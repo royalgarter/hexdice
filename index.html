@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="index.css">
     <script src="game.js"></script>
 </head>
-<body class="bg-gray-800 text-white p-4 flex flex-col items-center" x-data="game()">
+<body class="text-white p-4 flex flex-col items-center" x-data="game()">
     <h1 class="text-3xl font-bold mb-4">Hex Dice v1.0 Prototype</h1>
 
     <!-- Game Setup -->
@@ -95,7 +95,7 @@
                  :style="hexStyle(hex)"
                  :data-id="hex.id"
                  @click="handleHexClick(hex.id)">
-                <div class="hex-content">
+                <div class="hex-content" style="margin-top: 10px;margin-left: 20px;">
                     <span x-show="getUnitOnHex(hex.id)" 
                           class="font-bold text-lg"
                           :class="{

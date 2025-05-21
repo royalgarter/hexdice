@@ -26,6 +26,8 @@ body {
 .hex-content {
     text-align: center;
     position: relative; /* For badge positioning */
+    margin-top: 10px;
+    margin-left: 20px;
 }
 
 .hexagon.base-p1 { background-color: #7f1d1d; } /* dark red */
