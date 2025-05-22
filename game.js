@@ -51,8 +51,8 @@ function game() {
 
         resetGame() {
             this.players = [
-                { id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: this.getHexByQR(-(R-1), 0)?.id, rerollsUsed: 0 },
-                { id: 1, color: 'Blue', dice: [], initialRollDone: false, baseHexId: this.getHexByQR(R-1, 0)?.id, rerollsUsed: 0 }
+                { id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: this.getHexByQR(0, -(R-1))?.id, rerollsUsed: 0 },
+                { id: 1, color: 'Blue', dice: [], initialRollDone: false, baseHexId: this.getHexByQR(0, R-1)?.id, rerollsUsed: 0 }
             ];
             this.hexes.forEach(h => h.unitId = null); // Clear units from hexes
             this.gameState = 'SETUP_ROLL';
@@ -84,12 +84,12 @@ function game() {
         determineBaseLocations() {
             // For 2 players, assign specific base hexes
             // Using hexes near opposite edges for R=6
-            const base1Hex = this.getHexByQR(-(R-1), 0); // e.g., Q=-5, R=0 for R=6
+            const base1Hex = this.getHexByQR(0, -(R-1)); // e.g., Q=-5, R=0 for R=6
             if (base1Hex) {
                 base1Hex.isP1Base = true;
                 this.players[0].baseHexId = base1Hex.id;
             }
-            const base2Hex = this.getHexByQR(R-1, 0); // e.g., Q=5, R=0 for R=6
+            const base2Hex = this.getHexByQR(0, R-1); // e.g., Q=5, R=0 for R=6
             if (base2Hex) {
                 base2Hex.isP2Base = true;
                 this.players[1].baseHexId = base2Hex.id;
@@ -151,8 +151,8 @@ function game() {
                 top: ${hex.visualY - minY}px;
                 width: ${HEX_WIDTH}px;
                 height: ${HEX_HEIGHT}px; /* Corrected height for pointy top full hex */
+                background-color: ${baseColor};
             `;
-            // background-color: ${baseColor};
         },
 
         // --- SETUP ---
