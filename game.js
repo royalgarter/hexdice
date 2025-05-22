@@ -150,10 +150,7 @@ function game() {
                 left: ${hex.visualX - minX}px; 
                 top: ${hex.visualY - minY}px;
                 width: ${HEX_WIDTH}px;
-                height: ${HEX_HEIGHT * 2}px; /* Corrected height for pointy top full hex */
-                position: absolute;
-                background-image: url(hex.png);
-                background-size: contain;
+                height: ${HEX_HEIGHT}px; /* Corrected height for pointy top full hex */
             `;
             // background-color: ${baseColor};
         },

@@ -4,11 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hex Dice Prototype</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <link rel="stylesheet" href="index.css">
+    <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="game.js"></script>
+    <!-- <link rel="stylesheet" href="./index.css"> -->
 </head>
+<style>
+    body {
+        font-family: sans-serif;
+    }
+
+    .hex-grid-container {
+        /* Dynamically set by JS */
+    }
+
+    .hexagon {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /*clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);*/
+        cursor: pointer;
+        background-image: url(hex.png);
+        background-size: contain;
+        /*width: 60px; /* hexSize */*/
+        /*height: calc(60px * 1.1547); /* hexSize * sqrt(3) / 2 * 2 */*/
+        /*background-color: #4A5568; /* gray-600 */*/
+    }
+
+    .hexagon:hover {
+        /*background-color: #718096; /* gray-500 */*/
+    }
+
+    .hex-content {
+        text-align: center;
+        position: relative; /* For badge positioning */
+        /*margin-top: 10px;*/
+        /*margin-left: 20px;*/
+    }
+
+    .hexagon.base-p1 { background-color: #7f1d1d; } /* dark red */
+    .hexagon.base-p2 { background-color: #1e3a8a; } /* dark blue */
+
+    .hexagon.selected-unit-hex {
+        background-color: #FBBF24; /* amber-400 */
+        outline: 2px solid #F59E0B; /* amber-500 */
+    }
+
+    .hexagon.valid-move {
+        background-color: #6EE7B7; /* emerald-300 */
+        opacity: 0.8;
+    }
+    .hexagon.valid-target {
+        background-color: #F472B6; /* pink-400 */
+        opacity: 0.8;
+    }
+    .hexagon.valid-deploy {
+        background-color: #A7F3D0; /* emerald-200 */
+        opacity: 0.7;
+    }
+
+    .action-button {
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        color: white;
+        font-weight: bold;
+    }
+    .action-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Ensure log messages are visible */
+    #messageLogContainer p {
+        color: #E2E8F0; /* gray-300 */
+        margin-bottom: 0.25rem;
+    }
+</style>
 <body class="text-white p-4 flex flex-col items-center" x-data="game()">
     <h1 class="text-3xl font-bold mb-4">Hex Dice v1.0 Prototype</h1>
 
