@@ -311,6 +311,8 @@ function game() {
         
         // --- GAMEPLAY ---
         handleHexClick(hexId) {
+            this.addLog('Clicked: ' + hexId);
+
             if (this.gameState === 'SETUP_DEPLOY') {
                 this.deployUnit(hexId);
                 return;
@@ -345,6 +347,8 @@ function game() {
             this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
             this.validTargets = []; // Will be calculated if attack action is chosen
             this.addLog(`Selected Unit: Dice ${unit.value} at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
+            
+            if (canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
         },
 
         deselectUnit() {
@@ -905,6 +909,7 @@ function game() {
 
         // --- UTILITIES ---
         addLog(message) {
+            console.log(message);
             this.messageLog.unshift({ id: this.logCounter++, message: `[${new Date().toLocaleTimeString()}] ${message}` });
             if (this.messageLog.length > 50) this.messageLog.pop();
             // Auto-scroll log
