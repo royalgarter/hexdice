@@ -1,5 +1,5 @@
 {
-  "scripts": {
+  "tasks": {
     "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts"
   }
 }
