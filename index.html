@@ -166,7 +166,7 @@
                  :data-id="hex.id"
                  :data-qr="[hex.q, hex.r].join(',')"
                  @click="handleHexClick(hex.id)">
-                <div class="hex-coordinate self-end fixed text-xs text-white" x-text="[hex.q, hex.r].join(',')"></div>
+                <div class="hex-coordinate self-end fixed text-[8px] text-gray-100" x-text="[hex.id, hex.q, hex.r].join(',')"></div>
                 <div class="hex-content">
                     <span x-show="getUnitOnHex(hex.id)" 
                           class="font-bold text-lg"

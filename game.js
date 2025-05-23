@@ -232,6 +232,16 @@ function game() {
             this.players[this.currentPlayerIndex].rerollsUsed++; // Mark as reroll phase completed
             this.diceToReroll = [];
             this.nextPlayerSetupRerollOrDeploy();
+
+            /*<DEBUG>*/
+            const player = this.players[this.currentPlayerIndex];
+            const validDeploymentHexes = this.getValidDeploymentHexes(this.currentPlayerIndex);
+            for (var i = 0; i < this.rules.dicePerPlayer; i++) {
+                this.selectedDieToDeploy = i;
+                let hexId = validDeploymentHexes[i].id;
+                this.deployUnit(hexId);
+            }
+            /*</DEBUG>*/
         },
         nextPlayerSetupRerollOrDeploy() {
             if (this.currentPlayerIndex === 0 && this.players[1].rerollsUsed === 0) {
@@ -492,6 +502,8 @@ function game() {
             const unitStats = UNIT_STATS[unit.value];
 
             const checkNextHexBreak = (nextHex) => {
+                if (!nextHex) return false; // Off map
+
                 if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
                     if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
                     // break; // Blocked
@@ -509,55 +521,46 @@ function game() {
 
             switch (unitStats.movement) {
                 case 'LINE': // Dice 1
-                    DIRS.forEach(dir => {
-                        for (let i = 1; i <= unitStats.distance; i++) {
-                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
-                            if (!nextHex) break; // Off map
+                    let dirLine = {q: 0, r: 1};
+                    switch(this.currentPlayerIndex) {
+                        case 0: dirLine = {q: 0, r: 1}; break;
+                        case 1: dirLine = {q: 0, r: -1}; break;
+                    }
 
-                            if (!checkNextHexBreak(nextHex)) break;
-                        }
-                    });
+                    for (let i = 1; i <= unitStats.distance; i++) {
+                        const nextHex = this.getHexByQR(startHex.q + dirLine.q * i, startHex.r + dirLine.r * i);
+                        checkNextHexBreak(nextHex)
+                    }
                     break;
                 case 'DIAGONAL_X': // Dice 2
-                    DIRS.forEach(dir => {
-                        for (let i = 1; i <= unitStats.distance; i++) {
-                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
-                            if (!nextHex) break; // Off map
+                    const dValidsX = [
+                        [-1, 0], [-2, 0], [-3, 0],
+                        [-1, 1], [-2, 2], [-3, 3],
+                        [1, 0], [2, 0], [3, 0],
+                        [1, -1], [2, -2], [3, -3],
+                    ];
 
-                            if (
-                                !(startHex.q == nextHex.q && startHex.r > nextHex.r)
-                                && !(startHex.q - nextHex.q == nextHex.r - startHex.r)
-                                && !(startHex.q - nextHex.q == startHex.r - nextHex.r)
-                                && !(startHex.q > nextHex.q && startHex.r == nextHex.r)
-                            ) break;
+                    for (let valid of dValidsX) {
+                        const nextHex = this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1]);
+                        checkNextHexBreak(nextHex)
+                    }
 
-                            if (!checkNextHexBreak(nextHex)) break;
-                        }
-                    });
                     break;
                 case 'L_SHAPE': // Dice 3
                     const dValidsLShape = [
                         [-1, -2], [-2, -1],
                         [-3, 1], [-3, 2],
                         [-2, 3], [-1, 3],
-                        [1, 2], [2, 3],
+                        [1, 2], [2, 1],
                         [3, -1], [3, -2],
                         [2, -3], [1, -3],
                     ];
 
-                    DIRS.forEach(dir => {
-                        for (let i = 1; i <= unitStats.distance; i++) {
-                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
-                            if (!nextHex) break; // Off map
+                    for (let valid of dValidsLShape) {
+                        const nextHex = this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1]);
+                        checkNextHexBreak(nextHex)
+                    }
 
-                            let dQ = nextHex.q - startHex.q;
-                            let dR = nextHex.r - startHex.r;
-
-                            if (!dValidsLShape.find(([x, y]) => (dQ == x) && (dR == y))) break;
-
-                            if (!checkNextHexBreak(nextHex)) break;
-                        }
-                    });
                     break;
                 case 'AXIAL_SPLIT': // Dice 4
                     const dValidsAxialSplit = [
@@ -566,19 +569,11 @@ function game() {
                         [-2, 1], [2, -1],
                     ];
 
-                    DIRS.forEach(dir => {
-                        for (let i = 1; i <= unitStats.distance; i++) {
-                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
-                            if (!nextHex) break; // Off map
+                    for (let valid of dValidsAxialSplit) {
+                        const nextHex = this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1]);
+                        checkNextHexBreak(nextHex)
+                    }
 
-                            let dQ = nextHex.q - startHex.q;
-                            let dR = nextHex.r - startHex.r;
-
-                            if (!dValidsAxialSplit.find(([x, y]) => (dQ == x) && (dR == y))) break;
-
-                            if (!checkNextHexBreak(nextHex)) break;
-                        }
-                    });
                     break;
                 case 'ADJACENT': // Dice 5
                     this.getNeighbors(startHex).forEach(neighbor => {
@@ -589,6 +584,8 @@ function game() {
                      // Dice 6 cannot initiate a move action, only special attack or move after combat.
                     break;
             }
+
+            console.dir({calculateValidMoves: unit, startHex, possibleMoves})
             
             // Filter based on target: empty or enemy (for move), or friendly (for merge)
             return possibleMoves.filter(hexId => {
