@@ -25,7 +25,7 @@
         justify-content: center;
         clip-path: polygon(50% -50%,100% 50%,50% 150%,0 50%);
         cursor: pointer;
-        background-color: #4A5568;
+        background-color: #d6d3d1;
         border-bottom: 1px solid white;
         /*background-image: url(hex.png);*/
         /*background-size: contain;*/
@@ -38,12 +38,10 @@
     .hex-content {
         text-align: center;
         position: relative; /* For badge positioning */
-        /*margin-top: 10px;*/
-        /*margin-left: 20px;*/
     }
 
-    .hexagon.base-p1 { background-color: #7f1d1d; } /* dark red */
-    .hexagon.base-p2 { background-color: #1e3a8a; } /* dark blue */
+    .hexagon.base-p1 { background-color: #f87171; } /* red */
+    .hexagon.base-p2 { background-color: #fb7185; } /* blue */
 
     .hexagon.selected-unit-hex {
         background-color: #FBBF24; /* amber-400 */
@@ -59,7 +57,7 @@
         opacity: 0.8;
     }
     .hexagon.valid-deploy {
-        background-color: #A7F3D0; /* emerald-200 */
+        background-color: #fef08a; /* yellow-200 */
         opacity: 0.7;
     }
 
@@ -106,21 +104,22 @@
         </div>
          <div x-show="gameState === 'SETUP_DEPLOY'">
             <p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
-            <p class="mb-1">Select a die to deploy:</p>
+            <p class="mb-1">Select to deploy:</p>
             <div class="flex justify-center space-x-1 mb-2">
                 <template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
-                    <div x-show="!die.isDeployed" 
-                         class="p-1 border rounded text-xs cursor-pointer"
-                         :class="{
-                            'bg-yellow-400': selectedDieToDeploy === index,
-                            'bg-gray-600': selectedDieToDeploy !== index
-                         }"
-                         @click="selectDieToDeploy(index)">
-                        Val: <span x-text="die.value"></span>
+                    <div
+                        class="p-1 border rounded text-xs cursor-pointer"
+                        :class="
+                            [
+                                selectedDieToDeploy === index ? 'bg-yellow-400' : 'bg-gray-600',
+                                die.isDeployed ? 'bg-green-500 cursor-none' : '',
+                            ].join(' ')
+                        "
+                        @click="selectDieToDeploy(index)">
+                        [P<span x-text="currentPlayerIndex + 1"></span>] #<span x-text="die.value"></span>
                     </div>
                 </template>
             </div>
-            <p x-show="selectedDieToDeploy !== null">Now click on a valid deployment hex (your base or adjacent).</p>
         </div>
     </div>
 
@@ -167,6 +166,7 @@
                  :data-id="hex.id"
                  :data-qr="[hex.q, hex.r].join(',')"
                  @click="handleHexClick(hex.id)">
+                <div class="hex-coordinate self-end fixed text-xs text-white" x-text="[hex.q, hex.r].join(',')"></div>
                 <div class="hex-content">
                     <span x-show="getUnitOnHex(hex.id)" 
                           class="font-bold text-lg"

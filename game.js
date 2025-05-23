@@ -13,7 +13,7 @@ const UNIT_STATS = {
     1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 4, movement: 'LINE', notes: "Straight line" },
     2: { name: "Spearman", armor: 2, attack: 3, range: 0, distance: 3, movement: 'DIAGONAL_X', notes: "'X' shape diagonals" },
     3: { name: "Assault", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L_SHAPE', notes: "'L' pattern" },
-    4: { name: "Tank", armor: 4, attack: 5, range: 0, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
+    4: { name: "Tank", armor: 4, attack: 5, range: 0, distance: 2, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
     5: { name: "Archer", armor: 5, attack: 6, range: "2-3", distance: 1, movement: 'ADJACENT', notes: "Ranged Attack" },
     6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: 'NONE', notes: "Special Attack, Adjacent Armor+1" }
 };
@@ -128,15 +128,15 @@ function game() {
         },
         hexStyle(hex) {
             const unit = this.getUnitOnHex(hex.id);
-            let baseColor = '#4A5568'; // Default gray
-            if (hex.isP1Base) baseColor = '#991B1B'; // Darker Red
-            if (hex.isP2Base) baseColor = '#1E3A8A'; // Darker Blue
+            let baseColor = '#a8a29e'; // Default
+            if (hex.isP1Base) baseColor = '#ef4444'; // Red
+            if (hex.isP2Base) baseColor = '#3b82f6'; // Blue
 
             if (this.selectedUnitHexId === hex.id) baseColor = '#FBBF24'; // Selected
             else if (this.validMoves.includes(hex.id)) baseColor = '#6EE7B7'; // Valid move
             else if (this.validTargets.includes(hex.id)) baseColor = '#F472B6'; // Valid target
             else if (this.gameState === 'SETUP_DEPLOY' && this.getValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
-                 baseColor = '#A7F3D0'; // Valid deploy
+                 baseColor = '#fef08a'; // Valid deploy
             }
             
             // Calculate offset for positioning
@@ -150,7 +150,7 @@ function game() {
                 left: ${hex.visualX - minX}px; 
                 top: ${hex.visualY - minY}px;
                 width: ${HEX_WIDTH}px;
-                height: ${HEX_HEIGHT}px; /* Corrected height for pointy top full hex */
+                height: ${HEX_HEIGHT}px;
                 background-color: ${baseColor};
             `;
         },
@@ -286,18 +286,20 @@ function game() {
             dieToDeploy.isDeployed = true;
             dieToDeploy.hexId = hexId;
             targetHex.unitId = dieToDeploy.id;
-            this.addLog(`Player ${player.id + 1} deployed Dice ${dieToDeploy.value} to hex ${hexId} (${targetHex.q}, ${targetHex.r})`);
+            this.addLog(`Player ${player.id + 1} deployed Dice #${dieToDeploy.value} to hex ${hexId} [${targetHex.q}, ${targetHex.r}]`);
             this.selectedDieToDeploy = null;
 
             // Check if current player has deployed all dice
             if (player.dice.every(d => d.isDeployed)) {
                 if (this.currentPlayerIndex === 0) {
                     this.currentPlayerIndex = 1; // Move to Player 2's deployment
-                    if(this.players[1].dice.every(d => d.isDeployed)) { // If P2 also auto-deployed (e.g. less dice)
-                         this.startGamePlay();
+
+                    this.addLog("Player 2 turn to deploy");
+
+                    if(this.players[1].dice.every(d => d.isDeployed)) {
+                        this.startGamePlay();
                     }
                 } else {
-                    // Both players finished deployment
                     this.startGamePlay();
                 }
             }
@@ -348,7 +350,7 @@ function game() {
             this.validTargets = []; // Will be calculated if attack action is chosen
             this.addLog(`Selected Unit: Dice ${unit.value} at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
             
-            if (canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
+            if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
         },
 
         deselectUnit() {
@@ -489,44 +491,103 @@ function game() {
             let possibleMoves = [];
             const unitStats = UNIT_STATS[unit.value];
 
+            const checkNextHexBreak = (nextHex) => {
+                if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
+                    if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
+                    // break; // Blocked
+
+                    return false; // Blocked
+                }
+                if (this.getUnitOnHex(nextHex.id) && isForMerging && this.getUnitOnHex(nextHex.id).playerId === unit.playerId) {
+                    possibleMoves.push(nextHex.id); // Can merge with friendly
+                    // Don't break, can potentially move past to another friendly for merge if rules allowed (not typical)
+                }
+                if (!this.getUnitOnHex(nextHex.id)) possibleMoves.push(nextHex.id); // Empty hex
+
+                return true;
+            }
+
             switch (unitStats.movement) {
-                case 'ADJACENT': // Dice 5
-                    this.getNeighbors(startHex).forEach(neighbor => {
-                        if (neighbor) possibleMoves.push(neighbor.id);
-                    });
-                    break;
                 case 'LINE': // Dice 1
                     DIRS.forEach(dir => {
                         for (let i = 1; i <= unitStats.distance; i++) {
                             const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
                             if (!nextHex) break; // Off map
-                            if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
-                                if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
-                                break; // Blocked
-                            }
-                            if (this.getUnitOnHex(nextHex.id) && isForMerging && this.getUnitOnHex(nextHex.id).playerId === unit.playerId) {
-                                possibleMoves.push(nextHex.id); // Can merge with friendly
-                                // Don't break, can potentially move past to another friendly for merge if rules allowed (not typical)
-                            }
-                             if (!this.getUnitOnHex(nextHex.id)) possibleMoves.push(nextHex.id); // Empty hex
+
+                            if (!checkNextHexBreak(nextHex)) break;
                         }
+                    });
+                    break;
+                case 'DIAGONAL_X': // Dice 2
+                    DIRS.forEach(dir => {
+                        for (let i = 1; i <= unitStats.distance; i++) {
+                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
+                            if (!nextHex) break; // Off map
+
+                            if (
+                                !(startHex.q == nextHex.q && startHex.r > nextHex.r)
+                                && !(startHex.q - nextHex.q == nextHex.r - startHex.r)
+                                && !(startHex.q - nextHex.q == startHex.r - nextHex.r)
+                                && !(startHex.q > nextHex.q && startHex.r == nextHex.r)
+                            ) break;
+
+                            if (!checkNextHexBreak(nextHex)) break;
+                        }
+                    });
+                    break;
+                case 'L_SHAPE': // Dice 3
+                    const dValidsLShape = [
+                        [-1, -2], [-2, -1],
+                        [-3, 1], [-3, 2],
+                        [-2, 3], [-1, 3],
+                        [1, 2], [2, 3],
+                        [3, -1], [3, -2],
+                        [2, -3], [1, -3],
+                    ];
+
+                    DIRS.forEach(dir => {
+                        for (let i = 1; i <= unitStats.distance; i++) {
+                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
+                            if (!nextHex) break; // Off map
+
+                            let dQ = nextHex.q - startHex.q;
+                            let dR = nextHex.r - startHex.r;
+
+                            if (!dValidsLShape.find(([x, y]) => (dQ == x) && (dR == y))) break;
+
+                            if (!checkNextHexBreak(nextHex)) break;
+                        }
+                    });
+                    break;
+                case 'AXIAL_SPLIT': // Dice 4
+                    const dValidsAxialSplit = [
+                        [0, -1], [0, -2],
+                        [0, 1], [0, 2],
+                        [-2, 1], [2, -1],
+                    ];
+
+                    DIRS.forEach(dir => {
+                        for (let i = 1; i <= unitStats.distance; i++) {
+                            const nextHex = this.getHexByQR(startHex.q + dir.q * i, startHex.r + dir.r * i);
+                            if (!nextHex) break; // Off map
+
+                            let dQ = nextHex.q - startHex.q;
+                            let dR = nextHex.r - startHex.r;
+
+                            if (!dValidsAxialSplit.find(([x, y]) => (dQ == x) && (dR == y))) break;
+
+                            if (!checkNextHexBreak(nextHex)) break;
+                        }
+                    });
+                    break;
+                case 'ADJACENT': // Dice 5
+                    this.getNeighbors(startHex).forEach(neighbor => {
+                        if (neighbor) possibleMoves.push(neighbor.id);
                     });
                     break;
                 case 'NONE': // Dice 6
                      // Dice 6 cannot initiate a move action, only special attack or move after combat.
                     break;
-                // TODO: Implement D2, D3, D4 movement patterns
-                // For D2 (Diagonal_X), D3 (L_Shape), D4 (Axial_Split) - more complex logic
-                // Simplified for now: D2, D3, D4 act like D5 (adjacent)
-                case 'DIAGONAL_X':
-                case 'L_SHAPE':
-                case 'AXIAL_SPLIT':
-                     this.getNeighbors(startHex).forEach(neighbor => {
-                        if (neighbor) possibleMoves.push(neighbor.id);
-                    });
-                    this.addLog(`Movement for Dice ${unit.value} is simplified to adjacent for this prototype.`);
-                    break;
-
             }
             
             // Filter based on target: empty or enemy (for move), or friendly (for merge)
