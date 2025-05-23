@@ -323,8 +323,6 @@ function game() {
         
         // --- GAMEPLAY ---
         handleHexClick(hexId) {
-            this.addLog('Clicked: ' + hexId);
-
             if (this.gameState === 'SETUP_DEPLOY') {
                 this.deployUnit(hexId);
                 return;

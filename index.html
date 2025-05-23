@@ -112,11 +112,11 @@
                         :class="
                             [
                                 selectedDieToDeploy === index ? 'bg-yellow-400' : 'bg-gray-600',
-                                die.isDeployed ? 'bg-green-500 cursor-none' : '',
+                                players[currentPlayerIndex].dice[index].isDeployed ? 'bg-green-500 cursor-none' : '',
                             ].join(' ')
                         "
                         @click="selectDieToDeploy(index)">
-                        [P<span x-text="currentPlayerIndex + 1"></span>] #<span x-text="die.value"></span>
+                        [P<span x-text="currentPlayerIndex + 1"></span>] #<span x-text="players[currentPlayerIndex].dice[index].value"></span>
                     </div>
                 </template>
             </div>
