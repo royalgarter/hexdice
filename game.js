@@ -425,24 +425,28 @@ function game() {
             if (action === 'MOVE') {
                 if (this.validMoves.includes(targetHexId)) {
                     this.performMove(this.selectedUnitHexId, targetHexId);
+                    this.endTurn();
                 } else {
                     this.addLog("Invalid move destination.");
                 }
             } else if (action === 'RANGED_ATTACK') {
                  if (this.validTargets.includes(targetHexId)) {
                     this.performRangedAttack(this.selectedUnitHexId, targetHexId);
+                    this.endTurn();
                 } else {
                     this.addLog("Invalid target for Ranged Attack.");
                 }
             } else if (action === 'SPECIAL_ATTACK') {
                  if (this.validTargets.includes(targetHexId)) {
                     this.performSpecialAttack(this.selectedUnitHexId, targetHexId);
+                    this.endTurn();
                 } else {
                     this.addLog("Invalid target for Special Attack.");
                 }
             } else if (action === 'MERGE') {
                 if (this.validMoves.includes(targetHexId)) { // Merge uses move validation logic
                     this.performMerge(this.selectedUnitHexId, targetHexId);
+                    this.endTurn();
                 } else {
                     this.addLog("Invalid target hex for merging.");
                 }
@@ -488,6 +492,8 @@ function game() {
                 // Other actions are initiated via `initiateAction`
             }
             // `initiateAction` handles MOVE, RANGED_ATTACK, SPECIAL_ATTACK, MERGE
+
+            this.endTurn();
         },
         
         // --- MOVEMENT LOGIC (Simplified) ---
