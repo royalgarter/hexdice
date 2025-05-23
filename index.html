@@ -1,84 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Hex Dice Prototype</title>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hex Dice Prototype</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" :content="description" content="Hex Dice">
+    <meta name="keywords" content="boardgame,hexagon,dice">
+
+    <link rel="canonical" :href="host">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+
     <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="game.js"></script>
     <!-- <link rel="stylesheet" href="./index.css"> -->
 </head>
-<style>
-    body {
-        font-family: sans-serif;
-    }
 
-    .hex-grid-container {
-        /* Dynamically set by JS */
-    }
-
-    .hexagon {
-        position: absolute;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        clip-path: polygon(50% -50%,100% 50%,50% 150%,0 50%);
-        cursor: pointer;
-        background-color: #d6d3d1;
-        border-bottom: 1px solid white;
-        /*background-image: url(hex.png);*/
-        /*background-size: contain;*/
-    }
-
-    .hexagon:hover {
-        /*background-color: #718096; /* gray-500 */*/
-    }
-
-    .hex-content {
-        text-align: center;
-        position: relative; /* For badge positioning */
-    }
-
-    .hexagon.base-p1 { background-color: #f87171; } /* red */
-    .hexagon.base-p2 { background-color: #fb7185; } /* blue */
-
-    .hexagon.selected-unit-hex {
-        background-color: #FBBF24; /* amber-400 */
-        outline: 2px solid #F59E0B; /* amber-500 */
-    }
-
-    .hexagon.valid-move {
-        background-color: #6EE7B7; /* emerald-300 */
-        opacity: 0.8;
-    }
-    .hexagon.valid-target {
-        background-color: #F472B6; /* pink-400 */
-        opacity: 0.8;
-    }
-    .hexagon.valid-deploy {
-        background-color: #fef08a; /* yellow-200 */
-        opacity: 0.7;
-    }
-
-    .action-button {
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-        color: white;
-        font-weight: bold;
-    }
-    .action-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    /* Ensure log messages are visible */
-    #messageLogContainer p {
-        color: #E2E8F0; /* gray-300 */
-        margin-bottom: 0.25rem;
-    }
-</style>
-<body class="text-white p-4 flex flex-col items-center" x-data="game()">
+<body class="text-white p-4 flex flex-col items-center bg-stone-200" x-data="game()">
     <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1>
 
     <!-- Game Setup -->
@@ -161,12 +102,13 @@
     <!-- Hex Grid -->
     <div class="hex-grid-container relative" :style="gridContainerStyle()">
         <template x-for="hex in hexes" :key="hex.id">
-            <div class="hexagon" 
+            <div class="hexagon hover:bg-sky-300s"
                  :style="hexStyle(hex)"
                  :data-id="hex.id"
-                 :data-qr="[hex.q, hex.r].join(',')"
+                 @mousemove=""
                  @click="handleHexClick(hex.id)">
-                <div class="hex-coordinate self-end fixed text-[8px] text-gray-100" x-text="[hex.id, hex.q, hex.r].join(',')"></div>
+                <div class="hex-id self-start fixed text-[9px] text-gray-100" x-text="[hex.id].join(' ')"></div>
+                <div class="hex-coordinate self-end fixed text-[9px] text-gray-100" x-text="[hex.q, hex.r].join(' ')"></div>
                 <div class="hex-content">
                     <span x-show="getUnitOnHex(hex.id)" 
                           class="font-bold text-lg"
@@ -184,6 +126,75 @@
             </div>
         </template>
     </div>
-
 </body>
+
+<style>
+    body {
+        font-family: sans-serif;
+    }
+
+    .hex-grid-container {
+        /* Dynamically set by JS */
+    }
+
+    .hexagon {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        clip-path: polygon(50% -50%,100% 50%,50% 150%,0 50%);
+        cursor: pointer;
+        background-color: #d6d3d1;
+        border-bottom: 1px solid white;
+        /*background-image: url(hex.png);*/
+        /*background-size: contain;*/
+    }
+
+    .hexagon:hover {
+        background-color: #718096; /* gray-500 */
+    }
+
+    .hex-content {
+        text-align: center;
+        position: relative; /* For badge positioning */
+    }
+
+    .hexagon.base-p1 { background-color: #f87171; } /* red */
+    .hexagon.base-p2 { background-color: #fb7185; } /* blue */
+
+    .hexagon.selected-unit-hex {
+        background-color: #FBBF24; /* amber-400 */
+        outline: 2px solid #F59E0B; /* amber-500 */
+    }
+
+    .hexagon.valid-move {
+        background-color: #6EE7B7; /* emerald-300 */
+        opacity: 0.8;
+    }
+    .hexagon.valid-target {
+        background-color: #F472B6; /* pink-400 */
+        opacity: 0.8;
+    }
+    .hexagon.valid-deploy {
+        background-color: #fef08a; /* yellow-200 */
+        opacity: 0.7;
+    }
+
+    .action-button {
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        color: white;
+        font-weight: bold;
+    }
+    .action-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Ensure log messages are visible */
+    #messageLogContainer p {
+        color: #E2E8F0; /* gray-300 */
+        margin-bottom: 0.25rem;
+    }
+</style>
 </html>
