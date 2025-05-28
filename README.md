@@ -5,6 +5,8 @@
 HexDice is a strategic board game played on a hexagonal grid. Players deploy dice-represented units, each with unique stats and movement patterns, to capture the opponent's base or eliminate all enemy units. This JavaScript code provides the core game logic for HexDice, including hex grid generation, unit management, turn-based gameplay, combat resolution, and win condition checking.
 
 **Read more:** [Hex Dice - Rules & History](https://docs.google.com/document/d/1Zsh8VRxICV6Mxr7dSQ4wxQl__wt9GAhwg00m8tUTh10/edit?tab=t.0)
+**Wiki:** [DeepWiki](https://deepwiki.com/royalgarter/hexdice)
+
 
 ## Features
 
