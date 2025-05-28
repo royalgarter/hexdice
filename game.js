@@ -18,6 +18,8 @@ const UNIT_STATS = {
     6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: 'NONE', notes: "Special Attack, Adjacent Armor+1" }
 };
 
+Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
+
 function game() {
     return {
         hexes: [],
@@ -40,6 +42,11 @@ function game() {
         logCounter: 0,
         winnerMessage: "",
         actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
+        debug: {
+            skipReroll: true,
+            skipDeploy: true,
+            autoPlay: true,
+        },
         
         // --- INITIALIZATION ---
         init() {
@@ -123,21 +130,41 @@ function game() {
             const minY = Math.min(...allY);
             const maxY = Math.max(...allY);
             const gridWidth = maxX - minX + HEX_WIDTH;
-            const gridHeight = maxY - minY + HEX_HEIGHT * 2; // Approx
+            const gridHeight = maxY - minY + HEX_HEIGHT; // Approx
+
             return `width: ${gridWidth}px; height: ${gridHeight}px;`;
+        },
+        hexColor(hex) {
+            const unit = this.getUnitOnHex(hex.id);
+
+            let color = 'default';
+            if (hex.isP1Base) color = 'red';
+            if (hex.isP2Base) color = 'blue';
+
+            if (this.selectedUnitHexId === hex.id) color = 'selecte';
+            else if (this.validMoves.includes(hex.id)) color = 'move';
+            else if (this.validTargets.includes(hex.id)) color = 'target';
+            else if (this.gameState === 'SETUP_DEPLOY' && this.getValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
+                color = 'deploy';
+            }
+
+            return color;
         },
         hexStyle(hex) {
             const unit = this.getUnitOnHex(hex.id);
-            let baseColor = '#a8a29e'; // Default
-            if (hex.isP1Base) baseColor = '#ef4444'; // Red
-            if (hex.isP2Base) baseColor = '#3b82f6'; // Blue
 
-            if (this.selectedUnitHexId === hex.id) baseColor = '#FBBF24'; // Selected
-            else if (this.validMoves.includes(hex.id)) baseColor = '#6EE7B7'; // Valid move
-            else if (this.validTargets.includes(hex.id)) baseColor = '#F472B6'; // Valid target
-            else if (this.gameState === 'SETUP_DEPLOY' && this.getValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
-                 baseColor = '#fef08a'; // Valid deploy
-            }
+            // let baseColor = '#a8a29e'; // Default
+            // if (hex.isP1Base) baseColor = '#ef4444'; // Red
+            // if (hex.isP2Base) baseColor = '#3b82f6'; // Blue
+
+            // if (this.selectedUnitHexId === hex.id) baseColor = '#FBBF24'; // Selected
+            // else if (this.validMoves.includes(hex.id)) baseColor = '#6EE7B7'; // Valid move
+            // else if (this.validTargets.includes(hex.id)) baseColor = '#F472B6'; // Valid target
+            // else if (this.gameState === 'SETUP_DEPLOY' && this.getValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
+            //     baseColor = '#fef08a'; // Valid deploy
+            // }
+
+            // if (isColor) return baseColor;
             
             // Calculate offset for positioning
             // Find minX and minY to offset all hexes so they start near 0,0 of the container
@@ -151,7 +178,6 @@ function game() {
                 top: ${hex.visualY - minY}px;
                 width: ${HEX_WIDTH}px;
                 height: ${HEX_HEIGHT}px;
-                background-color: ${baseColor};
             `;
         },
 
@@ -190,6 +216,8 @@ function game() {
                 this.gameState = 'SETUP_REROLL';
                 this.currentPlayerIndex = 0; // Player 1 starts reroll
                 this.diceToReroll = [];
+
+                if (this.debug?.skipReroll) this.players.forEach(x => this.skipReroll());
             }
         },
         toggleRerollSelection(dieIndex) {
@@ -233,15 +261,6 @@ function game() {
             this.diceToReroll = [];
             this.nextPlayerSetupRerollOrDeploy();
 
-            /*<DEBUG>*/
-            const player = this.players[this.currentPlayerIndex];
-            const validDeploymentHexes = this.getValidDeploymentHexes(this.currentPlayerIndex);
-            for (var i = 0; i < this.rules.dicePerPlayer; i++) {
-                this.selectedDieToDeploy = i;
-                let hexId = validDeploymentHexes[i].id;
-                this.deployUnit(hexId);
-            }
-            /*</DEBUG>*/
         },
         nextPlayerSetupRerollOrDeploy() {
             if (this.currentPlayerIndex === 0 && this.players[1].rerollsUsed === 0) {
@@ -251,6 +270,19 @@ function game() {
                 this.gameState = 'SETUP_DEPLOY';
                 this.currentPlayerIndex = 0; // Player 1 starts deployment
                 this.selectedDieToDeploy = null;
+
+                if (this.debug?.skipDeploy) {
+                    this.players.forEach((player, playerIdx) => {
+                        const validDeploymentHexes = this.getValidDeploymentHexes(playerIdx);
+                        // console.dir({validDeploymentHexes})
+
+                        player.dice.forEach((dice, diceIdx) => {
+                            this.selectDieToDeploy(diceIdx);
+                            this.handleHexClick(validDeploymentHexes[diceIdx]);
+                            // console.dir(validDeploymentHexes[diceIdx])
+                        });
+                    });
+                }
             }
         },
         selectDieToDeploy(dieIndex) {
@@ -319,6 +351,38 @@ function game() {
             this.currentPlayerIndex = 0; // Player 1 starts the game
             this.resetTurnActionsForAllUnits();
             this.addLog("All units deployed. Player 1's turn.");
+
+            if (this.debug?.autoPlay) this.autoPlay();
+        },
+
+        autoPlay() {
+            console.log('autoPlay')
+            if (!this.debug?.autoPlay) return;
+
+            let player = this.players[this.currentPlayerIndex];
+            let unit = player.dice.random();
+
+            let actions = (unit.distance > 0) ? 'MOVE,REROLL,GUARD' : 'REROLL,GUARD';
+            let trymax=10, valid, target, action;
+
+            while (!target && (--trymax > 0)) {
+                action = actions.split(',').random();
+                switch (action) {
+                    case 'MOVE':
+                        this.selectUnit(unit.hexId);
+                        target = this.calculateValidMoves(unit.hexId).random();
+                        this.initiateAction('MOVE')
+                    break;
+                    default:
+                        valid = this.calculateValidMoves(unit.hexId, action);
+                        target = (valid?.possibleMoves || valid || []).random();
+                        if (target) this.performAction(action, unit.hexId);
+                }
+            }
+
+            if (target) this.completeAction(target);
+
+            console.dir({player, unit, action, valid, target, trymax});
         },
         
         // --- GAMEPLAY ---
@@ -413,7 +477,8 @@ function game() {
             this.actionMode = null;
             this.validMoves = [];
             this.validTargets = [];
-            // Keep selected unit if any
+
+            if (this.debug?.autoPlay) this.endTurn();
         },
 
         completeAction(targetHexId) {
@@ -589,7 +654,7 @@ function game() {
                     break;
             }
 
-            console.dir({calculateValidMoves: unit, startHex, possibleMoves})
+            // console.dir({calculateValidMoves: unit, startHex, possibleMoves})
             
             // Filter based on target: empty or enemy (for move), or friendly (for merge)
             return possibleMoves.filter(hexId => {
@@ -910,6 +975,8 @@ function game() {
 
             this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn.`);
             this.checkWinConditions(); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
+
+            if (this.debug?.autoPlay) this.autoPlay();
         },
         resetTurnActionsForAllUnits() {
             this.players.forEach(player => {
