@@ -13,7 +13,7 @@ const UNIT_STATS = {
     1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 4, movement: 'LINE', notes: "Straight line" },
     2: { name: "Spearman", armor: 2, attack: 3, range: 0, distance: 3, movement: 'DIAGONAL_X', notes: "'X' shape diagonals" },
     3: { name: "Assault", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L_SHAPE', notes: "'L' pattern" },
-    4: { name: "Tank", armor: 4, attack: 5, range: 0, distance: 2, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
+    4: { name: "Tank", armor: 4, attack: 5, range: 0, distance: 1, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
     5: { name: "Archer", armor: 5, attack: 6, range: "2-3", distance: 1, movement: 'ADJACENT', notes: "Ranged Attack" },
     6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: 'NONE', notes: "Special Attack, Adjacent Armor+1" }
 };
