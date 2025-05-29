@@ -45,7 +45,7 @@ function game() {
         debug: {
             skipReroll: true,
             skipDeploy: true,
-            autoPlay: true,
+            autoPlay: false,
         },
         
         // --- INITIALIZATION ---
