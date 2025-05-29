@@ -1085,8 +1085,8 @@ function game() {
 			const p1 = this.players[0];
 			const p2 = this.players[1];
 
-			const p1ActiveDice = p1.dice.filter(d => d.isDeployed).length;
-			const p2ActiveDice = p2.dice.filter(d => d.isDeployed).length;
+			const p1ActiveDice = p1.dice.filter(d => d.isDeployed && !d.isDeath).length;
+			const p2ActiveDice = p2.dice.filter(d => d.isDeployed && !d.isDeath).length;
 
 			// Annihilation
 			if (p1ActiveDice === 0 && p2ActiveDice > 0) {
