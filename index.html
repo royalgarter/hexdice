@@ -12,19 +12,39 @@
 
 	<link rel="canonical" :href="host">
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
+	
+	<style type="text/tailwindcss">
+		[x-cloak] { display: none !important; }
 
-	<script defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+		@theme {
+			--color-hexdefault: var(--color-teal-700);
+			--color-hexselect: var(--color-purple-400);
+			--color-hexmove: var(--color-purple-300);
+			--color-hexmerge: var(--color-purple-500);
+			--color-hextarget: var(--color-amber-500);
+			--color-hexdeploy: var(--color-yellow-500);
+			--color-hexred: var(--color-red-500);
+			--color-hexblue: var(--color-blue-500);
+		}
+
+		.hexagon {
+			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+			border-bottom: 1px solid var(--color-teal-700);
+		}
+	</style>
+	<script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	<script src="game.js"></script>
 </head>
 
-<body class="text-white p-2 flex flex-col items-center bg-slate-200 font-sans" x-data="game()">
+<body class="text-white p-2 flex flex-col items-center bg-gray-600 font-sans" x-data="game()">
 	<!-- <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Hex Grid -->
 	<div class="hex-grid-container relative m-2" :style="gridContainerStyle()">
 		<template x-for="hex in hexes" :key="hex.id">
 			<div class="hexagon absolute flex items-center justify-center cursor-pointer hover:opacity-80"
-				:class="'bg-hex' + hexColor(hex)"
+				:class="hexColor(hex)"
 				:style="hexStyle(hex)"
 				:data-id="hex.id"
 				@mousemove=""
@@ -41,15 +61,15 @@
 						  }"
 						  x-text="getUnitOnHex(hex.id)?.value">
 					</span>
-					 <span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-1">🛡️</span>
-					 <span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute bottom-0 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + 'A'"></span>
+					 <span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-2 text-blue-500">🛡️</span>
+					 <span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + '⚡'"></span>
 				</div>
 			</div>
 		</template>
 	</div>
 
 	<!-- Game Setup -->
-	<div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 p-2 bg-slate-700 rounded shadow-lg text-center">
+	<div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="gameState === 'SETUP_ROLL'">
 			<button @click="rollInitialDice(0)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2" x-show="!players[0].initialRollDone">Roll Player 1 (Red) Dice</button>
@@ -91,30 +111,55 @@
 	</div>
 
 	<!-- Game Over -->
-	<div x-cloak x-show="gameState === 'GAME_OVER'" class="mb-2 p-2 bg-green-700 rounded shadow-lg text-center">
+	<div x-cloak x-show="gameState === 'GAME_OVER'" class="mb-2 py-2 px-4 bg-green-700 rounded shadow-lg text-center">
 		<h2 class="text-2xl mb-2">Game Over!</h2>
 		<p x-text="winnerMessage"></p>
 		<button @click="resetGame()" class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">Play Again</button>
 	</div>
 
 	<!-- Action Mode Info -->
-	<div x-cloak x-show="actionMode !== null" class="mb-2 p-2 bg-yellow-600 rounded shadow-lg text-center">
+	<div x-cloak x-show="false && (actionMode !== null)" class="mb-2 py-2 px-4 bg-yellow-600 rounded shadow-lg text-center">
 		<p x-text="actionModeMessage()"></p>
 		<button @click="cancelAction()" class="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Cancel Action</button>
 	</div>
 
 	<!-- Game Info -->
-	<div x-cloak x-show="!gameState.startsWith('SETUP') && gameState !== 'GAME_OVER'" class="mb-2 p-2 bg-slate-700 rounded shadow-lg text-center">
-		<div x-show="selectedUnitHexId !== null" class="my-2 space-x-2">
-			<button @click="initiateAction('MOVE')" class="action-button p-1 text-gray-100 bg-blue-500 disabled:opacity-50 hover:bg-blue-700" x-show="canPerformAction(selectedUnitHexId, 'MOVE')">Move</button>
-			<button @click="performAction('REROLL', selectedUnitHexId)" class="action-button p-1 text-gray-100 bg-yellow-500 disabled:opacity-50 hover:bg-yellow-700" x-show="canPerformAction(selectedUnitHexId, 'REROLL')">Reroll Die</button>
-			<button @click="performAction('GUARD', selectedUnitHexId)" class="action-button p-1 text-gray-100 bg-teal-500 disabled:opacity-50 hover:bg-teal-700" x-show="canPerformAction(selectedUnitHexId, 'GUARD')">Guard (+1 Armor)</button>
-			<button @click="initiateAction('RANGED_ATTACK')" class="action-button p-1 text-gray-100 bg-purple-500 disabled:opacity-50 hover:bg-purple-700" x-show="canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')">Ranged Attack</button>
-			<button @click="initiateAction('SPECIAL_ATTACK')" class="action-button p-1 text-gray-100 bg-pink-500 disabled:opacity-50 hover:bg-pink-700" x-show="canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')">Special Attack</button>
-			<button @click="initiateAction('MERGE')" class="action-button p-1 text-gray-100 bg-indigo-500 disabled:opacity-50 hover:bg-indigo-700" x-show="canPerformAction(selectedUnitHexId, 'MERGE')">Merge</button>
+	<div x-cloak x-show="!gameState.startsWith('SETUP') && gameState !== 'GAME_OVER'" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
+		<div class="my-2 space-x-2">
+			<button class="action-button p-1 text-gray-100 bg-blue-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')" 
+				@click="initiateAction('MOVE')" 
+			>Move</button>
+			<button class="action-button p-1 text-gray-100 bg-yellow-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')" 
+				@click="performAction('REROLL', selectedUnitHexId)"
+			>Reroll</button>
+			<button class="action-button p-1 text-gray-100 bg-teal-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')" 
+				@click="performAction('GUARD', selectedUnitHexId)"
+			>Guard</button>
+			<button class="action-button p-1 text-gray-100 bg-purple-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')" 
+				@click="initiateAction('RANGED_ATTACK')"
+			>Rng Atk</button>
+			<button class="action-button p-1 text-gray-100 bg-pink-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" 
+				@click="initiateAction('SPECIAL_ATTACK')"
+			>Spl Atk</button>
+			<button class="action-button p-1 text-gray-100 bg-indigo-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
+				@click="initiateAction('MERGE')"
+			>Merge</button>
+			<button class="action-button p-1 text-white bg-red-500 hover:opacity-80 font-bold"
+				x-show="actionMode !== null"
+				@click="cancelAction()" 
+			>Cancel</button>
+			<button class="action-button p-1 text-white bg-slate-500 hover:opacity-80 font-bold" 
+				@click="endTurn()"
+			>End Turn</button>
 		</div>
-		<button @click="endTurn()" class="my-3 bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded">End Turn</button>
-		<p class="text-lg">Current Turn: Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>)</p>
+		
+		<p class="text-sm">Current Turn: Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>)</p>
 		<p x-show="selectedUnitHexId !== null">Selected Unit: Dice <span x-text="getUnitOnHex(selectedUnitHexId)?.value"></span> at (<span x-text="getHex(selectedUnitHexId)?.q"></span>, <span x-text="getHex(selectedUnitHexId)?.r"></span>)</p>
 	</div>
 
@@ -125,23 +170,5 @@
 		</template>
 	</div>
 </body>
-<script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<style type="text/tailwindcss">
-	[x-cloak] { display: none !important; }
 
-	@theme {
-		--color-hexdefault: var(--color-slate-500);
-		--color-hexselect: var(--color-sky-500);
-		--color-hexmove: var(--color-green-500);
-		--color-hextarget: var(--color-amber-500);
-		--color-hexdeploy: var(--color-yellow-500);
-		--color-hexred: var(--color-red-500);
-		--color-hexblue: var(--color-blue-500);
-	}
-
-	.hexagon {
-		clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
-		border-bottom: 1px solid var(--color-gray-300);
-	}
-</style>
 </html>

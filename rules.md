@@ -75,14 +75,14 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Distance:** The maximum distance (number of steps from the starting point) a unit can move following its shape pattern in a single turn.  
 * **Movement:** The pattern the unit can follow when moving.
 
-#### Dice Visualization Diagram
+**Dice Visualization Diagram**
 
-
-##### Hexagon Grid Monospace Diagram
+#### Hexagon Grid Monospace Diagram
 
 * Each player's primary axis on the board extends from their starting area towards the central hexagon.
 * The game grid can be expanded accordingly for larger maps (e.g. 8 hex radius R=8).
-* Moveable hex will be marked by + in diagram
+* Moveable hex will be marked by + in diagrams below
+
 ```
                     ^
                  .     .
@@ -107,10 +107,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     |
 ```
 
-##### Dice 1
+#### Dice 1
 
 * Forward: Players can move up to 3 steps straight ahead along their primary axis on the hex grid.
 * Backward: Players can move 1 step straight backward along their primary axis on the hex grid.
+
 ```
                     .
                  .     .
@@ -135,9 +136,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-##### Dice 2
+#### Dice 2
 
 * Can move up to 3 steps along the left & right diagonal axes (forming an 'X' or 'diagonal' pattern based on primary axis on a hex grid).
+
 ```
                     .
                  .     .
@@ -162,9 +164,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-##### Dice 3
+#### Dice 3
 * Can move 3 steps following an 'L' pattern: 2 steps in a straight line along one of 6 hex axes, then 1 step into an adjacent hex along a different facing outward hex axis.
 * Can jump over friendly units: This unit ignores hexes occupied by other friendly units but not enemy units for movement purposes, but cannot end its movement on an occupied hex unless performing combat with enemy units.
+
 ```
                     .
                  .     .
@@ -189,9 +192,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-##### Dice 4
+#### Dice 4
 * Can move to any adjacent hex (1 step distance).
 * Can move up to 2 steps in vertical & horizontal straight-line hex directions (based on primary axis on a hex grid)
+
 ```
                     .
                  .     .
@@ -216,9 +220,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-##### Dice 5
+#### Dice 5
 * Can move to any adjacent hex (1 step distance).
 * This unit can perform ranged attacks to any single enemy unit located from 2 to 3 hexes away (x in diagram) and could not attack adjacent units.
+
 ```
                     .
                  .     .
@@ -243,9 +248,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-##### Dice 6
+#### Dice 6
 * Cannot move except winning combat.
 * Any unit adjacent (* in diagram) to Dice 6 has their Armor + 1.
+
 ```
                     .
                  .     .
@@ -270,9 +276,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-##### Two-Players Bases
+#### Two-Players Bases
 * Player can deploy each single new unit in base or its adjacent hex
 
+```
                     R
                  R     R
               R     R     R
