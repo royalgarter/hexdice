@@ -12,9 +12,9 @@ const DIRS = [
 
 const UNIT_STATS = {
 	1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 4, movement: 'LINE', notes: "Straight line" },
-	2: { name: "Spearman", armor: 2, attack: 3, range: 0, distance: 3, movement: 'DIAGONAL_X', notes: "'X' shape diagonals" },
-	3: { name: "Assault", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L_SHAPE', notes: "'L' pattern" },
-	4: { name: "Tank", armor: 4, attack: 5, range: 0, distance: 1, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
+	2: { name: "Bishop", armor: 2, attack: 3, range: 0, distance: 3, movement: 'DIAGONAL_X', notes: "'X' shape diagonals" },
+	3: { name: "Knight", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L_SHAPE', notes: "'L' pattern" },
+	4: { name: "Rook", armor: 4, attack: 5, range: 0, distance: 1, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
 	5: { name: "Archer", armor: 5, attack: 6, range: "2-3", distance: 1, movement: 'ADJACENT', notes: "Ranged Attack" },
 	6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: 'NONE', notes: "Special Attack, Adjacent Armor+1" }
 };
@@ -23,6 +23,7 @@ Array.prototype.random = function () { return this[Math.floor((Math.random() * t
 
 function game() {
 	return {
+		// --- VARIABLES ---
 		hexes: [],
 		players: [
 			{ id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
@@ -56,7 +57,6 @@ function game() {
 			this.addLog("Game started. Welcome to Hex Dice!");
 			this.resetGame(); // To properly initialize players etc.
 		},
-
 		resetGame() {
 			this.players = [
 				{ id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: this.getHexByQR(0, -(R-1))?.id, rerollsUsed: 0 },
@@ -340,7 +340,6 @@ function game() {
 
 			if (this.debug?.autoPlay) this.autoPlay();
 		},
-
 		autoPlay() {
 			console.log('autoPlay')
 			if (!this.debug?.autoPlay) return;
@@ -395,7 +394,6 @@ function game() {
 				}
 			}
 		},
-
 		selectUnit(hexId) {
 			const unit = this.getUnitOnHex(hexId);
 			if (!unit || unit.playerId !== this.currentPlayerIndex || unit.hasMovedOrAttackedThisTurn) {
@@ -410,14 +408,12 @@ function game() {
 			
 			if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 		},
-
 		deselectUnit() {
 			this.selectedUnitHexId = null;
 			this.validMoves = [];
 			this.validTargets = [];
 			this.actionMode = null;
 		},
-		
 		initiateAction(actionType) {
 			if (!this.selectedUnitHexId) return;
 			const unit = this.getUnitOnHex(this.selectedUnitHexId);
@@ -450,7 +446,6 @@ function game() {
 				}
 			}
 		},
-		
 		actionModeMessage() {
 			if (this.actionMode === 'MOVE') return "Select a destination hex for your unit.";
 			if (this.actionMode === 'RANGED_ATTACK') return "Select an enemy unit to target (2-3 hexes away).";
@@ -458,7 +453,6 @@ function game() {
 			if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 			return "";
 		},
-
 		cancelAction() {
 			this.actionMode = null;
 			this.validMoves = [];
@@ -466,7 +460,6 @@ function game() {
 
 			if (this.debug?.autoPlay) this.endTurn();
 		},
-
 		completeAction(targetHexId) {
 			if (!this.actionMode) return;
 
@@ -510,7 +503,6 @@ function game() {
 			//      this.deselectUnit();
 			// }
 		},
-
 		canPerformAction(unitHexId, actionType) {
 			const unit = this.getUnitOnHex(unitHexId);
 			if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
@@ -525,7 +517,6 @@ function game() {
 				default: return false;
 			}
 		},
-
 		performAction(actionType, unitHexId) {
 			const unit = this.getUnitOnHex(unitHexId);
 			if (!unit || unit.hasMovedOrAttackedThisTurn) {
@@ -547,7 +538,7 @@ function game() {
 			this.endTurn();
 		},
 		
-		// --- MOVEMENT LOGIC (Simplified) ---
+		// --- MOVE ---
 		calculateValidMoves(unitHexId, isForMerging = false) {
 			const unit = this.getUnitOnHex(unitHexId);
 			const startHex = this.getHex(unitHexId);
@@ -652,7 +643,6 @@ function game() {
 				}
 			});
 		},
-
 		performMove(unitHexId, targetHexId) {
 			const attackerUnit = this.getUnitOnHex(unitHexId);
 			const attackerHex = this.getHex(unitHexId);
@@ -687,7 +677,7 @@ function game() {
 			this.checkWinConditions();
 		},
 
-		// --- OTHER ACTIONS ---
+		// --- ACTIONS ---
 		performUnitReroll(unitHexId) {
 			const unit = this.getUnitOnHex(unitHexId);
 			if (!unit || unit.hasMovedOrAttackedThisTurn) return;
@@ -706,7 +696,6 @@ function game() {
 			this.deselectUnit();
 			this.checkWinConditions();
 		},
-
 		performGuard(unitHexId) {
 			const unit = this.getUnitOnHex(unitHexId);
 			if (!unit || unit.hasMovedOrAttackedThisTurn) return;
@@ -742,7 +731,6 @@ function game() {
 			});
 			return targets;
 		},
-
 		performRangedAttack(attackerHexId, targetHexId) {
 			this.addLog(`Dice 5 at (${this.getHex(attackerHexId).q},${this.getHex(attackerHexId).r}) performs Ranged Attack on unit at (${this.getHex(targetHexId).q},${this.getHex(targetHexId).r}).`);
 			this.handleCombat(attackerHexId, targetHexId, 'RANGED');
@@ -771,7 +759,6 @@ function game() {
 			});
 			return targets;
 		},
-
 		performSpecialAttack(attackerHexId, targetHexId) {
 			this.addLog(`Dice 6 at (${this.getHex(attackerHexId).q},${this.getHex(attackerHexId).r}) performs Special Attack on unit at (${this.getHex(targetHexId).q},${this.getHex(targetHexId).r}).`);
 			this.handleCombat(attackerHexId, targetHexId, 'SPECIAL');
