@@ -25,7 +25,7 @@ const UNIT_STATS = {
 
 const PLAYER_PRIMARY_AXIS = {
 	1: [ AXES[5] ],
-	2: [ AXES[5], AXES[2] ],
+	2: [ AXES[2], AXES[5] ],
 	3: [ AXES[4], AXES[2], AXES[0] ],
 	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
@@ -107,16 +107,19 @@ function game() {
 		determineBaseLocations() {
 			// For 2 players, assign specific base hexes
 			// Using hexes near opposite edges for R=6
+
+			let radius = -(R-1);
+
 			const primary1 = PLAYER_PRIMARY_AXIS[this.players.length][0];
-			const base1Hex = this.getHexByQR(primary1.q * (R-1), primary1.r * (R-1));
-			// const base1Hex = this.getHexByQR(0, -(R-1)); // e.g., Q=-5, R=0 for R=6
+			const base1Hex = this.getHexByQR(primary1.q * radius, primary1.r * radius);
+			// const base1Hex = this.getHexByQR(0, radius); // e.g., Q=-5, R=0 for R=6
 			if (base1Hex) {
 				base1Hex.isP1Base = true;
 				this.players[0].baseHexId = base1Hex.id;
 			}
 
 			const primary2 = PLAYER_PRIMARY_AXIS[this.players.length][1];
-			const base2Hex = this.getHexByQR(primary2.q * (R-1), primary2.r * (R-1));
+			const base2Hex = this.getHexByQR(primary2.q * radius, primary2.r * radius);
 			// const base2Hex = this.getHexByQR(0, R-1); // e.g., Q=5, R=0 for R=6
 			if (base2Hex) {
 				base2Hex.isP2Base = true;
