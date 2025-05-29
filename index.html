@@ -29,7 +29,6 @@
 
 		.hexagon {
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
-			border-bottom: 1px solid var(--color-teal-700);
 		}
 	</style>
 	<script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -41,35 +40,38 @@
 	<!-- <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Hex Grid -->
-	<div class="hex-grid-container relative m-2" :style="gridContainerStyle()">
+	<div class="hex-grid-container relative m-2 mb-8" :style="gridContainerStyle()">
 		<template x-for="hex in hexes" :key="hex.id">
-			<div class="hexagon absolute flex items-center justify-center cursor-pointer hover:opacity-80"
-				:class="hexColor(hex)"
-				:style="hexStyle(hex)"
-				:data-id="hex.id"
-				@mousemove=""
-				@click="handleHexClick(hex.id)"
-			>
-				<div class="hex-id self-start fixed text-[8px] text-indigo-200" x-show="debug" x-text="[hex.id].join(' ')"></div>
-				<div class="hex-coordinate self-end fixed text-[10px] text-violet-200" x-show="debug" x-text="[hex.q, hex.r].join(', ')"></div>
-				<div class="hex-content text-center relative">
-					<span x-show="getUnitOnHex(hex.id)"
-						  class="font-bold text-lg"
-						  :class="{
-							  'text-red-900': getUnitOnHex(hex.id)?.playerId === 0,
-							  'text-blue-900': getUnitOnHex(hex.id)?.playerId === 1,
-						  }"
-						  x-text="getUnitOnHex(hex.id)?.value">
-					</span>
-					 <span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-2 text-blue-500">🛡️</span>
-					 <span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + '⚡'"></span>
+			<div>
+				<div class="hexagon absolute flex items-center justify-center cursor-pointer hover:opacity-80"
+					:class="hexColor(hex)"
+					:style="hexStyle(hex, 1)"
+					:data-id="hex.id"
+					@mousemove="hex.unitstat=true" @mouseleave="hex.unitstat=false"
+					@click="handleHexClick(hex.id)"
+				>
+					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
+					<div class="hex-coordinate fixed self-end text-[10px] text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
+					<div class="hex-content text-center relative">
+						<span x-show="getUnitOnHex(hex.id)"
+							class="font-bold text-lg"
+							:class="{
+								'text-red-900': getUnitOnHex(hex.id)?.playerId === 0,
+								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 1,
+							}"
+							x-text="getUnitOnHex(hex.id)?.value">
+						</span>
+						<span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-2 text-blue-500">🛡️</span>
+						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + '⚡'"></span>
+					</div>
 				</div>
+				<div class="hex-unitstat fixed left-1 bottom-25 text-xs text-gray-300" x-show="hex.unitstat" x-text='JSON.stringify(getUnitOnHex(hex.id) || "", null, 2).replace(/\"/g, "")''></div>
 			</div>
 		</template>
 	</div>
 
 	<!-- Game Setup -->
-	<div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
+	<div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 p-4 bg-slate-700 rounded shadow-lg text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="gameState === 'SETUP_ROLL'">
 			<button @click="rollInitialDice(0)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2" x-show="!players[0].initialRollDone">Roll Player 1 (Red) Dice</button>

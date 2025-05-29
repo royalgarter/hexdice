@@ -24,32 +24,11 @@ const UNIT_STATS = {
 };
 
 const PLAYER_PRIMARY_AXIS = {
-	1: [
-		{i: 5, q: 0, r: -1, name: '12h'},
-	],
-	2: [
-		{i: 2, q: 0, r: 1, name: '6h'},
-		{i: 5, q: 0, r: -1, name: '12h'},
-	],
-	3: [
-		{i: 2, q: 0, r: 1, name: '6h'},
-		{i: 4, q: -1, r: 0, name: '10h'},
-		{i: 0, q: 1, r: -1, name: '2h'},
-	],
-	4: [
-		{i: 3, q: -1, r: 1, name: '8h'},
-		{i: 4, q: -1, r: 0, name: '10h'},
-		{i: 0, q: 1, r: -1, name: '2h'},
-		{i: 1, q: 1, r: 0, name: '4h'},
-	],
-	6: [
-		{i: 0, q: 1, r: -1, name: '2h'},
-		{i: 1, q: 1, r: 0, name: '4h'},
-		{i: 2, q: 0, r: 1, name: '6h'},
-		{i: 3, q: -1, r: 1, name: '8h'},
-		{i: 4, q: -1, r: 0, name: '10h'},
-		{i: 5, q: 0, r: -1, name: '12h'},
-	],
+	1: [ AXES[5] ],
+	2: [ AXES[5], AXES[2] ],
+	3: [ AXES[4], AXES[2], AXES[0] ],
+	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
+	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 
 Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
@@ -79,8 +58,9 @@ function game() {
 		winnerMessage: "",
 		actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
 		debug: {
+			coordinate: true,
 			skipReroll: true,
-			skipDeploy: false,
+			skipDeploy: true,
 			autoPlay: false,
 		},
 		
@@ -127,12 +107,17 @@ function game() {
 		determineBaseLocations() {
 			// For 2 players, assign specific base hexes
 			// Using hexes near opposite edges for R=6
-			const base1Hex = this.getHexByQR(0, -(R-1)); // e.g., Q=-5, R=0 for R=6
+			const primary1 = PLAYER_PRIMARY_AXIS[this.players.length][0];
+			const base1Hex = this.getHexByQR(primary1.q * (R-1), primary1.r * (R-1));
+			// const base1Hex = this.getHexByQR(0, -(R-1)); // e.g., Q=-5, R=0 for R=6
 			if (base1Hex) {
 				base1Hex.isP1Base = true;
 				this.players[0].baseHexId = base1Hex.id;
 			}
-			const base2Hex = this.getHexByQR(0, R-1); // e.g., Q=5, R=0 for R=6
+
+			const primary2 = PLAYER_PRIMARY_AXIS[this.players.length][1];
+			const base2Hex = this.getHexByQR(primary2.q * (R-1), primary2.r * (R-1));
+			// const base2Hex = this.getHexByQR(0, R-1); // e.g., Q=5, R=0 for R=6
 			if (base2Hex) {
 				base2Hex.isP2Base = true;
 				this.players[1].baseHexId = base2Hex.id;
@@ -190,7 +175,7 @@ function game() {
 
 			return cls;
 		},
-		hexStyle(hex) {
+		hexStyle(hex, padding=0) {
 			// Calculate offset for positioning
 			// Find minX and minY to offset all hexes so they start near 0,0 of the container
 			const allX = this.hexes.map(h => h.visualX);
@@ -199,10 +184,10 @@ function game() {
 			const minY = Math.min(...allY);
 
 			return `
-				left: ${hex.visualX - minX}px; 
-				top: ${hex.visualY - minY}px;
-				width: ${HEX_WIDTH}px;
-				height: ${HEX_HEIGHT}px;
+				left: ${hex.visualX - minX + padding}px; 
+				top: ${hex.visualY - minY + padding}px;
+				width: ${HEX_WIDTH - (padding << 1)}px;
+				height: ${HEX_HEIGHT - (padding << 1)}px;
 			`;
 		},
 
