@@ -1,174 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Hex Dice Prototype</title>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hex Dice Prototype</title>
-    <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" :content="description" content="Hex Dice">
+    <meta name="keywords" content="boardgame,hexagon,dice">
+
+    <link rel="canonical" :href="host">
+    <link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
+
+
     <script defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="game.js"></script>
     <!-- <link rel="stylesheet" href="./index.css"> -->
 </head>
-<style>
-    body {
-        font-family: sans-serif;
-    }
 
-    .hex-grid-container {
-        /* Dynamically set by JS */
-    }
-
-    .hexagon {
-        position: absolute;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        /*clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);*/
-        cursor: pointer;
-        background-image: url(hex.png);
-        background-size: contain;
-        /*width: 60px; /* hexSize */*/
-        /*height: calc(60px * 1.1547); /* hexSize * sqrt(3) / 2 * 2 */*/
-        /*background-color: #4A5568; /* gray-600 */*/
-    }
-
-    .hexagon:hover {
-        /*background-color: #718096; /* gray-500 */*/
-    }
-
-    .hex-content {
-        text-align: center;
-        position: relative; /* For badge positioning */
-        /*margin-top: 10px;*/
-        /*margin-left: 20px;*/
-    }
-
-    .hexagon.base-p1 { background-color: #7f1d1d; } /* dark red */
-    .hexagon.base-p2 { background-color: #1e3a8a; } /* dark blue */
-
-    .hexagon.selected-unit-hex {
-        background-color: #FBBF24; /* amber-400 */
-        outline: 2px solid #F59E0B; /* amber-500 */
-    }
-
-    .hexagon.valid-move {
-        background-color: #6EE7B7; /* emerald-300 */
-        opacity: 0.8;
-    }
-    .hexagon.valid-target {
-        background-color: #F472B6; /* pink-400 */
-        opacity: 0.8;
-    }
-    .hexagon.valid-deploy {
-        background-color: #A7F3D0; /* emerald-200 */
-        opacity: 0.7;
-    }
-
-    .action-button {
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-        color: white;
-        font-weight: bold;
-    }
-    .action-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    /* Ensure log messages are visible */
-    #messageLogContainer p {
-        color: #E2E8F0; /* gray-300 */
-        margin-bottom: 0.25rem;
-    }
-</style>
-<body class="text-white p-4 flex flex-col items-center" x-data="game()">
-    <h1 class="text-3xl font-bold mb-4">Hex Dice v1.0 Prototype</h1>
-
-    <!-- Game Setup -->
-    <div x-show="gameState.startsWith('SETUP')" class="mb-4 p-4 bg-gray-700 rounded shadow-lg text-center">
-        <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2>
-        <div x-show="gameState === 'SETUP_ROLL'">
-            <button @click="rollInitialDice(0)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2" x-show="!players[0].initialRollDone">Roll Player 1 (Red) Dice</button>
-            <button @click="rollInitialDice(1)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone">Roll Player 2 (Blue) Dice</button>
-        </div>
-        <div x-show="gameState === 'SETUP_REROLL'">
-            <p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
-            <div class="flex justify-center space-x-2 mb-2">
-                <template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
-                    <div x-show="!die.isDeployed" class="p-2 border rounded cursor-pointer" 
-                         :class="{'bg-yellow-400': diceToReroll.includes(index)}"
-                         @click="toggleRerollSelection(index)">
-                        <span x-text="die.value"></span>
-                    </div>
-                </template>
-            </div>
-            <button @click="performReroll()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span> selected)</button>
-            <button @click="skipReroll()" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2">Skip Reroll</button>
-        </div>
-         <div x-show="gameState === 'SETUP_DEPLOY'">
-            <p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
-            <p class="mb-1">Select a die to deploy:</p>
-            <div class="flex justify-center space-x-1 mb-2">
-                <template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
-                    <div x-show="!die.isDeployed" 
-                         class="p-1 border rounded text-xs cursor-pointer"
-                         :class="{
-                            'bg-yellow-400': selectedDieToDeploy === index,
-                            'bg-gray-600': selectedDieToDeploy !== index
-                         }"
-                         @click="selectDieToDeploy(index)">
-                        Val: <span x-text="die.value"></span>
-                    </div>
-                </template>
-            </div>
-            <p x-show="selectedDieToDeploy !== null">Now click on a valid deployment hex (your base or adjacent).</p>
-        </div>
-    </div>
-
-    <!-- Game Info -->
-    <div x-show="!gameState.startsWith('SETUP') && gameState !== 'GAME_OVER'" class="mb-4 p-3 bg-gray-700 rounded shadow-lg text-center">
-        <p class="text-lg">Current Turn: Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>)</p>
-        <p x-show="selectedUnitHexId !== null">Selected Unit: Dice <span x-text="getUnitOnHex(selectedUnitHexId)?.value"></span> at (<span x-text="getHex(selectedUnitHexId)?.q"></span>, <span x-text="getHex(selectedUnitHexId)?.r"></span>)</p>
-        <div x-show="selectedUnitHexId !== null" class="mt-2 space-x-2">
-            <button @click="initiateAction('MOVE')" class="action-button bg-blue-500 hover:bg-blue-700" x-show="canPerformAction(selectedUnitHexId, 'MOVE')">Move</button>
-            <button @click="performAction('REROLL', selectedUnitHexId)" class="action-button bg-yellow-500 hover:bg-yellow-700" x-show="canPerformAction(selectedUnitHexId, 'REROLL')">Reroll Die</button>
-            <button @click="performAction('GUARD', selectedUnitHexId)" class="action-button bg-teal-500 hover:bg-teal-700" x-show="canPerformAction(selectedUnitHexId, 'GUARD')">Guard (+1 Armor)</button>
-            <button @click="initiateAction('RANGED_ATTACK')" class="action-button bg-purple-500 hover:bg-purple-700" x-show="canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')">Ranged Attack</button>
-            <button @click="initiateAction('SPECIAL_ATTACK')" class="action-button bg-pink-500 hover:bg-pink-700" x-show="canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')">Special Attack</button>
-            <button @click="initiateAction('MERGE')" class="action-button bg-indigo-500 hover:bg-indigo-700" x-show="canPerformAction(selectedUnitHexId, 'MERGE')">Merge</button>
-        </div>
-        <button @click="endTurn()" class="mt-3 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">End Turn</button>
-    </div>
-    
-    <!-- Action Mode Info -->
-    <div x-show="actionMode !== null" class="mb-4 p-3 bg-yellow-600 rounded shadow-lg text-center">
-        <p x-text="actionModeMessage()"></p>
-        <button @click="cancelAction()" class="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Cancel Action</button>
-    </div>
-
-    <!-- Game Over -->
-    <div x-show="gameState === 'GAME_OVER'" class="mb-4 p-4 bg-green-700 rounded shadow-lg text-center">
-        <h2 class="text-2xl mb-2">Game Over!</h2>
-        <p x-text="winnerMessage"></p>
-        <button @click="resetGame()" class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">Play Again</button>
-    </div>
-    
-    <!-- Message Log -->
-    <div class="fixed bottom-0 left-0 w-full bg-gray-900 p-2 text-sm h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
-        <template x-for="log in messageLog" :key="log.id">
-            <p x-text="log.message"></p>
-        </template>
-    </div>
+<body class="text-white p-2 flex flex-col items-center bg-slate-200 font-sans" x-data="game()">
+    <!-- <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
     <!-- Hex Grid -->
-    <div class="hex-grid-container relative" :style="gridContainerStyle()">
+    <div class="hex-grid-container relative m-2" :style="gridContainerStyle()">
         <template x-for="hex in hexes" :key="hex.id">
-            <div class="hexagon" 
-                 :style="hexStyle(hex)"
-                 :data-id="hex.id"
-                 @click="handleHexClick(hex.id)">
-                <div class="hex-content" style="margin-top: 10px;margin-left: 20px;">
-                    <span x-show="getUnitOnHex(hex.id)" 
+            <div class="hexagon absolute flex items-center justify-center cursor-pointer hover:opacity-80"
+                :class="'bg-hex' + hexColor(hex)"
+                :style="hexStyle(hex)"
+                :data-id="hex.id"
+                @mousemove=""
+                @click="handleHexClick(hex.id)"
+            >
+                <div class="hex-id self-start fixed text-[8px] text-indigo-200" x-show="debug" x-text="[hex.id].join(' ')"></div>
+                <div class="hex-coordinate self-end fixed text-[10px] text-violet-200" x-show="debug" x-text="[hex.q, hex.r].join(', ')"></div>
+                <div class="hex-content text-center relative">
+                    <span x-show="getUnitOnHex(hex.id)"
                           class="font-bold text-lg"
                           :class="{
                               'text-red-900': getUnitOnHex(hex.id)?.playerId === 0,
@@ -178,12 +45,105 @@
                     </span>
                      <span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-1">🛡️</span>
                      <span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute bottom-0 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + 'A'"></span>
-                    <!-- <span class="text-xs absolute top-0 left-0" x-text="hex.id"></span> -->
-                    <!-- <span class="text-xs absolute bottom-0 left-0" x-text="`(${hex.q},${hex.r})`"></span> -->
                 </div>
             </div>
         </template>
     </div>
 
+    <!-- Game Setup -->
+    <div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 p-2 bg-slate-700 rounded shadow-lg text-center">
+        <!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
+        <div x-show="gameState === 'SETUP_ROLL'">
+            <button @click="rollInitialDice(0)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2" x-show="!players[0].initialRollDone">Roll Player 1 (Red) Dice</button>
+            <button @click="rollInitialDice(1)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone">Roll Player 2 (Blue) Dice</button>
+        </div>
+        <div x-show="gameState === 'SETUP_REROLL'">
+            <p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
+            <div class="flex justify-center space-x-2 mb-2">
+                <template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
+                    <div x-show="!die.isDeployed" class="p-2 border rounded cursor-pointer"
+                         :class="{'bg-yellow-400': diceToReroll.includes(index)}"
+                         @click="toggleRerollSelection(index)">
+                        <span x-text="die.value"></span>
+                    </div>
+                </template>
+            </div>
+            <button @click="performReroll()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span> selected)</button>
+            <button @click="skipReroll()" class="bg-slate-500 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded ml-2">Skip Reroll</button>
+        </div>
+         <div x-show="gameState === 'SETUP_DEPLOY'">
+            <p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
+            <p class="mb-1">Select to deploy:</p>
+            <div class="flex justify-center space-x-1 mb-2">
+                <template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
+                    <div
+                        class="p-1 border rounded text-xs cursor-pointer"
+                        :class="
+                            [
+                                selectedDieToDeploy === index ? 'bg-yellow-400' : 'bg-slate-600',
+                                players[currentPlayerIndex].dice[index].isDeployed ? 'bg-green-500 cursor-none' : '',
+                            ].join(' ')
+                        "
+                        @click="selectDieToDeploy(index)">
+                        [P<span x-text="currentPlayerIndex + 1"></span>] #<span x-text="players[currentPlayerIndex].dice[index].value"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over -->
+    <div x-cloak x-show="gameState === 'GAME_OVER'" class="mb-2 p-2 bg-green-700 rounded shadow-lg text-center">
+        <h2 class="text-2xl mb-2">Game Over!</h2>
+        <p x-text="winnerMessage"></p>
+        <button @click="resetGame()" class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">Play Again</button>
+    </div>
+
+    <!-- Action Mode Info -->
+    <div x-cloak x-show="actionMode !== null" class="mb-2 p-2 bg-yellow-600 rounded shadow-lg text-center">
+        <p x-text="actionModeMessage()"></p>
+        <button @click="cancelAction()" class="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Cancel Action</button>
+    </div>
+
+    <!-- Game Info -->
+    <div x-cloak x-show="!gameState.startsWith('SETUP') && gameState !== 'GAME_OVER'" class="mb-2 p-2 bg-slate-700 rounded shadow-lg text-center">
+        <div x-show="selectedUnitHexId !== null" class="my-2 space-x-2">
+            <button @click="initiateAction('MOVE')" class="action-button p-1 text-gray-100 bg-blue-500 disabled:opacity-50 hover:bg-blue-700" x-show="canPerformAction(selectedUnitHexId, 'MOVE')">Move</button>
+            <button @click="performAction('REROLL', selectedUnitHexId)" class="action-button p-1 text-gray-100 bg-yellow-500 disabled:opacity-50 hover:bg-yellow-700" x-show="canPerformAction(selectedUnitHexId, 'REROLL')">Reroll Die</button>
+            <button @click="performAction('GUARD', selectedUnitHexId)" class="action-button p-1 text-gray-100 bg-teal-500 disabled:opacity-50 hover:bg-teal-700" x-show="canPerformAction(selectedUnitHexId, 'GUARD')">Guard (+1 Armor)</button>
+            <button @click="initiateAction('RANGED_ATTACK')" class="action-button p-1 text-gray-100 bg-purple-500 disabled:opacity-50 hover:bg-purple-700" x-show="canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')">Ranged Attack</button>
+            <button @click="initiateAction('SPECIAL_ATTACK')" class="action-button p-1 text-gray-100 bg-pink-500 disabled:opacity-50 hover:bg-pink-700" x-show="canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')">Special Attack</button>
+            <button @click="initiateAction('MERGE')" class="action-button p-1 text-gray-100 bg-indigo-500 disabled:opacity-50 hover:bg-indigo-700" x-show="canPerformAction(selectedUnitHexId, 'MERGE')">Merge</button>
+        </div>
+        <button @click="endTurn()" class="my-3 bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded">End Turn</button>
+        <p class="text-lg">Current Turn: Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>)</p>
+        <p x-show="selectedUnitHexId !== null">Selected Unit: Dice <span x-text="getUnitOnHex(selectedUnitHexId)?.value"></span> at (<span x-text="getHex(selectedUnitHexId)?.q"></span>, <span x-text="getHex(selectedUnitHexId)?.r"></span>)</p>
+    </div>
+
+    <!-- Message Log -->
+    <div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-sm h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
+        <template x-for="log in messageLog" :key="log.id">
+            <p x-text="log.message"></p>
+        </template>
+    </div>
 </body>
+<script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+    [x-cloak] { display: none !important; }
+
+    @theme {
+        --color-hexdefault: var(--color-slate-500);
+        --color-hexselect: var(--color-sky-500);
+        --color-hexmove: var(--color-green-500);
+        --color-hextarget: var(--color-amber-500);
+        --color-hexdeploy: var(--color-yellow-500);
+        --color-hexred: var(--color-red-500);
+        --color-hexblue: var(--color-blue-500);
+    }
+
+    .hexagon {
+        clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+        border-bottom: 1px solid var(--color-gray-300);
+    }
+</style>
 </html>
