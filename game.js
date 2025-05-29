@@ -80,7 +80,7 @@ function game() {
 		actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
 		debug: {
 			skipReroll: true,
-			skipDeploy: true,
+			skipDeploy: false,
 			autoPlay: false,
 		},
 		
@@ -184,7 +184,7 @@ function game() {
 			else if (this.validMoves.includes(hex.id)) cls = 'bg-hexmove';
 			else if (this.validMerges.includes(hex.id)) cls = 'bg-hexmerge';
 			else if (this.validTargets.includes(hex.id)) cls = 'bg-hextarget';
-			else if (this.gameState === 'SETUP_DEPLOY' && this.getValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
+			else if (this.gameState === 'SETUP_DEPLOY' && this.calculateValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
 				cls = 'bg-hexdeploy';
 			}
 
@@ -295,11 +295,11 @@ function game() {
 				// Both players finished reroll phase
 				this.gameState = 'SETUP_DEPLOY';
 				this.currentPlayerIndex = 0; // Player 1 starts deployment
-				this.selectedDieToDeploy = null;
+				this.selectedDieToDeploy = 0;
 
 				if (this.debug?.skipDeploy) {
 					this.players.forEach((player, playerIdx) => {
-						const validDeploymentHexes = this.getValidDeploymentHexes(playerIdx);
+						const validDeploymentHexes = this.calculateValidDeploymentHexes(playerIdx);
 						// console.dir({validDeploymentHexes})
 
 						player.dice.forEach((dice, diceIdx) => {
@@ -315,21 +315,7 @@ function game() {
 			if (this.players[this.currentPlayerIndex].dice[diceIndex].isDeployed) return;
 			this.selectedDieToDeploy = diceIndex;
 		},
-		getValidDeploymentHexes(playerId) {
-			const player = this.players[playerId];
-			const baseHex = this.getHex(player.baseHexId);
-			if (!baseHex) return [];
-			
-			let deploymentHexes = [baseHex];
-			this.getNeighbors(baseHex).forEach(neighbor => {
-				if (neighbor) deploymentHexes.push(neighbor);
-			});
-			
-			// Filter out hexes that are already occupied by friendly units
-			return deploymentHexes
-				.filter(hex => !this.getUnitOnHex(hex.id)) // Ensure hex is empty
-				.map(hex => hex.id);
-		},
+		
 		deployUnit(hexId) {
 			if (this.selectedDieToDeploy === null) {
 				this.addLog("Select a die to deploy first.");
@@ -341,7 +327,7 @@ function game() {
 
 			if (!targetHex || dieToDeploy.isDeployed) return;
 
-			const validDeploymentHexes = this.getValidDeploymentHexes(this.currentPlayerIndex);
+			const validDeploymentHexes = this.calculateValidDeploymentHexes(this.currentPlayerIndex);
 			if (!validDeploymentHexes.includes(hexId)) {
 				this.addLog("Invalid deployment hex. Deploy on your base or adjacent hexes.");
 				return;
@@ -355,16 +341,16 @@ function game() {
 			dieToDeploy.hexId = hexId;
 			targetHex.unitId = dieToDeploy.id;
 			this.addLog(`Player ${player.id + 1} deployed Dice #${dieToDeploy.value} to hex ${hexId} [${targetHex.q}, ${targetHex.r}]`);
-			this.selectedDieToDeploy = null;
+			this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 
 			// Check if current player has deployed all dice
 			if (player.dice.every(d => d.isDeployed)) {
 				if (this.currentPlayerIndex === 0) {
 					this.currentPlayerIndex = 1; // Move to Player 2's deployment
-
+					this.selectedDieToDeploy = 0;
 					this.addLog("Player 2 turn to deploy");
 
-					if(this.players[1].dice.every(d => d.isDeployed)) {
+					if (this.players[1].dice.every(d => d.isDeployed)) {
 						this.startGamePlay();
 					}
 				} else {
@@ -763,6 +749,33 @@ function game() {
 					return !targetUnit || targetUnit.playerId !== unit.playerId;
 				}
 			});
+		},
+		calculateValidDeploymentHexes(playerId) {
+			const player = this.players[playerId];
+			const baseHex = this.getHex(player.baseHexId);
+			if (!baseHex) return [];
+
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][playerId];
+			const mod3 = primary.i % 3;
+			
+			let deploymentHexes = [baseHex];
+			this.getNeighbors(baseHex).forEach(neighbor => deploymentHexes.push(neighbor));
+			if (mod3 == 2) {
+				deploymentHexes.push(this.getHexByQR(baseHex.q + -2, baseHex.r + 1));
+				deploymentHexes.push(this.getHexByQR(baseHex.q + 2, baseHex.r + -1));
+			} else if (mod3 == 1) {
+				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + 2));
+				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + -2));
+			} else if (mod3 == 0) {
+				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + -1));
+				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + 1));
+			}
+			
+			// Filter out hexes that are already occupied by friendly units
+			return deploymentHexes
+				.filter(x => x)
+				.filter(hex => !this.getUnitOnHex(hex.id)) // Ensure hex is empty
+				.map(hex => hex.id);
 		},
 
 		// --- ACTIONS ---

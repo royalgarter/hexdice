@@ -91,19 +91,18 @@
 		</div>
 		 <div x-show="gameState === 'SETUP_DEPLOY'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
-			<p class="mb-1">Select to deploy:</p>
 			<div class="flex justify-center space-x-1 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
 					<div
 						class="p-1 border rounded text-xs cursor-pointer"
 						:class="
 							[
-								selectedDieToDeploy === index ? 'bg-yellow-400' : 'bg-slate-600',
-								players[currentPlayerIndex].dice[index].isDeployed ? 'bg-green-500 cursor-none' : '',
+								selectedDieToDeploy === index ? 'bg-yellow-400' : '',
+								players[currentPlayerIndex]?.dice[index]?.isDeployed ? 'bg-green-500' : '',
 							].join(' ')
 						"
 						@click="selectDieToDeploy(index)">
-						[P<span x-text="currentPlayerIndex + 1"></span>] #<span x-text="players[currentPlayerIndex].dice[index].value"></span>
+						Dice <span x-text="players[currentPlayerIndex].dice[index].value"></span>
 					</div>
 				</template>
 			</div>
