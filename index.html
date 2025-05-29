@@ -65,7 +65,7 @@
 						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + '⚡'"></span>
 					</div>
 				</div>
-				<div class="hex-unitstat fixed left-1 bottom-25 text-xs text-gray-300" x-show="hex.unitstat" x-text='JSON.stringify(getUnitOnHex(hex.id) || "", null, 2).replace(/\"/g, "")''></div>
+				<div class="hex-unitstat fixed left-2 bottom-25 text-sm text-gray-400" x-show="hex.unitstat" x-html="Object.entries(getUnitOnHex(hex.id) || {}).map(x => x.join(': ')).join('<br>')"></div>
 			</div>
 		</template>
 	</div>
