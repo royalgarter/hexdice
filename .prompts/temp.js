@@ -41,7 +41,7 @@ function game() {
 			{ id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
 			{ id: 1, color: 'Blue', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 }
 		],
-		rules: {
+ rules: {
 			dicePerPlayer: 6, // For 2 players
 			maxRerolls: 2,    // 1/3 of 6
 		},
@@ -60,7 +60,8 @@ function game() {
 		debug: {
 			coordinate: true,
 			skipReroll: true,
-			skipDeploy: true,
+ skipDeploy: false,
+ autoSetup: false,
 			autoPlay: false,
 		},
 		
@@ -116,7 +117,7 @@ function game() {
 				base1Hex.isP1Base = true;
 				this.players[0].baseHexId = base1Hex.id;
 			}
-
+			
 			const primary2 = PLAYER_PRIMARY_AXIS[this.players.length][1];
 			const base2Hex = this.getHexByQR(primary2.q * radius, primary2.r * radius);
 			// const base2Hex = this.getHexByQR(0, R-1); // e.g., Q=5, R=0 for R=6
@@ -284,12 +285,14 @@ function game() {
 				this.currentPlayerIndex = 0; // Player 1 starts deployment
 				this.selectedDieToDeploy = 0;
 
-				if (this.debug?.skipDeploy) {
+				if (this.debug?.autoSetup && this.players.length == 2) {
 					this.players.forEach((player, playerIdx) => {
 						const validDeploymentHexes = this.calculateValidDeploymentHexes(playerIdx);
 						// console.dir({validDeploymentHexes})
 
-						player.dice.forEach((dice, diceIdx) => {
+						// Deploy dice sorted by value for consistent auto-deployment
+						const sortedDice = [...player.dice].sort((a, b) => b.value - a.value);
+						sortedDice.forEach((dice, diceIdx) => {
 							this.selectDieToDeploy(diceIdx);
 							this.handleHexClick(validDeploymentHexes[diceIdx]);
 							// console.dir(validDeploymentHexes[diceIdx])
@@ -521,7 +524,7 @@ function game() {
 				this.endTurn();
 				return;	
 			}
-			
+
 			// Deselect unit after action attempt, regardless of success, unless it's a failed move
 			// If move failed, unit stays selected. If combat failed, unit stays.
 			// For simplicity now, deselect. More complex logic can keep it selected.
@@ -696,7 +699,7 @@ function game() {
 			possibleMoves = [...new Set(possibleMoves.filter(x => x))];
 
 			// console.dir({calculateValidMoves: unit, startHex, possibleMoves})
-			
+
 			// Filter based on target: empty or enemy (for move), or friendly (for merge)
 			return possibleMoves.filter(hexId => {
 				const targetUnit = this.getUnitOnHex(hexId);
@@ -714,7 +717,7 @@ function game() {
 
 			const primary = PLAYER_PRIMARY_AXIS[this.players.length][playerId];
 			const mod3 = primary.i % 3;
-			
+
 			let deploymentHexes = [baseHex];
 			this.getNeighbors(baseHex).forEach(neighbor => deploymentHexes.push(neighbor));
 			if (mod3 == 2) {
@@ -727,7 +730,7 @@ function game() {
 				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + -1));
 				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + 1));
 			}
-			
+
 			// Filter out hexes that are already occupied by friendly units
 			return deploymentHexes
 				.filter(x => x)
@@ -752,7 +755,7 @@ function game() {
 				this.deselectUnit(); // Deselect if something is wrong
 				return;
 			}
-			
+
 			this.addLog(`Player ${attackerUnit.playerId + 1} attempts to move Dice ${attackerUnit.value} from (${attackerHex.q},${attackerHex.r}) to (${defenderHex.q},${defenderHex.r}).`);
 			attackerUnit.isGuarding = false;
 
@@ -763,7 +766,7 @@ function game() {
 					return;
 				}
 				// Combat occurs
-				this.handleCombat(unitHexId, targetHexId, 'MELEE');
+				this.handleCombat(unitHexId, targetHexId, 'MELEE', true); // Pass true for attackerMovesAfterCombat
 			} else { // Moving to an empty hex
 				attackerHex.unitId = null;
 				defenderHex.unitId = attackerUnit.id;
