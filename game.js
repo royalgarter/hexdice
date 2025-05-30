@@ -577,12 +577,28 @@ function game() {
 					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
 					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
 					// More robust line of sight would check for blocking units/terrain. Not implemented here.
-					if (dist >= 2 && dist <= 3) { // Range 2-3 for Dice 5
-						// TODO: Check Line of Sight (no units in between)
-						targets.push(potentialTargetHex.id);
+					if (dist >= 2 && dist <= 3) {
+						// Check Line of Sight: Iterate through hexes between attacker and target
+						let blocked = false;
+						const stepQ = (potentialTargetHex.q - attackerHex.q) / dist;
+						const stepR = (potentialTargetHex.r - attackerHex.r) / dist;
+
+						// Start checking from 1 hex away from attacker up to 1 hex away from target
+						for (let i = 1; i < dist; i++) {
+							const checkQ = Math.round(attackerHex.q + stepQ * i);
+							const checkR = Math.round(attackerHex.r + stepR * i);
+							const intermediateHex = this.getHexByQR(checkQ, checkR);
+							if (intermediateHex && this.getUnitOnHex(intermediateHex.id)) {
+								blocked = true;
+								break;
+							}
+						}
+
+						if (!blocked) targets.push(potentialTargetHex.id);
 					}
 				}
 			});
+
 			return targets;
 		},
 		calculateValidSpecialAttackTargets(attackerHexId) {
