@@ -130,7 +130,7 @@
 	<!-- Game Info -->
 	<div x-cloak x-show="!gameState.startsWith('SETUP') && gameState !== 'GAME_OVER'" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
 		<div class="my-2 space-x-2">
-			<button class="action-button p-1 text-gray-100 bg-blue-500 disabled:opacity-30 hover:opacity-80" 
+			<button class="action-button p-1 text-gray-100 bg-hexmove disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')" 
 				@click="initiateAction('MOVE')" 
 			>Move</button>
@@ -138,19 +138,19 @@
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')" 
 				@click="performAction('REROLL', selectedUnitHexId)"
 			>Reroll</button>
-			<button class="action-button p-1 text-gray-100 bg-teal-500 disabled:opacity-30 hover:opacity-80" 
+			<button class="action-button p-1 text-gray-100 bg-blue-500 disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')" 
 				@click="performAction('GUARD', selectedUnitHexId)"
 			>Guard</button>
-			<button class="action-button p-1 text-gray-100 bg-purple-500 disabled:opacity-30 hover:opacity-80" 
+			<button class="action-button p-1 text-gray-100 bg-hextarget disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')" 
 				@click="initiateAction('RANGED_ATTACK')"
 			>Rng Atk</button>
-			<button class="action-button p-1 text-gray-100 bg-pink-500 disabled:opacity-30 hover:opacity-80" 
+			<button class="action-button p-1 text-gray-100 bg-hextarget disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" 
 				@click="initiateAction('SPECIAL_ATTACK')"
 			>Spl Atk</button>
-			<button class="action-button p-1 text-gray-100 bg-indigo-500 disabled:opacity-30 hover:opacity-80" 
+			<button class="action-button p-1 text-gray-100 bg-hexmerge disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
 				@click="initiateAction('MERGE')"
 			>Merge</button>
