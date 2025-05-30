@@ -47,7 +47,7 @@
 					:class="hexColor(hex)"
 					:style="hexStyle(hex, 1)"
 					:data-id="hex.id"
-					@mousemove="hex.unitstat=true" @mouseleave="hex.unitstat=false"
+					@mouseenter="calculateDefenderEffectiveArmor(hex.id);hex.unitstat=true" @mouseleave="hex.unitstat=false"
 					@click="handleHexClick(hex.id)"
 				>
 					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
@@ -56,16 +56,16 @@
 						<span x-show="getUnitOnHex(hex.id)"
 							class="font-bold text-lg"
 							:class="{
-								'text-red-900': getUnitOnHex(hex.id)?.playerId === 0,
-								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 1,
+								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 0,
+								'text-red-900': getUnitOnHex(hex.id)?.playerId === 1,
 							}"
 							x-text="getUnitOnHex(hex.id)?.value">
 						</span>
 						<span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-2 text-blue-500">🛡️</span>
-						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction + '⚡'"></span>
+						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs font-bold absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
-				<div class="hex-unitstat fixed left-2 bottom-25 text-sm text-gray-400" x-show="hex.unitstat" x-html="Object.entries(getUnitOnHex(hex.id) || {}).map(x => x.join(': ')).join('<br>')"></div>
+				<div class="hex-unitstat fixed left-2 bottom-25 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="Object.entries(getUnitOnHex(hex.id) || {}).map(x => x.join(': ')).join('<br>')"></div>
 			</div>
 		</template>
 	</div>
@@ -74,8 +74,9 @@
 	<div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 p-4 bg-slate-700 rounded shadow-lg text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="gameState === 'SETUP_ROLL'">
-			<button @click="rollInitialDice(0)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2" x-show="!players[0].initialRollDone">Roll Player 1 (Red) Dice</button>
-			<button @click="rollInitialDice(1)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone">Roll Player 2 (Blue) Dice</button>
+			<button @click="rollInitialDice(0)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2" x-show="!players[0].initialRollDone">Roll Player 1 Dice</button>
+			<button @click="rollInitialDice(1)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone">Roll Player 2 Dice</button>
+			<button @click="resetGame({isP2AI: true});rollInitialDice(1)" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone">Play Against AI</button>
 		</div>
 		<div x-show="gameState === 'SETUP_REROLL'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
@@ -115,7 +116,9 @@
 	<div x-cloak x-show="gameState === 'GAME_OVER'" class="mb-2 py-2 px-4 bg-green-700 rounded shadow-lg text-center">
 		<h2 class="text-2xl mb-2">Game Over!</h2>
 		<p x-text="winnerMessage"></p>
-		<button @click="resetGame()" class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">Play Again</button>
+		<button class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
+			@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})" 
+		>Play Again</button>
 	</div>
 
 	<!-- Action Mode Info -->
