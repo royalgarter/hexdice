@@ -47,7 +47,7 @@
 					:class="hexColor(hex)"
 					:style="hexStyle(hex, 1)"
 					:data-id="hex.id"
-					@mouseenter="calculateDefenderEffectiveArmor(hex.id);hex.unitstat=true" @mouseleave="hex.unitstat=false"
+					@mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false"
 					@click="handleHexClick(hex.id)"
 				>
 					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
@@ -65,7 +65,7 @@
 						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs font-bold absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
-				<div class="hex-unitstat fixed left-2 bottom-25 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="Object.entries(getUnitOnHex(hex.id) || {}).map(x => x.join(': ')).join('<br>')"></div>
+				<div class="hex-unitstat fixed left-2 bottom-25 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calculateUIDiceStat(hex.id)"></div>
 			</div>
 		</template>
 	</div>

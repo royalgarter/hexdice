@@ -37,7 +37,7 @@ function game() {
 	return {
 		// --- VARIABLES ---
 		rules: {
-			dicePerPlayer: 6, // For 2 players
+			dicePerPlayer: 8, // For 2 players
 			maxRerolls: 2,    // 1/3 of 6
 		},
 		hexes: [],
@@ -84,12 +84,13 @@ function game() {
 			this.currentPlayerIndex = 0;
 			this.selectedUnitHexId = null;
 			this.selectedDieToDeploy = null;
+			this.actionMode = null;
 			this.validMoves = [];
 			this.validMerges = [];
 			this.validTargets = [];
 			this.diceToReroll = [];
-			this.actionMode = null;
-			//this.messageLog = []; // Keep log or clear? Let's keep for now.
+			this.messageLog = [];
+
 			this.addLog(`New game started. Player 1 (Red) rolls first. isP2AI=${!!opts?.isP2AI}`);
 		},
 
@@ -734,6 +735,38 @@ function game() {
 				.filter(hex => !this.getUnitOnHex(hex.id)) // Ensure hex is empty
 				.map(hex => hex.id);
 		},
+		calculateDefenderEffectiveArmor(defenderHexId) {
+			const defenderUnit = this.getUnitOnHex(defenderHexId);
+			if (!defenderUnit) return 0; // Or some error state
+
+			let effectiveArmor = defenderUnit.currentArmor;
+			if (defenderUnit.isGuarding) effectiveArmor++;
+
+			// Dice 6 adjacent buff - check neighbors of defender
+			this.getNeighbors(this.getHex(defenderHexId)).forEach(neighbor => {
+				const neighborUnit = this.getUnitOnHex(neighbor.id);
+				if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
+					effectiveArmor++;
+				}
+			});
+			effectiveArmor -= defenderUnit.armorReduction;
+
+			defenderUnit.effectiveArmor = Math.max(0, effectiveArmor);
+			return defenderUnit.effectiveArmor;
+		},
+		calculateUIDiceStat(hexId) {
+			const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
+			const unit = this.getUnitOnHex(hexId);
+
+			if (!unit || unit.isDeath) return;
+
+			this.calculateDefenderEffectiveArmor(hexId);
+
+			return Object.entries(unit)
+				.filter(([k ,v]) => FIELDS.includes(k))
+				.map(x => x.join(': '))
+				.join('<br>');
+		},
 
 		// --- ACTIONS ---
 		performMove(unitHexId, targetHexId) {
@@ -920,25 +953,6 @@ function game() {
 		},
 
 		// --- COMBAT ---
-		calculateDefenderEffectiveArmor(defenderHexId) {
-			const defenderUnit = this.getUnitOnHex(defenderHexId);
-			if (!defenderUnit) return 0; // Or some error state
-
-			let effectiveArmor = defenderUnit.currentArmor;
-			if (defenderUnit.isGuarding) effectiveArmor++;
-
-			// Dice 6 adjacent buff - check neighbors of defender
-			this.getNeighbors(this.getHex(defenderHexId)).forEach(neighbor => {
-				const neighborUnit = this.getUnitOnHex(neighbor.id);
-				if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
-					effectiveArmor++;
-				}
-			});
-			effectiveArmor -= defenderUnit.armorReduction;
-
-			defenderUnit.effectiveArmor = Math.max(0, effectiveArmor);
-			return defenderUnit.effectiveArmor;
-		},
 		handleCombat(attackerHexId, defenderHexId, combatType, attackerMovesAfterCombat = false) { // combatType: 'MELEE', 'RANGED', 'SPECIAL'
 			const attackerUnit = this.getUnitOnHex(attackerHexId);
 			const defenderUnit = this.getUnitOnHex(defenderHexId);
