@@ -91,6 +91,11 @@ function game() {
 			this.diceToReroll = [];
 			this.messageLog = [];
 
+			if (this.debug?.autoPlay) {
+				this.players.forEach(p => p.isAI = true);
+				this.addLog(`Autoplay game started`);
+			}
+
 			this.addLog(`New game started. Player 1 (Red) rolls first. isP2AI=${!!opts?.isP2AI}`);
 		},
 
@@ -346,7 +351,7 @@ function game() {
 			this.resetTurnActionsForAllUnits();
 			this.addLog("All units deployed. Player 1's turn.");
 
-			if (this.currentPlayerIndex === 1 && this.players[this.currentPlayerIndex].isAI) {
+			if (this.players[this.currentPlayerIndex].isAI) {
 				this.addLog("Player 2 (AI) turn.");
 				setTimeout(() => this.performAITurn(), 500); // Delay AI for a moment
 			} else if (this.debug?.autoPlay) {
@@ -354,30 +359,7 @@ function game() {
 			}
 		},
 		autoPlay() {
-			let player = this.players[this.currentPlayerIndex];
-			let unit = player.dice.random();
-
-			let actions = (unit.distance > 0) ? 'MOVE,REROLL,GUARD' : 'REROLL,GUARD';
-			let trymax=10, valid, target, action;
-
-			while (!target && (--trymax > 0)) {
-				action = actions.split(',').random();
-				switch (action) {
-					case 'MOVE':
-						this.selectUnit(unit.hexId);
-						target = this.calcValidMoves(unit.hexId).random();
-						this.initiateAction('MOVE')
-					break;
-					default:
-						valid = this.calcValidMoves(unit.hexId, action);
-						target = (valid?.possibleMoves || valid || []).random();
-						if (target) this.performAction(action, unit.hexId);
-				}
-			}
-
-			if (target) this.completeAction(target);
-
-			console.dir({player, unit, action, valid, target, trymax});
+			setTimeout(() => this.performAITurn(), 1e3);
 		},
 		
 		/* --- GAMEPLAY --- */
@@ -1173,7 +1155,7 @@ function game() {
 
 			this.checkWinConditions(); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
 
-			if (this.gameState === 'PLAYER_TURN' && this.currentPlayerIndex === 1 && this.players[this.currentPlayerIndex].isAI) {
+			if (this.gameState === 'PLAYER_TURN' && this.players[this.currentPlayerIndex].isAI) {
 				setTimeout(() => this.performAITurn(), 500);
 			} else if (this.debug?.autoPlay) {
 				this.autoPlay();
@@ -1239,15 +1221,16 @@ function game() {
 
 		/* --- AI OPPONENT (Player 2) --- */
 		performAITurn_1() {
-			if (this.gameState !== 'PLAYER_TURN' || this.currentPlayerIndex !== 1) return;
+			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 			this.addLog("AI (Player 2) is thinking...");
 
-			const aiPlayer = this.players[1];
+			const aiPlayer = this.players[this.currentPlayerIndex];
+			const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-			const opponentUnits = this.players[0].dice.filter(d => d.isDeployed && !d.isDeath);
+			const opponentUnits = otherPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
 			const aiBaseHexId = aiPlayer.baseHexId;
-			const opponentBaseHexId = this.players[0].baseHexId;
+			const opponentBaseHexId = otherPlayer.baseHexId;
 
 			// Simple AI Strategy:
 			// 1. If any unit can attack an enemy and win, do it. Prioritize units closer to opponent base?
@@ -1373,15 +1356,16 @@ function game() {
 			this.endTurn();
 		},
 		performAITurn_2(forceUnits) {
-			if (this.gameState !== 'PLAYER_TURN' || this.currentPlayerIndex !== 1) return;
+			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 			this.addLog("AI (Player 2) is planning its turn...");
 
-			const aiPlayer = this.players[1];
+			const aiPlayer = this.players[this.currentPlayerIndex];
+			const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
 			const aiUnits = forceUnits || aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-			const opponentUnits = this.players[0].dice.filter(d => d.isDeployed && !d.isDeath);
+			const opponentUnits = otherPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
 			const aiBaseHexId = aiPlayer.baseHexId;
-			const opponentBaseHexId = this.players[0].baseHexId;
+			const opponentBaseHexId = otherPlayer.baseHexId;
 
 			/* --- Improved AI Strategy --- */
 			// Evaluate the board state
