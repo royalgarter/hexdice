@@ -15,11 +15,11 @@ const AXES = [
 ];
 
 const UNIT_STATS = {
-	1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 4, movement: '|' },
+	1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 3, movement: '|' },
 	2: { name: "Bishop", armor: 2, attack: 3, range: 0, distance: 3, movement: 'X' },
 	3: { name: "Knight", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L' },
 	4: { name: "Rook", armor: 4, attack: 5, range: 0, distance: 2, movement: '+' },
-	5: { name: "Archer", armor: 5, attack: 6, range: "2-3", distance: 1, movement: '*' },
+	5: { name: "Archer", armor: 5, attack: 6, range: "2-2", distance: 1, movement: '*' },
 	6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: '0' },
 };
 
@@ -569,15 +569,32 @@ function game() {
 			if (!attackerUnit || attackerUnit.value !== 5 || !attackerHex) return [];
 
 			let targets = [];
+
+			let isEnemyAdjacent = false;
+
+			for (let neighborHex of this.getNeighbors(attackerHex)) {
+				if (neighborHex) {
+					const targetUnit = this.getUnitOnHex(neighborHex.id);
+					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
+						isEnemyAdjacent = true;
+						break;
+					}
+				}
+			});
+
+			if (isEnemyAdjacent) return [];
+
 			this.hexes.forEach(potentialTargetHex => {
 				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
 				
 				const targetUnit = this.getUnitOnHex(potentialTargetHex.id);
 				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) { // Is an enemy unit
 					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
+
+					let [min, max] = attackerUnit.range.split('-').map(parseInt);
 					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
 					// More robust line of sight would check for blocking units/terrain. Not implemented here.
-					if (dist >= 2 && dist <= 3) {
+					if (dist >= min && dist <= max) {
 						// Check Line of Sight: Iterate through hexes between attacker and target
 						let blocked = false;
 						const stepQ = (potentialTargetHex.q - attackerHex.q) / dist;
