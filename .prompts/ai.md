@@ -1,3 +1,17 @@
+Implement function performBraveryCharge() for Dice 1 only
+
+* ##### **Dice 1: Bravery Charge**
+
+  * Action: Choose one of your Dice 1 units, must **declare "Bravery Charge"** action. Otherwise, it's a normal move.  
+    * Movement: The Dice 1 unit must **move forward** up to its full movement distance (3 steps) during this action.  
+    * Target: The Dice 1 unit must end its movement **adjacent to at least a single enemy unit** that has an **Effective Armor** value of **6 or higher**. An enemy unit's Effective Armor is its base Armor value plus any bonuses from Guard Mode or terrain, minus any Armor Reduction tokens.  
+    * Effect: If the target condition is met:  
+      - The attacking **Dice 1** unit is **immediately removed** from the board.  
+      - The targeted enemy unit has its **Armor value reduced by 6**. If the enemy unit's Armor value is **reduced to 0 or less** by this effect, that enemy unit is also **immediately removed** from the board. Otherwise, the enemy unit survives with its reduced Armor.  
+    * Note: This action bypasses all standard combat rules (e.g., no Attack vs. Armor comparison, no Armor reduction based on failed attacks). It is a direct, specified effect.  
+    * Action Complete: After executing a Bravery Charge, the player's turn ends.
+
+---
 Please change the code below in the following way: "Improve the AI Strategy. make it thinking more about overall context (friendly unit, threat, friendly units formation ...)"
 
 Okay, I understand. I will try to improve the AI's strategy by considering the game state more comprehensively. Here's how I'll approach it:

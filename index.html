@@ -150,6 +150,10 @@
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" 
 				@click="initiateAction('SPECIAL_ATTACK')"
 			>Spl Atk</button>
+			<button class="action-button p-1 text-gray-100 bg-orange-500 disabled:opacity-30 hover:opacity-80" 
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'BRAVE_CHARGE')" 
+				@click="initiateAction('BRAVE_CHARGE')"
+			>Brave Charge</button>
 			<button class="action-button p-1 text-gray-100 bg-hexmerge disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
 				@click="initiateAction('MERGE')"

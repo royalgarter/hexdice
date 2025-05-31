@@ -466,6 +466,12 @@ function game() {
 					this.addLog("No valid targets for Special Attack.");
 					// this.cancelAction();
 				}
+			} else if (actionType === 'BRAVE_CHARGE') {
+				this.validMoves = this.calculateValidBraveChargeMoves(this.selectedUnitHexId);
+				 if (this.validMoves.length === 0) {
+					this.addLog("No valid targets for Brave Charge.");
+					// this.cancelAction();
+				}
 			}
 		},
 		actionModeMessage() {
@@ -491,6 +497,11 @@ function game() {
 			const action = this.actionMode;
 			this.actionMode = null; // Clear action mode first
 
+			if (action == 'BRAVE_CHARGE_TARGET') {
+				this.performBraveCharge(this.selectedUnitHexId, targetHexId);
+				this.endTurn();
+			}
+
 			if (this.selectedUnitHexId == targetHexId) {
 				this.deselectUnit();
 				return;
@@ -502,7 +513,15 @@ function game() {
 					// New merge unit could take action if sum > 6
 				} else {
 					this.performMove(this.selectedUnitHexId, targetHexId);
-					this.endTurn();
+
+					if (action == 'BRAVE_CHARGE') {
+						this.actionMode = 'BRAVE_CHARGE_TARGET';
+						this.selectedUnitHexId = targetHexId;
+						this.validTargets = this.calculateValidSpecialAttackTargets(this.selectedUnitHexId);
+						this.addLog("Now choose a target of Dice 1 Brave Change");
+					} else {
+						this.endTurn();
+					}
 				}
 				
 				return;
@@ -532,12 +551,13 @@ function game() {
 			if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
 
 			switch(actionType) {
-				case 'MOVE': return true; // Basic check, specific unit limitations handled in calculateValidMoves
+				case 'MOVE': return true;
 				case 'REROLL': return true;
 				case 'GUARD': return true;
 				case 'RANGED_ATTACK': return unit.value === 5;
 				case 'SPECIAL_ATTACK': return unit.value === 6;
-				case 'MERGE': return true; // Can always attempt to move to a friendly unit
+				case 'BRAVE_CHARGE': return unit.value === 1;
+				case 'MERGE': return true;
 				default: return false;
 			}
 		},
@@ -571,7 +591,6 @@ function game() {
 			let targets = [];
 
 			let isEnemyAdjacent = false;
-
 			for (let neighborHex of this.getNeighbors(attackerHex)) {
 				if (neighborHex) {
 					const targetUnit = this.getUnitOnHex(neighborHex.id);
@@ -580,8 +599,7 @@ function game() {
 						break;
 					}
 				}
-			});
-
+			}
 			if (isEnemyAdjacent) return [];
 
 			this.hexes.forEach(potentialTargetHex => {
@@ -621,14 +639,24 @@ function game() {
 		calculateValidSpecialAttackTargets(attackerHexId) {
 			const attackerUnit = this.getUnitOnHex(attackerHexId);
 			const attackerHex = this.getHex(attackerHexId);
-			if (!attackerUnit || attackerUnit.value !== 6 || !attackerHex) return [];
+
+			if (!attackerUnit || ![1, 6].includes(attackerUnit.value) || !attackerHex) return [];
 
 			let targets = [];
 			this.getNeighbors(attackerHex).forEach(neighborHex => {
 				if (neighborHex) {
 					const targetUnit = this.getUnitOnHex(neighborHex.id);
 					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
-						targets.push(neighborHex.id);
+
+						if (attackerUnit.value == 1) {
+							const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(neighborHex.id);
+
+							if (defenderEffectiveArmor >= 6) {
+								targets.push(neighborHex.id);
+							}
+						} else {
+							targets.push(neighborHex.id);
+						}
 					}
 				}
 			});
@@ -799,6 +827,34 @@ function game() {
 				.filter(([k ,v]) => FIELDS.includes(k))
 				.map(x => x.join(': '))
 				.join('<br>');
+		},
+		calculateValidBraveChargeMoves(unitHexId) {
+			const unit = this.getUnitOnHex(unitHexId);
+			const startHex = this.getHex(unitHexId);
+			if (!unit || !startHex) return [];
+
+			let possibleMoves = [];
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
+			for (let i = 1; i <= unit.distance; i++) {
+				let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i);
+
+				if (this.getUnitOnHex(hex.id)) continue;
+
+				let foundEnemy = this.getNeighbors(hex).find(neighborHex => {
+					const targetUnit = this.getUnitOnHex(neighborHex.id);
+
+					const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(neighborHex.id);
+					if (targetUnit && targetUnit.playerId !== unit.playerId && defenderEffectiveArmor >= 6) {
+						return true;
+					}
+
+					return false;
+				})
+
+				if (foundEnemy) possibleMoves.push(hex?.id);
+			}
+
+			return possibleMoves;
 		},
 
 		// --- ACTIONS ---
@@ -988,6 +1044,47 @@ function game() {
 			this.deselectUnit();
 			this.checkWinConditions();
 		},
+		performBraveCharge(attackerHexId, targetHexId) {
+			const attackerUnit = this.getUnitOnHex(attackerHexId);
+			const defenderUnit = this.getUnitOnHex(targetHexId);
+			const attackerHex = this.getHex(attackerHexId);
+			const defenderHex = this.getHex(targetHexId);
+
+			if (!attackerUnit || !defenderUnit || !attackerHex || !defenderHex) {
+				this.addLog("Brave Charge failed: Invalid units or hexes.");
+				this.deselectUnit();
+				return;
+			}
+
+			if (attackerUnit.value !== 1) {
+				this.addLog("Brave Charge failed: Only Dice 1 units can perform this action.");
+				this.deselectUnit();
+				return;
+			}
+
+			const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
+			if (distance !== 1) {
+				this.addLog("Brave Charge failed: Target must be adjacent.");
+				this.deselectUnit();
+				return;
+			}
+
+			const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(targetHexId);
+			if (defenderEffectiveArmor < 6) {
+				this.addLog("Brave Charge failed: Target unit must have Effective Armor 6 or higher.");
+				this.deselectUnit();
+				return;
+			}
+
+			this.addLog(`Dice 1 at (${attackerHex.q},${attackerHex.r}) performs Brave Charge on unit at (${defenderHex.q},${defenderHex.r}).`);
+
+			// Effect: Remove the Dice 1 unit
+			this.removeUnit(attackerHexId);
+			// Effect: Reduce target enemy unit's armor by 6
+			this.applyDamage(targetHexId, 6); // Apply 6 damage, handle unit removal if armor <= 0
+
+			this.endTurn(); // End the player's turn after the charge
+		},
 
 		// --- COMBAT ---
 		handleCombat(attackerHexId, defenderHexId, combatType, attackerMovesAfterCombat = false) { // combatType: 'MELEE', 'RANGED', 'SPECIAL'
@@ -1006,8 +1103,7 @@ function game() {
 			if (defenderUnit.armorReduction >= UNIT_STATS[defenderUnit.value].armor || attackerUnit.attack >= defenderEffectiveArmor) { // Attacker wins
 				this.addLog("Attacker wins! Defender is defeated.");
 				// Remove defender
-				// this.players[defenderUnit.playerId].dice = this.players[defenderUnit.playerId].dice.filter(d => d.id !== defenderUnit.id);
-				this.players[defenderUnit.playerId].dice.find(d => d.id == defenderUnit.id).isDeath = true;
+				this.removeUnit(defenderHexId);
 				defenderHex.unitId = null;
 
 				if (combatType === 'MELEE' || (combatType === 'SPECIAL' && attackerUnit.value === 6)) {
@@ -1023,8 +1119,11 @@ function game() {
 
 			} else { // Attacker fails
 				this.addLog("Attacker fails! Defender's Armor reduced by 1.");
-				defenderUnit.armorReduction++;
-				defenderUnit.currentArmor = UNIT_STATS[defenderUnit.value].armor; // Reset base armor for clarity if needed, reduction is separate
+
+				this.applyDamage(defenderHexId, 1);
+
+				// defenderUnit.armorReduction++;
+				// defenderUnit.currentArmor = UNIT_STATS[defenderUnit.value].armor; // Reset base armor for clarity if needed, reduction is separate
 				
 				// If armor reaches 0 conceptually (base_armor - reduction <= 0) it's defeated on next hit rule.
 				// The rule is "If a unit's Armor reaches 0, the next attack it suffers, regardless of the attacker's Attack value, automatically defeats it."
@@ -1038,6 +1137,20 @@ function game() {
 			// If attack failed, unit stays selected for potential other actions if this was not its main action
 			// But for this game, Move/Attack is one action. So, deselect.
 			this.deselectUnit(); 
+		},
+		removeUnit(hexId) {
+			const unit = this.getUnitOnHex(hexId);
+			if (!unit) return;
+			this.addLog(`Dice ${unit.value} at (${this.getHex(hexId).q},${this.getHex(hexId).r}) is removed.`);
+			this.players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
+			this.getHex(hexId).unitId = null; // Clear hex
+		},
+		applyDamage(hexId, damage=1) {
+			const unit = this.getUnitOnHex(hexId);
+			if (!unit) return;
+			unit.armorReduction += damage;
+			this.calculateDefenderEffectiveArmor(hexId); // Recalculate effective armor
+			if ((damage > 1) && unit.effectiveArmor <= 0) this.removeUnit(hexId); // Remove if armor drops to 0 or less
 		},
 
 		// --- TURN MANAGEMENT & WIN CONDITIONS ---
