@@ -399,11 +399,11 @@ function game() {
 			this.validMerges = this.calcValidMoves(this.selectedUnitHexId, 'MERGE');
 			this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 			
-			if (unit.range == '2-3') {
+			if (unit.value == 5) {
 				this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);	
 			}
 
-			if (unit.range == 1) {
+			if (unit.value == 6) {
 				this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 			}
 
@@ -457,7 +457,7 @@ function game() {
 		},
 		actionModeMessage() {
 			if (this.actionMode === 'MOVE') return "Select a destination hex for your unit.";
-			if (this.actionMode === 'RANGED_ATTACK') return "Select an enemy unit to target (2-3 hexes away).";
+			if (this.actionMode === 'RANGED_ATTACK') return "Select an ranged enemy unit to target.";
 			if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 			if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 			return "";
@@ -511,12 +511,12 @@ function game() {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
 				// New merge unit could take action if sum > 6
 				return;
-			} else if (unit.range == '2-3' && this.validTargets.includes(targetHexId)) {
+			} else if (unit.value == 5 && this.validTargets.includes(targetHexId)) {
 				this.performRangedAttack(this.selectedUnitHexId, targetHexId);
 				this.endTurn();
 				return;
-			} else if (unit.range == 1 && this.validTargets.includes(targetHexId)) {
-				this.performSpecialAttack(this.selectedUnitHexId, targetHexId);
+			} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
+				this.performComandConquer(this.selectedUnitHexId, targetHexId);
 				this.endTurn();
 				return;	
 			}
@@ -737,7 +737,7 @@ function game() {
 			this.deselectUnit();
 			this.checkWinConditions();
 		},
-		performSpecialAttack(attackerHexId, targetHexId) {
+		performComandConquer(attackerHexId, targetHexId) {
 			this.addLog(`Dice 6 at (${this.getHex(attackerHexId).q},${this.getHex(attackerHexId).r}) performs Special Attack on unit at (${this.getHex(targetHexId).q},${this.getHex(targetHexId).r}).`);
 			this.handleCombat(attackerHexId, targetHexId, 'SPECIAL');
 			const attackerUnit = this.getUnitOnHex(attackerHexId); // Attacker might have moved if Dice 6 wins
@@ -1219,11 +1219,11 @@ function game() {
 			this.addLog(`Game Over: ${this.winnerMessage}`);
 		},
 
-		/* --- AI OPPONENT (Player 2) --- */
+		/* --- AI OPPONENT --- */
 		performAITurn_1() {
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-			this.addLog("AI (Player 2) is thinking...");
+			this.addLog("AI is thinking...");
 
 			const aiPlayer = this.players[this.currentPlayerIndex];
 			const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
@@ -1266,7 +1266,7 @@ function game() {
 						// Simple: attack the first valid target
 						const targetHexId = targets[0];
 						this.addLog(`AI (Dice 6) performs Special Attack on hex ${targetHexId}`);
-						this.performSpecialAttack(unit.hexId, targetHexId);
+						this.performComandConquer(unit.hexId, targetHexId);
 						actionTaken = true;
 						break; // AI performs one action per turn for now
 					}
@@ -1358,7 +1358,7 @@ function game() {
 		performAITurn_2(forceUnits) {
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-			this.addLog("AI (Player 2) is planning its turn...");
+			this.addLog("AI is planning its turn...");
 
 			const aiPlayer = this.players[this.currentPlayerIndex];
 			const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
@@ -1416,7 +1416,7 @@ function game() {
 							const specialTargets = this.calcValidSpecialAttackTargets(defendingUnit.hexId);
 							if (specialTargets.includes(attackingUnit.hexId)) {
 								this.addLog(`AI: Eliminating high-value threat - performing Special Attack on hex ${attackingUnit.hexId}.`);
-								this.performSpecialAttack(defendingUnit.hexId, attackingUnit.hexId);
+								this.performComandConquer(defendingUnit.hexId, attackingUnit.hexId);
 								actionExecuted = true;
 								break;
 							}
@@ -1522,7 +1522,7 @@ function game() {
 						this.performRangedAttack(bestAttackOrMove.unitHexId, bestAttackOrMove.targetHexId);
 					} else if (bestAttackOrMove.type === 'SPECIAL_ATTACK') {
 						this.addLog(`AI: Performing Special Attack on unit at hex ${bestAttackOrMove.targetHexId} with unit at hex ${bestAttackOrMove.unitHexId}.`);
-						this.performSpecialAttack(bestAttackOrMove.unitHexId, bestAttackOrMove.targetHexId);
+						this.performComandConquer(bestAttackOrMove.unitHexId, bestAttackOrMove.targetHexId);
 					}
 					actionExecuted = true;
 				}
@@ -1560,8 +1560,57 @@ function game() {
 			this.deselectUnit(); // Ensure unit is deselected before ending turn
 			this.endTurn();
 		},
+		performAITurn_3() {
+			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
+
+			this.addLog("AI is acting randomly...");
+
+			const aiPlayer = this.players[this.currentPlayerIndex];
+			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+
+			if (aiUnits.length === 0) {
+				this.addLog("AI has no units that can act. Ending turn.");
+				this.endTurn();
+				return;
+			}
+
+			const unitToActWith = aiUnits.random();
+			this.selectedUnitHexId = unitToActWith.hexId;
+
+			const possibleActions = ['MOVE', 'REROLL', 'GUARD', 'MERGE'];
+			if (unitToActWith.value === 5) possibleActions.push('RANGED_ATTACK');
+			if (unitToActWith.value === 6) possibleActions.push('SPECIAL_ATTACK');
+			if (unitToActWith.value === 1) possibleActions.push('BRAVE_CHARGE');
+
+			// Filter actions the unit *can* perform based on game rules (not just strategy)
+			const validActions = possibleActions.filter(action => this.canPerformAction(unitToActWith.hexId, action));
+
+			if (validActions.length === 0) {
+				this.addLog(`AI (Dice ${unitToActWith.value}) at hex ${unitToActWith.hexId} has no valid actions. Ending turn.`);
+				this.deselectUnit();
+				this.endTurn();
+				return;
+			}
+
+			const chosenAction = validActions.random();
+			this.addLog(`AI (Dice ${unitToActWith.value}) at hex ${unitToActWith.hexId} chooses action: ${chosenAction}`);
+
+			this.initiateAction(chosenAction); // This calculates valid targets/moves
+
+			let targetHexId = null;
+			if (this.validMoves.length > 0 && ['MOVE', 'MERGE', 'BRAVE_CHARGE'].includes(chosenAction)) {
+				targetHexId = this.validMoves.random();
+			} else if (this.validTargets.length > 0 && ['RANGED_ATTACK', 'SPECIAL_ATTACK'].includes(chosenAction)) {
+				targetHexId = this.validTargets.random();
+			}
+
+			if (targetHexId !== null) {
+				this.completeAction(targetHexId); // Perform the action with the chosen target
+			}
+			// If no target found for a target-based action, the action fails gracefully, and the turn ends.
+		},
 		performAITurn() {
-			let choice = [1, 2].random();
+			let choice = [1, 2, 3].random();
 			this['performAITurn_' + choice]();
 		},
 
