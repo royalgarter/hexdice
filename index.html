@@ -65,7 +65,7 @@
 						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs font-bold absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
-				<div class="hex-unitstat fixed left-2 bottom-25 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calculateUIDiceStat(hex.id)"></div>
+				<div class="hex-unitstat fixed left-2 bottom-25 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calcUIDiceStat(hex.id)"></div>
 			</div>
 		</template>
 	</div>

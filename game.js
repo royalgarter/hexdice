@@ -35,7 +35,7 @@ Array.prototype.random = function () { return this[Math.floor((Math.random() * t
 
 function game() {
 	return {
-		// --- VARIABLES ---
+		/* --- VARIABLES --- */
 		rules: {
 			dicePerPlayer: 8, // For 2 players
 			maxRerolls: 2,    // 1/3 of 6
@@ -64,7 +64,7 @@ function game() {
 			autoPlay: false,
 		},
 		
-		// --- INITIALIZATION ---
+		/* --- INITIALIZATION --- */
 		init() {
 			this.generateHexGrid(R);
 			this.determineBaseLocations();
@@ -94,7 +94,7 @@ function game() {
 			this.addLog(`New game started. Player 1 (Red) rolls first. isP2AI=${!!opts?.isP2AI}`);
 		},
 
-		// --- HEX GRID ---
+		/* --- HEX GRID --- */
 		generateHexGrid(radius) {
 			this.hexes = [];
 			let id = 0;
@@ -146,7 +146,7 @@ function game() {
 			return AXES.map(dir => this.getHexByQR(hex.q + dir.q, hex.r + dir.r)).filter(Boolean);
 		},
 		
-		// --- UI STYLING ---
+		/* --- UI STYLING --- */
 		gridContainerStyle() {
 			const allX = this.hexes.map(h => h.visualX);
 			const allY = this.hexes.map(h => h.visualY);
@@ -171,7 +171,7 @@ function game() {
 			else if (this.validMoves.includes(hex.id)) cls = 'bg-hexmove';
 			else if (this.validMerges.includes(hex.id)) cls = 'bg-hexmerge';
 			else if (this.validTargets.includes(hex.id)) cls = 'bg-hextarget';
-			else if (this.gameState === 'SETUP_DEPLOY' && this.calculateValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
+			else if (this.gameState === 'SETUP_DEPLOY' && this.calcValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
 				cls = 'bg-hexdeploy';
 			}
 
@@ -193,7 +193,7 @@ function game() {
 			`;
 		},
 
-		// --- SETUP ---
+		/* --- SETUP --- */
 		setupStatusMessage() {
 			if (this.gameState === 'SETUP_ROLL') return "Roll initial dice for both players.";
 			if (this.gameState === 'SETUP_REROLL') return `Player ${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Reroll Phase.`;
@@ -288,7 +288,7 @@ function game() {
 					this.players.forEach((player, playerIdx) => {
 						player.dice.forEach((dice, diceIdx) => {
 							this.selectDieToDeploy(diceIdx);
-							this.handleHexClick(this.calculateValidDeploymentHexes(playerIdx).random());
+							this.handleHexClick(this.calcValidDeploymentHexes(playerIdx).random());
 						});
 					});
 				}
@@ -298,7 +298,6 @@ function game() {
 			if (this.players[this.currentPlayerIndex].dice[diceIndex].isDeployed) return;
 			this.selectedDieToDeploy = diceIndex;
 		},
-		
 		deployUnit(hexId) {
 			if (this.selectedDieToDeploy === null) {
 				this.addLog("Select a die to deploy first.");
@@ -310,7 +309,7 @@ function game() {
 
 			if (!targetHex || dieToDeploy.isDeployed) return;
 
-			const validDeploymentHexes = this.calculateValidDeploymentHexes(this.currentPlayerIndex);
+			const validDeploymentHexes = this.calcValidDeploymentHexes(this.currentPlayerIndex);
 			if (!validDeploymentHexes.includes(hexId)) {
 				this.addLog("Invalid deployment hex. Deploy on your base or adjacent hexes.");
 				return;
@@ -366,11 +365,11 @@ function game() {
 				switch (action) {
 					case 'MOVE':
 						this.selectUnit(unit.hexId);
-						target = this.calculateValidMoves(unit.hexId).random();
+						target = this.calcValidMoves(unit.hexId).random();
 						this.initiateAction('MOVE')
 					break;
 					default:
-						valid = this.calculateValidMoves(unit.hexId, action);
+						valid = this.calcValidMoves(unit.hexId, action);
 						target = (valid?.possibleMoves || valid || []).random();
 						if (target) this.performAction(action, unit.hexId);
 				}
@@ -381,7 +380,7 @@ function game() {
 			console.dir({player, unit, action, valid, target, trymax});
 		},
 		
-		// --- GAMEPLAY ---
+		/* --- GAMEPLAY --- */
 		handleHexClick(hexId) {
 			if (this.gameState === 'SETUP_DEPLOY') {
 				this.deployUnit(hexId);
@@ -415,15 +414,15 @@ function game() {
 			this.selectedUnitHexId = hexId;
 			this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 			this.validTargets = []; // Will be calculated if attack action is chosen
-			this.validMerges = this.calculateValidMoves(this.selectedUnitHexId, 'MERGE');
+			this.validMerges = this.calcValidMoves(this.selectedUnitHexId, 'MERGE');
 			this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 			
 			if (unit.range == '2-3') {
-				this.validTargets = this.calculateValidRangedTargets(this.selectedUnitHexId);	
+				this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);	
 			}
 
 			if (unit.range == 1) {
-				this.validTargets = this.calculateValidSpecialAttackTargets(this.selectedUnitHexId);
+				this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 			}
 
 			if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
@@ -449,25 +448,25 @@ function game() {
 			// this.validTargets = [];
 
 			if (actionType === 'MOVE' || actionType === 'MERGE') {
-				this.validMoves = this.calculateValidMoves(this.selectedUnitHexId, actionType === 'MERGE');
+				this.validMoves = this.calcValidMoves(this.selectedUnitHexId, actionType === 'MERGE');
 				if (this.validMoves.length === 0) {
 					this.addLog("No valid moves for this unit.");
 					// this.cancelAction();
 				}
 			} else if (actionType === 'RANGED_ATTACK') {
-				this.validTargets = this.calculateValidRangedTargets(this.selectedUnitHexId);
+				this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
 				 if (this.validTargets.length === 0) {
 					this.addLog("No valid targets for Ranged Attack.");
 					// this.cancelAction();
 				}
 			} else if (actionType === 'SPECIAL_ATTACK') {
-				this.validTargets = this.calculateValidSpecialAttackTargets(this.selectedUnitHexId);
+				this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 				 if (this.validTargets.length === 0) {
 					this.addLog("No valid targets for Special Attack.");
 					// this.cancelAction();
 				}
 			} else if (actionType === 'BRAVE_CHARGE') {
-				this.validMoves = this.calculateValidBraveChargeMoves(this.selectedUnitHexId);
+				this.validMoves = this.calcValidBraveChargeMoves(this.selectedUnitHexId);
 				 if (this.validMoves.length === 0) {
 					this.addLog("No valid targets for Brave Charge.");
 					// this.cancelAction();
@@ -500,6 +499,7 @@ function game() {
 			if (action == 'BRAVE_CHARGE_TARGET') {
 				this.performBraveCharge(this.selectedUnitHexId, targetHexId);
 				this.endTurn();
+				return;
 			}
 
 			if (this.selectedUnitHexId == targetHexId) {
@@ -517,7 +517,7 @@ function game() {
 					if (action == 'BRAVE_CHARGE') {
 						this.actionMode = 'BRAVE_CHARGE_TARGET';
 						this.selectedUnitHexId = targetHexId;
-						this.validTargets = this.calculateValidSpecialAttackTargets(this.selectedUnitHexId);
+						this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 						this.addLog("Now choose a target of Dice 1 Brave Change");
 					} else {
 						this.endTurn();
@@ -582,282 +582,7 @@ function game() {
 			this.endTurn();
 		},
 
-		// --- CALCULATE ---
-		calculateValidRangedTargets(attackerHexId) {
-			const attackerUnit = this.getUnitOnHex(attackerHexId);
-			const attackerHex = this.getHex(attackerHexId);
-			if (!attackerUnit || attackerUnit.value !== 5 || !attackerHex) return [];
-
-			let targets = [];
-
-			let isEnemyAdjacent = false;
-			for (let neighborHex of this.getNeighbors(attackerHex)) {
-				if (neighborHex) {
-					const targetUnit = this.getUnitOnHex(neighborHex.id);
-					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
-						isEnemyAdjacent = true;
-						break;
-					}
-				}
-			}
-			if (isEnemyAdjacent) return [];
-
-			this.hexes.forEach(potentialTargetHex => {
-				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
-				
-				const targetUnit = this.getUnitOnHex(potentialTargetHex.id);
-				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) { // Is an enemy unit
-					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
-
-					let [min, max] = attackerUnit.range.split('-').map(parseInt);
-					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
-					// More robust line of sight would check for blocking units/terrain. Not implemented here.
-					if (dist >= min && dist <= max) {
-						// Check Line of Sight: Iterate through hexes between attacker and target
-						let blocked = false;
-						const stepQ = (potentialTargetHex.q - attackerHex.q) / dist;
-						const stepR = (potentialTargetHex.r - attackerHex.r) / dist;
-
-						// Start checking from 1 hex away from attacker up to 1 hex away from target
-						for (let i = 1; i < dist; i++) {
-							const checkQ = Math.round(attackerHex.q + stepQ * i);
-							const checkR = Math.round(attackerHex.r + stepR * i);
-							const intermediateHex = this.getHexByQR(checkQ, checkR);
-							if (intermediateHex && this.getUnitOnHex(intermediateHex.id)) {
-								blocked = true;
-								break;
-							}
-						}
-
-						if (!blocked) targets.push(potentialTargetHex.id);
-					}
-				}
-			});
-
-			return targets;
-		},
-		calculateValidSpecialAttackTargets(attackerHexId) {
-			const attackerUnit = this.getUnitOnHex(attackerHexId);
-			const attackerHex = this.getHex(attackerHexId);
-
-			if (!attackerUnit || ![1, 6].includes(attackerUnit.value) || !attackerHex) return [];
-
-			let targets = [];
-			this.getNeighbors(attackerHex).forEach(neighborHex => {
-				if (neighborHex) {
-					const targetUnit = this.getUnitOnHex(neighborHex.id);
-					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
-
-						if (attackerUnit.value == 1) {
-							const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(neighborHex.id);
-
-							if (defenderEffectiveArmor >= 6) {
-								targets.push(neighborHex.id);
-							}
-						} else {
-							targets.push(neighborHex.id);
-						}
-					}
-				}
-			});
-			return targets;
-		},
-		calculateValidMoves(unitHexId, isForMerging = false) {
-			const unit = this.getUnitOnHex(unitHexId);
-			const startHex = this.getHex(unitHexId);
-			if (!unit || !startHex) return [];
-
-			let possibleMoves = [];
-			const unitStats = UNIT_STATS[unit.value];
-
-			// const checkNextHexBreak = (nextHex) => {
-			// 	if (!nextHex) return false; // Off map
-
-			// 	if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
-			// 		if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
-			// 		// break; // Blocked
-
-			// 		return false; // Blocked
-			// 	}
-			// 	if (this.getUnitOnHex(nextHex.id) && isForMerging && this.getUnitOnHex(nextHex.id).playerId === unit.playerId) {
-			// 		possibleMoves.push(nextHex.id); // Can merge with friendly
-			// 		// Don't break, can potentially move past to another friendly for merge if rules allowed (not typical)
-			// 	}
-			// 	if (!this.getUnitOnHex(nextHex.id)) possibleMoves.push(nextHex.id); // Empty hex
-
-			// 	return true;
-			// }
-
-			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
-			const mod3 = primary.i % 3;
-			const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3) );
-			const axes_x = AXES.filter(({i}) => (i % 3) != mod3 );
-
-			switch (unitStats.movement) {
-				case '|': // Dice 1
-					for (let i = 1; i <= unitStats.distance; i++) {
-						possibleMoves.push(this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i)?.id);
-					}
-					
-					for (let i = 1; i <= unitStats.armor; i++) {
-						possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i)?.id);
-					}
-					break;
-				case 'X': // Dice 2
-					for (let axis of axes_x) {
-						for (let i = 1; i <= unitStats.distance; i++) {
-							possibleMoves.push(this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i)?.id);
-						}	
-					}
-
-					break;
-				case 'L': // Dice 3
-					const dValidsLShape = [
-						[-1, -2], [-2, -1],
-						[-3, 1], [-3, 2],
-						[-2, 3], [-1, 3],
-						[1, 2], [2, 1],
-						[3, -1], [3, -2],
-						[2, -3], [1, -3],
-					];
-
-					for (let valid of dValidsLShape) {
-						possibleMoves.push(this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1])?.id);
-					}
-
-					break;
-				case '+': // Dice 4
-					this.getNeighbors(startHex).forEach(neighbor => possibleMoves.push(neighbor?.id));
-
-					possibleMoves.push(this.getHexByQR(startHex.q + primary.q * 2, startHex.r + primary.r * 2)?.id);
-					possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 2, startHex.r + axes_b.r * 2)?.id);
-
-					if (mod3 == 2) {
-						possibleMoves.push(this.getHexByQR(startHex.q + -2, startHex.r + 1)?.id);
-						possibleMoves.push(this.getHexByQR(startHex.q + 2, startHex.r + -1)?.id);
-					} else if (mod3 == 1) {
-						possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + 2)?.id);
-						possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + -2)?.id);
-					} else if (mod3 == 0) {
-						possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + -1)?.id);
-						possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + 1)?.id);
-					}
-
-					break;
-				case '*': // Dice 5
-					this.getNeighbors(startHex)
-						.map(hex => hex.id)
-						.filter(hexId => !!unit.playerId == !!this.getUnitOnHex(hexId)?.playerId)
-						.forEach(neighbor => possibleMoves.push(neighbor));
-					break;
-				case '0': // Dice 6
-					 // Dice 6 cannot initiate a move action, only special attack or move after combat.
-					break;
-			}
-
-			possibleMoves = [...new Set(possibleMoves.filter(x => x))];
-
-			// console.dir({calculateValidMoves: unit, startHex, possibleMoves})
-			
-			// Filter based on target: empty or enemy (for move), or friendly (for merge)
-			return possibleMoves.filter(hexId => {
-				const targetUnit = this.getUnitOnHex(hexId);
-				if (isForMerging) {
-					return targetUnit && targetUnit.playerId === unit.playerId && targetUnit.id !== unit.id;
-				} else {
-					return !targetUnit || targetUnit.playerId !== unit.playerId;
-				}
-			});
-		},
-		calculateValidDeploymentHexes(playerId) {
-			const player = this.players[playerId];
-			const baseHex = this.getHex(player.baseHexId);
-			if (!baseHex) return [];
-
-			const primary = PLAYER_PRIMARY_AXIS[this.players.length][playerId];
-			const mod3 = primary.i % 3;
-			
-			let deploymentHexes = [baseHex];
-			this.getNeighbors(baseHex).forEach(neighbor => deploymentHexes.push(neighbor));
-			if (mod3 == 2) {
-				deploymentHexes.push(this.getHexByQR(baseHex.q + -2, baseHex.r + 1));
-				deploymentHexes.push(this.getHexByQR(baseHex.q + 2, baseHex.r + -1));
-			} else if (mod3 == 1) {
-				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + 2));
-				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + -2));
-			} else if (mod3 == 0) {
-				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + -1));
-				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + 1));
-			}
-			
-			// Filter out hexes that are already occupied by friendly units
-			return deploymentHexes
-				.filter(x => x)
-				.filter(hex => !this.getUnitOnHex(hex.id)) // Ensure hex is empty
-				.map(hex => hex.id);
-		},
-		calculateDefenderEffectiveArmor(defenderHexId) {
-			const defenderUnit = this.getUnitOnHex(defenderHexId);
-			if (!defenderUnit) return 0; // Or some error state
-
-			let effectiveArmor = defenderUnit.currentArmor;
-			if (defenderUnit.isGuarding) effectiveArmor++;
-
-			// Dice 6 adjacent buff - check neighbors of defender
-			this.getNeighbors(this.getHex(defenderHexId)).forEach(neighbor => {
-				const neighborUnit = this.getUnitOnHex(neighbor.id);
-				if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
-					effectiveArmor++;
-				}
-			});
-			effectiveArmor -= defenderUnit.armorReduction;
-
-			defenderUnit.effectiveArmor = Math.max(0, effectiveArmor);
-			return defenderUnit.effectiveArmor;
-		},
-		calculateUIDiceStat(hexId) {
-			const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
-			const unit = this.getUnitOnHex(hexId);
-
-			if (!unit || unit.isDeath) return;
-
-			this.calculateDefenderEffectiveArmor(hexId);
-
-			return Object.entries(unit)
-				.filter(([k ,v]) => FIELDS.includes(k))
-				.map(x => x.join(': '))
-				.join('<br>');
-		},
-		calculateValidBraveChargeMoves(unitHexId) {
-			const unit = this.getUnitOnHex(unitHexId);
-			const startHex = this.getHex(unitHexId);
-			if (!unit || !startHex) return [];
-
-			let possibleMoves = [];
-			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
-			for (let i = 1; i <= unit.distance; i++) {
-				let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i);
-
-				if (this.getUnitOnHex(hex.id)) continue;
-
-				let foundEnemy = this.getNeighbors(hex).find(neighborHex => {
-					const targetUnit = this.getUnitOnHex(neighborHex.id);
-
-					const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(neighborHex.id);
-					if (targetUnit && targetUnit.playerId !== unit.playerId && defenderEffectiveArmor >= 6) {
-						return true;
-					}
-
-					return false;
-				})
-
-				if (foundEnemy) possibleMoves.push(hex?.id);
-			}
-
-			return possibleMoves;
-		},
-
-		// --- ACTIONS ---
+		/* --- ACTIONS --- */
 		performMove(unitHexId, targetHexId) {
 			if (unitHexId == targetHexId) {
 				this.addLog("Move failed: Same hex.");
@@ -1069,7 +794,7 @@ function game() {
 				return;
 			}
 
-			const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(targetHexId);
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHexId);
 			if (defenderEffectiveArmor < 6) {
 				this.addLog("Brave Charge failed: Target unit must have Effective Armor 6 or higher.");
 				this.deselectUnit();
@@ -1086,7 +811,282 @@ function game() {
 			this.endTurn(); // End the player's turn after the charge
 		},
 
-		// --- COMBAT ---
+		/* --- CALCULATE --- */
+		calcValidRangedTargets(attackerHexId) {
+			const attackerUnit = this.getUnitOnHex(attackerHexId);
+			const attackerHex = this.getHex(attackerHexId);
+			if (!attackerUnit || attackerUnit.value !== 5 || !attackerHex) return [];
+
+			let targets = [];
+
+			let isEnemyAdjacent = false;
+			for (let neighborHex of this.getNeighbors(attackerHex)) {
+				if (neighborHex) {
+					const targetUnit = this.getUnitOnHex(neighborHex.id);
+					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
+						isEnemyAdjacent = true;
+						break;
+					}
+				}
+			}
+			if (isEnemyAdjacent) return [];
+
+			this.hexes.forEach(potentialTargetHex => {
+				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
+				
+				const targetUnit = this.getUnitOnHex(potentialTargetHex.id);
+				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) { // Is an enemy unit
+					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
+
+					let [min, max] = attackerUnit.range.split('-').map(parseInt);
+					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
+					// More robust line of sight would check for blocking units/terrain. Not implemented here.
+					if (dist >= min && dist <= max) {
+						// Check Line of Sight: Iterate through hexes between attacker and target
+						let blocked = false;
+						const stepQ = (potentialTargetHex.q - attackerHex.q) / dist;
+						const stepR = (potentialTargetHex.r - attackerHex.r) / dist;
+
+						// Start checking from 1 hex away from attacker up to 1 hex away from target
+						for (let i = 1; i < dist; i++) {
+							const checkQ = Math.round(attackerHex.q + stepQ * i);
+							const checkR = Math.round(attackerHex.r + stepR * i);
+							const intermediateHex = this.getHexByQR(checkQ, checkR);
+							if (intermediateHex && this.getUnitOnHex(intermediateHex.id)) {
+								blocked = true;
+								break;
+							}
+						}
+
+						if (!blocked) targets.push(potentialTargetHex.id);
+					}
+				}
+			});
+
+			return targets;
+		},
+		calcValidSpecialAttackTargets(attackerHexId) {
+			const attackerUnit = this.getUnitOnHex(attackerHexId);
+			const attackerHex = this.getHex(attackerHexId);
+
+			if (!attackerUnit || ![1, 6].includes(attackerUnit.value) || !attackerHex) return [];
+
+			let targets = [];
+			this.getNeighbors(attackerHex).forEach(neighborHex => {
+				if (neighborHex) {
+					const targetUnit = this.getUnitOnHex(neighborHex.id);
+					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
+
+						if (attackerUnit.value == 1) {
+							const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(neighborHex.id);
+
+							if (defenderEffectiveArmor >= 6) {
+								targets.push(neighborHex.id);
+							}
+						} else {
+							targets.push(neighborHex.id);
+						}
+					}
+				}
+			});
+			return targets;
+		},
+		calcValidMoves(unitHexId, isForMerging = false) {
+			const unit = this.getUnitOnHex(unitHexId);
+			const startHex = this.getHex(unitHexId);
+			if (!unit || !startHex) return [];
+
+			let possibleMoves = [];
+			const unitStats = UNIT_STATS[unit.value];
+
+			// const checkNextHexBreak = (nextHex) => {
+			// 	if (!nextHex) return false; // Off map
+
+			// 	if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
+			// 		if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
+			// 		// break; // Blocked
+
+			// 		return false; // Blocked
+			// 	}
+			// 	if (this.getUnitOnHex(nextHex.id) && isForMerging && this.getUnitOnHex(nextHex.id).playerId === unit.playerId) {
+			// 		possibleMoves.push(nextHex.id); // Can merge with friendly
+			// 		// Don't break, can potentially move past to another friendly for merge if rules allowed (not typical)
+			// 	}
+			// 	if (!this.getUnitOnHex(nextHex.id)) possibleMoves.push(nextHex.id); // Empty hex
+
+			// 	return true;
+			// }
+
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
+			const mod3 = primary.i % 3;
+			const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3) );
+			const axes_x = AXES.filter(({i}) => (i % 3) != mod3 );
+
+			switch (unitStats.movement) {
+				case '|': // Dice 1
+					for (let i = 1; i <= unitStats.distance; i++) {
+						possibleMoves.push(this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i)?.id);
+					}
+					
+					for (let i = 1; i <= unitStats.armor; i++) {
+						possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i)?.id);
+					}
+					break;
+				case 'X': // Dice 2
+					for (let axis of axes_x) {
+						for (let i = 1; i <= unitStats.distance; i++) {
+							possibleMoves.push(this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i)?.id);
+						}	
+					}
+
+					break;
+				case 'L': // Dice 3
+					const dValidsLShape = [
+						[-1, -2], [-2, -1],
+						[-3, 1], [-3, 2],
+						[-2, 3], [-1, 3],
+						[1, 2], [2, 1],
+						[3, -1], [3, -2],
+						[2, -3], [1, -3],
+					];
+
+					for (let valid of dValidsLShape) {
+						possibleMoves.push(this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1])?.id);
+					}
+
+					break;
+				case '+': // Dice 4
+					this.getNeighbors(startHex).forEach(neighbor => possibleMoves.push(neighbor?.id));
+
+					possibleMoves.push(this.getHexByQR(startHex.q + primary.q * 2, startHex.r + primary.r * 2)?.id);
+					possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 2, startHex.r + axes_b.r * 2)?.id);
+
+					if (mod3 == 2) {
+						possibleMoves.push(this.getHexByQR(startHex.q + -2, startHex.r + 1)?.id);
+						possibleMoves.push(this.getHexByQR(startHex.q + 2, startHex.r + -1)?.id);
+					} else if (mod3 == 1) {
+						possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + 2)?.id);
+						possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + -2)?.id);
+					} else if (mod3 == 0) {
+						possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + -1)?.id);
+						possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + 1)?.id);
+					}
+
+					break;
+				case '*': // Dice 5
+					this.getNeighbors(startHex)
+						.map(hex => hex.id)
+						.filter(hexId => !!unit.playerId == !!this.getUnitOnHex(hexId)?.playerId)
+						.forEach(neighbor => possibleMoves.push(neighbor));
+					break;
+				case '0': // Dice 6
+					 // Dice 6 cannot initiate a move action, only special attack or move after combat.
+					break;
+			}
+
+			possibleMoves = [...new Set(possibleMoves.filter(x => x))];
+
+			// console.dir({calcValidMoves: unit, startHex, possibleMoves})
+			
+			// Filter based on target: empty or enemy (for move), or friendly (for merge)
+			return possibleMoves.filter(hexId => {
+				const targetUnit = this.getUnitOnHex(hexId);
+				if (isForMerging) {
+					return targetUnit && targetUnit.playerId === unit.playerId && targetUnit.id !== unit.id;
+				} else {
+					return !targetUnit || targetUnit.playerId !== unit.playerId;
+				}
+			});
+		},
+		calcValidDeploymentHexes(playerId) {
+			const player = this.players[playerId];
+			const baseHex = this.getHex(player.baseHexId);
+			if (!baseHex) return [];
+
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][playerId];
+			const mod3 = primary.i % 3;
+			
+			let deploymentHexes = [baseHex];
+			this.getNeighbors(baseHex).forEach(neighbor => deploymentHexes.push(neighbor));
+			if (mod3 == 2) {
+				deploymentHexes.push(this.getHexByQR(baseHex.q + -2, baseHex.r + 1));
+				deploymentHexes.push(this.getHexByQR(baseHex.q + 2, baseHex.r + -1));
+			} else if (mod3 == 1) {
+				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + 2));
+				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + -2));
+			} else if (mod3 == 0) {
+				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + -1));
+				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + 1));
+			}
+			
+			// Filter out hexes that are already occupied by friendly units
+			return deploymentHexes
+				.filter(x => x)
+				.filter(hex => !this.getUnitOnHex(hex.id)) // Ensure hex is empty
+				.map(hex => hex.id);
+		},
+		calcDefenderEffectiveArmor(defenderHexId) {
+			const defenderUnit = this.getUnitOnHex(defenderHexId);
+			if (!defenderUnit) return 0; // Or some error state
+
+			let effectiveArmor = defenderUnit.currentArmor;
+			if (defenderUnit.isGuarding) effectiveArmor++;
+
+			// Dice 6 adjacent buff - check neighbors of defender
+			this.getNeighbors(this.getHex(defenderHexId)).forEach(neighbor => {
+				const neighborUnit = this.getUnitOnHex(neighbor.id);
+				if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
+					effectiveArmor++;
+				}
+			});
+			effectiveArmor -= defenderUnit.armorReduction;
+
+			defenderUnit.effectiveArmor = Math.max(0, effectiveArmor);
+			return defenderUnit.effectiveArmor;
+		},
+		calcValidBraveChargeMoves(unitHexId) {
+			const unit = this.getUnitOnHex(unitHexId);
+			const startHex = this.getHex(unitHexId);
+			if (!unit || !startHex) return [];
+
+			let possibleMoves = [];
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
+			for (let i = 1; i <= unit.distance; i++) {
+				let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i);
+
+				if (this.getUnitOnHex(hex.id)) continue;
+
+				let foundEnemy = this.getNeighbors(hex).find(neighborHex => {
+					const targetUnit = this.getUnitOnHex(neighborHex.id);
+
+					const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(neighborHex.id);
+					if (targetUnit && targetUnit.playerId !== unit.playerId && defenderEffectiveArmor >= 6) {
+						return true;
+					}
+
+					return false;
+				})
+
+				if (foundEnemy) possibleMoves.push(hex?.id);
+			}
+
+			return possibleMoves;
+		},
+		calcUIDiceStat(hexId) {
+			const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
+			const unit = this.getUnitOnHex(hexId);
+
+			if (!unit || unit.isDeath) return;
+
+			this.calcDefenderEffectiveArmor(hexId);
+
+			return Object.entries(unit)
+				.filter(([k ,v]) => FIELDS.includes(k))
+				.map(x => x.join(': '))
+				.join('<br>');
+		},
+
+		/* --- COMBAT --- */
 		handleCombat(attackerHexId, defenderHexId, combatType, attackerMovesAfterCombat = false) { // combatType: 'MELEE', 'RANGED', 'SPECIAL'
 			const attackerUnit = this.getUnitOnHex(attackerHexId);
 			const defenderUnit = this.getUnitOnHex(defenderHexId);
@@ -1098,7 +1098,7 @@ function game() {
 				return;
 			}
 
-			const defenderEffectiveArmor = this.calculateDefenderEffectiveArmor(defenderHexId);
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId);
 			
 			if (defenderUnit.armorReduction >= UNIT_STATS[defenderUnit.value].armor || attackerUnit.attack >= defenderEffectiveArmor) { // Attacker wins
 				this.addLog("Attacker wins! Defender is defeated.");
@@ -1149,11 +1149,11 @@ function game() {
 			const unit = this.getUnitOnHex(hexId);
 			if (!unit) return;
 			unit.armorReduction += damage;
-			this.calculateDefenderEffectiveArmor(hexId); // Recalculate effective armor
+			this.calcDefenderEffectiveArmor(hexId); // Recalculate effective armor
 			if ((damage > 1) && unit.effectiveArmor <= 0) this.removeUnit(hexId); // Remove if armor drops to 0 or less
 		},
 
-		// --- TURN MANAGEMENT & WIN CONDITIONS ---
+		/* --- TURN MANAGEMENT & WIN CONDITIONS --- */
 		endTurn() {
 			this.actionMode = null;
 			this.validMoves = [];
@@ -1237,7 +1237,7 @@ function game() {
 			this.addLog(`Game Over: ${this.winnerMessage}`);
 		},
 
-		// --- AI OPPONENT (Player 2) ---
+		/* --- AI OPPONENT (Player 2) --- */
 		performAITurn_1() {
 			if (this.gameState !== 'PLAYER_TURN' || this.currentPlayerIndex !== 1) return;
 
@@ -1265,7 +1265,7 @@ function game() {
 				
 				// Check for ranged attacks (Dice 5)
 				if (unit.value === 5) {
-					const targets = this.calculateValidRangedTargets(unit.hexId);
+					const targets = this.calcValidRangedTargets(unit.hexId);
 					if (targets.length > 0) {
 						// Simple: attack the first valid target
 						const targetHexId = targets[0];
@@ -1278,7 +1278,7 @@ function game() {
 				
 				// Check for special attacks (Dice 6)
 				if (unit.value === 6) {
-					const targets = this.calculateValidSpecialAttackTargets(unit.hexId);
+					const targets = this.calcValidSpecialAttackTargets(unit.hexId);
 					if (targets.length > 0) {
 						// Simple: attack the first valid target
 						const targetHexId = targets[0];
@@ -1290,7 +1290,7 @@ function game() {
 				}
 
 				// Check for Melee attacks (implicitly part of move)
-				const validMoves = this.calculateValidMoves(unit.hexId);
+				const validMoves = this.calcValidMoves(unit.hexId);
 				for (const targetHexId of validMoves) {
 					const targetUnit = this.getUnitOnHex(targetHexId);
 					if (targetUnit && targetUnit.playerId !== aiPlayer.id) { // It's an enemy
@@ -1309,7 +1309,7 @@ function game() {
 				for (const unit of aiUnits) {
 					if (unit.hasMovedOrAttackedThisTurn) continue;
 					this.selectedUnitHexId = unit.hexId;
-					const validMerges = this.calculateValidMoves(unit.hexId, true);
+					const validMerges = this.calcValidMoves(unit.hexId, true);
 					if (validMerges.length > 0) {
 						const targetHexId = validMerges[0];
 						this.addLog(`AI (Dice ${unit.value}) attempts to merge with unit at hex ${targetHexId}`);
@@ -1331,7 +1331,7 @@ function game() {
 				for (const unit of aiUnits) {
 					if (unit.hasMovedOrAttackedThisTurn || unit.distance <= 0) continue;
 					this.selectedUnitHexId = unit.hexId;
-					const validMoves = this.calculateValidMoves(unit.hexId); // Get moves to empty hexes
+					const validMoves = this.calcValidMoves(unit.hexId); // Get moves to empty hexes
 
 					for (const targetHexId of validMoves) {
 						const targetHex = this.getHex(targetHexId);
@@ -1383,7 +1383,7 @@ function game() {
 			const aiBaseHexId = aiPlayer.baseHexId;
 			const opponentBaseHexId = this.players[0].baseHexId;
 
-			// --- Improved AI Strategy ---
+			/* --- Improved AI Strategy --- */
 			// Evaluate the board state
 			const threats = this.analyzeThreats(aiUnits, opponentUnits, aiBaseHexId);
 			const opportunities = this.analyzeOpportunities(aiUnits, opponentUnits, opponentBaseHexId);
@@ -1400,7 +1400,7 @@ function game() {
 					if (defendingUnit && !defendingUnit.hasMovedOrAttackedThisTurn) {
 						// Try to attack the threatening unit
 						this.selectedUnitHexId = defendingUnit.hexId;
-						const validAttacks = this.calculateValidMoves(defendingUnit.hexId).filter(hexId => this.getUnitOnHex(hexId)?.id === attackingUnit.id);
+						const validAttacks = this.calcValidMoves(defendingUnit.hexId).filter(hexId => this.getUnitOnHex(hexId)?.id === attackingUnit.id);
 						if (validAttacks.length > 0) {
 							this.addLog(`AI: Defending base - attacking threatening unit at hex ${threat.attackingUnitHexId}.`);
 							this.performMove(defendingUnit.hexId, threat.attackingUnitHexId); // Melee attack by moving
@@ -1420,7 +1420,7 @@ function game() {
 						this.selectedUnitHexId = defendingUnit.hexId;
 						// Check for direct attacks (melee, ranged, special)
 						if (defendingUnit.value === 5) {
-							const rangedTargets = this.calculateValidRangedTargets(defendingUnit.hexId);
+							const rangedTargets = this.calcValidRangedTargets(defendingUnit.hexId);
 							if (rangedTargets.includes(attackingUnit.hexId)) {
 								this.addLog(`AI: Eliminating high-value threat - performing Ranged Attack on hex ${attackingUnit.hexId}.`);
 								this.performRangedAttack(defendingUnit.hexId, attackingUnit.hexId);
@@ -1429,7 +1429,7 @@ function game() {
 							}
 						}
 						if (!actionExecuted && defendingUnit.value === 6) {
-							const specialTargets = this.calculateValidSpecialAttackTargets(defendingUnit.hexId);
+							const specialTargets = this.calcValidSpecialAttackTargets(defendingUnit.hexId);
 							if (specialTargets.includes(attackingUnit.hexId)) {
 								this.addLog(`AI: Eliminating high-value threat - performing Special Attack on hex ${attackingUnit.hexId}.`);
 								this.performSpecialAttack(defendingUnit.hexId, attackingUnit.hexId);
@@ -1438,7 +1438,7 @@ function game() {
 							}
 						}
 						if (!actionExecuted) {
-							const validMoves = this.calculateValidMoves(defendingUnit.hexId);
+							const validMoves = this.calcValidMoves(defendingUnit.hexId);
 							if (validMoves.includes(attackingUnit.hexId)) {
 								this.addLog(`AI: Eliminating high-value threat - moving to attack unit at hex ${attackingUnit.hexId}.`);
 								this.performMove(defendingUnit.hexId, attackingUnit.hexId); // Melee attack by moving
@@ -1459,7 +1459,7 @@ function game() {
 				for (const unit of aiUnits) {
 					if (unit.hasMovedOrAttackedThisTurn) continue;
 					this.selectedUnitHexId = unit.hexId;
-					const validMerges = this.calculateValidMoves(unit.hexId, true);
+					const validMerges = this.calcValidMoves(unit.hexId, true);
 					if (validMerges.length > 0) {
 						// Simple: take the first valid merge
 						bestMerge = { mergingUnitHexId: unit.hexId, targetUnitHexId: validMerges[0] };
@@ -1486,9 +1486,9 @@ function game() {
 					this.selectedUnitHexId = unit.hexId;
 
 					// Check for direct attacks (ranged, special, melee)
-					const rangedTargets = (unit.value === 5) ? this.calculateValidRangedTargets(unit.hexId) : [];
-					const specialTargets = (unit.value === 6) ? this.calculateValidSpecialAttackTargets(unit.hexId) : [];
-					const meleeTargets = this.calculateValidMoves(unit.hexId).filter(hexId => this.getUnitOnHex(hexId)?.playerId !== aiPlayer.id);
+					const rangedTargets = (unit.value === 5) ? this.calcValidRangedTargets(unit.hexId) : [];
+					const specialTargets = (unit.value === 6) ? this.calcValidSpecialAttackTargets(unit.hexId) : [];
+					const meleeTargets = this.calcValidMoves(unit.hexId).filter(hexId => this.getUnitOnHex(hexId)?.playerId !== aiPlayer.id);
 
 					if (rangedTargets.length > 0) {
 						bestAttackOrMove = { type: 'RANGED_ATTACK', unitHexId: unit.hexId, targetHexId: rangedTargets[0] };
@@ -1504,7 +1504,7 @@ function game() {
 					}
 
 					// If no attack, find the best move towards the opponent's base
-					const validMoves = this.calculateValidMoves(unit.hexId);
+					const validMoves = this.calcValidMoves(unit.hexId);
 					let closestDistance = Infinity;
 					let bestMoveTarget = null;
 					const opponentBaseHex = this.getHex(opponentBaseHexId);
@@ -1581,7 +1581,7 @@ function game() {
 			this['performAITurn_' + choice]();
 		},
 
-		// --- AI HELPER FUNCTIONS ---
+		/* --- AI HELPER FUNCTIONS --- */
 		analyzeThreats(aiUnits, opponentUnits, aiBaseHexId) {
 			const threats = [];
 			const aiBaseHex = this.getHex(aiBaseHexId);
@@ -1590,9 +1590,9 @@ function game() {
 			opponentUnits.forEach(enemyUnit => {
 				if (!enemyUnit.isDeath) {
 					this.selectedUnitHexId = enemyUnit.hexId; // Select enemy unit to calculate its potential moves/targets
-					const enemyMoves = this.calculateValidMoves(enemyUnit.hexId);
-					const enemyRangedTargets = (enemyUnit.value === 5) ? this.calculateValidRangedTargets(enemyUnit.hexId) : [];
-					const enemySpecialTargets = (enemyUnit.value === 6) ? this.calculateValidSpecialAttackTargets(enemyUnit.hexId) : [];
+					const enemyMoves = this.calcValidMoves(enemyUnit.hexId);
+					const enemyRangedTargets = (enemyUnit.value === 5) ? this.calcValidRangedTargets(enemyUnit.hexId) : [];
+					const enemySpecialTargets = (enemyUnit.value === 6) ? this.calcValidSpecialAttackTargets(enemyUnit.hexId) : [];
 
 					if (enemyMoves.includes(aiBaseHexId) || enemyRangedTargets.includes(aiBaseHexId) || enemySpecialTargets.includes(aiBaseHexId)) {
 						threats.push({
@@ -1643,9 +1643,9 @@ function game() {
 			aiUnits.forEach(aiUnit => {
 				if (!aiUnit.hasMovedOrAttackedThisTurn && !aiUnit.isDeath) {
 					this.selectedUnitHexId = aiUnit.hexId;
-					const validMoves = this.calculateValidMoves(aiUnit.hexId);
-					const validRangedTargets = (aiUnit.value === 5) ? this.calculateValidRangedTargets(aiUnit.hexId) : [];
-					const validSpecialTargets = (aiUnit.value === 6) ? this.calculateValidSpecialAttackTargets(aiUnit.hexId) : [];
+					const validMoves = this.calcValidMoves(aiUnit.hexId);
+					const validRangedTargets = (aiUnit.value === 5) ? this.calcValidRangedTargets(aiUnit.hexId) : [];
+					const validSpecialTargets = (aiUnit.value === 6) ? this.calcValidSpecialAttackTargets(aiUnit.hexId) : [];
 
 					// Check for attacks on opponent base
 					if (validMoves.includes(opponentBaseHexId) || validRangedTargets.includes(opponentBaseHexId) || validSpecialTargets.includes(opponentBaseHexId)) {
@@ -1698,7 +1698,7 @@ function game() {
 					});
 
 					// Look for merge opportunities
-					const validMerges = this.calculateValidMoves(aiUnit.hexId, true);
+					const validMerges = this.calcValidMoves(aiUnit.hexId, true);
 					validMerges.forEach(mergeTargetHexId => {
 						const targetUnit = this.getUnitOnHex(mergeTargetHexId);
 						if (targetUnit) {
@@ -1776,19 +1776,19 @@ function game() {
 					if (!enemyHex) return;
 
 					// Check if enemy can reach this unit's hex
-					const enemyPotentialMoves = this.calculateValidMoves(enemyUnit.hexId);
+					const enemyPotentialMoves = this.calcValidMoves(enemyUnit.hexId);
 					if (enemyPotentialMoves.includes(unitHexId)) {
 						isThreatened = true;
 						return;
 					}
 
 					// Check if enemy ranged/special can target this unit
-					const enemyRangedTargets = (enemyUnit.value === 5) ? this.calculateValidRangedTargets(enemyUnit.hexId) : [];
+					const enemyRangedTargets = (enemyUnit.value === 5) ? this.calcValidRangedTargets(enemyUnit.hexId) : [];
 					if (enemyRangedTargets.includes(unitHexId)) {
 						isThreatened = true;
 						return;
 					}
-					const enemySpecialTargets = (enemyUnit.value === 6) ? this.calculateValidSpecialAttackTargets(enemyUnit.hexId) : [];
+					const enemySpecialTargets = (enemyUnit.value === 6) ? this.calcValidSpecialAttackTargets(enemyUnit.hexId) : [];
 					if (enemySpecialTargets.includes(unitHexId)) {
 						isThreatened = true;
 						return;
@@ -1801,7 +1801,7 @@ function game() {
 			// More complex: consider unit's armor, value, number of threatening enemies, friendly support
 		},
 		
-		// --- UTILITIES ---
+		/* --- UTILITIES --- */
 		addLog(message) {
 			// console.log(message);
 			this.messageLog.unshift({ id: this.logCounter++, message: `[${new Date().toLocaleTimeString()}] ${message}` });
