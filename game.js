@@ -1613,7 +1613,7 @@ function game() {
 			}
 			// If no target found for a target-based action, the action fails gracefully, and the turn ends.
 		},
-		performAITurn_4() {
+		performAITurn_4() { // Minimax AI
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 			this.addLog("Minimax AI is thinking...");
@@ -1776,7 +1776,6 @@ function game() {
 
 			return score;
 		},
-		// Function to find the best move for the AI
 		findBestMove(gameState, depth) {
 			let bestScore = -Infinity;
 			let bestMove = null;
@@ -1821,7 +1820,6 @@ function game() {
 
 			return bestMove; // Return the move (unitHexId, targetHexId, actionType) that leads to the best score
 		},
-		// Minimax Algorithm
 		minimax(gameState, depth, maximizingPlayer) {
 			// Base case: If depth is 0 or game is over, return the evaluated score
 			if (depth === 0 || gameState.gameState === 'GAME_OVER') {
