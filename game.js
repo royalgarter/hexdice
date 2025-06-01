@@ -1780,39 +1780,10 @@ function alpineHexDiceTacticGame() {
 				validMerges.forEach(mergeTargetHexId => {
 					const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
 					if (targetUnit) {
-						score += (aiUnit.value + targetUnit.value > 6 ? 6 : aiUnit.value + targetUnit.value) * 2; // Award points for potential merges, higher value merges are better
+						score -= (aiUnit.value + targetUnit.value);
+						score += (aiUnit.value + targetUnit.value > 6 ? 7 : aiUnit.value + targetUnit.value);
 					}
 				});
-			});
-
-			aiUnits.forEach(aiUnit => {
-				const aiUnitHex = this.getHex(aiUnit.hexId, state);
-				if (aiUnitHex) {
-					const neighbors = this.getNeighbors(aiUnitHex, state);
-					neighbors.forEach(neighborHex => {
-						if (neighborHex) {
-							const neighborUnit = this.getUnitOnHex(neighborHex.id, state);
-							if (neighborUnit && neighborUnit.playerId === opponentPlayerIndex) {
-								score -= 5; // Penalize if an AI unit is adjacent to an enemy
-							}
-						}
-					});
-				}
-			});
-
-			 opponentUnits.forEach(opponentUnit => {
-				const opponentUnitHex = this.getHex(opponentUnit.hexId, state);
-				if (opponentUnitHex) {
-					const neighbors = this.getNeighbors(opponentUnitHex, state);
-					neighbors.forEach(neighborHex => {
-						if (neighborHex) {
-							const neighborUnit = this.getUnitOnHex(neighborHex.id, state);
-							if (neighborUnit && neighborUnit.playerId === aiPlayerIndex) {
-								score += 5; // Reward if an opponent unit is adjacent to an AI unit
-							}
-						}
-					});
-				}
 			});
 
 			// Brave Charge opportunities
@@ -1991,7 +1962,8 @@ function alpineHexDiceTacticGame() {
 							// Need to update state.phase based on simulated win conditions
 
 							// Recursive call for the opponent (minimizing player)
-							const score = this.minimax(nextGameState, depth - 1, true);
+							const score = this.minimax(nextGameState, depth - 1, false);
+							console.log('minimax.score', depth, score)
 
 							// Update maxScore if the current move leads to a better score
 							if (score > maxScore) {
