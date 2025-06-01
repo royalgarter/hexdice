@@ -72,14 +72,14 @@
 	</div>
 
 	<!-- Game Setup -->
-	<div x-cloak x-show="gameState.startsWith('SETUP')" class="mb-2 p-4 bg-slate-700 rounded shadow-lg text-center">
+	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 bg-slate-700 rounded shadow-lg text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
-		<div x-show="gameState === 'SETUP_ROLL'">
+		<div x-show="phase === 'SETUP_ROLL'">
 			<button class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone" @click="resetGame({isP2AI: true});rollInitialDice(1)" >Play Against AI</button>
 			<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" x-show="!players[0].initialRollDone" @click="rollInitialDice(0)" >Roll Player 1 Dice</button>
 			<button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone" @click="rollInitialDice(1)" >Roll Player 2 Dice</button>
 		</div>
-		<div x-show="gameState === 'SETUP_REROLL'">
+		<div x-show="phase === 'SETUP_REROLL'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
 			<div class="flex justify-center space-x-2 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
@@ -93,7 +93,7 @@
 			<button @click="performReroll()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span> selected)</button>
 			<button @click="skipReroll()" class="bg-slate-500 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded ml-2">Skip Reroll</button>
 		</div>
-		 <div x-show="gameState === 'SETUP_DEPLOY'">
+		 <div x-show="phase === 'SETUP_DEPLOY'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
 			<div class="flex justify-center space-x-1 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
@@ -114,7 +114,7 @@
 	</div>
 
 	<!-- Game Over -->
-	<div x-cloak x-show="gameState === 'GAME_OVER'" class="mb-2 py-2 px-4 bg-green-700 rounded shadow-lg text-center">
+	<div x-cloak x-show="phase === 'GAME_OVER'" class="mb-2 py-2 px-4 bg-green-700 rounded shadow-lg text-center">
 		<h2 class="text-2xl mb-2">Game Over!</h2>
 		<p x-text="winnerMessage"></p>
 		<button class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
@@ -129,7 +129,7 @@
 	</div>
 
 	<!-- Game Info -->
-	<div x-cloak x-show="!gameState.startsWith('SETUP') && gameState !== 'GAME_OVER'" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
+	<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
 		<div class="my-2 space-x-2">
 			<button class="action-button p-1 text-gray-100 bg-hexmove disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')" 
