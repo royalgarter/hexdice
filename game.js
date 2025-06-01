@@ -33,7 +33,7 @@ const PLAYER_PRIMARY_AXIS = {
 
 Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
 
-function game() {
+function alpineHexDiceTacticGame() {
 	return {
 		/* --- VARIABLES --- */
 		rules: {
@@ -820,7 +820,7 @@ function game() {
 				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) { // Is an enemy unit
 					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
 
-					let [min, max] = attackerUnit.range.split('-').map(parseInt);
+					let [min, max] = attackerUnit.range.split('-').map(x => parseInt(x, 10))
 					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
 					// More robust line of sight would check for blocking units/terrain. Not implemented here.
 					if (dist >= min && dist <= max) {
@@ -958,7 +958,7 @@ function game() {
 				case '*': // Dice 5
 					this.getNeighbors(startHex)
 						.map(hex => hex.id)
-						.filter(hexId => !!unit.playerId == !!this.getUnitOnHex(hexId)?.playerId)
+						.filter(hexId => !this.getUnitOnHex(hexId) || (unit.playerId == this.getUnitOnHex(hexId)?.playerId) )
 						.forEach(neighbor => possibleMoves.push(neighbor));
 					break;
 				case '0': // Dice 6
@@ -1144,14 +1144,16 @@ function game() {
 
 			if (this.gameState !== 'PLAYER_TURN') return;
 			
-			this.addLog(`Player ${this.currentPlayerIndex + 1} ends their turn.`);
+			let score_0 = this.boardEvaluation();
+			this.addLog(`Player ${this.currentPlayerIndex + 1} ends their turn (evaluation: ${score_0}).`);
 			this.deselectUnit(); // Clear selection
 			this.actionMode = null; // Clear action mode
 
 			this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
 			this.resetTurnActionsForAllUnits();
 
-			this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn.`);
+			let score_1 = this.boardEvaluation();
+			this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn (evaluation: ${score_1}).`);
 
 			this.checkWinConditions(); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
 
@@ -1222,6 +1224,8 @@ function game() {
 		/* --- AI OPPONENT --- */
 		performAITurn() {
 			let choice = [1, 2, 3, 4].random();
+			choice = 4;
+			this.addLog(`AI persona: ${choice}`);
 			this['performAITurn_' + choice]();
 		},
 		performAITurn_1() { // Simple AI
@@ -1608,6 +1612,10 @@ function game() {
 				targetHexId = this.validTargets.random();
 			}
 
+			if (['REROLL', 'GUARD'].includes(chosenAction)) {
+				this.performAction(chosenAction, this.selectedUnitHexId);
+			}
+
 			if (targetHexId !== null) {
 				this.completeAction(targetHexId); // Perform the action with the chosen target
 			}
@@ -1694,13 +1702,12 @@ function game() {
 		},
 
 		/* --- AI HELPER FUNCTIONS --- */
-		boardEvaluation(gameState) { // Make sure this is accessible within the game object
-			// Simple evaluation for the AI player (Player 1 in this case, need to generalize later)
+		boardEvaluation() { // Use this helper for Minimax AI
 			const aiPlayerIndex = this.currentPlayerIndex; // Assuming the AI is the current player for evaluation
 			const opponentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
 
-			const aiPlayer = gameState.players[aiPlayerIndex];
-			const opponentPlayer = gameState.players[opponentPlayerIndex];
+			const aiPlayer = this.players[aiPlayerIndex];
+			const opponentPlayer = this.players[opponentPlayerIndex];
 
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
 			const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
@@ -1768,9 +1775,9 @@ function game() {
 			});
 
 			// 4. Check Win/Loss conditions (Highest priority)
-			if (gameState.gameState === 'GAME_OVER') {
-				if (gameState.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
-				else if (gameState.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
+			if (this.gameState === 'GAME_OVER') {
+				if (this.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
+				else if (this.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
 				else score = 0; // Draw
 			}
 
@@ -2150,4 +2157,4 @@ function game() {
 			});
 		},
 	};
-}
+}	
