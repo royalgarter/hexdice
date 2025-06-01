@@ -1144,16 +1144,16 @@ function alpineHexDiceTacticGame() {
 
 			if (this.gameState !== 'PLAYER_TURN') return;
 			
-			let score_0 = this.boardEvaluation();
-			this.addLog(`Player ${this.currentPlayerIndex + 1} ends their turn (evaluation: ${score_0}).`);
+			this.players[this.currentPlayerIndex].evaluation = this.boardEvaluation();
+			this.addLog(`Player ${this.currentPlayerIndex + 1} ends their turn (evaluation: ${this.players[this.currentPlayerIndex].evaluation}).`);
 			this.deselectUnit(); // Clear selection
 			this.actionMode = null; // Clear action mode
 
 			this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
 			this.resetTurnActionsForAllUnits();
 
-			let score_1 = this.boardEvaluation();
-			this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn (evaluation: ${score_1}).`);
+			this.players[this.currentPlayerIndex].evaluation = this.boardEvaluation();
+			this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn (evaluation: ${this.players[this.currentPlayerIndex].evaluation}).`);
 
 			this.checkWinConditions(); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
 
@@ -1702,12 +1702,14 @@ function alpineHexDiceTacticGame() {
 		},
 
 		/* --- AI HELPER FUNCTIONS --- */
-		boardEvaluation() { // Use this helper for Minimax AI
-			const aiPlayerIndex = this.currentPlayerIndex; // Assuming the AI is the current player for evaluation
-			const opponentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+		boardEvaluation(gameState) { // Use this helper for Minimax AI
+			if (!gameState) gameState = this;
 
-			const aiPlayer = this.players[aiPlayerIndex];
-			const opponentPlayer = this.players[opponentPlayerIndex];
+			const aiPlayerIndex = gameState.currentPlayerIndex; // Assuming the AI is the current player for evaluation
+			const opponentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+
+			const aiPlayer = gameState.players[aiPlayerIndex];
+			const opponentPlayer = gameState.players[opponentPlayerIndex];
 
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
 			const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
@@ -1775,9 +1777,9 @@ function alpineHexDiceTacticGame() {
 			});
 
 			// 4. Check Win/Loss conditions (Highest priority)
-			if (this.gameState === 'GAME_OVER') {
-				if (this.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
-				else if (this.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
+			if (gameState.gameState === 'GAME_OVER') {
+				if (gameState.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
+				else if (gameState.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
 				else score = 0; // Draw
 			}
 
@@ -1790,6 +1792,7 @@ function alpineHexDiceTacticGame() {
 			// Generate possible moves for the AI player
 			const aiPlayer = gameState.players[gameState.currentPlayerIndex];
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+			const currentScore = this.boardEvaluation(gameState);
 
 			 // Iterate through all possible actions for all active AI units
 			 // Need to consider Move, Reroll, Guard, Ranged Attack, Special Attack, Merge
@@ -1817,7 +1820,7 @@ function alpineHexDiceTacticGame() {
 					if (score > bestScore) {
 						bestScore = score;
 						// Store the move that led to this score
-						bestMove = { unitHexId: unit.hexId, targetHexId: targetHexId, actionType: 'MOVE' }; // Store action type
+						bestMove = { unitHexId: unit.hexId, targetHexId: targetHexId, actionType: 'MOVE', score, currentScore }; // Store action type
 					}
 				}
 

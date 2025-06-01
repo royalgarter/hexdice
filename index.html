@@ -106,7 +106,7 @@
 							].join(' ')
 						"
 						@click="selectDieToDeploy(index)">
-						Dice <span x-text="players[currentPlayerIndex].dice[index].value"></span>
+						Dice <span x-text="players[currentPlayerIndex].dice[index]?.value"></span>
 					</div>
 				</template>
 			</div>
