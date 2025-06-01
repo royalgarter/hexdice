@@ -33,6 +33,11 @@ const PLAYER_PRIMARY_AXIS = {
 
 Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
 
+function clone(obj) {
+	// return Object.assign({}, obj);
+	return JSON.parse(JSON.stringify(obj));
+}
+
 function alpineHexDiceTacticGame() {
 	return {
 		/* --- VARIABLES --- */
@@ -49,6 +54,7 @@ function alpineHexDiceTacticGame() {
 		currentPlayerIndex: 0,
 		selectedUnitHexId: null,
 		selectedDieToDeploy: null, // index in player's dice array
+		hovering: {},
 		validMoves: [], // array of hex IDs
 		validMerges: [], // array of hex IDs
 		validTargets: [], // array of hex IDs for attacks/merges
@@ -182,6 +188,13 @@ function alpineHexDiceTacticGame() {
 				cls = 'bg-hexdeploy';
 			}
 
+			let hovering = state.hovering;
+			if (hovering.hexId && (state.selectedUnitHexId != hovering.hexId)) {
+				if (hovering.validMoves?.includes(hex.id)) cls += ' bg-hexmove invert-20';
+				else if (hovering.validMerges?.includes(hex.id)) cls += ' bg-hexmerge invert-20';
+				else if (hovering.validTargets?.includes(hex.id)) cls += ' bg-hextarget invert-20';
+			}
+
 			return cls;
 		},
 		hexStyle(hex, padding=0) {
@@ -198,6 +211,27 @@ function alpineHexDiceTacticGame() {
 				width: ${HEX_WIDTH - (padding << 1)}px;
 				height: ${HEX_HEIGHT - (padding << 1)}px;
 			`;
+		},
+		hoverHex(hexId){
+			if (this.phase !== 'PLAYER_TURN') return;
+
+			if (!hexId || (hexId && (this.selectedUnitHexId == hexId))) this.hovering = {};
+
+			this.hovering.hexId = hexId;
+			this.hovering.unit = this.getUnitOnHex(hexId);
+
+			if (this.hovering.unit) {
+				this.hovering.validMoves = this.calcValidMoves(hexId);
+				this.hovering.validMerges = this.calcValidMoves(hexId, 'MERGE');
+				
+				if (this.hovering.unit?.value == 5) {
+					this.hovering.validTargets = this.calcValidRangedTargets(hexId, null, true);	
+				}
+
+				if (this.hovering.unit?.value == 6) {
+					this.hovering.validTargets = this.calcValidSpecialAttackTargets(hexId, null, true);
+				}
+			}
 		},
 
 		/* --- SETUP --- */
@@ -399,7 +433,7 @@ function alpineHexDiceTacticGame() {
 			this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 			this.validTargets = []; // Will be calculated if attack action is chosen
 			this.validMerges = this.calcValidMoves(this.selectedUnitHexId, 'MERGE');
-			this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
+			// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 			
 			if (unit.value == 5) {
 				this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);	
@@ -601,7 +635,7 @@ function alpineHexDiceTacticGame() {
 				attackerUnit.hexId = targetHexId;
 				attackerUnit.hasMovedOrAttackedThisTurn = true;
 				attackerUnit.actionsTakenThisTurn++;
-				this.addLog(`Dice ${attackerUnit.value} moved to (${defenderHex.q},${defenderHex.r}).`);
+				// this.addLog(`Dice ${attackerUnit.value} moved to (${defenderHex.q},${defenderHex.r}).`);
 				this.deselectUnit(); // Action complete
 			}
 			this.checkWinConditions();
@@ -722,7 +756,7 @@ function alpineHexDiceTacticGame() {
 			if (newUnitCanAct) {
 				this.selectUnit(newUnit.hexId); // Select the new unit so player can act with it
 				this.addLog(`New Dice ${newUnit.value} selected. Choose an action.`);
-				if (isAI) this.performAITurn();
+				// if (isAI) this.performAITurn();
 			} else {
 				this.endTurn();
 			}
@@ -796,11 +830,12 @@ function alpineHexDiceTacticGame() {
 		},
 
 		/* --- CALCULATE --- */
-		calcValidRangedTargets(attackerHexId, state) {
+		calcValidRangedTargets(attackerHexId, state, isHovering) {
 			const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 			const attackerHex = this.getHex(attackerHexId, state);
 			if (!attackerUnit || attackerUnit.value !== 5 || !attackerHex) return [];
 
+			let [min, max] = attackerUnit.range.split('-').map(x => parseInt(x, 10));
 			let targets = [];
 
 			let isEnemyAdjacent = false;
@@ -819,10 +854,11 @@ function alpineHexDiceTacticGame() {
 				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
 				
 				const targetUnit = this.getUnitOnHex(potentialTargetHex.id, state);
-				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) { // Is an enemy unit
+				if ((targetUnit && targetUnit.playerId !== attackerUnit.playerId) // Is an enemy unit
+					|| isHovering
+				) { 
 					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
-
-					let [min, max] = attackerUnit.range.split('-').map(x => parseInt(x, 10))
+					
 					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
 					// More robust line of sight would check for blocking units/terrain. Not implemented here.
 					if (dist >= min && dist <= max) {
@@ -849,7 +885,7 @@ function alpineHexDiceTacticGame() {
 
 			return targets;
 		},
-		calcValidSpecialAttackTargets(attackerHexId, state) {
+		calcValidSpecialAttackTargets(attackerHexId, state, isHovering) {
 			const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 			const attackerHex = this.getHex(attackerHexId, state);
 
@@ -858,6 +894,11 @@ function alpineHexDiceTacticGame() {
 			let targets = [];
 			this.getNeighbors(attackerHex, state).forEach(neighborHex => {
 				if (neighborHex) {
+					if (isHovering) {
+						targets.push(neighborHex.id);
+						return;
+					}
+
 					const targetUnit = this.getUnitOnHex(neighborHex.id, state);
 					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
 
@@ -901,7 +942,7 @@ function alpineHexDiceTacticGame() {
 			// 	return true;
 			// }
 
-			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][unit.playerId];
 			const mod3 = primary.i % 3;
 			const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3) );
 			const axes_x = AXES.filter(({i}) => (i % 3) != mod3 );
@@ -1146,9 +1187,9 @@ function alpineHexDiceTacticGame() {
 			this.validTargets = [];
 
 			if (this.phase !== 'PLAYER_TURN') return;
-			
+
 			this.players[this.currentPlayerIndex].evaluation = this.boardEvaluation();
-			this.addLog(`Player ${this.currentPlayerIndex + 1} ends their turn (evaluation: ${this.players[this.currentPlayerIndex].evaluation}).`);
+			this.addLog(`${this.players[this.currentPlayerIndex].isAI ? '[AI] ' : ''}Player ${this.currentPlayerIndex + 1}'s turn ended (eval: ${this.players[this.currentPlayerIndex].evaluation}).`);
 			this.deselectUnit(); // Clear selection
 			this.actionMode = null; // Clear action mode
 
@@ -1156,7 +1197,7 @@ function alpineHexDiceTacticGame() {
 			this.resetTurnActionsForAllUnits();
 
 			this.players[this.currentPlayerIndex].evaluation = this.boardEvaluation();
-			this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn (evaluation: ${this.players[this.currentPlayerIndex].evaluation}).`);
+			this.addLog(`${this.players[this.currentPlayerIndex].isAI ? '[AI] ' : ''}Player ${this.currentPlayerIndex + 1}'s turn started (eval: ${this.players[this.currentPlayerIndex].evaluation}).`);
 
 			this.checkWinConditions(); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
 
@@ -1227,14 +1268,14 @@ function alpineHexDiceTacticGame() {
 		/* --- AI OPPONENT --- */
 		performAITurn() {
 			let choice = [1, 2, 3, 4].random();
-			choice = 4;
+			// choice = 4;
 			this.addLog(`AI persona: ${choice}`);
 			this['performAITurn_' + choice]();
 		},
 		performAITurn_1() { // Simple AI
 			if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-			this.addLog("AI is thinking...");
+			// this.addLog("AI is thinking...");
 
 			const aiPlayer = this.players[this.currentPlayerIndex];
 			const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
@@ -1369,7 +1410,7 @@ function alpineHexDiceTacticGame() {
 		performAITurn_2(forceUnits) { // Strategic AI
 			if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-			this.addLog("AI is planning its turn...");
+			// this.addLog("AI is planning its turn...");
 
 			const aiPlayer = this.players[this.currentPlayerIndex];
 			const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
@@ -1574,7 +1615,7 @@ function alpineHexDiceTacticGame() {
 		performAITurn_3() { // Random AI
 			if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-			this.addLog("AI is acting randomly...");
+			// this.addLog("AI is acting randomly...");
 
 			const aiPlayer = this.players[this.currentPlayerIndex];
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
@@ -1627,7 +1668,7 @@ function alpineHexDiceTacticGame() {
 		performAITurn_4() { // Minimax AI
 			if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-			this.addLog("Minimax AI is thinking...");
+			// this.addLog("Minimax AI is thinking...");
 
 			const aiPlayer = this.players[this.currentPlayerIndex];
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
@@ -1640,7 +1681,7 @@ function alpineHexDiceTacticGame() {
 
 			// Find the best move using the Minimax algorithm
 			// We need to pass a copy of the current game state to minimax
-			const currentGameStateCopy = structuredClone(this.$data); // Copy the game state
+			const currentGameStateCopy = clone(this.$data); // Copy the game state
 			const bestMove = this.findBestMove(currentGameStateCopy, 3); // Search depth of 3 (can adjust)
 
 			if (bestMove) {
@@ -1705,7 +1746,7 @@ function alpineHexDiceTacticGame() {
 		},
 
 		/* --- AI HELPER FUNCTIONS --- */
-		boardEvaluation(state) { // Use this helper for Minimax AI
+		boardEvaluation(state) {
 			state = state || this;
 
 			const aiPlayerIndex = state.currentPlayerIndex; // Assuming the AI is the current player for evaluation
@@ -1851,6 +1892,8 @@ function alpineHexDiceTacticGame() {
 			let bestScore = -Infinity;
 			let bestMove = null;
 
+			state = state || this;
+
 			// Generate possible moves for the AI player
 			const aiPlayer = state.players[state.currentPlayerIndex];
 			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
@@ -1864,7 +1907,7 @@ function alpineHexDiceTacticGame() {
 				const validMoves = this.calcValidMoves(unit.hexId, state); // Need to make calcValidMoves work with the passed state
 
 				for (const targetHexId of validMoves) {
-					const nextGameState = structuredClone(state);
+					const nextGameState = clone(state);
 
 					 // Apply the move in the copied state (needs to be implemented correctly)
 					 // This simulation logic is crucial and needs to be accurate for all action types
@@ -1918,7 +1961,7 @@ function alpineHexDiceTacticGame() {
 
 					for (const targetHexId of validMoves) {
 						// Create a deep copy of the game state to simulate the move
-						const nextGameState = structuredClone(state); // Simple deep copy, might need a more robust method
+						const nextGameState = clone(state); // Simple deep copy, might need a more robust method
 
 						// Apply the move to nextGameState (This part is complex and depends on your game state structure)
 						// Find the unit and hex in the copied state and update

@@ -48,6 +48,7 @@
 					:style="hexStyle(hex, 1)"
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
+					@mouseenter="hoverHex(hex.id)" @mouseleave="hoverHex()"
 				>
 					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-[10px] text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
