@@ -1220,87 +1220,9 @@ function game() {
 		},
 
 		/* --- AI OPPONENT --- */
-		boardEvaluation(gameState) {
-			// Simple evaluation for the AI player (Player 1 in this case, need to generalize later)
-			const aiPlayerIndex = this.currentPlayerIndex; // Assuming the AI is the current player for evaluation
-			const opponentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-
-			const aiPlayer = gameState.players[aiPlayerIndex];
-			const opponentPlayer = gameState.players[opponentPlayerIndex];
-
-			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-			const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-
-			let score = 0;
-
-			// 1. Unit Count and Value
-			score += aiUnits.length * 10; // Award points for each AI unit
-			score -= opponentUnits.length * 10; // Penalize for each opponent unit
-
-			aiUnits.forEach(unit => {
-				score += unit.value; // Add unit value to score
-				if (unit.isGuarding) score += 2; // Bonus for guarding units
-			});
-
-			opponentUnits.forEach(unit => {
-				score -= unit.value; // Penalize for opponent unit value
-			});
-
-			// 2. Positional Scoring (towards opponent's base)
-			const opponentBaseHex = this.getHex(opponentPlayer.baseHexId);
-			if (opponentBaseHex) {
-				aiUnits.forEach(unit => {
-					const unitHex = this.getHex(unit.hexId);
-					if (unitHex) {
-						const distanceToOpponentBase = this.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
-						// The closer to the opponent's base, the higher the score
-						score += (R * 2 - distanceToOpponentBase); // R*2 is roughly max distance
-					}
-				});
-			}
-
-			// 3. Threat and Vulnerability (simplified)
-			// This is a more complex part and might require simulating attacks or checking adjacent hexes
-			// For a basic evaluation, we can just check if units are adjacent to enemies
-
-			aiUnits.forEach(aiUnit => {
-				const aiUnitHex = this.getHex(aiUnit.hexId);
-				if (aiUnitHex) {
-					const neighbors = this.getNeighbors(aiUnitHex);
-					neighbors.forEach(neighborHex => {
-						if (neighborHex) {
-							const neighborUnit = this.getUnitOnHex(neighborHex.id);
-							if (neighborUnit && neighborUnit.playerId === opponentPlayerIndex) {
-								score -= 5; // Penalize if an AI unit is adjacent to an enemy
-							}
-						}
-					});
-				}
-			});
-
-			 opponentUnits.forEach(opponentUnit => {
-				const opponentUnitHex = this.getHex(opponentUnit.hexId);
-				if (opponentUnitHex) {
-					const neighbors = this.getNeighbors(opponentUnitHex);
-					neighbors.forEach(neighborHex => {
-						if (neighborHex) {
-							const neighborUnit = this.getUnitOnHex(neighborHex.id);
-							if (neighborUnit && neighborUnit.playerId === aiPlayerIndex) {
-								score += 5; // Reward if an opponent unit is adjacent to an AI unit
-							}
-						}
-					});
-				}
-			});
-
-			// 4. Check Win/Loss conditions (Highest priority)
-			if (gameState.gameState === 'GAME_OVER') {
-				if (gameState.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
-				else if (gameState.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
-				else score = 0; // Draw
-			}
-
-			return score;
+		performAITurn() {
+			let choice = [1, 2, 3, 4].random();
+			this['performAITurn_' + choice]();
 		},
 		performAITurn_1() { // Simple AI
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
@@ -1691,12 +1613,316 @@ function game() {
 			}
 			// If no target found for a target-based action, the action fails gracefully, and the turn ends.
 		},
-		performAITurn() {
-			let choice = [1, 2, 3].random();
-			this['performAITurn_' + choice]();
+		performAITurn_4() {
+			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
+
+			this.addLog("Minimax AI is thinking...");
+
+			const aiPlayer = this.players[this.currentPlayerIndex];
+			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+
+			if (aiUnits.length === 0) {
+				this.addLog("Minimax AI has no units that can act. Ending turn.");
+				this.endTurn();
+				return;
+			}
+
+			// Find the best move using the Minimax algorithm
+			// We need to pass a copy of the current game state to minimax
+			const currentGameStateCopy = JSON.parse(JSON.stringify(this.$data)); // Copy the game state
+			const bestMove = this.findBestMove(currentGameStateCopy, 3); // Search depth of 3 (can adjust)
+
+			if (bestMove) {
+				const unitToAct = this.getUnitOnHex(bestMove.unitHexId);
+				const targetHex = this.getHex(bestMove.targetHexId);
+
+				this.selectedUnitHexId = bestMove.unitHexId; // Select the unit for the action
+
+				// Determine the action type based on the best move
+				let actionType = null;
+				const unit = this.getUnitOnHex(bestMove.unitHexId);
+				const targetUnit = this.getUnitOnHex(bestMove.targetHexId);
+
+				// Logic to determine action type (this needs to be more robust)
+				// - If target is empty and move is valid for unit's movement type, it's a MOVE
+				// - If target is enemy and move is valid, it's a MELEE attack (handled by performMove)
+				// - If unit is Dice 5 and target is in ranged attack range, it's a RANGED_ATTACK
+				// - If unit is Dice 6 and target is adjacent enemy, it's a SPECIAL_ATTACK
+				// - If target is friendly and move is valid, it's a MERGE
+
+				 const validMoves = this.calcValidMoves(bestMove.unitHexId);
+				 const validRangedTargets = (unit?.value === 5) ? this.calcValidRangedTargets(unit.hexId) : [];
+				 const validSpecialTargets = (unit?.value === 6) ? this.calcValidSpecialAttackTargets(unit.hexId) : [];
+				 const validMerges = this.calcValidMoves(unit.hexId, true);
+
+				if (validMoves.includes(bestMove.targetHexId) && !targetUnit) {
+					 actionType = 'MOVE';
+				 } else if (validMoves.includes(bestMove.targetHexId) && targetUnit?.playerId !== aiPlayer.id) {
+					 actionType = 'MOVE'; // Melee attack
+				 } else if (unit?.value === 5 && validRangedTargets.includes(bestMove.targetHexId)) {
+					 actionType = 'RANGED_ATTACK';
+				 } else if (unit?.value === 6 && validSpecialTargets.includes(bestMove.targetHexId)) {
+					 actionType = 'SPECIAL_ATTACK';
+				 } else if (validMerges.includes(bestMove.targetHexId)) {
+					 actionType = 'MERGE';
+				 } else {
+					 // If no specific action type is identified, default to MOVE or handle other actions
+					 // For now, if bestMove leads to no clear action, the AI might not act effectively
+					 // This needs more sophisticated action determination based on the Minimax result
+					 this.addLog("Minimax AI: Could not determine action type for best move.");
+					 this.deselectUnit();
+					 this.endTurn();
+					 return;
+				 }
+
+
+				this.addLog(`Minimax AI: Performing ${actionType} with Dice ${unitToAct.value} from hex ${bestMove.unitHexId} to hex ${bestMove.targetHexId}.`);
+
+				// Perform the action based on the determined type
+				if (actionType === 'MOVE') this.performMove(bestMove.unitHexId, bestMove.targetHexId);
+				else if (actionType === 'RANGED_ATTACK') this.performRangedAttack(bestMove.unitHexId, bestMove.targetHexId);
+				else if (actionType === 'SPECIAL_ATTACK') this.performComandConquer(bestMove.unitHexId, bestMove.targetHexId);
+				else if (actionType === 'MERGE') this.performMerge(bestMove.unitHexId, bestMove.targetHexId, true); // Pass true for AI merge
+				// TODO: Add logic for Reroll and Guard if Minimax determines these are the best moves
+
+			} else {
+				this.addLog("Minimax AI: No best move found or no available actions. Ending turn.");
+			}
+
+			this.deselectUnit(); // Deselect unit after action
+			this.endTurn(); // End AI turn
 		},
 
 		/* --- AI HELPER FUNCTIONS --- */
+		boardEvaluation(gameState) { // Make sure this is accessible within the game object
+			// Simple evaluation for the AI player (Player 1 in this case, need to generalize later)
+			const aiPlayerIndex = this.currentPlayerIndex; // Assuming the AI is the current player for evaluation
+			const opponentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+
+			const aiPlayer = gameState.players[aiPlayerIndex];
+			const opponentPlayer = gameState.players[opponentPlayerIndex];
+
+			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+			const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+
+			let score = 0;
+
+			// 1. Unit Count and Value
+			score += aiUnits.length * 10; // Award points for each AI unit
+			score -= opponentUnits.length * 10; // Penalize for each opponent unit
+
+			aiUnits.forEach(unit => {
+				score += unit.value; // Add unit value to score
+				if (unit.isGuarding) score += 2; // Bonus for guarding units
+			});
+
+			opponentUnits.forEach(unit => {
+				score -= unit.value; // Penalize for opponent unit value
+			});
+
+			// 2. Positional Scoring (towards opponent's base)
+			const opponentBaseHex = this.getHex(opponentPlayer.baseHexId);
+			if (opponentBaseHex) {
+				aiUnits.forEach(unit => {
+					const unitHex = this.getHex(unit.hexId);
+					if (unitHex) {
+						const distanceToOpponentBase = this.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
+						// The closer to the opponent's base, the higher the score
+						score += (R * 2 - distanceToOpponentBase); // R*2 is roughly max distance
+					}
+				});
+			}
+
+			// 3. Threat and Vulnerability (simplified)
+			// This is a more complex part and might require simulating attacks or checking adjacent hexes
+			// For a basic evaluation, we can just check if units are adjacent to enemies
+
+			aiUnits.forEach(aiUnit => {
+				const aiUnitHex = this.getHex(aiUnit.hexId);
+				if (aiUnitHex) {
+					const neighbors = this.getNeighbors(aiUnitHex);
+					neighbors.forEach(neighborHex => {
+						if (neighborHex) {
+							const neighborUnit = this.getUnitOnHex(neighborHex.id);
+							if (neighborUnit && neighborUnit.playerId === opponentPlayerIndex) {
+								score -= 5; // Penalize if an AI unit is adjacent to an enemy
+							}
+						}
+					});
+				}
+			});
+
+			 opponentUnits.forEach(opponentUnit => {
+				const opponentUnitHex = this.getHex(opponentUnit.hexId);
+				if (opponentUnitHex) {
+					const neighbors = this.getNeighbors(opponentUnitHex);
+					neighbors.forEach(neighborHex => {
+						if (neighborHex) {
+							const neighborUnit = this.getUnitOnHex(neighborHex.id);
+							if (neighborUnit && neighborUnit.playerId === aiPlayerIndex) {
+								score += 5; // Reward if an opponent unit is adjacent to an AI unit
+							}
+						}
+					});
+				}
+			});
+
+			// 4. Check Win/Loss conditions (Highest priority)
+			if (gameState.gameState === 'GAME_OVER') {
+				if (gameState.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
+				else if (gameState.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
+				else score = 0; // Draw
+			}
+
+			return score;
+		},
+		// Function to find the best move for the AI
+		findBestMove(gameState, depth) {
+			let bestScore = -Infinity;
+			let bestMove = null;
+
+			// Generate possible moves for the AI player
+			const aiPlayer = gameState.players[gameState.currentPlayerIndex];
+			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+
+			 // Iterate through all possible actions for all active AI units
+			 // Need to consider Move, Reroll, Guard, Ranged Attack, Special Attack, Merge
+
+			 for (const unit of aiUnits) {
+				// Simulate Move actions
+				const validMoves = this.calcValidMoves(unit.hexId); // Need to make calcValidMoves work with the passed gameState
+
+				for (const targetHexId of validMoves) {
+					const nextGameState = JSON.parse(JSON.stringify(gameState));
+
+					 // Apply the move in the copied state (needs to be implemented correctly)
+					 // This simulation logic is crucial and needs to be accurate for all action types
+
+					 // After simulating the move:
+					 // 1. Update the unit's position
+					 // 2. Handle potential combat and update units/hexes accordingly
+					 // 3. Update win conditions in nextGameState
+					 // 4. Switch the current player in nextGameState
+
+					 // Call minimax for the opponent (minimizing player)
+					const score = this.minimax(nextGameState, depth - 1, false);
+
+					// Update bestScore and bestMove
+					if (score > bestScore) {
+						bestScore = score;
+						// Store the move that led to this score
+						bestMove = { unitHexId: unit.hexId, targetHexId: targetHexId, actionType: 'MOVE' }; // Store action type
+					}
+				}
+
+				// TODO: Simulate Reroll, Guard, Ranged Attack, Special Attack, Merge actions
+				// For each action, create nextGameState, apply the action, call minimax, and update bestScore/bestMove
+			 }
+
+			return bestMove; // Return the move (unitHexId, targetHexId, actionType) that leads to the best score
+		},
+		// Minimax Algorithm
+		minimax(gameState, depth, maximizingPlayer) {
+			// Base case: If depth is 0 or game is over, return the evaluated score
+			if (depth === 0 || gameState.gameState === 'GAME_OVER') {
+				// Evaluate the state from the perspective of the maximizing player (AI)
+				return this.boardEvaluation(gameState); // Assuming boardEvaluation is for the AI
+			}
+
+			// If maximizing player (AI)
+			if (maximizingPlayer) {
+				let maxScore = -Infinity;
+				let bestMove = null; // To store the best move at the root
+
+				// Generate possible moves for the current player
+				const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+				const activeUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+
+				for (const unit of activeUnits) {
+					// Need to simulate all possible actions for the unit
+					// This is a simplified example, would need to handle different action types (move, attack, etc.)
+					// And their resulting game states
+
+					// Example: Simulate moving to each valid move hex
+					const validMoves = this.calcValidMoves(unit.hexId); // This needs access to the current state
+
+					for (const targetHexId of validMoves) {
+						// Create a deep copy of the game state to simulate the move
+						const nextGameState = JSON.parse(JSON.stringify(gameState)); // Simple deep copy, might need a more robust method
+
+						// Apply the move to nextGameState (This part is complex and depends on your game state structure)
+						// Find the unit and hex in the copied state and update
+						const unitInNextState = nextGameState.players[nextGameState.currentPlayerIndex].dice.find(d => d.id === unit.id);
+						const currentHexInNextState = nextGameState.hexes.find(hex => hex.id === unit.hexId);
+						const targetHexInNextState = nextGameState.hexes.find(hex => hex.id === targetHexId);
+
+						if (unitInNextState && currentHexInNextState && targetHexInNextState) {
+							// Handle potential combat in the simulated move
+							const targetUnitInNextState = nextGameState.hexes.find(hex => hex.id === targetHexId)?.unitId ?
+														nextGameState.players[(nextGameState.currentPlayerIndex + 1) % nextGameState.players.length].dice.find(d => d.id === nextGameState.hexes.find(hex => hex.id === targetHexId).unitId) : null;
+
+							if (targetUnitInNextState) {
+								// Simulate combat logic here (based on your handleCombat function)
+								// This is a simplification: assume attacker wins if attack >= defender armor
+								const attackerEffectiveArmor = this.calcDefenderEffectiveArmor({ ...nextGameState, hexes: [ unitInNextState ] }); // Needs refinement
+								const defenderEffectiveArmor = this.calcDefenderEffectiveArmor({ ...nextGameState, hexes: [ targetUnitInNextState ] }); // Needs refinement
+
+								if (unitInNextState.attack >= defenderEffectiveArmor) {
+									// Attacker wins, remove defender
+									targetHexInNextState.unitId = null;
+									targetUnitInNextState.isDeath = true;
+									// Move attacker
+									currentHexInNextState.unitId = null;
+									targetHexInNextState.unitId = unitInNextState.id;
+									unitInNextState.hexId = targetHexId;
+								} else {
+									// Attacker fails, stays put, defender armor reduced
+									targetUnitInNextState.armorReduction++;
+								}
+
+							} else {
+								// Move to empty hex
+								currentHexInNextState.unitId = null;
+								targetHexInNextState.unitId = unitInNextState.id;
+								unitInNextState.hexId = targetHexId;
+							}
+
+							// After simulating the move, it's the opponent's turn
+							nextGameState.currentPlayerIndex = (nextGameState.currentPlayerIndex + 1) % nextGameState.players.length;
+							// Need to update gameState.gameState based on simulated win conditions
+
+							// Recursive call for the opponent (minimizing player)
+							const score = this.minimax(nextGameState, depth - 1, false);
+
+							// Update maxScore if the current move leads to a better score
+							if (score > maxScore) {
+								maxScore = score;
+								if (depth === 3) { // If at the root (initial call depth), store the move
+									bestMove = { unitHexId: unit.hexId, targetHexId: targetHexId };
+								}
+							}
+						}
+					}
+					// TODO: Simulate other actions like Reroll, Guard, Ranged Attack, Special Attack, Merge
+				}
+
+				if (depth === 3) { // Return the best move at the root
+					return bestMove;
+				}
+
+				return maxScore; // Return the best score at other levels
+			} else { // If minimizing player (Opponent)
+				let minScore = Infinity;
+
+				// Generate possible moves for the current player (opponent)
+				// This part needs to simulate opponent's moves and call minimax(nextGameState, depth - 1, true)
+				// For simplicity in this placeholder, it just returns a default value.
+				// You would iterate through opponent's units and their possible actions here,
+				// simulate each, get the resulting state, and call minimax recursively.
+
+				return minScore; // Return the minimum score
+			}
+		},
 		analyzeThreats(aiUnits, opponentUnits, aiBaseHexId) {
 			const threats = [];
 			const aiBaseHex = this.getHex(aiBaseHexId);
@@ -1749,7 +1975,6 @@ function game() {
 			this.deselectUnit(); // Clean up selection used for calculation
 			return threats;
 		},
-
 		analyzeOpportunities(aiUnits, opponentUnits, opponentBaseHexId) {
 			const opportunities = [];
 			const opponentBaseHex = this.getHex(opponentBaseHexId);
@@ -1877,7 +2102,6 @@ function game() {
 			this.deselectUnit(); // Clean up selection used for calculation
 			return opportunities;
 		},
-
 		isUnitVulnerable(unitHexId, opponentUnits) {
 			const unit = this.getUnitOnHex(unitHexId);
 			if (!unit || unit.isDeath) return false;
