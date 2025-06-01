@@ -58,10 +58,10 @@ function game() {
 		winnerMessage: "",
 		actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
 		debug: {
-			coordinate: true,
-			skipReroll: true,
-			skipDeploy: true,
-			autoPlay: false,
+			coordinate: new URLSearchParams(location.search).get('mode')?.includes('debug'),
+			skipReroll: new URLSearchParams(location.search).get('mode')?.includes('debug'),
+			skipDeploy: new URLSearchParams(location.search).get('mode')?.includes('debug'),
+			autoPlay: new URLSearchParams(location.search).get('mode')?.includes('autoPlay'),
 		},
 		
 		/* --- INITIALIZATION --- */
@@ -1220,7 +1220,89 @@ function game() {
 		},
 
 		/* --- AI OPPONENT --- */
-		performAITurn_1() {
+		boardEvaluation(gameState) {
+			// Simple evaluation for the AI player (Player 1 in this case, need to generalize later)
+			const aiPlayerIndex = this.currentPlayerIndex; // Assuming the AI is the current player for evaluation
+			const opponentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+
+			const aiPlayer = gameState.players[aiPlayerIndex];
+			const opponentPlayer = gameState.players[opponentPlayerIndex];
+
+			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+			const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+
+			let score = 0;
+
+			// 1. Unit Count and Value
+			score += aiUnits.length * 10; // Award points for each AI unit
+			score -= opponentUnits.length * 10; // Penalize for each opponent unit
+
+			aiUnits.forEach(unit => {
+				score += unit.value; // Add unit value to score
+				if (unit.isGuarding) score += 2; // Bonus for guarding units
+			});
+
+			opponentUnits.forEach(unit => {
+				score -= unit.value; // Penalize for opponent unit value
+			});
+
+			// 2. Positional Scoring (towards opponent's base)
+			const opponentBaseHex = this.getHex(opponentPlayer.baseHexId);
+			if (opponentBaseHex) {
+				aiUnits.forEach(unit => {
+					const unitHex = this.getHex(unit.hexId);
+					if (unitHex) {
+						const distanceToOpponentBase = this.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
+						// The closer to the opponent's base, the higher the score
+						score += (R * 2 - distanceToOpponentBase); // R*2 is roughly max distance
+					}
+				});
+			}
+
+			// 3. Threat and Vulnerability (simplified)
+			// This is a more complex part and might require simulating attacks or checking adjacent hexes
+			// For a basic evaluation, we can just check if units are adjacent to enemies
+
+			aiUnits.forEach(aiUnit => {
+				const aiUnitHex = this.getHex(aiUnit.hexId);
+				if (aiUnitHex) {
+					const neighbors = this.getNeighbors(aiUnitHex);
+					neighbors.forEach(neighborHex => {
+						if (neighborHex) {
+							const neighborUnit = this.getUnitOnHex(neighborHex.id);
+							if (neighborUnit && neighborUnit.playerId === opponentPlayerIndex) {
+								score -= 5; // Penalize if an AI unit is adjacent to an enemy
+							}
+						}
+					});
+				}
+			});
+
+			 opponentUnits.forEach(opponentUnit => {
+				const opponentUnitHex = this.getHex(opponentUnit.hexId);
+				if (opponentUnitHex) {
+					const neighbors = this.getNeighbors(opponentUnitHex);
+					neighbors.forEach(neighborHex => {
+						if (neighborHex) {
+							const neighborUnit = this.getUnitOnHex(neighborHex.id);
+							if (neighborUnit && neighborUnit.playerId === aiPlayerIndex) {
+								score += 5; // Reward if an opponent unit is adjacent to an AI unit
+							}
+						}
+					});
+				}
+			});
+
+			// 4. Check Win/Loss conditions (Highest priority)
+			if (gameState.gameState === 'GAME_OVER') {
+				if (gameState.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
+				else if (gameState.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
+				else score = 0; // Draw
+			}
+
+			return score;
+		},
+		performAITurn_1() { // Simple AI
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 			this.addLog("AI is thinking...");
@@ -1355,7 +1437,7 @@ function game() {
 			this.deselectUnit(); // Ensure unit is deselected before ending turn
 			this.endTurn();
 		},
-		performAITurn_2(forceUnits) {
+		performAITurn_2(forceUnits) { // Strategic AI
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 			this.addLog("AI is planning its turn...");
@@ -1560,7 +1642,7 @@ function game() {
 			this.deselectUnit(); // Ensure unit is deselected before ending turn
 			this.endTurn();
 		},
-		performAITurn_3() {
+		performAITurn_3() { // Random AI
 			if (this.gameState !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 			this.addLog("AI is acting randomly...");
@@ -1577,10 +1659,10 @@ function game() {
 			const unitToActWith = aiUnits.random();
 			this.selectedUnitHexId = unitToActWith.hexId;
 
-			const possibleActions = ['MOVE', 'REROLL', 'GUARD', 'MERGE'];
+			const possibleActions = ['MOVE', 'REROLL', /*'GUARD',*/ 'MERGE'];
 			if (unitToActWith.value === 5) possibleActions.push('RANGED_ATTACK');
 			if (unitToActWith.value === 6) possibleActions.push('SPECIAL_ATTACK');
-			if (unitToActWith.value === 1) possibleActions.push('BRAVE_CHARGE');
+			// if (unitToActWith.value === 1) possibleActions.push('BRAVE_CHARGE');
 
 			// Filter actions the unit *can* perform based on game rules (not just strategy)
 			const validActions = possibleActions.filter(action => this.canPerformAction(unitToActWith.hexId, action));
