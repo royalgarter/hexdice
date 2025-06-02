@@ -1307,8 +1307,7 @@ function alpineHexDiceTacticGame() { return {
 		// Simple AI Strategy:
 		// 1. If any unit can attack an enemy and win, do it. Prioritize units closer to opponent base?
 		// 2. If no winning attacks, check for merges to create stronger units.
-		// 3. If no good merges, move units towards the opponent's base, prioritizing units that can move.
-		// 4. If no moves possible, Guard or Reroll (very basic - Guard nearby vulnerable units?)
+		// 3. If no moves possible, Guard or Reroll (very basic - Guard nearby vulnerable units?)
 
 		let actionTaken = false;
 
@@ -1357,24 +1356,6 @@ function alpineHexDiceTacticGame() { return {
 				}
 			}
 			if(actionTaken) break;
-		}
-
-		// If no attack, try to merge (simple: merge with first valid friendly)
-		if (false && !actionTaken) {
-			for (const unit of aiUnits) {
-				if (unit.hasMovedOrAttackedThisTurn) continue;
-				this.selectedUnitHexId = unit.hexId;
-				const validMerges = this.calcValidMoves(unit.hexId, true);
-				if (validMerges.length > 0) {
-					const targetHexId = validMerges[0];
-					this.addLog(`AI (Dice ${unit.value}) attempts to merge with unit at hex ${targetHexId}`);
-					this.performMerge(unit.hexId, targetHexId);
-					actionTaken = true;
-					// If merge results in a new unit that can act, the AI should try to use it.
-					// For now, assume merge ends the unit's actions for the turn unless the rule grants it.
-					break;
-				}
-			}
 		}
 
 		// If no attack or merge, move towards opponent base
@@ -1585,6 +1566,59 @@ function alpineHexDiceTacticGame() { return {
 		this.deselectUnit();
 		this.endTurn();
 	},
+	performAI_Random() { // Random AI
+		if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
+
+		// this.addLog("AI is acting randomly...");
+
+		const aiPlayer = this.players[this.currentPlayerIndex];
+		const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+
+		if (aiUnits.length === 0) {
+			this.addLog("AI has no units that can act. Ending turn.");
+			this.endTurn();
+			return;
+		}
+
+		const unitToActWith = aiUnits.random();
+		this.selectedUnitHexId = unitToActWith.hexId;
+
+		const possibleActions = ['MOVE', 'REROLL', /*'GUARD',*/ 'MERGE'];
+		if (unitToActWith.value === 5) possibleActions.push('RANGED_ATTACK');
+		if (unitToActWith.value === 6) possibleActions.push('SPECIAL_ATTACK');
+		// if (unitToActWith.value === 1) possibleActions.push('BRAVE_CHARGE');
+
+		// Filter actions the unit *can* perform based on game rules (not just strategy)
+		const validActions = possibleActions.filter(action => this.canPerformAction(unitToActWith.hexId, action));
+
+		if (validActions.length === 0) {
+			this.addLog(`AI (Dice ${unitToActWith.value}) at hex ${unitToActWith.hexId} has no valid actions. Ending turn.`);
+			this.deselectUnit();
+			this.endTurn();
+			return;
+		}
+
+		const chosenAction = validActions.random();
+		this.addLog(`AI (Dice ${unitToActWith.value}) at hex ${unitToActWith.hexId} chooses action: ${chosenAction}`);
+
+		this.initiateAction(chosenAction); // This calculates valid targets/moves
+
+		let targetHexId = null;
+		if (this.validMoves.length > 0 && ['MOVE', 'MERGE', 'BRAVE_CHARGE'].includes(chosenAction)) {
+			targetHexId = this.validMoves.random();
+		} else if (this.validTargets.length > 0 && ['RANGED_ATTACK', 'SPECIAL_ATTACK'].includes(chosenAction)) {
+			targetHexId = this.validTargets.random();
+		}
+
+		if (['REROLL', 'GUARD'].includes(chosenAction)) {
+			this.performAction(chosenAction, this.selectedUnitHexId);
+		}
+
+		if (targetHexId !== null) {
+			this.completeAction(targetHexId); // Perform the action with the chosen target
+		}
+		// If no target found for a target-based action, the action fails gracefully, and the turn ends.
+	},
 	performAI_Analyze() { // Strategic AI
 		if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
@@ -1665,32 +1699,54 @@ function alpineHexDiceTacticGame() { return {
 			if(actionExecuted) break;
 		}
 
-		// 2. Strengthen Units (Merge)
-		if (false && !actionExecuted) {
-			// Look for good merge opportunities (e.g., merging two 3s to a 6, or creating a unit that can immediately act and attack)
-			let bestMerge = null;
-			// Simple merge logic: find the first available merge
-			for (const unit of aiUnits) {
-				if (unit.hasMovedOrAttackedThisTurn) continue;
-				this.selectedUnitHexId = unit.hexId;
-				const validMerges = this.calcValidMoves(unit.hexId, true);
-				if (validMerges.length > 0) {
-					// Simple: take the first valid merge
-					bestMerge = { mergingUnitHexId: unit.hexId, targetUnitHexId: validMerges[0] };
+		// 2. Take the good opportunity from opportunities
+		if (!actionExecuted) {
+			for (const opportunity of opportunities) {
+				const unit = this.getUnitOnHex(opportunity.unitHexId);
+				// Ensure the unit exists, is not dead, and has not acted yet this turn
+				if (!unit || unit.isDeath || unit.hasMovedOrAttackedThisTurn) {
+					continue;
+				}
+
+				this.selectedUnitHexId = opportunity.unitHexId; // Select the unit before performing the action
+
+				// Perform the action based on the opportunity type and action
+				if (opportunity.type === 'attackBase' || opportunity.type === 'attackUnit') {
+					if (opportunity.action === 'MOVE') { // Melee attack or move to base
+						this.performMove(opportunity.unitHexId, opportunity.targetHexId);
+						this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with melee unit from hex ${opportunity.unitHexId}.`);
+						actionExecuted = true;
+						break;
+					} else if (opportunity.action === 'RANGED_ATTACK') {
+						this.performRangedAttack(opportunity.unitHexId, opportunity.targetHexId);
+						this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with ranged unit from hex ${opportunity.unitHexId}.`);
+						actionExecuted = true;
+						break;
+					} else if (opportunity.action === 'SPECIAL_ATTACK') {
+						this.performComandConquer(opportunity.unitHexId, opportunity.targetHexId); // Assuming ComandConquer is the special attack
+						this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with special unit from hex ${opportunity.unitHexId}.`);
+						actionExecuted = true;
+						break;
+					}
+				} else if (opportunity.type === 'merge') {
+					// Merging is performed via a move action
+					this.performMove(opportunity.unitHexId, opportunity.targetHexId);
+					this.addLog(`AI: Opportunity - Merging unit from hex ${opportunity.unitHexId} to hex ${opportunity.targetHexId}. Resulting value: ${opportunity.resultingValue}.`);
+					actionExecuted = true;
+					break;
+				} else if (opportunity.type === 'advance') {
+					// Advancing is performed via a move action
+					this.performMove(opportunity.unitHexId, opportunity.targetHexId);
+					this.addLog(`AI: Opportunity - Advancing unit from hex ${opportunity.unitHexId} to hex ${opportunity.targetHexId} (distance to base: ${opportunity.distanceToOpponentBase}).`);
+					actionExecuted = true;
 					break;
 				}
-			}
-
-			if (bestMerge) {
-				this.addLog(`AI: Merging units at hex ${bestMerge.mergingUnitHexId} and ${bestMerge.targetUnitHexId}.`);
-				this.performMerge(bestMerge.mergingUnitHexId, bestMerge.targetUnitHexId, true);
-				actionExecuted = true;
-				// Note: If merge results in a unit that can act, the AI needs another loop to use it.
-				// For simplicity now, assume merge ends the action for the turn.
+				// If we reach here, either the opportunity type was not handled, or the action was not valid for some reason.
+				// Continue to the next opportunity.
 			}
 		}
 
-		// 3. Attack Weaker Enemies or Advance
+		// 3. Attack Weaker Enemies or Advance (This block will only execute if no higher priority action was taken)
 		if (!actionExecuted) {
 			// Prioritize attacking any enemy unit within reach
 			let bestAttackOrMove = null;
@@ -1728,7 +1784,7 @@ function alpineHexDiceTacticGame() { return {
 					if (targetHex && opponentBaseHex) {
 						const distanceToOpponentBase = this.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
 						if (distanceToOpponentBase < closestDistance) {
-							closestDistance = distanceToOppanceBase;
+							closestDistance = distanceToOpponentBase;
 							bestMoveTarget = targetHexId;
 						}
 					}
@@ -1761,7 +1817,7 @@ function alpineHexDiceTacticGame() { return {
 		// 4. Guard Vulnerable Units or Reroll
 		if (!actionExecuted) {
 			// Identify vulnerable units (e.g., low armor, exposed position)
-			const vulnerableUnits = aiUnits.filter(unit => !unit.hasMovedOrAttackedThisTurn && this.isUnitVulnerable(unit.hexId, opponentUnits));
+			const vulnerableUnits = aiUnits.filter(unit => !unit.hasMovedOrAttackedThisTurn && this.analyzeUnitVulnerable(unit.hexId, opponentUnits));
 			if (vulnerableUnits.length > 0) {
 				// Simple: Guard the first vulnerable unit
 				const unitToGuard = vulnerableUnits[0];
@@ -1789,59 +1845,6 @@ function alpineHexDiceTacticGame() { return {
 		// If no action was taken, end the turn.
 		this.deselectUnit(); // Ensure unit is deselected before ending turn
 		this.endTurn();
-	},
-	performAI_Random() { // Random AI
-		if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
-
-		// this.addLog("AI is acting randomly...");
-
-		const aiPlayer = this.players[this.currentPlayerIndex];
-		const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
-
-		if (aiUnits.length === 0) {
-			this.addLog("AI has no units that can act. Ending turn.");
-			this.endTurn();
-			return;
-		}
-
-		const unitToActWith = aiUnits.random();
-		this.selectedUnitHexId = unitToActWith.hexId;
-
-		const possibleActions = ['MOVE', 'REROLL', /*'GUARD',*/ 'MERGE'];
-		if (unitToActWith.value === 5) possibleActions.push('RANGED_ATTACK');
-		if (unitToActWith.value === 6) possibleActions.push('SPECIAL_ATTACK');
-		// if (unitToActWith.value === 1) possibleActions.push('BRAVE_CHARGE');
-
-		// Filter actions the unit *can* perform based on game rules (not just strategy)
-		const validActions = possibleActions.filter(action => this.canPerformAction(unitToActWith.hexId, action));
-
-		if (validActions.length === 0) {
-			this.addLog(`AI (Dice ${unitToActWith.value}) at hex ${unitToActWith.hexId} has no valid actions. Ending turn.`);
-			this.deselectUnit();
-			this.endTurn();
-			return;
-		}
-
-		const chosenAction = validActions.random();
-		this.addLog(`AI (Dice ${unitToActWith.value}) at hex ${unitToActWith.hexId} chooses action: ${chosenAction}`);
-
-		this.initiateAction(chosenAction); // This calculates valid targets/moves
-
-		let targetHexId = null;
-		if (this.validMoves.length > 0 && ['MOVE', 'MERGE', 'BRAVE_CHARGE'].includes(chosenAction)) {
-			targetHexId = this.validMoves.random();
-		} else if (this.validTargets.length > 0 && ['RANGED_ATTACK', 'SPECIAL_ATTACK'].includes(chosenAction)) {
-			targetHexId = this.validTargets.random();
-		}
-
-		if (['REROLL', 'GUARD'].includes(chosenAction)) {
-			this.performAction(chosenAction, this.selectedUnitHexId);
-		}
-
-		if (targetHexId !== null) {
-			this.completeAction(targetHexId); // Perform the action with the chosen target
-		}
-		// If no target found for a target-based action, the action fails gracefully, and the turn ends.
 	},
 	performAI_Minimax() { // Minimax AI
 		if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
@@ -2394,7 +2397,7 @@ function alpineHexDiceTacticGame() { return {
 		this.deselectUnit(); // Clean up selection used for calculation
 		return opportunities;
 	},
-	isUnitVulnerable(unitHexId, opponentUnits) {
+	analyzeUnitVulnerable(unitHexId, opponentUnits) {
 		const unit = this.getUnitOnHex(unitHexId);
 		if (!unit || unit.isDeath) return false;
 

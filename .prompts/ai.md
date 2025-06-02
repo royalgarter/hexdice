@@ -1,3 +1,7 @@
+Based on the result of `analyzeOpportunities()` implement the TODO `Take the good opportunity from opportunities` inside `performAI_Analyze()` in `game.js`
+
+
+---
 Implement function performBraveryCharge() for Dice 1 only
 
 * ##### **Dice 1: Bravery Charge**
