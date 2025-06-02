@@ -1619,7 +1619,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 		// If no target found for a target-based action, the action fails gracefully, and the turn ends.
 	},
-	performAI_Analyze() { // Strategic AI
+	performAI_Analyze() { // Analyst AI
 		if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
 		// this.addLog("AI is planning its turn...");
@@ -1700,50 +1700,49 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		// 2. Take the good opportunity from opportunities
-		if (!actionExecuted) {
-			for (const opportunity of opportunities) {
-				const unit = this.getUnitOnHex(opportunity.unitHexId);
-				// Ensure the unit exists, is not dead, and has not acted yet this turn
-				if (!unit || unit.isDeath || unit.hasMovedOrAttackedThisTurn) {
-					continue;
-				}
-
-				this.selectedUnitHexId = opportunity.unitHexId; // Select the unit before performing the action
-
-				// Perform the action based on the opportunity type and action
-				if (opportunity.type === 'attackBase' || opportunity.type === 'attackUnit') {
-					if (opportunity.action === 'MOVE') { // Melee attack or move to base
-						this.performMove(opportunity.unitHexId, opportunity.targetHexId);
-						this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with melee unit from hex ${opportunity.unitHexId}.`);
-						actionExecuted = true;
-						break;
-					} else if (opportunity.action === 'RANGED_ATTACK') {
-						this.performRangedAttack(opportunity.unitHexId, opportunity.targetHexId);
-						this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with ranged unit from hex ${opportunity.unitHexId}.`);
-						actionExecuted = true;
-						break;
-					} else if (opportunity.action === 'SPECIAL_ATTACK') {
-						this.performComandConquer(opportunity.unitHexId, opportunity.targetHexId); // Assuming ComandConquer is the special attack
-						this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with special unit from hex ${opportunity.unitHexId}.`);
-						actionExecuted = true;
-						break;
-					}
-				} else if (opportunity.type === 'merge') {
-					// Merging is performed via a move action
-					this.performMove(opportunity.unitHexId, opportunity.targetHexId);
-					this.addLog(`AI: Opportunity - Merging unit from hex ${opportunity.unitHexId} to hex ${opportunity.targetHexId}. Resulting value: ${opportunity.resultingValue}.`);
-					actionExecuted = true;
-					break;
-				} else if (opportunity.type === 'advance') {
-					// Advancing is performed via a move action
-					this.performMove(opportunity.unitHexId, opportunity.targetHexId);
-					this.addLog(`AI: Opportunity - Advancing unit from hex ${opportunity.unitHexId} to hex ${opportunity.targetHexId} (distance to base: ${opportunity.distanceToOpponentBase}).`);
-					actionExecuted = true;
-					break;
-				}
-				// If we reach here, either the opportunity type was not handled, or the action was not valid for some reason.
-				// Continue to the next opportunity.
+		for (const opportunity of opportunities) {
+			if (actionExecuted) break;
+			const unit = this.getUnitOnHex(opportunity.unitHexId);
+			// Ensure the unit exists, is not dead, and has not acted yet this turn
+			if (!unit || unit.isDeath || unit.hasMovedOrAttackedThisTurn) {
+				continue;
 			}
+
+			this.selectedUnitHexId = opportunity.unitHexId; // Select the unit before performing the action
+
+			// Perform the action based on the opportunity type and action
+			if (opportunity.type === 'attackBase' || opportunity.type === 'attackUnit') {
+				if (opportunity.action === 'MOVE') { // Melee attack or move to base
+					this.performMove(opportunity.unitHexId, opportunity.targetHexId);
+					this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with melee unit from hex ${opportunity.unitHexId}.`);
+					actionExecuted = true;
+					break;
+				} else if (opportunity.action === 'RANGED_ATTACK') {
+					this.performRangedAttack(opportunity.unitHexId, opportunity.targetHexId);
+					this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with ranged unit from hex ${opportunity.unitHexId}.`);
+					actionExecuted = true;
+					break;
+				} else if (opportunity.action === 'SPECIAL_ATTACK') {
+					this.performComandConquer(opportunity.unitHexId, opportunity.targetHexId); // Assuming ComandConquer is the special attack
+					this.addLog(`AI: Opportunity - ${opportunity.type === 'attackBase' ? 'attacking base' : 'attacking unit'} at hex ${opportunity.targetHexId} with special unit from hex ${opportunity.unitHexId}.`);
+					actionExecuted = true;
+					break;
+				}
+			} else if (opportunity.type === 'merge') {
+				// Merging is performed via a move action
+				this.performMove(opportunity.unitHexId, opportunity.targetHexId);
+				this.addLog(`AI: Opportunity - Merging unit from hex ${opportunity.unitHexId} to hex ${opportunity.targetHexId}. Resulting value: ${opportunity.resultingValue}.`);
+				actionExecuted = true;
+				break;
+			} else if (opportunity.type === 'advance') {
+				// Advancing is performed via a move action
+				this.performMove(opportunity.unitHexId, opportunity.targetHexId);
+				this.addLog(`AI: Opportunity - Advancing unit from hex ${opportunity.unitHexId} to hex ${opportunity.targetHexId} (distance to base: ${opportunity.distanceToOpponentBase}).`);
+				actionExecuted = true;
+				break;
+			}
+			// If we reach here, either the opportunity type was not handled, or the action was not valid for some reason.
+			// Continue to the next opportunity.
 		}
 
 		// 3. Attack Weaker Enemies or Advance (This block will only execute if no higher priority action was taken)
