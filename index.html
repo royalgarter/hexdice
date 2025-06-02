@@ -67,7 +67,7 @@
 						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs font-bold absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
-				<div class="hex-unitstat fixed left-2 bottom-25 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calcUIDiceStat(hex.id)"></div>
+				<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calcUIDiceStat(hex.id)"></div>
 			</div>
 		</template>
 	</div>
@@ -174,7 +174,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-sm h-32 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
+	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs h-32 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message"></p>
 		</template>
