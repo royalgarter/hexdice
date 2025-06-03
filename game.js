@@ -1978,6 +1978,15 @@ function alpineHexDiceTacticGame() { return {
 			delete applyState.validMoves;
 			delete applyState.validTargets;
 			delete applyState.selectedUnitHexId;
+
+			// Auto-end turn if all units have acted
+			const currentPlayer = applyState.players[applyState.currentPlayerIndex];
+			const allUnitsActed = currentPlayer.dice.every(d => 
+				d.isDeployed && !d.isDeath && d.hasMovedOrAttackedThisTurn
+			);
+			if (allUnitsActed) {
+				this.endTurn(applyState);
+			}
 		}
 
 		return applyState;
