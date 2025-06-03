@@ -236,14 +236,18 @@ generateAllPossibleMoves(state) {
 			});
 		}
 
-		// 4. Brave Charge (Dice 1)
+		// 4. Brave Charge (Dice 1) - move to front for better move ordering
 		if (unitValue === 1) {
 			const opponentUnits = state.players[(state.currentPlayerIndex + 1) % state.players.length].dice.filter(d => d.isDeployed && !d.isDeath);
 			opponentUnits.forEach(opponentUnit => {
-				// Check if this unit can brave charge this specific opponent unit
 				if (this.canUnitAttackTarget(unit, opponentUnit, state)) {
-					// The `performBraveCharge` typically takes the unit's hex and the target unit's hex
-					moves.push({ actionType: 'BRAVE_CHARGE', unitHexId, targetHexId: opponentUnit.hexId });
+					// Prioritize high-value targets first for better pruning
+					moves.unshift({ 
+						actionType: 'BRAVE_CHARGE', 
+						unitHexId, 
+						targetHexId: opponentUnit.hexId,
+						_priority: opponentUnit.value // Add heuristic for move ordering
+					});
 				}
 			});
 		}
@@ -351,7 +355,12 @@ applyMove(state, move) {
 			break;
 	}
 
-	return tempContext; // Return the modified state
+	// Clean up transient state properties
+	delete tempContext.validMoves;
+	delete tempContext.validTargets;
+	delete tempContext.selectedUnitHexId;
+	
+	return tempContext;
 },
 
 /*
@@ -379,8 +388,9 @@ minimax(state, depth, alpha, beta, isMaximizingPlayer, aiPlayerIndex) {
 		return isMaximizingPlayer ? score : -score;
 	}
 
-	// Generate moves for the player whose turn it is in the `state` object.
-	const moves = this.generateAllPossibleMoves(state);
+	// Generate and order moves - put promising moves first for better pruning
+	const moves = this.generateAllPossibleMoves(state)
+		.sort((a, b) => (b._priority || 0) - (a._priority || 0)); 
 
 	if (isMaximizingPlayer) { // AI's turn: maximize
 		let maxEval = -Infinity;
@@ -534,9 +544,37 @@ performAI_Minimax() { // Minimax AI
 			break;
 	}
 
-	this.deselectUnit(); // Deselect any unit after the action
-	// As per your original `performAI_Minimax`, the AI performs one action and then ends its turn.
-	// If you want the AI to take *all* its optimal actions within a single turn, this function
-	// would need to loop, re-calculating `bestMove` until it returns 'END_TURN'.
-	this.endTurn(); // End the current player's turn
+	// Loop to perform multiple actions per turn
+	let shouldEndTurn = false;
+	while (!shouldEndTurn) {
+		// Get fresh state copy each iteration
+		const currentStateCopy = clone(this.$data);
+		const nextMove = this.minimaxBestMove(currentStateCopy, 3);
+		
+		if (nextMove.actionType === 'END_TURN' || 
+			!this.generateAllPossibleMoves(this.$data).some(m => m.actionType !== 'END_TURN')) {
+			shouldEndTurn = true;
+			break;
+		}
+		
+		// Perform the move on actual game state
+		switch (nextMove.actionType) {
+			case 'MOVE': this.performMove(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'RANGED_ATTACK': this.performRangedAttack(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'COMMAND_CONQUER': this.performComandConquer(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'BRAVE_CHARGE': this.performBraveCharge(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'MERGE': this.performMerge(nextMove.unitHexId, nextMove.targetHexId, true); break;
+			case 'REROLL': this.performUnitReroll(nextMove.unitHexId); break;
+			case 'GUARD': this.performGuard(nextMove.unitHexId); break;
+			case 'END_TURN': shouldEndTurn = true; break;
+			default: break;
+		}
+		
+		if (nextMove.actionType === 'END_TURN') break;
+	}
+	
+	this.deselectUnit();
+	if (shouldEndTurn) {
+		this.endTurn();
+	}
 }
