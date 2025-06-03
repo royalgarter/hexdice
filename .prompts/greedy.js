@@ -83,159 +83,72 @@ generateAllPossibleMoves(state) {
 
 	return moves;
 },
-performAI_Greedy() { // Greedy AI
+performAI_Greedy() {
 	if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
 
-	// this.addLog("AI is greedy...");
-
-	const aiPlayer = this.players[this.currentPlayerIndex];
-	const otherPlayer = this.players[(this.currentPlayerIndex + 1) % this.players.length];
-	const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-	const opponentUnits = otherPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-	const aiBaseHexId = aiPlayer.baseHexId;
-	const opponentBaseHexId = otherPlayer.baseHexId;
-
 	const currentGameStateCopy = clone(this.$data);
-	const initScore = this.boardEvaluation(currentGameStateCopy);
+	const possibleMoves = this.generateAllPossibleMoves(currentGameStateCopy);
 	let bestScore = -Infinity;
 	let bestMove = null;
 
-	// Iterate through all possible actions for all active AI units
-	for (const unit of aiUnits) {
-		if (unit.hasMovedOrAttackedThisTurn) continue;
-
-		// Simulate Move actions
-		const validMoves = this.calcValidMoves(unit.hexId, false, currentGameStateCopy);
-		for (const targetHexId of validMoves) {
-			const nextGameState = clone(currentGameStateCopy);
-			this.performMove(unit.hexId, targetHexId, nextGameState);
-
-			const evaluation = this.boardEvaluation(nextGameState);
-			console.log('MOVE', unit.hexId, targetHexId, evaluation);
-			if (evaluation > bestScore) {
-				bestScore = evaluation;
-				bestMove = { actionType: 'MOVE', unit: unit.value, unitHexId: unit.hexId, targetHexId: targetHexId };
-			}
+	// Evaluate all possible moves
+	possibleMoves.forEach(move => {
+		const nextGameState = clone(currentGameStateCopy);
+		switch (move.actionType) {
+			case 'MOVE':
+				this.performMove(move.unitHexId, move.targetHexId, nextGameState);
+				break;
+			case 'RANGED_ATTACK':
+				this.performRangedAttack(move.unitHexId, move.targetHexId, nextGameState);
+				break;
+			case 'COMMAND_CONQUER':
+				this.performComandConquer(move.unitHexId, move.targetHexId, nextGameState);
+				break;
+			case 'BRAVE_CHARGE':
+				this.performBraveCharge(move.unitHexId, move.targetHexId, nextGameState);
+				break;
+			case 'MERGE':
+				this.performMerge(move.unitHexId, move.targetHexId, true, nextGameState);
+				break;
+			case 'REROLL':
+				this.performUnitReroll(move.unitHexId, nextGameState);
+				break;
+			case 'GUARD':
+				this.performGuard(move.unitHexId, nextGameState);
+				break;
 		}
-
-		// Simulate Ranged Attack (Dice 5)
-		if (unit.value === 5) {
-			const validRangedTargets = this.calcValidRangedTargets(unit.hexId, currentGameStateCopy);
-			for (const targetHexId of validRangedTargets) {
-				const nextGameState = clone(currentGameStateCopy);
-				this.performRangedAttack(unit.hexId, targetHexId, nextGameState);
-
-				const evaluation = this.boardEvaluation(nextGameState);
-				console.log('RANGED_ATTACK', unit.hexId, targetHexId, evaluation);
-				if (evaluation > bestScore) {
-					bestScore = evaluation;
-					bestMove = { actionType: 'RANGED_ATTACK', unit: unit.value, unitHexId: unit.hexId, targetHexId: targetHexId };
-				}
-			}
+		const evaluation = this.boardEvaluation(nextGameState);
+		if (evaluation > bestScore) {
+			bestScore = evaluation;
+			bestMove = move;
 		}
+	});
 
-		// Simulate Command & Conquer (Dice 6)
-		if (unit.value === 6) {
-			const validSpecialTargets = this.calcValidSpecialAttackTargets(unit.hexId, currentGameStateCopy);
-			for (const targetHexId of validSpecialTargets) {
-				const nextGameState = clone(currentGameStateCopy);
-				this.performComandConquer(unit.hexId, targetHexId, nextGameState);
-
-				const evaluation = this.boardEvaluation(nextGameState);
-				console.log('COMMAND_CONQUER', unit.hexId, targetHexId, evaluation);
-				if (evaluation > bestScore) {
-					bestScore = evaluation;
-					bestMove = { actionType: 'COMMAND_CONQUER', unit: unit.value, unitHexId: unit.hexId, targetHexId: targetHexId };
-				}
-			}
+	// Execute best move if found
+	if (bestMove) {
+		switch (bestMove.actionType) {
+			case 'MOVE':
+				this.performMove(bestMove.unitHexId, bestMove.targetHexId);
+				break;
+			case 'RANGED_ATTACK':
+				this.performRangedAttack(bestMove.unitHexId, bestMove.targetHexId);
+				break;
+			case 'COMMAND_CONQUER':
+				this.performComandConquer(bestMove.unitHexId, bestMove.targetHexId);
+				break;
+			case 'BRAVE_CHARGE':
+				this.performBraveCharge(bestMove.unitHexId, bestMove.targetHexId);
+				break;
+			case 'MERGE':
+				this.performMerge(bestMove.unitHexId, bestMove.targetHexId, true);
+				break;
+			case 'REROLL':
+				this.performUnitReroll(bestMove.unitHexId);
+				break;
+			case 'GUARD':
+				this.performGuard(bestMove.unitHexId);
+				break;
 		}
-
-		// Simulate Brave Charge (Dice 1) - Simulate move and then attack logic
-		if (unit.value === 1) {
-			const validBraveChargeMoves = this.calcValidBraveChargeMoves(unit.hexId, currentGameStateCopy);
-			for (const moveHexId of validBraveChargeMoves) {
-				const nextGameStateAfterMove = clone(currentGameStateCopy);
-				this.performMove(unit.hexId, moveHexId, nextGameStateAfterMove);
-
-				// After moving, simulate the Brave Charge attack on eligible adjacent targets
-				const potentialTargets = this.calcValidSpecialAttackTargets(moveHexId, nextGameStateAfterMove); // Special attack targets are adjacent
-				for (const targetHexId of potentialTargets) {
-					const targetUnit = this.getUnitOnHex(targetHexId, nextGameStateAfterMove);
-					if (targetUnit && targetUnit.playerId !== unit.playerId && this.calcDefenderEffectiveArmor(targetHexId, nextGameStateAfterMove) >= 6) {
-						const nextGameStateAfterCharge = clone(nextGameStateAfterMove);
-						this.performBraveCharge(moveHexId, targetHexId, nextGameStateAfterCharge); // Needs to be implemented
-
-						const evaluation = this.boardEvaluation(nextGameStateAfterCharge);
-						console.log('BRAVE_CHARGE', unit.hexId, targetHexId, evaluation);
-						if (evaluation > bestScore) {
-							bestScore = evaluation;
-							bestMove = { actionType: 'BRAVE_CHARGE', unit: unit.value, unitHexId: unit.hexId, targetHexId: targetHexId }; // Record the initial unit and final target
-						}
-					}
-				}
-			}
-		}
-
-		// Simulate Merge
-		const validMerges = this.calcValidMoves(unit.hexId, true, currentGameStateCopy);
-		for (const targetHexId of validMerges) {
-			const nextGameState = clone(currentGameStateCopy);
-			this.performMerge(unit.hexId, targetHexId, true, nextGameState);
-
-			const evaluation = (initScore - 1) || this.boardEvaluation(nextGameState);// Merge is so random, score is unpredictable
-			if (evaluation > bestScore) {
-				bestScore = evaluation;
-				bestMove = { actionType: 'MERGE', unit: unit.value, unitHexId: unit.hexId, targetHexId: targetHexId };
-			}
-		}
-
-		// Simulate Reroll
-		if (this.canPerformAction(unit.hexId, 'REROLL', currentGameStateCopy)) {
-			const nextGameState = clone(currentGameStateCopy);
-			this.performUnitReroll(unit.hexId, nextGameState);
-
-			const evaluation = (initScore + 1) || this.boardEvaluation(nextGameState); // Reroll is so random, score is unpredictable
-			if (evaluation > bestScore) {
-				bestScore = evaluation;
-				bestMove = { actionType: 'REROLL', unit: unit.value, unitHexId: unit.hexId };
-			}
-		}
-
-		// Simulate Guard
-		if (this.canPerformAction(unit.hexId, 'GUARD', currentGameStateCopy)) { 
-			const nextGameState = clone(currentGameStateCopy);
-			this.performGuard(unit.hexId, nextGameState);
-
-			const evaluation = this.boardEvaluation(nextGameState);
-			if (evaluation > bestScore) {
-				bestScore = evaluation;
-				bestMove = { actionType: 'GUARD', unit: unit.value, unitHexId: unit.hexId };
-			}
-		}
-	}
-
-	// If no action found improves the board state, consider a default action like Guarding or skipping turn
-	if (bestMove === null) {
-		const unitsToGuard = aiUnits.filter(unit => !unit.hasMovedOrAttackedThisTurn && this.canPerformAction(unit.hexId, 'GUARD', currentGameStateCopy));
-		if (unitsToGuard.length > 0) {
-			const unitToActWith = unitsToGuard.random();
-			// Simple: if no better move, Guard a random unit
-			bestMove = { unitHexId: unitToActWith.hexId, actionType: 'GUARD' }; // No target hex for Guard
-		}
-	}
-
-	console.log('bestMove:', bestMove, ', evaluation:', initScore, '->', bestScore);
-
-	if (!bestMove) return this.endTurn();
-
-	switch (bestMove.actionType) {
-		case 'MOVE': this.performMove(bestMove.unitHexId, bestMove.targetHexId); break;
-		case 'RANGED_ATTACK': this.performRangedAttack(bestMove.unitHexId, bestMove.targetHexId); break;
-		case 'COMMAND_CONQUER': this.performComandConquer(bestMove.unitHexId, bestMove.targetHexId); break;
-		case 'BRAVE_CHARGE': this.performBraveCharge(bestMove.unitHexId, bestMove.targetHexId); break;
-		case 'MERGE': this.performMerge(bestMove.unitHexId, bestMove.targetHexId, true); break;
-		case 'REROLL': this.performUnitReroll(bestMove.unitHexId); break;
-		case 'GUARD': this.performGuard(bestMove.unitHexId); break;
 	}
 
 	this.deselectUnit();
