@@ -52,8 +52,8 @@
 				>
 					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-[10px] text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
-					<div class="hex-content text-center relative">
-						<span class="font-bold text-lg"
+					<div class="hex-content text-sm text-center font-bold relative">
+						<span class="text-lg"
 							:class="{
 								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 0,
 								'text-red-900': getUnitOnHex(hex.id)?.playerId === 1,
@@ -62,9 +62,9 @@
 							x-show="getUnitOnHex(hex.id)"
 							x-text="getUnitOnHex(hex.id)?.value">
 						</span>
-						<span x-show="getUnitOnHex(hex.id)?.isGuarding" class="text-xs absolute top-0 right-2 text-blue-500">🛡️</span>
-						<span x-show="getUnitOnHex(hex.id)" class="text-xs font-bold absolute -top-2 -right-2 text-green-500" x-text="calcDefenderEffectiveArmor(hex.id)"></span>
-						<span x-show="getUnitOnHex(hex.id)?.armorReduction > 0" class="text-xs font-bold absolute top-4 right-1 text-red-500" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
+						<span class="absolute -top-1 right-2 text-blue-500" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
+						<span class="absolute -top-1 -right-2 text-green-500" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)"></span>
+						<span class="absolute top-4 -right-2 text-red-600" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
 				<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calcUIDiceStat(hex.id)"></div>
@@ -169,8 +169,13 @@
 			>End Turn</button>
 		</div>
 		
-		<p class="text-sm">Current Turn: Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>)</p>
-		<p x-show="selectedUnitHexId !== null">Selected Unit: Dice <span x-text="getUnitOnHex(selectedUnitHexId)?.value"></span> at (<span x-text="getHex(selectedUnitHexId)?.q"></span>, <span x-text="getHex(selectedUnitHexId)?.r"></span>)</p>
+		<p class="text-sm"
+			:class="{
+				'text-blue-500': currentPlayerIndex === 0,
+				'text-red-500': currentPlayerIndex === 1,
+			}"
+			>Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
+		</p>
 	</div>
 
 	<!-- Message Log -->

@@ -33,11 +33,11 @@ const PLAYER_PRIMARY_AXIS = {
 
 const EVALUATION_WEIGHT = {
 	UNIT_COUNT: 100,      // Value for each deployed AI unit
-	UNIT_FACTOR: 10,      // Multiplier for unit's dice value
+	UNIT_FACTOR: 100,      // Multiplier for unit's dice value
 	GUARD: 50,            // Bonus for guarding units
 	DISTANCE: 5,          // Points per hex closer to opponent's base
-	THREAT: 20,           // Penalty for AI units being threatened (multiplied by opponent's attack)
-	VULNERABLE: 30,       // Reward for opponent units being vulnerable (multiplied by AI's attack)
+	THREAT: 4,           // Penalty for AI units being threatened (multiplied by opponent's attack)
+	VULNERABLE: 5,       // Reward for opponent units being vulnerable (multiplied by AI's attack)
 	MERGE_GT_6: 150,      // Bonus for merging into a unit with value > 6 (e.g., reaching 6)
 	BRAVE_CHARGE: 70      // Reward for potential Brave Charge (multiplied by target's value)
 };
@@ -1098,7 +1098,7 @@ function alpineHexDiceTacticGame() { return {
 		for (let i = 1; i <= unit.distance; i++) {
 			let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 
-			if (this.getUnitOnHex(hex.id, state)) continue;
+			if (!hex || this.getUnitOnHex(hex.id, state)) continue;
 
 			let foundEnemy = this.getNeighbors(hex, state).find(neighborHex => {
 				const targetUnit = this.getUnitOnHex(neighborHex.id, state);
@@ -1232,7 +1232,7 @@ function alpineHexDiceTacticGame() { return {
 		if (isState) return;
 
 		if (state.phase === 'PLAYER_TURN' && state.players[state.currentPlayerIndex].isAI) {
-			setTimeout(() => this.performAITurn(), 100);
+			setTimeout(() => this.performAITurn(), 500);
 		} else if (this.debug?.autoPlay) {
 			this.autoPlay();
 		}
@@ -1433,6 +1433,7 @@ function alpineHexDiceTacticGame() { return {
 
 			const evaluation = this.boardEvaluation(nextGameState);
 			move.evaluation = evaluation;
+			move.nextGameState = nextGameState;
 
 			if (evaluation > bestScore) {
 				bestScore = evaluation;
@@ -1789,12 +1790,12 @@ function alpineHexDiceTacticGame() { return {
 		score -= (opponentUnits.length * EVALUATION_WEIGHT.UNIT_COUNT); // Penalize for each opponent unit
 
 		aiUnits.forEach(unit => {
-			score += (unit.value * EVALUATION_WEIGHT.UNIT_FACTOR); // Add unit value to score
+			score += Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR); // Add unit value to score
 			if (unit.isGuarding) score += EVALUATION_WEIGHT.GUARD; // Bonus for guarding units
 		});
 
 		opponentUnits.forEach(unit => {
-			score -= (unit.value * EVALUATION_WEIGHT.UNIT_FACTOR); // Penalize for opponent unit value
+			score -= Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR); // Penalize for opponent unit value
 		});
 
 		// 2. Positional Scoring (towards opponent's base)
@@ -1813,12 +1814,14 @@ function alpineHexDiceTacticGame() { return {
 		// 3. Threat and Vulnerability (simplified)
 		let totalThreatScore = 0;
 		let totalVulnerabilityScore = 0;
+		let opponentThreats = new Set();
 
 		// Calculate threat score for each AI unit
 		aiUnits.forEach(aiUnit => {
 			let aiUnitThreat = 0;
 			opponentUnits.forEach(opponentUnit => {
 				if (this.canUnitAttackTarget(opponentUnit, aiUnit, state)) {
+					opponentThreats.add(opponentUnit.hexId)
 					aiUnitThreat += (aiUnit.value + opponentUnit.value);
 				}
 			});
@@ -1830,7 +1833,7 @@ function alpineHexDiceTacticGame() { return {
 			let opponentUnitVulnerability = 0;
 			aiUnits.forEach(aiUnit => {
 				if (this.canUnitAttackTarget(aiUnit, opponentUnit, state)) {
-					opponentUnitVulnerability += (aiUnit.value + opponentUnit.value);
+					opponentUnitVulnerability += (aiUnit.value + opponentUnit.value) * (opponentThreats.has(opponentUnit.hexId) ? 2 : 1);
 				}
 			});
 			totalVulnerabilityScore += opponentUnitVulnerability;
@@ -1932,28 +1935,28 @@ function alpineHexDiceTacticGame() { return {
 				});
 			}
 
-			// 5. Merges
-			const validMerges = this.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
-			validMerges.forEach(mergeTargetHexId => {
-				const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
-				// Ensure it's another friendly unit and not the unit itself
-				if (targetUnit && targetUnit.playerId === state.currentPlayerIndex && targetUnit.hexId !== unitHexId) {
-					moves.push({ actionType: 'MERGE', unitHexId, targetHexId: mergeTargetHexId });
-				}
-			});
+			// // 5. Merges
+			// const validMerges = this.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
+			// validMerges.forEach(mergeTargetHexId => {
+			// 	const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
+			// 	// Ensure it's another friendly unit and not the unit itself
+			// 	if (targetUnit && targetUnit.playerId === state.currentPlayerIndex && targetUnit.hexId !== unitHexId) {
+			// 		moves.push({ actionType: 'MERGE', unitHexId, targetHexId: mergeTargetHexId });
+			// 	}
+			// });
 
-			// 6. Reroll
-			moves.push({ actionType: 'REROLL', unitHexId });
+			// // 6. Reroll
+			// moves.push({ actionType: 'REROLL', unitHexId });
 
-			// 7. Guard
-			if (!unit.isGuarding) { // Only allow if unit is not already guarding
-				moves.push({ actionType: 'GUARD', unitHexId });
-			}
+			// // 7. Guard
+			// if (!unit.isGuarding) { // Only allow if unit is not already guarding
+			// 	moves.push({ actionType: 'GUARD', unitHexId });
+			// }
 		});
 
 		// Always include the option to end the turn, as it might be the best strategic choice
 		// (e.g., no good moves, or to force opponent into a bad position)
-		moves.push({ actionType: 'END_TURN' });
+		// moves.push({ actionType: 'END_TURN' });
 
 		return moves;
 	},
@@ -1968,7 +1971,7 @@ function alpineHexDiceTacticGame() { return {
 			case 'MERGE': this.performMerge(move.unitHexId, move.targetHexId, true, applyState);break;
 			case 'REROLL': this.performUnitReroll(move.unitHexId, applyState);break;
 			case 'GUARD': this.performGuard(move.unitHexId, applyState);break;
-			case 'END_TURN': this.endTurn(applyState); break;
+			// case 'END_TURN': this.endTurn(applyState); break;
 		}
 
 		this.checkWinConditions(applyState);
@@ -1978,15 +1981,6 @@ function alpineHexDiceTacticGame() { return {
 			delete applyState.validMoves;
 			delete applyState.validTargets;
 			delete applyState.selectedUnitHexId;
-
-			// Auto-end turn if all units have acted
-			const currentPlayer = applyState.players[applyState.currentPlayerIndex];
-			const allUnitsActed = currentPlayer.dice.every(d => 
-				d.isDeployed && !d.isDeath && d.hasMovedOrAttackedThisTurn
-			);
-			if (allUnitsActed) {
-				this.endTurn(applyState);
-			}
 		}
 
 		return applyState;
