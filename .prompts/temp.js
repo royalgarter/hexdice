@@ -1,1237 +1,580 @@
-// deno-lint-ignore-file
-const R = 6; // Map size radius
-const HEX_SIZE = 60; // pixels
-const HEX_WIDTH = HEX_SIZE;
-const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
+// --- Helper functions assumed to be available ---
 
-// Axial directions
-const AXES = [
-	{i: 0, q: 1, r: -1, name: '2h'},
-	{i: 1, q: 1, r: 0, name: '4h'},
-	{i: 2, q: 0, r: 1, name: '6h'},
-	{i: 3, q: -1, r: 1, name: '8h'},
-	{i: 4, q: -1, r: 0, name: '10h'},
-	{i: 5, q: 0, r: -1, name: '12h'},
-];
+// Deep clone function: IMPORTANT! This needs to correctly deep clone your entire game state.
+// A simple example, but for complex Vue objects or specific custom classes,
+// you might need a more robust solution or a library.
+function clone(obj) {
+	if (obj === null || typeof obj !== 'object') {
+		return obj;
+	}
+	if (obj instanceof Date) {
+		return new Date(obj.getTime());
+	}
+	if (obj instanceof Array) {
+		return obj.map(item => clone(item));
+	}
+	const newObj = {};
+	for (const key in obj) {
+		if (Object.prototype.hasOwnProperty.call(obj, key)) {
+			newObj[key] = clone(obj[key]);
+		}
+	}
+	return newObj;
+}
 
-const UNIT_STATS = {
-	1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 3, distance_b: 1, movement: 'LINE', notes: "Straight line" },
-	2: { name: "Bishop", armor: 2, attack: 3, range: 0, distance: 3, movement: 'DIAGONAL_X', notes: "'X' shape diagonals" },
-	3: { name: "Knight", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L_SHAPE', notes: "'L' pattern" },
-	4: { name: "Rook", armor: 4, attack: 5, range: 0, distance: 1, distance_v: 2, distance_h: 1, movement: 'AXIAL_SPLIT', notes: "Vertical/Horizontal" },
-	5: { name: "Archer", armor: 5, attack: 6, range: "2-3", distance: 1, movement: 'ADJACENT', notes: "Ranged Attack" },
-	6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: 'NONE', notes: "Special Attack, Adjacent Armor+1" },
+// Example EVALUATION_WEIGHT constants (adjust these based on your game balance)
+const EVALUATION_WEIGHT = {
+	UNIT_COUNT: 100,      // Value for each deployed AI unit
+	UNIT_FACTOR: 10,      // Multiplier for unit's dice value
+	GUARD: 50,            // Bonus for guarding units
+	DISTANCE: 5,          // Points per hex closer to opponent's base
+	THREAT: 20,           // Penalty for AI units being threatened (multiplied by opponent's attack)
+	VULNERABLE: 30,       // Reward for opponent units being vulnerable (multiplied by AI's attack)
+	MERGE_GT_6: 150,      // Bonus for merging into a unit with value > 6 (e.g., reaching 6)
+	BRAVE_CHARGE: 70      // Reward for potential Brave Charge (multiplied by target's value)
 };
 
-const PLAYER_PRIMARY_AXIS = {
-	1: [ AXES[5] ],
-	2: [ AXES[2], AXES[5] ],
-	3: [ AXES[4], AXES[2], AXES[0] ],
-	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
-	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
-};
+// Example R constant (radius of hex grid, used in distance calculation)
+const R = 5; // Adjust to your actual game board's maximum hex distance
 
-Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
+// --- Your existing functions (modified slightly for state passing and win condition) ---
 
-function game() {
-	return {
-		// --- VARIABLES ---
-		hexes: [],
-		players: [
-			{ id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
-			{ id: 1, color: 'Blue', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 }
-		],
- rules: {
-			dicePerPlayer: 6, // For 2 players
-			maxRerolls: 2,    // 1/3 of 6
-		},
-		gameState: 'SETUP_ROLL', // SETUP_ROLL, SETUP_REROLL, SETUP_DEPLOY, PLAYER_TURN, GAME_OVER
-		currentPlayerIndex: 0,
-		selectedUnitHexId: null,
-		selectedDieToDeploy: null, // index in player's dice array
-		validMoves: [], // array of hex IDs
-		validMerges: [], // array of hex IDs
-		validTargets: [], // array of hex IDs for attacks/merges
-		diceToReroll: [], // indices of dice selected for reroll
-		messageLog: [],
-		logCounter: 0,
-		winnerMessage: "",
-		actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
-		debug: {
-			coordinate: true,
-			skipReroll: true,
- skipDeploy: false,
- autoSetup: false,
-			autoPlay: false,
-		},
-		
-		// --- INITIALIZATION ---
-		init() {
-			this.generateHexGrid(R);
-			this.determineBaseLocations();
-			this.addLog("Game started. Welcome to Hex Dice!");
-			this.resetGame(); // To properly initialize players etc.
-		},
-		resetGame() {
-			this.players = [
-				{ id: 0, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
-				{ id: 1, color: 'Blue', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 }
-			];
-			this.hexes.forEach(h => h.unitId = null); // Clear units from hexes
-			this.determineBaseLocations(); // Redetermine bases on reset
-			this.gameState = 'SETUP_ROLL';
-			this.currentPlayerIndex = 0;
-			this.selectedUnitHexId = null;
-			this.selectedDieToDeploy = null;
-			this.validMoves = [];
-			this.validMerges = [];
-			this.validTargets = [];
-			this.diceToReroll = [];
-			this.actionMode = null;
-			//this.messageLog = []; // Keep log or clear? Let's keep for now.
-			this.addLog("New game started. Player 1 (Red) rolls first.");
-		},
+boardEvaluation(state) {
+	// `state` is guaranteed to be passed by minimax
+	// `state = state || this;` was for legacy/direct calls, minimax will pass it.
 
-		// --- HEX GRID ---
-		generateHexGrid(radius) {
-			this.hexes = [];
-			let id = 0;
-			for (let q = -radius; q <= radius; q++) {
-				for (let r = -radius; r <= radius; r++) {
-					if (-q - r >= -radius && -q - r <= radius) { // Check if s is also within radius
-						const x = HEX_WIDTH * 3/4 * q;
-						const y = HEX_HEIGHT * (r + q / 2);
-						this.hexes.push({ id: id++, q, r, s: -q-r, unitId: null, isP1Base: false, isP2Base: false, visualX: x, visualY: y });
-					}
+	// For evaluation, the `state.currentPlayerIndex` refers to the player whose turn it was
+	// to reach this state. `boardEvaluation` evaluates from THIS player's perspective.
+	// The `minimax` function will handle negating the score if it's the opponent's perspective.
+	const aiPlayerIndex = state.currentPlayerIndex;
+	const opponentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+
+	const aiPlayer = state.players[aiPlayerIndex];
+	const opponentPlayer = state.players[opponentPlayerIndex];
+
+	const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+	const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+
+	let score = 0;
+
+	// 1. Unit Count and Value
+	score += (aiUnits.length * EVALUATION_WEIGHT.UNIT_COUNT);
+	score -= (opponentUnits.length * EVALUATION_WEIGHT.UNIT_COUNT);
+
+	aiUnits.forEach(unit => {
+		score += (unit.value * EVALUATION_WEIGHT.UNIT_FACTOR);
+		if (unit.isGuarding) score += EVALUATION_WEIGHT.GUARD;
+	});
+
+	opponentUnits.forEach(unit => {
+		score -= (unit.value * EVALUATION_WEIGHT.UNIT_FACTOR);
+	});
+
+	// 2. Positional Scoring (towards opponent's base)
+	const opponentBaseHex = this.getHex(opponentPlayer.baseHexId, state);
+	if (opponentBaseHex) {
+		aiUnits.forEach(unit => {
+			const unitHex = this.getHex(unit.hexId, state);
+			if (unitHex) {
+				const distanceToOpponentBase = this.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
+				score += ((R * 2 - distanceToOpponentBase) * EVALUATION_WEIGHT.DISTANCE);
+			}
+		});
+	}
+
+	// 3. Threat and Vulnerability (simplified)
+	let totalThreatScore = 0;
+	let totalVulnerabilityScore = 0;
+
+	aiUnits.forEach(aiUnit => {
+		let aiUnitThreat = 0;
+		opponentUnits.forEach(opponentUnit => {
+			// Check if opponentUnit can attack aiUnit
+			if (this.canUnitAttackTarget(opponentUnit, aiUnit, state)) {
+				aiUnitThreat += opponentUnit.attack; // Assuming opponentUnit has an 'attack' property
+			}
+		});
+		totalThreatScore += aiUnitThreat;
+	});
+
+	opponentUnits.forEach(opponentUnit => {
+		let opponentUnitVulnerability = 0;
+		aiUnits.forEach(aiUnit => {
+			// Check if aiUnit can attack opponentUnit
+			if (this.canUnitAttackTarget(aiUnit, opponentUnit, state)) {
+				opponentUnitVulnerability += aiUnit.attack; // Assuming aiUnit has an 'attack' property
+			}
+		});
+		totalVulnerabilityScore += opponentUnitVulnerability;
+	});
+
+	score -= (totalThreatScore * EVALUATION_WEIGHT.THREAT);
+	score += (totalVulnerabilityScore * EVALUATION_WEIGHT.VULNERABLE);
+
+	// Consider merges
+	aiUnits.forEach(aiUnit => {
+		// `calcValidMoves` needs to handle the `isForMerge` parameter to identify friendly units
+		const validMerges = this.calcValidMoves(aiUnit.hexId, true, state);
+		validMerges.forEach(mergeTargetHexId => {
+			const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
+			if (targetUnit && targetUnit.playerId === aiPlayerIndex && aiUnit.hexId !== targetUnit.hexId) {
+				score -= (aiUnit.value + targetUnit.value); // Penalize for the combined value that's "lost" or condensed
+				score += (aiUnit.value + targetUnit.value) > 6 ? EVALUATION_WEIGHT.MERGE_GT_6 : (aiUnit.value + targetUnit.value);
+			}
+		});
+	});
+
+	// Brave Charge opportunities
+	aiUnits.forEach(aiUnit => {
+		if (aiUnit.value === 1) {
+			const opponentUnitsForBC = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+			opponentUnitsForBC.forEach(opponentUnit => {
+				// If this unit 1 can brave charge this specific opponent unit
+				if (this.canUnitAttackTarget(aiUnit, opponentUnit, state) && opponentUnit.value >= 6) { // Brave Charge targets high armor value (e.g., >=6)
+					score += (opponentUnit.value * EVALUATION_WEIGHT.BRAVE_CHARGE);
 				}
-			}
-		},
-		determineBaseLocations() {
-			// For 2 players, assign specific base hexes
-			// Using hexes near opposite edges for R=6
-			let radius = -(R-1);
-
-			const primary1 = PLAYER_PRIMARY_AXIS[this.players.length][0];
-			const base1Hex = this.getHexByQR(primary1.q * radius, primary1.r * radius);
-			if (base1Hex) {
-				base1Hex.isP1Base = true;
-				this.players[0].baseHexId = base1Hex.id;
-			}
-			
-			const primary2 = PLAYER_PRIMARY_AXIS[this.players.length][1];
-			const base2Hex = this.getHexByQR(primary2.q * radius, primary2.r * radius);
-			// const base2Hex = this.getHexByQR(0, R-1); // e.g., Q=5, R=0 for R=6
-			if (base2Hex) {
-				base2Hex.isP2Base = true;
-				this.players[1].baseHexId = base2Hex.id;
-			}
-		},
-		getHex(id) { return this.hexes.find(h => h.id === id); },
-		getHexByQR(q, r) { return this.hexes.find(h => h.q === q && h.r === r); },
-		getUnitOnHex(hexId) {
-			const hex = this.getHex(hexId);
-			if (!hex || hex.unitId === null) return null;
-			const [playerId, diceIndex] = hex.unitId.split('_').map(Number);
-
-			let unit = this.players[playerId]?.dice[diceIndex]; 
-			return (!unit.isDeath) && unit ;
-		},
-		axialDistance(q1, r1, q2, r2) {
-			const dq = q1 - q2;
-			const dr = r1 - r2;
-			const ds = (-q1 - r1) - (-q2 - r2);
-			return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
-		},
-		getNeighbors(hex) {
-			if (!hex) return [];
-			return AXES.map(dir => this.getHexByQR(hex.q + dir.q, hex.r + dir.r)).filter(Boolean);
-		},
-		
-		// --- UI STYLING ---
-		gridContainerStyle() {
-			const allX = this.hexes.map(h => h.visualX);
-			const allY = this.hexes.map(h => h.visualY);
-			const minX = Math.min(...allX);
-			const maxX = Math.max(...allX);
-			const minY = Math.min(...allY);
-			const maxY = Math.max(...allY);
-			const gridWidth = maxX - minX + HEX_WIDTH;
-			const gridHeight = maxY - minY + HEX_HEIGHT; // Approx
-
-			return `width: ${gridWidth}px; height: ${gridHeight}px;`;
-		},
-		hexColor(hex) {
-			const unit = this.getUnitOnHex(hex.id);
-
-			let cls = 'bg-hexdefault';
-
-			if (hex.isP1Base) cls = 'bg-hexred';
-			if (hex.isP2Base) cls = 'bg-hexblue';
-
-			if (this.selectedUnitHexId === hex.id) cls = 'bg-hexselect';
-			else if (this.validMoves.includes(hex.id)) cls = 'bg-hexmove';
-			else if (this.validMerges.includes(hex.id)) cls = 'bg-hexmerge';
-			else if (this.validTargets.includes(hex.id)) cls = 'bg-hextarget';
-			else if (this.gameState === 'SETUP_DEPLOY' && this.calculateValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
-				cls = 'bg-hexdeploy';
-			}
-
-			return cls;
-		},
-		hexStyle(hex, padding=0) {
-			// Calculate offset for positioning
-			// Find minX and minY to offset all hexes so they start near 0,0 of the container
-			const allX = this.hexes.map(h => h.visualX);
-			const allY = this.hexes.map(h => h.visualY);
-			const minX = Math.min(...allX);
-			const minY = Math.min(...allY);
-
-			return `
-				left: ${hex.visualX - minX + padding}px; 
-				top: ${hex.visualY - minY + padding}px;
-				width: ${HEX_WIDTH - (padding << 1)}px;
-				height: ${HEX_HEIGHT - (padding << 1)}px;
-			`;
-		},
-
-		// --- SETUP ---
-		setupStatusMessage() {
-			if (this.gameState === 'SETUP_ROLL') return "Roll initial dice for both players.";
-			if (this.gameState === 'SETUP_REROLL') return `Player ${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Reroll Phase.`;
-			if (this.gameState === 'SETUP_DEPLOY') return `Player ${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Deployment Phase.`;
-			return "Setup";
-		},
-		rollInitialDice(playerId) {
-			if (this.players[playerId].initialRollDone) return;
-			const player = this.players[playerId];
-			player.dice = [];
-			for (let i = 0; i < this.rules.dicePerPlayer; i++) {
-				const roll = Math.floor(Math.random() * 6) + 1;
-				player.dice.push({ 
-					id: `${playerId}_${i}`, // Unique ID for the die unit
-					originalIndex: i, // to link back to player.dice array
-					playerId: playerId,
-					value: roll, 
-					...UNIT_STATS[roll], // Spread initial stats
-					currentArmor: UNIT_STATS[roll].armor,
-					armorReduction: 0,
-					isDeployed: false, 
-					hexId: null,
-					hasMovedOrAttackedThisTurn: false,
-					isGuarding: false,
-					isDeath: false,
-					actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
-				});
-			}
-			player.initialRollDone = true;
-			this.addLog(`Player ${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
-
-			if (this.players.every(p => p.initialRollDone)) {
-				this.gameState = 'SETUP_REROLL';
-				this.currentPlayerIndex = 0; // Player 1 starts reroll
-				this.diceToReroll = [];
-
-				if (this.debug?.skipReroll && this.players.length == 2) this.players.forEach(() => this.skipReroll());
-			}
-		},
-		toggleRerollSelection(diceIndex) {
-			if (this.players[this.currentPlayerIndex].dice[diceIndex].isDeployed) return;
-			const indexInReroll = this.diceToReroll.indexOf(diceIndex);
-			if (indexInReroll > -1) {
-				this.diceToReroll.splice(indexInReroll, 1);
-			} else {
-				if (this.diceToReroll.length < this.rules.maxRerolls) {
-					this.diceToReroll.push(diceIndex);
-				}
-			}
-		},
-		canConfirmReroll() {
-			return this.players[this.currentPlayerIndex].rerollsUsed === 0; // Only one reroll phase
-		},
-		performReroll() {
-			if (!this.canConfirmReroll() || this.diceToReroll.length === 0) {
-				this.skipReroll(); // If no dice selected or already rerolled, just skip
-				return;
-			}
-			const player = this.players[this.currentPlayerIndex];
-			let rerolledValues = [];
-			this.diceToReroll.forEach(diceIndex => {
-				const newRoll = Math.floor(Math.random() * 6) + 1;
-				player.dice[diceIndex].value = newRoll;
-				// Update stats based on new roll
-				Object.assign(player.dice[diceIndex], UNIT_STATS[newRoll]);
-				player.dice[diceIndex].currentArmor = UNIT_STATS[newRoll].armor;
-				player.dice[diceIndex].armorReduction = 0; // Reset this on reroll
-				rerolledValues.push(newRoll);
 			});
-			this.addLog(`Player ${player.id + 1} rerolled ${this.diceToReroll.length} dice. New values: ${rerolledValues.join(', ')}`);
-			player.rerollsUsed++;
-			this.diceToReroll = [];
-			this.nextPlayerSetupRerollOrDeploy();
-		},
-		skipReroll() {
-			this.addLog(`Player ${this.currentPlayerIndex + 1} skipped reroll.`);
-			this.players[this.currentPlayerIndex].rerollsUsed++; // Mark as reroll phase completed
-			this.diceToReroll = [];
-			this.nextPlayerSetupRerollOrDeploy();
+		}
+	});
 
-		},
-		nextPlayerSetupRerollOrDeploy() {
-			if (this.currentPlayerIndex === 0 && this.players[1].rerollsUsed === 0) {
-				this.currentPlayerIndex = 1; // Move to Player 2's reroll
-			} else {
-				// Both players finished reroll phase
-				this.gameState = 'SETUP_DEPLOY';
-				this.currentPlayerIndex = 0; // Player 1 starts deployment
-				this.selectedDieToDeploy = 0;
+	// 4. Check Win/Loss conditions (Highest priority)
+	// The `this.checkWinConditions()` method MUST have been called on the `state`
+	// within `applyMove` to update `state.phase` and `state.winnerPlayerIndex`.
+	if (state.phase === 'GAME_OVER') {
+		// The `aiPlayerIndex` here refers to `state.currentPlayerIndex` at the time of evaluation.
+		// We need to compare it against the *original* AI player index for the whole minimax search.
+		// This `boardEvaluation` function is called *within* the minimax for a specific `state`.
+		// The `minimax` function itself will handle the final sign based on `isMaximizingPlayer`.
+		// So here, just return Infinity/Negative Infinity based on `state.winnerPlayerIndex`.
+		if (state.winnerPlayerIndex === aiPlayerIndex) return Infinity; // The current player in this state won
+		else if (state.winnerPlayerIndex !== -1) return -Infinity; // The current player in this state lost
+		else return 0; // Draw
+	}
 
-				if (this.debug?.autoSetup && this.players.length == 2) {
-					this.players.forEach((player, playerIdx) => {
-						const validDeploymentHexes = this.calculateValidDeploymentHexes(playerIdx);
-						// console.dir({validDeploymentHexes})
+	return score;
+},
 
-						// Deploy dice sorted by value for consistent auto-deployment
-						const sortedDice = [...player.dice].sort((a, b) => b.value - a.value);
-						sortedDice.forEach((dice, diceIdx) => {
-							this.selectDieToDeploy(diceIdx);
-							this.handleHexClick(validDeploymentHexes[diceIdx]);
-							// console.dir(validDeploymentHexes[diceIdx])
-						});
+canUnitAttackTarget(attackerUnit, targetUnit, state) {
+	if (!attackerUnit || !targetUnit || attackerUnit.playerId === targetUnit.playerId) return false;
+
+	const attackerHex = this.getHex(attackerUnit.hexId, state);
+	const targetHex = this.getHex(targetUnit.hexId, state);
+
+	if (!attackerHex || !targetHex) return false;
+
+	const distance = this.axialDistance(attackerHex.q, attackerHex.r, targetHex.q, targetHex.r);
+
+	// Melee attack (implicitly part of move)
+	// Ensure calcValidMoves correctly handles passing the state object and the `isForMerge` flag.
+	const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, false, state);
+	if (validMeleeMoves.includes(targetHex.id)) return true;
+
+	// Ranged attack (Dice 5)
+	if (attackerUnit.value === 5) {
+		const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state);
+		if (validRangedTargets.includes(targetHex.id)) return true;
+	}
+
+	// Special attack (Dice 6) - Command Conquer (assuming this is it)
+	if (attackerUnit.value === 6) {
+		const validSpecialTargets = this.calcValidSpecialAttackTargets(attackerUnit.hexId, state);
+		if (validSpecialTargets.includes(targetHex.id)) return true;
+	}
+
+	// Brave Charge (Dice 1)
+	if (attackerUnit.value === 1 && distance === 1) { // Brave charge only happens if adjacent
+		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state);
+		if (defenderEffectiveArmor >= 6) return true; // Brave Charge targets units with effective armor >= 6
+	}
+
+	return false;
+},
+
+// --- NEW Helper functions for Minimax ---
+
+/**
+ * Generates all possible legal moves for the current player in the given state.
+ * @param {object} state - The current game state.
+ * @returns {Array<object>} An array of move objects.
+ */
+generateAllPossibleMoves(state) {
+	const moves = [];
+	const currentPlayer = state.players[state.currentPlayerIndex];
+	// Units that are deployed, not dead, and haven't acted this turn
+	const unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+
+	// If no units can act, the only possible move is to end the turn.
+	if (unitsThatCanAct.length === 0) {
+		moves.push({ actionType: 'END_TURN' });
+		return moves;
+	}
+
+	unitsThatCanAct.forEach(unit => {
+		const unitHexId = unit.hexId;
+		const unitValue = unit.value;
+
+		// 1. Basic Moves (and implied melee attacks on occupied hexes)
+		// `calcValidMoves(unitHexId, isForMerge, state)` - assuming this signature
+		const validMoves = this.calcValidMoves(unitHexId, false, state);
+		validMoves.forEach(targetHexId => {
+			moves.push({ actionType: 'MOVE', unitHexId, targetHexId });
+		});
+
+		// 2. Ranged Attack (Dice 5)
+		if (unitValue === 5) {
+			const validRangedTargets = this.calcValidRangedTargets(unitHexId, state);
+			validRangedTargets.forEach(targetHexId => {
+				moves.push({ actionType: 'RANGED_ATTACK', unitHexId, targetHexId });
+			});
+		}
+
+		// 3. Command Conquer (Dice 6)
+		if (unitValue === 6) {
+			const validSpecialTargets = this.calcValidSpecialAttackTargets(unitHexId, state);
+			validSpecialTargets.forEach(targetHexId => {
+				moves.push({ actionType: 'COMMAND_CONQUER', unitHexId, targetHexId });
+			});
+		}
+
+		// 4. Brave Charge (Dice 1) - move to front for better move ordering
+		if (unitValue === 1) {
+			const opponentUnits = state.players[(state.currentPlayerIndex + 1) % state.players.length].dice.filter(d => d.isDeployed && !d.isDeath);
+			opponentUnits.forEach(opponentUnit => {
+				if (this.canUnitAttackTarget(unit, opponentUnit, state)) {
+					// Prioritize high-value targets first for better pruning
+					moves.unshift({ 
+						actionType: 'BRAVE_CHARGE', 
+						unitHexId, 
+						targetHexId: opponentUnit.hexId,
+						_priority: opponentUnit.value // Add heuristic for move ordering
 					});
 				}
-			}
-		},
-		selectDieToDeploy(diceIndex) {
-			if (this.players[this.currentPlayerIndex].dice[diceIndex].isDeployed) return;
-			this.selectedDieToDeploy = diceIndex;
-		},
-		
-		deployUnit(hexId) {
-			if (this.selectedDieToDeploy === null) {
-				this.addLog("Select a die to deploy first.");
-				return;
-			}
-			const player = this.players[this.currentPlayerIndex];
-			const dieToDeploy = player.dice[this.selectedDieToDeploy];
-			const targetHex = this.getHex(hexId);
-
-			if (!targetHex || dieToDeploy.isDeployed) return;
-
-			const validDeploymentHexes = this.calculateValidDeploymentHexes(this.currentPlayerIndex);
-			if (!validDeploymentHexes.includes(hexId)) {
-				this.addLog("Invalid deployment hex. Deploy on your base or adjacent hexes.");
-				return;
-			}
-			if (this.getUnitOnHex(hexId)) {
-				this.addLog("Hex is already occupied.");
-				return;
-			}
-
-			dieToDeploy.isDeployed = true;
-			dieToDeploy.hexId = hexId;
-			targetHex.unitId = dieToDeploy.id;
-			this.addLog(`Player ${player.id + 1} deployed Dice #${dieToDeploy.value} to hex ${hexId} [${targetHex.q}, ${targetHex.r}]`);
-			this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
-
-			// Check if current player has deployed all dice
-			if (player.dice.every(d => d.isDeployed)) {
-				if (this.currentPlayerIndex === 0) {
-					this.currentPlayerIndex = 1; // Move to Player 2's deployment
-					this.selectedDieToDeploy = 0;
-					this.addLog("Player 2 turn to deploy");
-
-					if (this.players[1].dice.every(d => d.isDeployed)) {
-						this.startGamePlay();
-					}
-				} else {
-					this.startGamePlay();
-				}
-			}
-		},
-		startGamePlay() {
-			this.gameState = 'PLAYER_TURN';
-			this.currentPlayerIndex = 0; // Player 1 starts the game
-			this.resetTurnActionsForAllUnits();
-			this.addLog("All units deployed. Player 1's turn.");
-
-			if (this.players.length === 2 && this.currentPlayerIndex === 1) {
-				this.addLog("Player 2 (Blue - AI) turn.");
-				setTimeout(() => this.performAITurn(), 500); // Delay AI for a moment
-			} else if (this.debug?.autoPlay) this.autoPlay();
-		},
-		autoPlay() {
-			let player = this.players[this.currentPlayerIndex];
-			let unit = player.dice.random();
-
-			let actions = (unit.distance > 0) ? 'MOVE,REROLL,GUARD' : 'REROLL,GUARD';
-			let trymax=10, valid, target, action;
-
-			while (!target && (--trymax > 0)) {
-				action = actions.split(',').random();
-				switch (action) {
-					case 'MOVE':
-						this.selectUnit(unit.hexId);
-						target = this.calculateValidMoves(unit.hexId).random();
-						this.initiateAction('MOVE')
-					break;
-					default:
-						valid = this.calculateValidMoves(unit.hexId, action);
-						target = (valid?.possibleMoves || valid || []).random();
-						if (target) this.performAction(action, unit.hexId);
-				}
-			}
-
-			if (target) this.completeAction(target);
-
-			console.dir({player, unit, action, valid, target, trymax});
-		},
-		
-		// --- GAMEPLAY ---
-		handleHexClick(hexId) {
-			if (this.gameState === 'SETUP_DEPLOY') {
-				this.deployUnit(hexId);
-				return;
-			}
-
-			if (this.gameState !== 'PLAYER_TURN') return;
-
-			const clickedHex = this.getHex(hexId);
-			const unitOnClickedHex = this.getUnitOnHex(hexId);
-
-			if (this.actionMode) { // If in an action mode like MOVE or ATTACK
-				this.completeAction(hexId);
-			} else { // Normal selection mode
-				if (unitOnClickedHex && unitOnClickedHex.playerId === this.currentPlayerIndex) {
-					this.selectUnit(hexId);
-				} else if (this.selectedUnitHexId !== null) { // Clicked on empty or enemy hex while a unit is selected (implies move/attack intent)
-					// This could be simplified to require explicit action button click
-					// For now, deselect if not a valid action target
-					this.deselectUnit();
-				}
-			}
-		},
-		selectUnit(hexId) {
-			const unit = this.getUnitOnHex(hexId);
-			if (!unit || unit.playerId !== this.currentPlayerIndex || unit.hasMovedOrAttackedThisTurn) {
-				if(unit && unit.hasMovedOrAttackedThisTurn) this.addLog("This unit has already acted this turn.");
-				this.deselectUnit();
-				return;
-			}
-			this.selectedUnitHexId = hexId;
-			this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
-			this.validTargets = []; // Will be calculated if attack action is chosen
-			this.validMerges = this.calculateValidMoves(this.selectedUnitHexId, 'MERGE');
-			this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
-			
-			if (unit.range == '2-3') {
-				this.validTargets = this.calculateValidRangedTargets(this.selectedUnitHexId);	
-			}
-
-			if (unit.range == 1) {
-				this.validTargets = this.calculateValidSpecialAttackTargets(this.selectedUnitHexId);
-			}
-
-			if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
-		},
-		deselectUnit() {
-			this.selectedUnitHexId = null;
-			this.validMoves = [];
-			this.validTargets = [];
-			this.validMerges = [];
-			this.actionMode = null;
-		},
-		initiateAction(actionType) {
-			if (!this.selectedUnitHexId) return;
-			const unit = this.getUnitOnHex(this.selectedUnitHexId);
-			if (!unit || unit.hasMovedOrAttackedThisTurn) {
-				this.addLog("Unit cannot perform this action or has already acted.");
-				return;
-			}
-
-			this.actionMode = actionType;
-			this.validMoves = [];
-			// this.validMerges = [];
-			// this.validTargets = [];
-
-			if (actionType === 'MOVE' || actionType === 'MERGE') {
-				this.validMoves = this.calculateValidMoves(this.selectedUnitHexId, actionType === 'MERGE');
-				if (this.validMoves.length === 0) {
-					this.addLog("No valid moves for this unit.");
-					// this.cancelAction();
-				}
-			} else if (actionType === 'RANGED_ATTACK') {
-				this.validTargets = this.calculateValidRangedTargets(this.selectedUnitHexId);
-				 if (this.validTargets.length === 0) {
-					this.addLog("No valid targets for Ranged Attack.");
-					// this.cancelAction();
-				}
-			} else if (actionType === 'SPECIAL_ATTACK') {
-				this.validTargets = this.calculateValidSpecialAttackTargets(this.selectedUnitHexId);
-				 if (this.validTargets.length === 0) {
-					this.addLog("No valid targets for Special Attack.");
-					// this.cancelAction();
-				}
-			}
-		},
-		actionModeMessage() {
-			if (this.actionMode === 'MOVE') return "Select a destination hex for your unit.";
-			if (this.actionMode === 'RANGED_ATTACK') return "Select an enemy unit to target (2-3 hexes away).";
-			if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
-			if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
-			return "";
-		},
-		cancelAction() {
-			this.actionMode = null;
-			this.validMoves = [];
-			this.validMerges = [];
-			this.validTargets = [];
-
-			if (this.debug?.autoPlay) this.endTurn();
-		},
-		completeAction(targetHexId) {
-			if (!this.actionMode) return;
-
-			const unit = this.getUnitOnHex(this.selectedUnitHexId);
-			const target = this.getUnitOnHex(this.targetHexId);
-			const action = this.actionMode;
-			this.actionMode = null; // Clear action mode first
-
-			if (this.selectedUnitHexId == targetHexId) {
-				this.deselectUnit();
-				return;
-			}
-
-			if (this.validMoves.includes(targetHexId)) {
-				if (unit.playerId == target?.playerId) {
-					this.performMerge(this.selectedUnitHexId, targetHexId);
-					// New merge unit could take action if sum > 6
-				} else {
-					this.performMove(this.selectedUnitHexId, targetHexId);
-					this.endTurn();
-				}
-				
-				return;
-			} else if (this.validMerges.includes(targetHexId)){
-				this.performMerge(this.selectedUnitHexId, targetHexId);
-				// New merge unit could take action if sum > 6
-				return;
-			} else if (unit.range == '2-3' && this.validTargets.includes(targetHexId)) {
-				this.performRangedAttack(this.selectedUnitHexId, targetHexId);
-				this.endTurn();
-				return;
-			} else if (unit.range == 1 && this.validTargets.includes(targetHexId)) {
-				this.performSpecialAttack(this.selectedUnitHexId, targetHexId);
-				this.endTurn();
-				return;	
-			}
-
-			// Deselect unit after action attempt, regardless of success, unless it's a failed move
-			// If move failed, unit stays selected. If combat failed, unit stays.
-			// For simplicity now, deselect. More complex logic can keep it selected.
-			// if (this.getUnitOnHex(this.selectedUnitHexId)?.hasMovedOrAttackedThisTurn) {
-			//      this.deselectUnit();
-			// }
-		},
-		canPerformAction(unitHexId, actionType) {
-			const unit = this.getUnitOnHex(unitHexId);
-			if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
-
-			switch(actionType) {
-				case 'MOVE': return true; // Basic check, specific unit limitations handled in calculateValidMoves
-				case 'REROLL': return true;
-				case 'GUARD': return true;
-				case 'RANGED_ATTACK': return unit.value === 5;
-				case 'SPECIAL_ATTACK': return unit.value === 6;
-				case 'MERGE': return true; // Can always attempt to move to a friendly unit
-				default: return false;
-			}
-		},
-		performAction(actionType, unitHexId) {
-			const unit = this.getUnitOnHex(unitHexId);
-			if (!unit || unit.hasMovedOrAttackedThisTurn) {
-				this.addLog("Unit cannot act or has already acted.");
-				return;
-			}
-
-			switch(actionType) {
-				case 'REROLL':
-					this.performUnitReroll(unitHexId);
-					break;
-				case 'GUARD':
-					this.performGuard(unitHexId);
-					break;
-				// Other actions are initiated via `initiateAction`
-			}
-			// `initiateAction` handles MOVE, RANGED_ATTACK, SPECIAL_ATTACK, MERGE
-
-			this.endTurn();
-		},
-
-		// --- CALCULATE ---
-		calculateValidRangedTargets(attackerHexId) {
-			const attackerUnit = this.getUnitOnHex(attackerHexId);
-			const attackerHex = this.getHex(attackerHexId);
-			if (!attackerUnit || attackerUnit.value !== 5 || !attackerHex) return [];
-
-			let targets = [];
-			this.hexes.forEach(potentialTargetHex => {
-				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
-				
-				const targetUnit = this.getUnitOnHex(potentialTargetHex.id);
-				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) { // Is an enemy unit
-					const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
-					// Check for straight line (simplified: axial distance check implies straight line on hex grid)
-					// More robust line of sight would check for blocking units/terrain. Not implemented here.
-					if (dist >= 2 && dist <= 3) { // Range 2-3 for Dice 5
-						// TODO: Check Line of Sight (no units in between)
-						targets.push(potentialTargetHex.id);
-					}
-				}
 			});
-			return targets;
-		},
-		calculateValidSpecialAttackTargets(attackerHexId) {
-			const attackerUnit = this.getUnitOnHex(attackerHexId);
-			const attackerHex = this.getHex(attackerHexId);
-			if (!attackerUnit || attackerUnit.value !== 6 || !attackerHex) return [];
+		}
 
-			let targets = [];
-			this.getNeighbors(attackerHex).forEach(neighborHex => {
-				if (neighborHex) {
-					const targetUnit = this.getUnitOnHex(neighborHex.id);
-					if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
-						targets.push(neighborHex.id);
-					}
-				}
-			});
-			return targets;
-		},
-		calculateValidMoves(unitHexId, isForMerging = false) {
-			const unit = this.getUnitOnHex(unitHexId);
-			const startHex = this.getHex(unitHexId);
-			if (!unit || !startHex) return [];
-
-			let possibleMoves = [];
-			const unitStats = UNIT_STATS[unit.value];
-
-			// const checkNextHexBreak = (nextHex) => {
-			// 	if (!nextHex) return false; // Off map
-
-			// 	if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
-			// 		if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
-			// 		// break; // Blocked
-
-			// 		return false; // Blocked
-			// 	}
-			// 	if (this.getUnitOnHex(nextHex.id) && isForMerging && this.getUnitOnHex(nextHex.id).playerId === unit.playerId) {
-			// 		possibleMoves.push(nextHex.id); // Can merge with friendly
-			// 		// Don't break, can potentially move past to another friendly for merge if rules allowed (not typical)
-			// 	}
-			// 	if (!this.getUnitOnHex(nextHex.id)) possibleMoves.push(nextHex.id); // Empty hex
-
-			// 	return true;
-			// }
-
-			const primary = PLAYER_PRIMARY_AXIS[this.players.length][this.currentPlayerIndex];
-			const mod3 = primary.i % 3;
-			const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3) );
-			const axes_x = AXES.filter(({i}) => (i % 3) != mod3 );
-
-			switch (unitStats.movement) {
-				case 'LINE': // Dice 1
-					for (let i = 1; i <= unitStats.distance; i++) {
-						possibleMoves.push(this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i)?.id);
-					}
-					
-					for (let i = 1; i <= unitStats.distance_b; i++) {
-						possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i)?.id);
-					}
-					break;
-				case 'DIAGONAL_X': // Dice 2
-					for (let axis of axes_x) {
-						for (let i = 1; i <= unitStats.distance; i++) {
-							possibleMoves.push(this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i)?.id);
-						}	
-					}
-
-					break;
-				case 'L_SHAPE': // Dice 3
-					const dValidsLShape = [
-						[-1, -2], [-2, -1],
-						[-3, 1], [-3, 2],
-						[-2, 3], [-1, 3],
-						[1, 2], [2, 1],
-						[3, -1], [3, -2],
-						[2, -3], [1, -3],
-					];
-
-					for (let valid of dValidsLShape) {
-						possibleMoves.push(this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1])?.id);
-					}
-
-					break;
-				case 'AXIAL_SPLIT': // Dice 4
-					this.getNeighbors(startHex).forEach(neighbor => possibleMoves.push(neighbor?.id));
-
-					possibleMoves.push(this.getHexByQR(startHex.q + primary.q * 2, startHex.r + primary.r * 2)?.id);
-					possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 2, startHex.r + axes_b.r * 2)?.id);
-
-					if (mod3 == 2) {
-						possibleMoves.push(this.getHexByQR(startHex.q + -2, startHex.r + 1)?.id);
-						possibleMoves.push(this.getHexByQR(startHex.q + 2, startHex.r + -1)?.id);
-					} else if (mod3 == 1) {
-						possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + 2)?.id);
-						possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + -2)?.id);
-					} else if (mod3 == 0) {
-						possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + -1)?.id);
-						possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + 1)?.id);
-					}
-
-					break;
-				case 'ADJACENT': // Dice 5
-				this.getNeighbors(startHex).forEach(neighbor => possibleMoves.push(neighbor?.id));
-					break;
-				case 'NONE': // Dice 6
-					 // Dice 6 cannot initiate a move action, only special attack or move after combat.
-					break;
+		// 5. Merges
+		const validMerges = this.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
+		validMerges.forEach(mergeTargetHexId => {
+			const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
+			// Ensure it's another friendly unit and not the unit itself
+			if (targetUnit && targetUnit.playerId === state.currentPlayerIndex && targetUnit.hexId !== unitHexId) {
+				moves.push({ actionType: 'MERGE', unitHexId, targetHexId: mergeTargetHexId });
 			}
+		});
 
-			possibleMoves = [...new Set(possibleMoves.filter(x => x))];
+		// 6. Reroll
+		moves.push({ actionType: 'REROLL', unitHexId });
 
-			// console.dir({calculateValidMoves: unit, startHex, possibleMoves})
+		// 7. Guard
+		if (!unit.isGuarding) { // Only allow if unit is not already guarding
+			moves.push({ actionType: 'GUARD', unitHexId });
+		}
+	});
 
-			// Filter based on target: empty or enemy (for move), or friendly (for merge)
-			return possibleMoves.filter(hexId => {
-				const targetUnit = this.getUnitOnHex(hexId);
-				if (isForMerging) {
-					return targetUnit && targetUnit.playerId === unit.playerId && targetUnit.id !== unit.id;
-				} else {
-					return !targetUnit || targetUnit.playerId !== unit.playerId;
-				}
-			});
-		},
-		calculateValidDeploymentHexes(playerId) {
-			const player = this.players[playerId];
-			const baseHex = this.getHex(player.baseHexId);
-			if (!baseHex) return [];
+	// Always include the option to end the turn, as it might be the best strategic choice
+	// (e.g., no good moves, or to force opponent into a bad position)
+	moves.push({ actionType: 'END_TURN' });
 
-			const primary = PLAYER_PRIMARY_AXIS[this.players.length][playerId];
-			const mod3 = primary.i % 3;
+	return moves;
+},
 
-			let deploymentHexes = [baseHex];
-			this.getNeighbors(baseHex).forEach(neighbor => deploymentHexes.push(neighbor));
-			if (mod3 == 2) {
-				deploymentHexes.push(this.getHexByQR(baseHex.q + -2, baseHex.r + 1));
-				deploymentHexes.push(this.getHexByQR(baseHex.q + 2, baseHex.r + -1));
-			} else if (mod3 == 1) {
-				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + 2));
-				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + -2));
-			} else if (mod3 == 0) {
-				deploymentHexes.push(this.getHexByQR(baseHex.q + -1, baseHex.r + -1));
-				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + 1));
-			}
+/**
+ * Applies a given move to a copied game state and returns the new state.
+ * This is crucial for Minimax to explore hypothetical game states.
+ * @param {object} state - The current game state (must be a deep copy).
+ * @param {object} move - The move object to apply.
+ * @returns {object} The new game state after applying the move.
+ */
+applyMove(state, move) {
+	const newState = clone(state); // Deep copy the state to modify
 
-			// Filter out hexes that are already occupied by friendly units
-			return deploymentHexes
-				.filter(x => x)
-				.filter(hex => !this.getUnitOnHex(hex.id)) // Ensure hex is empty
-				.map(hex => hex.id);
-		},
-
-		// --- ACTIONS ---
-		performMove(unitHexId, targetHexId) {
-			if (unitHexId == targetHexId) {
-				this.addLog("Move failed: Same hex.");
-				return;
-			}
-
-			const attackerUnit = this.getUnitOnHex(unitHexId);
-			const defenderUnit = this.getUnitOnHex(targetHexId);
-			const attackerHex = this.getHex(unitHexId);
-			const defenderHex = this.getHex(targetHexId);
-
-			if (!attackerUnit || !attackerHex || !defenderHex) {
-				this.addLog("Move failed: Invalid unit or hex.");
-				this.deselectUnit(); // Deselect if something is wrong
-				return;
-			}
-
-			this.addLog(`Player ${attackerUnit.playerId + 1} attempts to move Dice ${attackerUnit.value} from (${attackerHex.q},${attackerHex.r}) to (${defenderHex.q},${defenderHex.r}).`);
-			attackerUnit.isGuarding = false;
-
-			if (defenderUnit) { // Moving into an enemy occupied hex
-				if (defenderUnit.playerId === attackerUnit.playerId) {
-					this.addLog("Cannot move into a hex occupied by a friendly unit (use Merge action).");
-					// Do not deselect, allow player to choose another action or target
-					return;
-				}
-				// Combat occurs
-				this.handleCombat(unitHexId, targetHexId, 'MELEE', true); // Pass true for attackerMovesAfterCombat
-			} else { // Moving to an empty hex
-				attackerHex.unitId = null;
-				defenderHex.unitId = attackerUnit.id;
-				attackerUnit.hexId = targetHexId;
-				attackerUnit.hasMovedOrAttackedThisTurn = true;
-				attackerUnit.actionsTakenThisTurn++;
-				this.addLog(`Dice ${attackerUnit.value} moved to (${defenderHex.q},${defenderHex.r}).`);
-				this.deselectUnit(); // Action complete
-			}
-			this.checkWinConditions();
-		},
-		performUnitReroll(unitHexId) {
-			const unit = this.getUnitOnHex(unitHexId);
-			if (!unit || unit.hasMovedOrAttackedThisTurn) return;
-
-			const oldVal = unit.value;
-			const newRoll = Math.floor(Math.random() * 6) + 1;
-			unit.value = newRoll;
-			Object.assign(unit, UNIT_STATS[newRoll]); // Update stats
-			unit.currentArmor = UNIT_STATS[newRoll].armor;
-			unit.armorReduction = 0; // Reset armor reduction
-			unit.isGuarding = false; // Rerolling removes guard
-
-			unit.hasMovedOrAttackedThisTurn = true;
-			unit.actionsTakenThisTurn++;
-			this.addLog(`Player ${unit.playerId + 1}'s Dice ${oldVal} rerolled into a Dice ${newRoll}.`);
-			this.deselectUnit();
-			this.checkWinConditions();
-		},
-		performGuard(unitHexId) {
-			const unit = this.getUnitOnHex(unitHexId);
-			if (!unit || unit.hasMovedOrAttackedThisTurn) return;
-
-			unit.isGuarding = true;
-			// Actual armor buff is applied during combat calculation
-			unit.hasMovedOrAttackedThisTurn = true;
-			unit.actionsTakenThisTurn++;
-			this.addLog(`Player ${unit.playerId + 1}'s Dice ${unit.value} is now Guarding.`);
-			this.deselectUnit();
-			this.checkWinConditions(); // Though guard alone won't win
-		},
-		performMerge(mergingUnitHexId, targetUnitHexId) {
-			const mergingUnit = this.getUnitOnHex(mergingUnitHexId);
-			const targetUnit = this.getUnitOnHex(targetUnitHexId);
-			const mergingHex = this.getHex(mergingUnitHexId);
-			const targetHex = this.getHex(targetUnitHexId);
-
-			if (!mergingUnit || !targetUnit || mergingUnit.playerId !== targetUnit.playerId || mergingUnit.id === targetUnit.id) {
-				this.addLog("Merge failed: Invalid units or target.");
-				this.deselectUnit();
-				return;
-			}
-
-			if (!confirm(`Merge Dice ${mergingUnit.value} [${mergingHex.id}] & Dice ${targetUnit.value} [${targetHex.id}] into new unit?`) == true) {
-				this.deselectUnit();
-				return;
-			}
-
-			this.addLog(`Player ${mergingUnit.playerId + 1} merges Dice ${mergingUnit.value} with Dice ${targetUnit.value}.`);
-
-			const sum = mergingUnit.value + targetUnit.value;
-			let newDieValue;
-			let newUnitCanAct = false;
-
-			if (sum <= 6) {
-				newDieValue = sum;
-			} else {
-				// Player chooses. For prototype, let's pick a default (e.g., 6) or prompt.
-				// Simple: always pick 6 for >6 sum. A real game would prompt.
-				newDieValue = parseInt(prompt(`Sum is ${sum} (>6). Choose new dice value (1-6):`, "6")) || 6;
-				if (newDieValue < 1 || newDieValue > 6) newDieValue = 6;
-				
-				// "And if the Target Unit did not take action last turn, the new unit is may immediately perform one action"
-				// "last turn" here means "this turn before merging"
-				if (targetUnit.actionsTakenThisTurn === 0) {
-					newUnitCanAct = true;
-				}
-			}
-			
-			// Remove original units from player's dice array
-			// This is tricky because indices shift. Find by ID.
-			const p = this.players[mergingUnit.playerId];
-
-			// const mergingUnitArrayIndex = p.dice.findIndex(d => d.id === mergingUnit.id);
-			// if (mergingUnitArrayIndex !== -1) p.dice.splice(mergingUnitArrayIndex, 1);
-			
-			// const targetUnitArrayIndex = p.dice.findIndex(d => d.id === targetUnit.id);
-			// if (targetUnitArrayIndex !== -1) p.dice.splice(targetUnitArrayIndex, 1);
-
-			p.dice.find(d => d.id === mergingUnit.id).isDeath = true;
-			p.dice.find(d => d.id === targetUnit.id).isDeath = true
-
-			// Create new unit ( reusing one of the slots, or pushing new. Let's reuse targetUnit's slot in array by re-finding or assign new ID)
-			// For simplicity, let's add a new die to the player's list. This might mess up indexing if not careful.
-			// A better way: modify targetUnit in place, and remove mergingUnit.
-			// Best way for this model: Create totally new die, assign new unique ID
-			const newDieOriginalIndex = p.dice.length; // New effective index
-			const newUnit = {
-				id: `${p.id}_${newDieOriginalIndex}`, // Unique enough for prototype
-				originalIndex: newDieOriginalIndex,
-				playerId: p.id,
-				value: newDieValue,
-				...UNIT_STATS[newDieValue],
-				currentArmor: UNIT_STATS[newDieValue].armor,
-				armorReduction: 0,
-				isDeployed: true,
-				isDeath: false,
-				hexId: targetHex.id,
-				hasMovedOrAttackedThisTurn: !newUnitCanAct, // If can act, it hasn't "completed" its action for the turn yet
-				isGuarding: false,
-				actionsTakenThisTurn: newUnitCanAct ? 0 : 1, // If cannot act, it counts as action taken
-			};
-			p.dice.push(newUnit);
-			
-			// Update hexes
-			mergingHex.unitId = null;
-			targetHex.unitId = newUnit.id;
-
-			this.addLog(`Merged into a new Dice ${newUnit.value}. ${newUnitCanAct ? "It may act this turn." : "It cannot act further this turn."}`);
-			
-			this.deselectUnit(); // Deselect old unit
-			if (newUnitCanAct) {
-				this.selectUnit(newUnit.hexId); // Select the new unit so player can act with it
-				this.addLog(`New Dice ${newUnit.value} selected. Choose an action.`);
-			} else {
-				this.endTurn();
-			}
-			this.checkWinConditions();
-		},
-		performRangedAttack(attackerHexId, targetHexId) {
-			this.addLog(`Dice 5 at (${this.getHex(attackerHexId).q},${this.getHex(attackerHexId).r}) performs Ranged Attack on unit at (${this.getHex(targetHexId).q},${this.getHex(targetHexId).r}).`);
-			this.handleCombat(attackerHexId, targetHexId, 'RANGED');
-			const attackerUnit = this.getUnitOnHex(attackerHexId); // Attacker stays on its hex for ranged
-			if (attackerUnit) {
-				attackerUnit.hasMovedOrAttackedThisTurn = true;
-				attackerUnit.actionsTakenThisTurn++;
-			}
-			this.deselectUnit();
-			this.checkWinConditions();
-		},
-		performSpecialAttack(attackerHexId, targetHexId) {
-			this.addLog(`Dice 6 at (${this.getHex(attackerHexId).q},${this.getHex(attackerHexId).r}) performs Special Attack on unit at (${this.getHex(targetHexId).q},${this.getHex(targetHexId).r}).`);
-			this.handleCombat(attackerHexId, targetHexId, 'SPECIAL');
-			const attackerUnit = this.getUnitOnHex(attackerHexId); // Attacker might have moved if Dice 6 wins
-			if (attackerUnit && attackerUnit.hexId === attackerHexId) { // if it didn't move (attack failed)
-				 attackerUnit.hasMovedOrAttackedThisTurn = true;
-				 attackerUnit.actionsTakenThisTurn++;
-			} else if (this.getUnitOnHex(targetHexId)?.id === attackerUnit?.id) { // if it moved (attack succeeded)
-				 attackerUnit.hasMovedOrAttackedThisTurn = true;
-				 attackerUnit.actionsTakenThisTurn++;
-			}
-			this.deselectUnit();
-			this.checkWinConditions();
-		},
-
-		// --- COMBAT ---
-		handleCombat(attackerHexId, defenderHexId, combatType, attackerMovesAfterCombat = false) { // combatType: 'MELEE', 'RANGED', 'SPECIAL'
-			const attackerUnit = this.getUnitOnHex(attackerHexId);
-			const defenderUnit = this.getUnitOnHex(defenderHexId);
-			const attackerHex = this.getHex(attackerHexId);
-			const defenderHex = this.getHex(defenderHexId);
-
-			if (!attackerUnit || !defenderUnit || !attackerHex || !defenderHex) {
-				this.addLog("Combat error: attacker or defender not found.");
-				return;
-			}
-
-			// Calculate effective armor for defender
-			let defenderEffectiveArmor = defenderUnit.currentArmor;
-			if (defenderUnit.isGuarding) defenderEffectiveArmor++;
-			// Dice 6 adjacent buff - check neighbors of defender
-			this.getNeighbors(defenderHex).forEach(neighbor => {
-				const neighborUnit = this.getUnitOnHex(neighbor.id);
-				if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
-					defenderEffectiveArmor++;
-				}
-			});
-			defenderEffectiveArmor -= defenderUnit.armorReduction;
-			if (defenderEffectiveArmor < 0) defenderEffectiveArmor = 0;
-			
-			// Dice 6 adjacent buff for attacker (if attacker is Dice 6, it applies to ITS neighbors, not itself)
-			// This is usually a passive aura, so only defender gets it from THEIR Dice 6.
-
-			this.addLog(`Combat: Attacker (D${attackerUnit.value}, Atk ${attackerUnit.attack}) vs Defender (D${defenderUnit.value}, Eff.Armor ${defenderEffectiveArmor})`);
-
-			if (defenderUnit.armorReduction >= UNIT_STATS[defenderUnit.value].armor || attackerUnit.attack >= defenderEffectiveArmor) { // Attacker wins
-				this.addLog("Attacker wins! Defender is defeated.");
-				// Remove defender
-				// this.players[defenderUnit.playerId].dice = this.players[defenderUnit.playerId].dice.filter(d => d.id !== defenderUnit.id);
-				this.players[defenderUnit.playerId].dice.find(d => d.id == defenderUnit.id).isDeath = true;
-				defenderHex.unitId = null;
-
-				if (combatType === 'MELEE' || (combatType === 'SPECIAL' && attackerUnit.value === 6)) {
-					// Attacker moves into vacated hex (melee, special, or if specifically allowed)
-					attackerHex.unitId = null;
-					defenderHex.unitId = attackerUnit.id;
-					attackerUnit.hexId = defenderHex.id;
-					this.addLog(`Attacker D${attackerUnit.value} moves into hex (${defenderHex.q},${defenderHex.r}).`);
-				}
-				// For Ranged, attacker stays. For Special, attacker moves if successful.
-				attackerUnit.hasMovedOrAttackedThisTurn = true;
-				attackerUnit.actionsTakenThisTurn++;
-
-			} else { // Attacker fails
-				this.addLog("Attacker fails! Defender's Armor reduced by 1.");
-				defenderUnit.armorReduction++;
-				defenderUnit.currentArmor = UNIT_STATS[defenderUnit.value].armor; // Reset base armor for clarity if needed, reduction is separate
-				
-				// If armor reaches 0 conceptually (base_armor - reduction <= 0) it's defeated on next hit rule.
-				// The rule is "If a unit's Armor reaches 0, the next attack it suffers, regardless of the attacker's Attack value, automatically defeats it."
-				// And "Effective Armor cannot go below 0 for combat comparison."
-				// So, if defenderEffectiveArmor was 0 (because base_armor - reduction tokens <=0), it should have been defeated.
-				// The condition `defenderUnit.armorReduction >= defenderUnit.armor` handles the "Armor reaches 0" case.
-				
-				attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
-				attackerUnit.actionsTakenThisTurn++;
-			}
-			// If attack failed, unit stays selected for potential other actions if this was not its main action
-			// But for this game, Move/Attack is one action. So, deselect.
-			this.deselectUnit(); 
-		},
-
-		// --- TURN MANAGEMENT & WIN CONDITIONS ---
-		endTurn() {
-			this.actionMode = null;
-			this.validMoves = [];
-			this.validMerges = [];
-			this.validTargets = [];
-
-			if (this.gameState !== 'PLAYER_TURN') return;
-			
-			this.addLog(`Player ${this.currentPlayerIndex + 1} ends their turn.`);
-			this.deselectUnit(); // Clear selection
-			this.actionMode = null; // Clear action mode
-
-			this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-			this.resetTurnActionsForAllUnits();
-			
-			// Deactivate guard mode for units of the player whose turn it WILL BE.
-			// Rule: "Guard Mode is automatically deactivated (remove guard token) if unit moves next turn."
-			// This implies guard lasts until the unit's *owner's* next turn, and deactivates if it moves.
-			// For simplicity here, let's say guard lasts for one round of attacks. Or clear at start of owner's turn.
-			// More accurate: Guard is active. If unit moves, guard deactivates. If it guards again, it's active.
-			// The current implementation of guard adding +1 Armor during combat is fine.
-			// We need to reset isGuarding if the unit moves. Let's do it when a unit *successfully* moves.
-			// Let's also clear guard for the *next* player's units at start of their turn if they had it from prev turn.
-			// OR: Guard token removed if unit MOVES. It persists otherwise.
-			// The rule "Guard Mode is automatically deactivated (remove guard token) if unit move next turn." is a bit ambiguous.
-			// Let's assume it means: if a unit is guarding, and on ITS NEXT ACTIVATION it chooses to move, guard is removed.
-			// So, `isGuarding` should persist until the unit itself moves or rerolls.
-			// My current implementation: `isGuarding` is set, used in combat. If unit moves, `isGuarding` should be set to false.
-			// If a unit moves, it loses guard:
-			// In performMove: if (attackerUnit.isGuarding) attackerUnit.isGuarding = false;
-			// In performUnitReroll: unit.isGuarding = false; (already there)
-			// This seems correct.
-
-			this.addLog(`Player ${this.currentPlayerIndex + 1}'s turn.`);
-
-			this.checkWinConditions(); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
-			if (this.players.length === 2 && this.currentPlayerIndex === 1 && this.gameState === 'PLAYER_TURN') setTimeout(() => this.performAITurn(), 500);
-
-			if (this.debug?.autoPlay) this.autoPlay();
-		},
-		resetTurnActionsForAllUnits() {
-			this.players.forEach(player => {
-				player.dice.forEach(die => {
-					if(die.isDeployed) {
-						die.hasMovedOrAttackedThisTurn = false;
-						die.actionsTakenThisTurn = 0;
-						// Guard status persists until the unit moves or rerolls.
-					}
-				});
-			});
-		},
-		checkWinConditions() {
-			if (this.gameState === 'GAME_OVER') return;
-
-			const p1 = this.players[0];
-			const p2 = this.players[1];
-
-			const p1ActiveDice = p1.dice.filter(d => d.isDeployed && !d.isDeath).length;
-			const p2ActiveDice = p2.dice.filter(d => d.isDeployed && !d.isDeath).length;
-
-			// Annihilation
-			if (p1ActiveDice === 0 && p2ActiveDice > 0) {
-				this.gameOver(1, "Player 1 (Red) annihilated!");
-				return;
-			}
-			if (p2ActiveDice === 0 && p1ActiveDice > 0) {
-				this.gameOver(0, "Player 2 (Blue) annihilated!");
-				return;
-			}
-			 if (p1ActiveDice === 0 && p2ActiveDice === 0) {
-				this.gameOver(-1, "Mutual Annihilation! It's a draw!"); // Or last player to make move loses
-				return;
-			}
-
-
-			// Base Capture
-			const p1BaseHex = this.getHex(p1.baseHexId);
-			const p2BaseHex = this.getHex(p2.baseHexId);
-
-			if (p1BaseHex && this.getUnitOnHex(p1BaseHex.id)?.playerId === 1) {
-				this.gameOver(1, "Player 2 (Blue) captured Player 1's base!");
-				return;
-			}
-			if (p2BaseHex && this.getUnitOnHex(p2BaseHex.id)?.playerId === 0) {
-				this.gameOver(0, "Player 1 (Red) captured Player 2's base!");
-				return;
-			}
-		},
-		gameOver(winnerPlayerIndex, message) {
-			this.gameState = 'GAME_OVER';
-			if (winnerPlayerIndex === -1) { // Draw
-				 this.winnerMessage = message;
-			} else {
-				this.winnerMessage = `Player ${winnerPlayerIndex + 1} (${this.players[winnerPlayerIndex].color}) wins! ${message}`;
-			}
-			this.addLog(`Game Over: ${this.winnerMessage}`);
-		},
-
-		// --- AI OPPONENT (Player 2) ---
-		performAITurn() {
-			if (this.gameState !== 'PLAYER_TURN' || this.currentPlayerIndex !== 1) return;
-			this.addLog("AI (Player 2) is thinking...");
-
-			const aiPlayer = this.players[1];
-			const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-			const opponentUnits = this.players[0].dice.filter(d => d.isDeployed && !d.isDeath);
-			const aiBaseHexId = aiPlayer.baseHexId;
-			const opponentBaseHexId = this.players[0].baseHexId;
-
-			// Simple AI Strategy:
-			// 1. If any unit can attack an enemy and win, do it. Prioritize units closer to opponent base?
-			// 2. If no winning attacks, check for merges to create stronger units.
-			// 3. If no good merges, move units towards the opponent's base, prioritizing units that can move.
-			// 4. If no moves possible, Guard or Reroll (very basic - Guard nearby vulnerable units?)
-
-			let actionTaken = false;
-
-			// Prioritize Attacks
-			for (const unit of aiUnits) {
-				if (unit.hasMovedOrAttackedThisTurn) continue;
-
-				this.selectedUnitHexId = unit.hexId; // Select the unit for calculation
-				
-				// Check for ranged attacks (Dice 5)
-				if (unit.value === 5) {
-					const targets = this.calculateValidRangedTargets(unit.hexId);
-					if (targets.length > 0) {
-						// Simple: attack the first valid target
-						const targetHexId = targets[0];
-						this.addLog(`AI (Dice 5) performs Ranged Attack on hex ${targetHexId}`);
-						this.performRangedAttack(unit.hexId, targetHexId);
-						actionTaken = true;
-						break; // AI performs one action per turn for now
-					}
-				}
-				
-				// Check for special attacks (Dice 6)
-				if (unit.value === 6) {
-					const targets = this.calculateValidSpecialAttackTargets(unit.hexId);
-					if (targets.length > 0) {
-						// Simple: attack the first valid target
-						const targetHexId = targets[0];
-						this.addLog(`AI (Dice 6) performs Special Attack on hex ${targetHexId}`);
-						this.performSpecialAttack(unit.hexId, targetHexId);
-						actionTaken = true;
-						break; // AI performs one action per turn for now
-					}
-				}
-
-				// Check for Melee attacks (implicitly part of move)
-				const validMoves = this.calculateValidMoves(unit.hexId);
-				for (const targetHexId of validMoves) {
-					const targetUnit = this.getUnitOnHex(targetHexId);
-					if (targetUnit && targetUnit.playerId !== aiPlayer.id) { // It's an enemy
-						// Simple: Attack if possible. More complex AI would simulate combat outcome.
-						this.addLog(`AI (Dice ${unit.value}) moves to attack unit at hex ${targetHexId}`);
-						this.performMove(unit.hexId, targetHexId); // Move action triggers combat
-						actionTaken = true;
-						break; // AI performs one action per turn for now
-					}
-				}
-				if(actionTaken) break;
-			}
-
-			// If no attack, try to merge (simple: merge with first valid friendly)
-			if (!actionTaken) {
-				for (const unit of aiUnits) {
-					if (unit.hasMovedOrAttackedThisTurn) continue;
-					this.selectedUnitHexId = unit.hexId;
-					const validMerges = this.calculateValidMoves(unit.hexId, true);
-					if (validMerges.length > 0) {
-						const targetHexId = validMerges[0];
-						this.addLog(`AI (Dice ${unit.value}) attempts to merge with unit at hex ${targetHexId}`);
-						this.performMerge(unit.hexId, targetHexId);
-						actionTaken = true;
-						// If merge results in a new unit that can act, the AI should try to use it.
-						// For now, assume merge ends the unit's actions for the turn unless the rule grants it.
-						break;
-					}
-				}
-			}
-
-			// If no attack or merge, move towards opponent base
-			if (!actionTaken) {
-				// Basic movement: find unit that hasn't moved, find a valid empty move target closest to opponent base.
-				let bestMove = null;
-				let closestDistance = Infinity;
-
-				for (const unit of aiUnits) {
-					if (unit.hasMovedOrAttackedThisTurn || unit.distance <= 0) continue;
-					this.selectedUnitHexId = unit.hexId;
-					const validMoves = this.calculateValidMoves(unit.hexId); // Get moves to empty hexes
-
-					for (const targetHexId of validMoves) {
-						const targetHex = this.getHex(targetHexId);
-						const opponentBaseHex = this.getHex(opponentBaseHexId);
-						if (targetHex && opponentBaseHex) {
-							const distanceToOpponentBase = this.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
-							if (distanceToOpponentBase < closestDistance) {
-								closestDistance = distanceToOpponentBase;
-								bestMove = { unitHexId: unit.hexId, targetHexId: targetHexId };
-							}
-						}
-					}
-				}
-
-				if (bestMove) {
-					this.addLog(`AI (Dice ${this.getUnitOnHex(bestMove.unitHexId).value}) moves towards opponent base.`);
-					this.performMove(bestMove.unitHexId, bestMove.targetHexId);
-					actionTaken = true;
-				}
-			}
-
-			// If no action taken (no attacks, merges, or moves), Guard a unit or reroll (basic - just guard a random unit)
-			if (!actionTaken) {
-				const unitsToGuardOrReroll = aiUnits.filter(unit => !unit.hasMovedOrAttackedThisTurn);
-				if (unitsToGuardOrReroll.length > 0) {
-					const unitToActWith = unitsToGuardOrReroll.random();
-					// For simplicity, AI always Guards if it can't move/attack/merge
-					if (this.canPerformAction(unitToActWith.hexId, 'GUARD')) {
-						this.addLog(`AI (Dice ${unitToActWith.value}) decides to Guard.`);
-						this.performGuard(unitToActWith.hexId);
-						actionTaken = true;
-					}
-					// Add Reroll logic here if desired (e.g., Reroll low value dice)
-				}
-			}
-
-			// If no unit could perform any action, or all active units have acted, end turn.
-			this.deselectUnit(); // Ensure unit is deselected before ending turn
-			this.endTurn();
-		},
-		// --- UTILITIES ---
-		addLog(message) {
-			console.log(message);
-			this.messageLog.unshift({ id: this.logCounter++, message: `[${new Date().toLocaleTimeString()}] ${message}` });
-			if (this.messageLog.length > 50) this.messageLog.pop();
-			// Auto-scroll log
-			this.$nextTick(() => {
-				const logContainer = document.getElementById('messageLogContainer');
-				if (logContainer) logContainer.scrollTop = 0;
-			});
-		},
+	// Create a temporary context object. When `performX.call(tempContext, ...)` is used,
+	// `this` inside `performX` will refer to `tempContext`.
+	// Ensure `tempContext` has all necessary properties and methods that `performX` might access.
+	// This is the most delicate part; if your `performX` methods rely on global scope or
+	// other Vue reactivity (like `this.$data` directly, or `this.$set`), this might fail.
+	const tempContext = {
+		...newState, // Copy all state properties
+		// Include any game methods that your `performX` functions might call internally.
+		// Example: `getHex`, `getUnitOnHex`, `checkWinConditions`.
+		// Ensure these methods are also suitable for being called on a `tempContext`.
+		getHex: this.getHex,
+		getUnitOnHex: this.getUnitOnHex,
+		axialDistance: this.axialDistance, // From canUnitAttackTarget, which might be called internally
+		getNeighbors: this.getNeighbors, // From canUnitAttackTarget
+		calcDefenderEffectiveArmor: this.calcDefenderEffectiveArmor, // From canUnitAttackTarget
+		canUnitAttackTarget: this.canUnitAttackTarget, // If your performX methods call this
+		checkWinConditions: this.checkWinConditions, // CRITICAL: This updates game.phase and winnerPlayerIndex
+		// Suppress any logging or other side-effects during AI simulation
+		addLog: () => {},
+		// ... add any other methods that your performX functions rely on `this.` for
 	};
+
+	// Mark the unit as having acted, unless it's an 'END_TURN' action.
+	// The `hasMovedOrAttackedThisTurn` flag is reset by the `END_TURN` logic.
+	if (move.actionType !== 'END_TURN') {
+		const unitPerformingAction = tempContext.players[tempContext.currentPlayerIndex].dice.find(d => d.hexId === move.unitHexId);
+		if (unitPerformingAction) {
+			unitPerformingAction.hasMovedOrAttackedThisTurn = true;
+		}
+	}
+
+	// Apply the chosen move by calling the corresponding game logic function.
+	// We bind the `this` context of these functions to our `tempContext` (which is `newState`).
+	switch (move.actionType) {
+		case 'MOVE':
+			this.performMove.call(tempContext, move.unitHexId, move.targetHexId);
+			break;
+		case 'RANGED_ATTACK':
+			this.performRangedAttack.call(tempContext, move.unitHexId, move.targetHexId);
+			break;
+		case 'COMMAND_CONQUER':
+			this.performComandConquer.call(tempContext, move.unitHexId, move.targetHexId);
+			break;
+		case 'BRAVE_CHARGE':
+			this.performBraveCharge.call(tempContext, move.unitHexId, move.targetHexId);
+			break;
+		case 'MERGE':
+			this.performMerge.call(tempContext, move.unitHexId, move.targetHexId, true);
+			break;
+		case 'REROLL':
+			this.performUnitReroll.call(tempContext, move.unitHexId);
+			break;
+		case 'GUARD':
+			this.performGuard.call(tempContext, move.unitHexId);
+			break;
+		case 'END_TURN':
+			// Manually simulate the effects of ending a turn.
+			tempContext.currentPlayerIndex = (tempContext.currentPlayerIndex + 1) % tempContext.players.length;
+			// Reset `hasMovedOrAttackedThisTurn` for all units of the NEW current player.
+			tempContext.players[tempContext.currentPlayerIndex].dice.forEach(d => {
+				d.hasMovedOrAttackedThisTurn = false;
+			});
+			// Crucial: check for win conditions after end of turn to update phase/winner.
+			this.checkWinConditions.call(tempContext);
+			break;
+	}
+
+	// Clean up transient state properties
+	delete tempContext.validMoves;
+	delete tempContext.validTargets;
+	delete tempContext.selectedUnitHexId;
+	
+	return tempContext;
+},
+
+/*
+ * Performs the minimax algorithm to choose the best move.
+ * Recursively explores all possible moves up to a given depth, and evaluates the game board at the leaves.
+ *
+ * Inputs:
+ *  - state:                the current game state object (a deep copy).
+ *  - depth:                the depth of the recursive tree (number of full turns to look ahead).
+ *  - alpha:                alpha value for pruning.
+ *  - beta:                 beta value for pruning.
+ *  - isMaximizingPlayer:   true if the current layer is maximizing (AI's turn), false otherwise (opponent's turn).
+ *  - aiPlayerIndex:        the index of the AI player (fixed throughout the search, who we are maximizing for).
+ *
+ * Output:
+ *  the evaluation score for the current state from the AI's perspective.
+ */
+minimax(state, depth, alpha, beta, isMaximizingPlayer, aiPlayerIndex) {
+	// Base case: depth is 0 OR game is over
+	if (depth === 0 || state.phase === 'GAME_OVER') {
+		const score = this.boardEvaluation(state);
+		// If it's the AI's turn (maximizing player) in the current hypothetical state, use the score directly.
+		// If it's the opponent's turn (minimizing player), negate the score because `boardEvaluation`
+		// calculates it for the `state.currentPlayerIndex` (who is the opponent in this case).
+		return isMaximizingPlayer ? score : -score;
+	}
+
+	// Generate and order moves - put promising moves first for better pruning
+	const moves = this.generateAllPossibleMoves(state)
+		.sort((a, b) => (b._priority || 0) - (a._priority || 0)); 
+
+	if (isMaximizingPlayer) { // AI's turn: maximize
+		let maxEval = -Infinity;
+		for (const move of moves) {
+			const newState = this.applyMove(state, move); // Apply move to get new state
+
+			let evalValue;
+			if (move.actionType === 'END_TURN') {
+				// If an END_TURN action is taken, the player flips, and a full turn has passed.
+				evalValue = this.minimax(newState, depth - 1, alpha, beta, false, aiPlayerIndex); // Next is opponent's turn, depth decrements
+			} else {
+				// If it's not an END_TURN, the same player's turn continues.
+				// AI is still maximizing. Depth does NOT decrement as a full turn hasn't passed.
+				// The `newState` will reflect that one unit has acted, so `generateAllPossibleMoves` for `newState`
+				// will produce fewer options for the *same* player.
+				evalValue = this.minimax(newState, depth, alpha, beta, true, aiPlayerIndex); // Still AI's turn, depth remains
+			}
+
+			maxEval = Math.max(maxEval, evalValue);
+			alpha = Math.max(alpha, evalValue);
+
+			if (beta <= alpha) { // Alpha-beta pruning
+				break; // Cut off this branch
+			}
+		}
+		return maxEval;
+	} else { // Opponent's turn: minimize
+		let minEval = Infinity;
+		for (const move of moves) {
+			const newState = this.applyMove(state, move);
+
+			let evalValue;
+			if (move.actionType === 'END_TURN') {
+				// If an END_TURN action is taken, player flips and depth decrements.
+				evalValue = this.minimax(newState, depth - 1, alpha, beta, true, aiPlayerIndex); // Next is AI's turn, depth decrements
+			} else {
+				// If not END_TURN, same player's turn continues.
+				evalValue = this.minimax(newState, depth, alpha, beta, false, aiPlayerIndex); // Still opponent's turn, depth remains
+			}
+
+			minEval = Math.min(minEval, evalValue);
+			beta = Math.min(beta, evalValue);
+
+			if (beta <= alpha) { // Alpha-beta pruning
+				break; // Cut off this branch
+			}
+		}
+		return minEval;
+	}
+},
+
+/*
+ * Calculates the best legal move for the AI player at the root of the search tree.
+ *
+ * Inputs:
+ *  - initialGameState: The current game state object (a deep copy from this.$data).
+ *  - depth:            The search depth (number of full turns to look ahead).
+ *
+ * Output:
+ *  the best move object { actionType, unitHexId, targetHexId }.
+ */
+minimaxBestMove(initialGameState, depth) {
+	let bestMove = null;
+	let bestValue = -Infinity;
+	const alpha = -Infinity; // Initial alpha for the root
+	const beta = Infinity;   // Initial beta for the root
+
+	// The AI is the current player whose turn it is in the `initialGameState`.
+	const aiPlayerIndex = initialGameState.currentPlayerIndex;
+
+	// Generate all possible first moves for the AI player from the current state.
+	const possibleMoves = this.generateAllPossibleMoves(initialGameState);
+
+	// Safety fallback: This ensures that even if no units can act, an 'END_TURN' is chosen.
+	// `generateAllPossibleMoves` should already ensure this by always including 'END_TURN'.
+	if (possibleMoves.length === 0) {
+		console.warn("minimaxBestMove: No possible moves generated, defaulting to END_TURN.");
+		return { actionType: 'END_TURN' };
+	}
+
+	for (const move of possibleMoves) {
+		// Create a new state by applying the current move
+		const newState = this.applyMove(initialGameState, move);
+
+		let moveValue;
+		if (move.actionType === 'END_TURN') {
+			// After END_TURN, it's the opponent's turn (minimizing player), and depth decrements.
+			moveValue = this.minimax(newState, depth - 1, alpha, beta, false, aiPlayerIndex);
+		} else {
+			// If not END_TURN, it's still the AI's turn (maximizing player), and depth does not decrement.
+			moveValue = this.minimax(newState, depth, alpha, beta, true, aiPlayerIndex);
+		}
+
+		// We want to maximize the AI's score
+		if (moveValue > bestValue) {
+			bestValue = moveValue;
+			bestMove = move;
+		}
+	}
+
+	// If no best move was found (e.g., all moves led to -Infinity or some error)
+	if (!bestMove) {
+		console.error("MinimaxBestMove: Failed to find any best move, returning first possible move as fallback.");
+		return possibleMoves[0] || { actionType: 'END_TURN' };
+	}
+
+	return bestMove;
+},
+
+// The original performAI_Minimax function that calls minimaxBestMove
+performAI_Minimax() { // Minimax AI
+	if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) {
+		return; // Only proceed if it's the AI's turn
+	}
+
+	this.addLog("Minimax AI is thinking...");
+
+	// Check if the AI has any units that can act. If not, and only END_TURN is possible, end turn.
+	// This pre-check is largely redundant if `generateAllPossibleMoves` correctly handles it,
+	// but acts as a quick exit.
+	const unitsThatCanAct = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+	if (unitsThatCanAct.length === 0 && this.generateAllPossibleMoves(this.$data).length === 1) { // If only END_TURN is the sole option
+		this.addLog("Minimax AI has no units that can act. Ending turn.");
+		this.endTurn();
+		return;
+	}
+
+	// Find the best move using the Minimax algorithm
+	const currentGameStateCopy = clone(this.$data); // Deep Copy the current live game state
+	// Choose an appropriate depth. A depth of 3 usually means 3 full turns ahead (AI turn -> Opponent turn -> AI turn -> Opponent turn -> AI turn).
+	// Be mindful of performance, as search space grows exponentially with depth.
+	const bestMove = this.minimaxBestMove(currentGameStateCopy, 3); // Search depth
+
+	// Perform the chosen best move on the *actual* game state.
+	// These methods automatically use `this.$data` which is the live state.
+	switch (bestMove.actionType) {
+		case 'MOVE': this.performMove(bestMove.unitHexId, bestMove.targetHexId); break;
+		case 'RANGED_ATTACK': this.performRangedAttack(bestMove.unitHexId, bestMove.targetHexId); break;
+		case 'COMMAND_CONQUER': this.performComandConquer(bestMove.unitHexId, bestMove.targetHexId); break;
+		case 'BRAVE_CHARGE': this.performBraveCharge(bestMove.unitHexId, bestMove.targetHexId); break;
+		case 'MERGE': this.performMerge(bestMove.unitHexId, bestMove.targetHexId, true); break;
+		case 'REROLL': this.performUnitReroll(bestMove.unitHexId); break;
+		case 'GUARD': this.performGuard(bestMove.unitHexId); break;
+		case 'END_TURN':
+			// If the best move is to END_TURN, the AI explicitly chooses to pass.
+			// The `this.endTurn()` call below will handle this.
+			this.addLog("Minimax AI chose to end turn.");
+			break;
+		default:
+			console.warn("Minimax AI chose an unrecognized action type:", bestMove.actionType);
+			break;
+	}
+
+	// Loop to perform multiple actions per turn
+	let shouldEndTurn = false;
+	while (!shouldEndTurn) {
+		// Get fresh state copy each iteration
+		const currentStateCopy = clone(this.$data);
+		const nextMove = this.minimaxBestMove(currentStateCopy, 3);
+		
+		if (nextMove.actionType === 'END_TURN' || 
+			!this.generateAllPossibleMoves(this.$data).some(m => m.actionType !== 'END_TURN')) {
+			shouldEndTurn = true;
+			break;
+		}
+		
+		// Perform the move on actual game state
+		switch (nextMove.actionType) {
+			case 'MOVE': this.performMove(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'RANGED_ATTACK': this.performRangedAttack(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'COMMAND_CONQUER': this.performComandConquer(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'BRAVE_CHARGE': this.performBraveCharge(nextMove.unitHexId, nextMove.targetHexId); break;
+			case 'MERGE': this.performMerge(nextMove.unitHexId, nextMove.targetHexId, true); break;
+			case 'REROLL': this.performUnitReroll(nextMove.unitHexId); break;
+			case 'GUARD': this.performGuard(nextMove.unitHexId); break;
+			case 'END_TURN': shouldEndTurn = true; break;
+			default: break;
+		}
+		
+		if (nextMove.actionType === 'END_TURN') break;
+	}
+	
+	this.deselectUnit();
+	if (shouldEndTurn) {
+		this.endTurn();
+	}
 }

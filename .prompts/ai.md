@@ -1,3 +1,46 @@
+Based on the result of `analyzeOpportunities()` implement the TODO `Take the good opportunity from opportunities` inside `performAI_Analyze()` in `game.js`
+
+
+---
+Implement function performBraveryCharge() for Dice 1 only
+
+* ##### **Dice 1: Bravery Charge**
+
+  * Action: Choose one of your Dice 1 units, must **declare "Bravery Charge"** action. Otherwise, it's a normal move.  
+    * Movement: The Dice 1 unit must **move forward** up to its full movement distance (3 steps) during this action.  
+    * Target: The Dice 1 unit must end its movement **adjacent to at least a single enemy unit** that has an **Effective Armor** value of **6 or higher**. An enemy unit's Effective Armor is its base Armor value plus any bonuses from Guard Mode or terrain, minus any Armor Reduction tokens.  
+    * Effect: If the target condition is met:  
+      - The attacking **Dice 1** unit is **immediately removed** from the board.  
+      - The targeted enemy unit has its **Armor value reduced by 6**. If the enemy unit's Armor value is **reduced to 0 or less** by this effect, that enemy unit is also **immediately removed** from the board. Otherwise, the enemy unit survives with its reduced Armor.  
+    * Note: This action bypasses all standard combat rules (e.g., no Attack vs. Armor comparison, no Armor reduction based on failed attacks). It is a direct, specified effect.  
+    * Action Complete: After executing a Bravery Charge, the player's turn ends.
+
+---
+Please change the code below in the following way: "Improve the AI Strategy. make it thinking more about overall context (friendly unit, threat, friendly units formation ...)"
+
+Okay, I understand. I will try to improve the AI's strategy by considering the game state more comprehensively. Here's how I'll approach it:
+
+Analyze Threats: Identify immediate threats to AI units and the AI base. This includes nearby enemy units that can attack and enemy units that are close to the base.
+
+Evaluate Friendly Units: Assess the position and strength of AI units. Determine which units are in good positions to attack, defend, or merge.
+
+Consider Formations: While the game doesn't have explicit formations, I can look for clusters of friendly units that could benefit from merging or supporting each other.
+
+Prioritize Actions: Based on the analysis, I will prioritize actions in a more nuanced way than the current simple list. The new priority will roughly be:
+
+Defend Base: If the AI base is under immediate threat, prioritize moving units to defend it or attacking threatening units.
+Eliminate High-Value Threats: Attack enemy units that pose a significant threat (e.g., high-value dice, units in key positions).
+Strengthen Units: If opportunities exist to merge units into stronger ones, consider doing so, especially if it creates a unit that can immediately impact the board.
+Attack Weaker Enemies: If no major threats or good merge opportunities exist, attack weaker enemy units to gain an advantage.
+Advance Towards Opponent Base: If the situation is relatively safe, move units towards the opponent's base in a coordinated manner.
+Guard Vulnerable Units: If a unit is in an exposed position, consider guarding it.
+Reroll (Conditional): Reroll low-value dice if no better option is available.
+Simulate Outcomes (Simplified): For attacks and merges, I will try to a simple evaluation of the potential outcome (e.g., will the attack likely succeed, will the merge create a stronger unit).
+
+This is a more complex strategy and will require significant changes to the performAITurn function. I will now attempt to implement this improved AI logic in the game.js file.
+
+---
+
 Implement the AI Opponent Bot (as Player 2) if user (Player 1) choose single player mode in `game.js` following below <REQUIREMENTS>:
 
 <REQUIREMENTS>
