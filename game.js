@@ -225,10 +225,12 @@ function alpineHexDiceTacticGame() { return {
 
 		const unit = this.getUnitOnHex(hex.id);
 		if (unit) {
-			style.push(`background-size: 50%;`,	`background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/d${unit.value}_board.webp");`);
+			const {value, playerId} = unit;
+			style.push(`background-size: 60%;`,	`background-repeat: no-repeat;`, `background-position: center;`);
+			style.push(`background-image: url("/assets/sprites/d${value}_${playerId == 0 ? 'blue' : 'red' }.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
+		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
 
 
 		return style.join('');
