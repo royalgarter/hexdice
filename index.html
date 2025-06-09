@@ -17,14 +17,14 @@
 		[x-cloak] { display: none !important; }
 
 		@theme {
-			--color-hexdefault: var(--color-teal-700);
-			--color-hexselect: var(--color-purple-400);
-			--color-hexmove: var(--color-purple-300);
-			--color-hexmerge: var(--color-purple-500);
+			--color-hexdefault: var(--color-lime-700);
+			--color-hexselect: var(--color-emerald-400);
+			--color-hexmove: var(--color-emerald-300);
+			--color-hexmerge: var(--color-emerald-500);
 			--color-hextarget: var(--color-amber-500);
 			--color-hexdeploy: var(--color-yellow-500);
-			--color-hexred: var(--color-red-500);
-			--color-hexblue: var(--color-blue-500);
+			--color-hexred: var(--color-red-700);
+			--color-hexblue: var(--color-blue-700);
 		}
 
 		.hexagon {
@@ -36,7 +36,7 @@
 	<script src="game.js"></script>
 </head>
 
-<body class="text-white p-2 flex flex-col items-center bg-gray-600 font-sans" x-data="alpineHexDiceTacticGame()">
+<body class="text-white p-2 flex flex-col items-center bg-stone-700 font-sans" x-data="alpineHexDiceTacticGame()">
 	<!-- <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Hex Grid -->
@@ -52,19 +52,21 @@
 				>
 					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-[10px] text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
-					<div class="hex-content text-sm text-center font-bold relative">
-						<span class="text-lg"
+					<div class="hex-content text-sm text-center font-bold relative"
+						@mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false"
+					>
+						<span class="text-lg invisible"
 							:class="{
 								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 0,
 								'text-red-900': getUnitOnHex(hex.id)?.playerId === 1,
 							}"
-							@mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false"
 							x-show="getUnitOnHex(hex.id)"
-							x-text="getUnitOnHex(hex.id)?.value">
+							x-text="getUnitOnHex(hex.id)?.value"
+						>
 						</span>
-						<span class="absolute -top-1 right-2 text-blue-500" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
-						<span class="absolute -top-1 -right-2 text-green-500" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)"></span>
-						<span class="absolute top-4 -right-2 text-red-600" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
+						<span class="absolute -top-4 right-3 text-yellow-700" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
+						<span class="absolute -top-4 -right-3 text-zinc-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)"></span>
+						<span class="absolute top-6 -right-3 text-rose-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
 				<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calcUIDiceStat(hex.id)"></div>
@@ -179,7 +181,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs h-32 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
+	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message"></p>
 		</template>
