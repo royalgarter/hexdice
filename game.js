@@ -181,7 +181,7 @@ function alpineHexDiceTacticGame() { return {
 		return `width: ${gridWidth}px; height: ${gridHeight}px;`;
 	},
 	hexColor(hex, state) {
-		const unit = this.getUnitOnHex(hex.id, state);
+		// const unit = this.getUnitOnHex(hex.id, state);
 
 		let cls = 'bg-hexdefault';
 
@@ -216,12 +216,22 @@ function alpineHexDiceTacticGame() { return {
 		const minX = Math.min(...allX);
 		const minY = Math.min(...allY);
 
-		return `
-			left: ${hex.visualX - minX + padding}px;
-			top: ${hex.visualY - minY + padding}px;
-			width: ${HEX_WIDTH - (padding << 1)}px;
-			height: ${HEX_HEIGHT - (padding << 1)}px;
-		`;
+		let style = [
+			`left: ${hex.visualX - minX + padding}px;`,
+			`top: ${hex.visualY - minY + padding}px;`,
+			`width: ${HEX_WIDTH - (padding << 1)}px;`,
+			`height: ${HEX_HEIGHT - (padding << 1)}px;`,
+		];
+
+		const unit = this.getUnitOnHex(hex.id);
+		if (unit) {
+			style.push(`background-size: 50%;`,	`background-repeat: no-repeat;`, `background-position: center;`);
+			style.push(`background-image: url("/assets/sprites/d${unit.value}_board.webp");`);
+		}
+		// https://github.com/Klokinator/FE-Repo
+
+
+		return style.join('');
 	},
 	hoverHex(hexId){
 		if (this.phase !== 'PLAYER_TURN') return;
