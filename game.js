@@ -232,13 +232,13 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(hex.id);
 		if (unit) {
 			const {value, playerId} = unit;
-			style.push(`background-size: auto 80%;`, `background-repeat: no-repeat;`, `background-position: center;`);
+			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
 			style.push(`background-image: url("/assets/sprites/d${value}${playerId == 0 ? 'blue' : 'red' }.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
 
-		let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 30];
+		let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 50];
 		if (hex.id == trail?.fromHex?.id) {
 			style.push(`filter: sepia(${step}%);`);
 		} else if (hex.id == trail?.toHex?.id) {
@@ -668,17 +668,27 @@ function alpineHexDiceTacticGame() { return {
 
 		if (fromHex && toHex) {
 			const dist = this.axialDistance(fromHex.q, fromHex.r, toHex.q, toHex.r);
+			// (unit.playerId==0) && console.log('trail.dist', dist, fromHex.q, fromHex.r, toHex.q, toHex.r);
 			if (dist > 1) {
 				const stepQ = (toHex.q - fromHex.q) / dist;
 				const stepR = (toHex.r - fromHex.r) / dist;
+				// (unit.playerId==0) && console.log('trail.step', stepQ, stepR);
 
 				// Start checking from 1 hex away from attacker up to 1 hex away from target
-				for (let i = 1; i < dist; i++) {
-					const checkQ = Math.floor(fromHex.q + stepQ * i);
-					const checkR = Math.floor(fromHex.r + stepR * i);
-					const intermediateHex = this.getHexByQR(checkQ, checkR);
+				for (let i = 0; i < dist; i++) {
+					let checkQ = fromHex.q + stepQ * i;
+					let checkR = fromHex.r + stepR * i;
 
-					this.trail.path.push(intermediateHex.id)
+					checkQ = (checkQ > 0.5) ? Math.ceil(checkQ) : Math.floor(checkQ);
+					checkR = (checkR > 0.5) ? Math.ceil(checkR) : Math.floor(checkR);
+
+					// const checkQ = Math.floor(fromHex.q + stepQ * i);
+					// const checkR = Math.floor(fromHex.r + stepR * i);
+					const checkHex = this.getHexByQR(checkQ, checkR);
+
+					// (unit.playerId==0) && console.log('trail.checkHex', checkQ, checkR, fromHex.q + stepQ * i, fromHex.r + stepR * i);
+
+					this.trail.path.push(checkHex.id)
 				}
 			}
 		}
@@ -959,10 +969,22 @@ function alpineHexDiceTacticGame() { return {
 
 					// Start checking from 1 hex away from attacker up to 1 hex away from target
 					for (let i = 1; i < dist; i++) {
-						const checkQ = Math.round(attackerHex.q + stepQ * i);
-						const checkR = Math.round(attackerHex.r + stepR * i);
-						const intermediateHex = this.getHexByQR(checkQ, checkR, state);
-						if (intermediateHex && (intermediateHex.id != attackerHexId) && this.getUnitOnHex(intermediateHex.id, state)) {
+						let checkQ, checkR, intermediateHex, intermediateUnit;
+
+						checkQ = Math.ceil(attackerHex.q + stepQ * i);
+						checkR = Math.ceil(attackerHex.r + stepR * i);
+						intermediateHex = this.getHexByQR(checkQ, checkR, state);
+						intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
+						if (intermediateHex && (intermediateHex.id != attackerHexId) && intermediateUnit && !intermediateUnit.isDeath) {
+							blocked = true;
+							break;
+						}
+
+						checkQ = Math.floor(attackerHex.q + stepQ * i);
+						checkR = Math.floor(attackerHex.r + stepR * i);
+						intermediateHex = this.getHexByQR(checkQ, checkR, state);
+						intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
+						if (intermediateHex && (intermediateHex.id != attackerHexId) && intermediateUnit && !intermediateUnit.isDeath) {
 							blocked = true;
 							break;
 						}
