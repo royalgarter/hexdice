@@ -858,9 +858,9 @@ function alpineHexDiceTacticGame() { return {
 			this.selectUnit(newUnit.hexId, state); // Select the new unit so player can act with it
 			this.addLog(`New Dice ${newUnit.value} selected. Choose an action.`, state);
 			// if (isAI) this.performAITurn();
-		} /*else {
+		} else {
 			this.endTurn(state);
-		}*/
+		}
 		this.checkWinConditions(state);
 	},
 	performRangedAttack(attackerHexId, targetHexId, state) {

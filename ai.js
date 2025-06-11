@@ -121,9 +121,7 @@ function performAIByWeight(GAME) {
 
 	const currentState = GAME.cloneState();
 
-	console.time('generateAllPossibleMoves')
 	const possibleMoves = generateAllPossibleMoves(GAME, currentState);
-	console.timeEnd('generateAllPossibleMoves')
 
 	let bestScore = -Infinity;
 	let bestMove = null;
