@@ -5,7 +5,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 120,      // Multiplier for unit's dice value (stronger units = more value)
 		GUARD: 10,            // Bonus for guarding units
 		ADVANCE: 5,           // Points for the whole formation moving closer to opponent's base
-		RETREAT_PENALTY: 15,  // Penalty for opponent formation moving closer to AI's base
 		MUTUAL_SUPPORT: 2,    // Bonus for friendly units being adjacent
 		BASE_PROTECTION: 20,  // Bonus for AI units protecting their own base
 		THREAT: 5,           // Penalty for AI units being threatened
@@ -19,7 +18,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 150,     // Stronger units for offense are more valued
 		GUARD: 5,             // Less emphasis on guarding
 		ADVANCE: 25,          // Strong push towards opponent base
-		RETREAT_PENALTY: 40,  // Strong penalty for enemy moving towards AI base
 		MUTUAL_SUPPORT: 5,    // Small bonus for staying together
 		BASE_PROTECTION: 60,  // High importance for defending own base
 		THREAT: 3,            // Less fearful of threats, willing to take risks
@@ -33,7 +31,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 90,      // Values unit strength, but survival is key
 		GUARD: 40,            // High reward for guarding
 		ADVANCE: 2,           // Less emphasis on pushing forward
-		RETREAT_PENALTY: 50,  // Very high penalty for enemy moving towards AI base
 		MUTUAL_SUPPORT: 15,   // High bonus for staying together
 		BASE_PROTECTION: 80,  // Extremely high importance for defending own base
 		THREAT: 15,           // Very high penalty for threatened units
@@ -47,7 +44,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 150,     // Very high value for unit strength
 		GUARD: 15,            // Guards good for protecting high-value units
 		ADVANCE: 5,           // Standard positional
-		RETREAT_PENALTY: 15,  // Standard positional
 		MUTUAL_SUPPORT: 7,    // Moderate bonus for cohesion
 		BASE_PROTECTION: 30,  // Moderate importance for defending own base
 		THREAT: 7,            // Moderate threat avoidance to protect key units
@@ -61,7 +57,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 50,      // Less emphasis on individual unit strength
 		GUARD: 5,             // Not a priority, better to push
 		ADVANCE: 10,          // Push forward to get more units on the board
-		RETREAT_PENALTY: 10,  // Less penalty, expects some units to be lost
 		MUTUAL_SUPPORT: 3,    // Low bonus, as units are meant to spread and overwhelm
 		BASE_PROTECTION: 20,  // Less importance, units are expendable
 		THREAT: 5,            // Moderate threat, expects some units to be lost
@@ -75,7 +70,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 100,
 		GUARD: 10,            // Guards are good for maintaining position
 		ADVANCE: 5,           // Standard positional
-		RETREAT_PENALTY: 15,  // Standard positional
 		MUTUAL_SUPPORT: 5,    // Standard cohesion
 		BASE_PROTECTION: 40,  // Good importance for defending own base
 		THREAT: 10,           // Avoids unnecessary threats, preserves units for opportunities
@@ -89,7 +83,6 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		UNIT_FACTOR: 1,
 		GUARD: 1,
 		ADVANCE: 1,
-		RETREAT_PENALTY: 1,
 		MUTUAL_SUPPORT: 1,
 		BASE_PROTECTION: 1,
 		THREAT: 1,
@@ -233,19 +226,6 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 		}
 	}
 	score += (aiTotalAdvanceScore * WEIGHT.ADVANCE);
-
-	let opponentTotalAdvanceScore = 0;
-	if (aiBaseHex) {
-		for (let i = 0; i < opponentUnitCount; i++) {
-			const unit = opponentUnits[i];
-			const unitHex = GAME.getHex(unit.hexId, state);
-			if (unitHex) {
-				const distanceToAIBase = GAME.axialDistance(unitHex.q, unitHex.r, aiBaseHex.q, aiBaseHex.r);
-				opponentTotalAdvanceScore += (R * 2 - distanceToAIBase); // Score for opponent being closer to AI base
-			}
-		}
-	}
-	score -= (opponentTotalAdvanceScore * WEIGHT.RETREAT_PENALTY); // Penalize opponent being close to AI base more heavily
 
 	// 3. Threat and Vulnerability (Existing)
 	let totalThreatScore = 0;
