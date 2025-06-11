@@ -227,6 +227,24 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 	}
 	score += (aiTotalAdvanceScore * WEIGHT.ADVANCE);
 
+	// 2.5. Positional Scoring - Piece Square Tables
+	for (let i = 0; i < aiUnitCount; i++) {
+		const unit = aiUnits[i];
+		const unitHex = GAME.getHex(unit.hexId, state);
+		if (unitHex) {
+			score += getHexPSTScore(GAME, unit, unitHex, state); // Add score for AI's units based on position
+		}
+	}
+
+	for (let i = 0; i < opponentUnitCount; i++) {
+		const unit = opponentUnits[i];
+		const unitHex = GAME.getHex(unit.hexId, state);
+		if (unitHex) {
+			score -= getHexPSTScore(GAME, unit, unitHex, state); // Subtract score for Opponent's units
+		}
+	}
+
+
 	// 3. Threat and Vulnerability (Existing)
 	let totalThreatScore = 0;
 	let totalVulnerabilityScore = 0;
@@ -484,4 +502,53 @@ function applyMove(GAME, move, state) {
 	}
 
 	return applyState;
+}
+
+function getHexPSTScore(GAME, unit, hex, state) { // Piece Square Tables (PSTs) implementation
+	let score = 0;
+	const { q, r } = hex;
+	const unitValue = unit.value;
+
+	// Get the base hex for the unit's player and the opponent's player
+	const playerBaseHex = GAME.getHex(state.players[unit.playerId].baseHexId, state);
+	const opponentBaseHex = GAME.getHex(state.players[(unit.playerId + 1) % state.players.length].baseHexId, state);
+
+	// 1. Centrality (general board control):
+	// Units generally prefer to be closer to the center of the board (0,0).
+	const centerQ = 0;
+	const centerR = 0;
+	const distanceFromCenter = GAME.axialDistance(q, r, centerQ, centerR);
+	// Reward for being closer to center, scaled (smaller distance = higher score)
+	score += (R - distanceFromCenter) * 0.5;
+
+	// 2. Unit-specific positional preferences:
+	// These preferences are relative to the unit's own player's objectives.
+
+	// A. Advancement toward opponent's base (typically for lower value, more aggressive units)
+	if (unitValue <= 3) { // Dice 1, 2, 3 might be more expendable or designed for pushing
+		if (opponentBaseHex) {
+			const distanceToOpponentBase = GAME.axialDistance(q, r, opponentBaseHex.q, opponentBaseHex.r);
+			// Reward for being closer to opponent's base. Max distance is R*2.
+			score += (R * 2 - distanceToOpponentBase) * 0.4;
+		}
+	}
+
+	// B. Proximity to own base (typically for higher value, more defensive/control units)
+	if (unitValue >= 4) { // Dice 4, 5, 6 might prefer more defensive or central-control positions
+		if (playerBaseHex) {
+			const distanceToOwnBase = GAME.axialDistance(q, r, playerBaseHex.q, playerBaseHex.r);
+			// Reward for being closer to own base (smaller distance = higher score)
+			score += (R - distanceToOwnBase) * 0.7;
+		}
+	}
+
+	// C. Special hex bonuses (e.g., central column, specific choke points):
+	// This is an example of a general board feature, independent of specific bases.
+	if (Math.abs(q) === 0) { // Bonus for being on the central column (q=0)
+		score += 2;
+	}
+	// You can add more specific hex-ID based bonuses here if your board has unique strategic hexes.
+	// Example: if (hex.id === 'central_chokepoint_hex') score += 5;
+
+	return score;
 }

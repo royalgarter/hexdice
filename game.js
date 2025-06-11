@@ -49,6 +49,7 @@ function alpineHexDiceTacticGame() { return {
 	selectedUnitHexId: null,
 	selectedDieToDeploy: null, // index in player's dice array
 	hovering: {},
+	unitstat: null,
 	trail: {fromHex: null, toHex: null, unit: null, path: []},
 	validMoves: [], // array of hex IDs
 	validMerges: [], // array of hex IDs
@@ -247,10 +248,10 @@ function alpineHexDiceTacticGame() { return {
 
 		return style.join('');
 	},
-	hoverHex(hexId){
+	hoverHex(hexId) {
 		if (this.phase !== 'PLAYER_TURN') return;
 
-		if (!hexId || (hexId && (this.selectedUnitHexId == hexId))) this.hovering = {};
+		this.hovering = {};
 
 		this.hovering.hexId = hexId;
 		this.hovering.unit = this.getUnitOnHex(hexId);
@@ -454,12 +455,20 @@ function alpineHexDiceTacticGame() { return {
 
 		if (this.actionMode) { // If in an action mode like MOVE or ATTACK
 			this.completeAction(hexId);
+			this.deselectUnit();
+			if (unitOnClickedHex ) {
+				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
+				this.hoverHex(hexId);
+			}
 		} else { // Normal selection mode
-			if (unitOnClickedHex && unitOnClickedHex.playerId === this.currentPlayerIndex) {
-				this.selectUnit(hexId);
+			if (unitOnClickedHex) {
+				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
+				this.hoverHex(hexId);
 			} else if (this.selectedUnitHexId !== null) { // Clicked on empty or enemy hex while a unit is selected (implies move/attack intent)
 				// This could be simplified to require explicit action button click
 				// For now, deselect if not a valid action target
+				this.deselectUnit();
+			} else {
 				this.deselectUnit();
 			}
 		}
@@ -489,12 +498,14 @@ function alpineHexDiceTacticGame() { return {
 		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 	},
 	deselectUnit(state) {
-		if (!state) return;
-		this.selectedUnitHexId = null;
-		this.validMoves = [];
-		this.validTargets = [];
-		this.validMerges = [];
-		this.actionMode = null;
+		state = state || this;
+
+		state.hovering = {}
+		state.selectedUnitHexId = null;
+		state.validMoves = [];
+		state.validTargets = [];
+		state.validMerges = [];
+		state.actionMode = null;
 	},
 	initiateAction(actionType) {
 		if (!this.selectedUnitHexId) return;

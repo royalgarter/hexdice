@@ -49,13 +49,14 @@
 					:style="hexStyle(hex, 1)"
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
-					@mouseenter="hoverHex(hex.id)" @mouseleave="hoverHex()"
 				>
+					<!-- @mouseenter="hoverHex(hex.id)" @mouseleave="hoverHex()" -->
 					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-[10px] text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-sm text-center font-bold relative"
-						@mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false"
+						@click="unitstat=hex.id"
 					>
+						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
 							:class="{
 								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 0,
@@ -70,9 +71,9 @@
 						<span class="absolute top-6 -right-3 text-rose-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
-				<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="hex.unitstat" x-html="calcUIDiceStat(hex.id)"></div>
 			</div>
 		</template>
+		<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div>
 	</div>
 
 	<!-- Game Setup -->
