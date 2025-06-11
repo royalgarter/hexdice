@@ -10,14 +10,17 @@ function performAI_Greedy(GAME) {
 	let bestScore = -Infinity;
 	let bestMove = null;
 
+	console.log('currentScore', boardEvaluation(GAME, currentState), currentState);
+
 	// Evaluate all possible moves
 	possibleMoves.forEach((move, i) => {
-		console.time('move' + i)
 		let nextState = structuredClone(currentState);
 
 		nextState = applyMove(GAME, move, nextState);
 
+		console.time('boardEvaluation-' + i)
 		const evaluation = boardEvaluation(GAME, nextState);
+		console.timeEnd('boardEvaluation-' + i)
 		move.evaluation = evaluation;
 		console.log(move);
 		move.nextState = nextState;
@@ -26,13 +29,17 @@ function performAI_Greedy(GAME) {
 			bestScore = evaluation;
 			bestMove = move;
 		}
-		console.timeEnd('move' + i)
 	});
 
 	// Execute best move if found
 	if (bestMove) applyMove(GAME, bestMove);
 
 	console.log('bestMove', bestMove);
+}
+
+const ATTACK_LOG_LOOKUP = [0]; // ATTACK_LOG_LOOKUP[attack] = Math.round(Math.log(attack) * EVALUATION_WEIGHT.UNIT_FACTOR)
+for (let i = 1; i < 100; i++) { // Assuming max attack value is less than 100
+	ATTACK_LOG_LOOKUP.push(Math.round(Math.log(i) * EVALUATION_WEIGHT.UNIT_FACTOR));
 }
 
 function boardEvaluation(GAME, state) {
@@ -44,9 +51,8 @@ function boardEvaluation(GAME, state) {
 		return 0; // Draw
 	}
 
-	const aiPlayerIndex = state.currentPlayerIndex; // Assuming the AI is the current player for evaluation
+	const aiPlayerIndex = state.currentPlayerIndex;
 	const opponentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-
 	const aiPlayer = state.players[aiPlayerIndex];
 	const opponentPlayer = state.players[opponentPlayerIndex];
 
@@ -56,119 +62,115 @@ function boardEvaluation(GAME, state) {
 	let score = 0;
 
 	// 1. Unit Count and Value
-	score += (aiUnits.length * EVALUATION_WEIGHT.UNIT_COUNT); // Award points for each AI unit
-	score -= (opponentUnits.length * EVALUATION_WEIGHT.UNIT_COUNT); // Penalize for each opponent unit
+	const aiUnitCount = aiUnits.length;
+	const opponentUnitCount = opponentUnits.length;
+	score += (aiUnitCount * EVALUATION_WEIGHT.UNIT_COUNT);
+	score -= (opponentUnitCount * EVALUATION_WEIGHT.UNIT_COUNT);
 
-	aiUnits.forEach(unit => {
-		score += Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR); // Add unit value to score
-		if (unit.isGuarding) score += EVALUATION_WEIGHT.GUARD; // Bonus for guarding units
+	for (let i = 0; i < aiUnitCount; i++) {
+		const unit = aiUnits[i];
+		score += Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR);
+		if (unit.isGuarding) score += EVALUATION_WEIGHT.GUARD;
+
 		if (unit.value === 6) {
-			GAME.getNeighbors(GAME.getHex(unit.hexId, state), state).forEach(neighbor => {
+			const neighbors = GAME.getNeighbors(GAME.getHex(unit.hexId, state), state);
+			for (let j = 0; j < neighbors.length; j++) {
+				const neighbor = neighbors[j];
 				const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
 				if (neighborUnit && neighborUnit.playerId === aiPlayerIndex) {
-					score += (EVALUATION_WEIGHT.GUARD >> 1); // Add a "synergy" bonus for each unit it buffs
+					score += (EVALUATION_WEIGHT.GUARD >> 3);
 				}
-			});
+			}
 		}
-	});
+	}
 
-	opponentUnits.forEach(unit => {
-		score -= Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR); // Penalize for opponent unit value
-	});
+	for (let i = 0; i < opponentUnitCount; i++) {
+		const unit = opponentUnits[i];
+		score -= Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR);
+	}
 
-	// 2. Positional Scoring (towards opponent's base)
+	// 2. Positional Scoring
 	const opponentBaseHex = GAME.getHex(opponentPlayer.baseHexId, state);
 	if (opponentBaseHex) {
-		aiUnits.forEach(unit => {
+		for (let i = 0; i < aiUnitCount; i++) {
+			const unit = aiUnits[i];
 			const unitHex = GAME.getHex(unit.hexId, state);
 			if (unitHex) {
 				const distanceToOpponentBase = GAME.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
-				// The closer to the opponent's base, the higher the score
-				score += ((R * 2 - distanceToOpponentBase) * EVALUATION_WEIGHT.DISTANCE); // R*2 is roughly max distance
+				score += ((R * 2 - distanceToOpponentBase) * EVALUATION_WEIGHT.DISTANCE);
 			}
-		});
+		}
 	}
 
-	// defende base
-	const aiBaseHex = GAME.getHex(aiPlayer.baseHexId, state);
-	if (aiBaseHex) {
-		opponentUnits.forEach(unit => {
-			const unitHex = GAME.getHex(unit.hexId, state);
-			if (unitHex) {
-				const distanceToAIBase = GAME.axialDistance(unitHex.q, unitHex.r, aiBaseHex.q, aiBaseHex.r);
-				// The closer an enemy is, the bigger the penalty
-				score -= ((R * 2 - distanceToAIBase) * EVALUATION_WEIGHT.DISTANCE); // Reuse the distance weight
-			}
-		});
-	}
-
-	// 3. Threat and Vulnerability (simplified)
+	// 3. Threat and Vulnerability
 	let totalThreatScore = 0;
 	let totalVulnerabilityScore = 0;
 	let opponentThreats = new Set();
 
-	// Calculate threat score for each AI unit
-	aiUnits.forEach(aiUnit => {
+	for (let i = 0; i < aiUnitCount; i++) {
+		const aiUnit = aiUnits[i];
 		let aiUnitThreat = 0;
-		opponentUnits.forEach(opponentUnit => {
+		for (let j = 0; j < opponentUnitCount; j++) {
+			const opponentUnit = opponentUnits[j];
 			if (GAME.canUnitAttackTarget(opponentUnit, aiUnit, state)) {
-				opponentThreats.add(opponentUnit.hexId)
+				opponentThreats.add(opponentUnit.hexId);
 				aiUnitThreat += (aiUnit.value + opponentUnit.value);
 			}
-		});
+		}
 		totalThreatScore += aiUnitThreat;
-	});
+	}
 
-	// Calculate vulnerability score for each opponent unit
-	opponentUnits.forEach(opponentUnit => {
+	for (let i = 0; i < opponentUnitCount; i++) {
+		const opponentUnit = opponentUnits[i];
 		let opponentUnitVulnerability = 0;
-		aiUnits.forEach(aiUnit => {
+		for (let j = 0; j < aiUnitCount; j++) {
+			const aiUnit = aiUnits[j];
 			if (GAME.canUnitAttackTarget(aiUnit, opponentUnit, state)) {
 				opponentUnitVulnerability += (aiUnit.value + opponentUnit.value) * (opponentThreats.has(opponentUnit.hexId) ? 2 : 1);
 			}
-		});
-		totalVulnerabilityScore += opponentUnitVulnerability;
-	});
-
-	score -= (totalThreatScore * EVALUATION_WEIGHT.THREAT); // Penalize for AI units being threatened
-	score += (totalVulnerabilityScore * EVALUATION_WEIGHT.VULNERABLE); // Reward for opponent units being vulnerable
-
-	// Consider merges
-	aiUnits.forEach(aiUnit => {
-		const validMerges = GAME.calcValidMoves(aiUnit.hexId, true, state);
-		validMerges.forEach(mergeTargetHexId => {
-			const targetUnit = GAME.getUnitOnHex(mergeTargetHexId, state);
-			if (targetUnit) {
-				score -= (aiUnit.value + targetUnit.value);
-				score += (aiUnit.value + targetUnit.value) > 6 ? EVALUATION_WEIGHT.MERGE_GT_6 : (aiUnit.value + targetUnit.value);
-			}
-		});
-	});
-
-	// Brave Charge opportunities
-	aiUnits.forEach(aiUnit => {
-		if (aiUnit.value === 1) {
-			const braveChargeMoves = GAME.calcValidBraveChargeMoves(aiUnit.hexId);
-			braveChargeMoves.forEach(moveHexId => {
-				// Check neighbors of the potential move hex for high armor enemy targets
-				const moveHex = GAME.getHex(moveHexId, state);
-				GAME.getNeighbors(moveHex, state).forEach(neighborHex => {
-					const targetUnit = GAME.getUnitOnHex(neighborHex.id, state);
-					if (targetUnit && targetUnit.playerId !== aiPlayerIndex && GAME.calcDefenderEffectiveArmor(neighborHex.id, state) >= 6) {
-						score += (targetUnit.value * EVALUATION_WEIGHT.BRAVE_CHARGE); // Reward for potential Brave Charge on high-value enemy
-					}
-				});
-			});
 		}
-	});
-
-	// 4. Check Win/Loss conditions (Highest priority)
-	if (state.phase === 'GAME_OVER') {
-		if (state.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
-		else if (state.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
-		else score = 0; // Draw
+		totalVulnerabilityScore += opponentUnitVulnerability;
 	}
 
+	score -= (totalThreatScore * EVALUATION_WEIGHT.THREAT);
+	score += (totalVulnerabilityScore * EVALUATION_WEIGHT.VULNERABLE);
+
+	// Consider merges
+	for (let i = 0; i < aiUnitCount; i++) {
+		const aiUnit = aiUnits[i];
+		const validMerges = GAME.calcValidMoves(aiUnit.hexId, true, state);
+		for (let j = 0; j < validMerges.length; j++) {
+			const mergeTargetHexId = validMerges[j];
+			const targetUnit = GAME.getUnitOnHex(mergeTargetHexId, state);
+			if (targetUnit) {
+				const mergeValue = aiUnit.value + targetUnit.value;
+				score -= mergeValue;
+				score += mergeValue > 6 ? EVALUATION_WEIGHT.MERGE_GT_6 : mergeValue;
+			}
+		}
+	}
+
+	// Brave Charge opportunities
+	for (let i = 0; i < aiUnitCount; i++) {
+		const aiUnit = aiUnits[i];
+		if (aiUnit.value === 1) {
+			const braveChargeMoves = GAME.calcValidBraveChargeMoves(aiUnit.hexId);
+			for (let j = 0; j < braveChargeMoves.length; j++) {
+				const moveHexId = braveChargeMoves[j];
+				const moveHex = GAME.getHex(moveHexId, state);
+				const neighbors = GAME.getNeighbors(moveHex, state);
+				for (let k = 0; k < neighbors.length; k++) {
+					const neighborHex = neighbors[k];
+					const targetUnit = GAME.getUnitOnHex(neighborHex.id, state);
+					if (targetUnit && targetUnit.playerId !== aiPlayerIndex && GAME.calcDefenderEffectiveArmor(neighborHex.id, state) >= 6) {
+						score += (targetUnit.value * EVALUATION_WEIGHT.BRAVE_CHARGE);
+					}
+				}
+			}
+		}
+	}
+
+	// 4. Check Win/Loss conditions
 	return score;
 }
 
@@ -227,7 +229,7 @@ function generateAllPossibleMoves(GAME, state) {
 			});
 		}
 
-		// // 5. Merges
+		// 5. Merges (Temporary disable as merging need to is complicated to evaluation)
 		// const validMerges = GAME.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
 		// validMerges.forEach(mergeTargetHexId => {
 		// 	const targetUnit = GAME.getUnitOnHex(mergeTargetHexId, state);
@@ -237,13 +239,13 @@ function generateAllPossibleMoves(GAME, state) {
 		// 	}
 		// });
 
-		// // 6. Reroll
+		// 6. Reroll (Temporary disable as reroll give a random evaluation based on luck)
 		// moves.push({ actionType: 'REROLL', unitHexId });
 
-		// // 7. Guard
-		// if (!unit.isGuarding) { // Only allow if unit is not already guarding
-		// 	moves.push({ actionType: 'GUARD', unitHexId });
-		// }
+		// 7. Guard
+		if (!unit.isGuarding) { // Only allow if unit is not already guarding
+			moves.push({ actionType: 'GUARD', unitHexId });
+		}
 	});
 
 	// moves.push({ actionType: 'END_TURN' });

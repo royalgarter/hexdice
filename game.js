@@ -34,7 +34,7 @@ const PLAYER_PRIMARY_AXIS = {
 const EVALUATION_WEIGHT = {
 	UNIT_COUNT: 100,      // Value for each deployed AI unit
 	UNIT_FACTOR: 100,      // Multiplier for unit's dice value
-	GUARD: 50,            // Bonus for guarding units
+	GUARD: 10,            // Bonus for guarding units
 	DISTANCE: 5,          // Points per hex closer to opponent's base
 	THREAT: 4,           // Penalty for AI units being threatened (multiplied by opponent's attack)
 	VULNERABLE: 5,       // Reward for opponent units being vulnerable (multiplied by AI's attack)
@@ -50,6 +50,7 @@ function alpineHexDiceTacticGame() { return {
 		dicePerPlayer: 12,
 	},
 	hexes: [],
+	hexesQR: {},
 	players: [
 		{ id: 0, color: 'Blue', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
 		{ id: 1, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 }
@@ -113,13 +114,18 @@ function alpineHexDiceTacticGame() { return {
 	/* --- HEX GRID --- */
 	generateHexGrid(radius) {
 		this.hexes = [];
+		this.hexesQR = {};
 		let id = 0;
 		for (let q = -radius; q <= radius; q++) {
 			for (let r = -radius; r <= radius; r++) {
 				if (-q - r >= -radius && -q - r <= radius) { // Check if s is also within radius
 					const x = HEX_WIDTH * 3/4 * q;
 					const y = HEX_HEIGHT * (r + q / 2);
-					this.hexes.push({ id: id++, q, r, s: -q-r, unitId: null, isP1Base: false, isP2Base: false, visualX: x, visualY: y });
+
+					this.hexes.push({ id, q, r, s: -q-r, unitId: null, isP1Base: false, isP2Base: false, visualX: x, visualY: y });
+					this.hexesQR[(q * 1e3) + r] = id;
+
+					id++;
 				}
 			}
 		}
@@ -147,8 +153,14 @@ function alpineHexDiceTacticGame() { return {
 		const ds = (-q1 - r1) - (-q2 - r2);
 		return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
 	},
-	getHex(id, state) { return (state || this).hexes[id]; /*(state || this).hexes.find(h => h.id === id);*/ },
-	getHexByQR(q, r, state) { return (state || this).hexes.find(h => h.q === q && h.r === r); },
+	getHex(id, state) {
+		return (state || this).hexes[id]; /*(state || this).hexes.find(h => h.id === id);*/
+	},
+	getHexByQR(q, r, state) {
+		state = (state || this);
+		return state.hexes[state.hexesQR[(q * 1e3) + r]];
+		/* return (state || this).hexes.find(h => h.q === q && h.r === r); */
+	},
 	getUnitOnHex(hexId, state) {
 		const hex = this.getHex(hexId, state);
 
@@ -643,21 +655,23 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- ACTIONS --- */
-	move(unit, fromHex, toHex) {
+	move(unit, fromHex, toHex, state) {
 		if (!unit) return;
 
 		if (fromHex) {
 			fromHex.unit = null;
 			fromHex.unitId = null;
-			this.trail.fromHex = fromHex;
+			this.trail.fromHex = state ? null : fromHex;
 		}
 
 		if (toHex) {
 			toHex.unit = unit;
 			toHex.unitId = unit.id;
 			unit.hexId = toHex.id;
-			this.trail.toHex = toHex;
+			this.trail.toHex = state ? null : toHex;
 		}
+
+		if (state) return;
 
 		this.trail.unit = unit;
 
@@ -722,7 +736,7 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} moved (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
 
 
-			this.move(attackerUnit, attackerHex, defenderHex);
+			this.move(attackerUnit, attackerHex, defenderHex, state);
 			// attackerHex.unit = null;
 			// attackerHex.unitId = null;
 			// defenderHex.unit = attackerUnit;
@@ -1288,7 +1302,7 @@ function alpineHexDiceTacticGame() { return {
 			if (combatType === 'MELEE' || (combatType === 'COMMAND_CONQUER' && attackerUnit.value === 6)) {
 				// Attacker moves into vacated hex (melee, special, or if specifically allowed)
 
-				this.move(attackerUnit, attackerHex, defenderHex);
+				this.move(attackerUnit, attackerHex, defenderHex, state);
 				// attackerHex.unit = null;
 				// attackerHex.unitId = null;
 				// defenderHex.unit = attackerUnit;
