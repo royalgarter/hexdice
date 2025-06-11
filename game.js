@@ -44,11 +44,6 @@ const EVALUATION_WEIGHT = {
 
 Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
 
-function clone(obj) {
-	// return Object.assign({}, obj);
-	return JSON.parse(JSON.stringify(obj));
-}
-
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
 	rules: {
@@ -1232,6 +1227,41 @@ function alpineHexDiceTacticGame() { return {
 			.map(x => x.join(': '))
 			.join('<br>');
 	},
+	canUnitAttackTarget(attackerUnit, targetUnit, state) {
+		if (!attackerUnit || !targetUnit || attackerUnit.playerId === targetUnit.playerId) return false;
+
+		const attackerHex = this.getHex(attackerUnit.hexId, state);
+		const targetHex = this.getHex(targetUnit.hexId, state);
+
+		if (!attackerHex || !targetHex) return false;
+
+		const distance = this.axialDistance(attackerHex.q, attackerHex.r, targetHex.q, targetHex.r);
+
+		// Melee attack (implicitly part of move)
+		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, state); // Need to make calcValidMoves work with passed gameState
+		if (validMeleeMoves.includes(targetHex.id)) return true;
+
+		// Ranged attack (Dice 5)
+		if (attackerUnit.value === 5) {
+			const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
+			if (validRangedTargets.includes(targetHex.id)) return true;
+		}
+
+		// Special attack (Dice 6)
+		if (attackerUnit.value === 6) {
+			const validSpecialTargets = this.calcValidSpecialAttackTargets(attackerUnit.hexId, state); // Need to make calcValidSpecialAttackTargets work with passed gameState
+			if (validSpecialTargets.includes(targetHex.id)) return true;
+		}
+
+		// Brave Charge (Dice 1)
+		if (attackerUnit.value === 1 && distance === 1) {
+			// Check if target has effective armor >= 6
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state); // Need to make calcDefenderEffectiveArmor work with passed gameState
+			if (defenderEffectiveArmor >= 6) return true;
+		}
+
+		return false;
+	},
 
 	/* --- COMBAT --- */
 	handleCombat(attackerHexId, defenderHexId, combatType, state) { // combatType: 'MELEE', 'RANGED_ATTACK', 'COMMAND_CONQUER'
@@ -1322,7 +1352,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (state.phase !== 'PLAYER_TURN') return;
 
-		state.players[state.currentPlayerIndex].evaluation = this.boardEvaluation(state);
+		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
 		this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
 		this.addLog(`---`, isState ? state : undefined);
 
@@ -1332,7 +1362,7 @@ function alpineHexDiceTacticGame() { return {
 		state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
 		this.resetTurnActionsForAllUnits(state);
 
-		state.players[state.currentPlayerIndex].evaluation = this.boardEvaluation(state);
+		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
 		this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1} turn started (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
 
 		this.checkWinConditions(state); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
@@ -1405,293 +1435,27 @@ function alpineHexDiceTacticGame() { return {
 	/* --- AI OPPONENT --- */
 	performAITurn() {
 		// let choice = ['Simple', 'Analyze', 'Random', 'Minimax', 'Greedy'].random();
-		let choice = 'Greedy';
 		// this.addLog(`AI persona: ${choice}`);
-		this['performAI_' + choice]();
-	},
-	performAI_Greedy() {
-		if (this.phase !== 'PLAYER_TURN' || !this.players[this.currentPlayerIndex].isAI) return;
+		// this['performAI_' + choice]();
 
-		const currentGameStateCopy = clone(this.$data);
-		const possibleMoves = this.generateAllPossibleMoves(currentGameStateCopy);
-		let bestScore = -Infinity;
-		let bestMove = null;
-
-		// Evaluate all possible moves
-		possibleMoves.forEach(move => {
-			let nextGameState = clone(currentGameStateCopy);
-
-			nextGameState = this.applyMove(move, nextGameState);
-
-			const evaluation = this.boardEvaluation(nextGameState);
-			move.evaluation = evaluation;
-			move.nextGameState = nextGameState;
-
-			if (evaluation > bestScore) {
-				bestScore = evaluation;
-				bestMove = move;
-			}
-		});
-
-		// Execute best move if found
-		if (bestMove) this.applyMove(bestMove);
+		console.time('performAITurn')
+		performAI_Greedy(this);
 
 		this.deselectUnit();
 		this.endTurn();
+		console.timeEnd('performAITurn')
 	},
 
-	/* --- AI HELPER FUNCTIONS --- */
-	boardEvaluation(state) {
-		state = state || this;
-
-		const aiPlayerIndex = state.currentPlayerIndex; // Assuming the AI is the current player for evaluation
-		const opponentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-
-		const aiPlayer = state.players[aiPlayerIndex];
-		const opponentPlayer = state.players[opponentPlayerIndex];
-
-		const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-		const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-
-		let score = 0;
-
-		// 1. Unit Count and Value
-		score += (aiUnits.length * EVALUATION_WEIGHT.UNIT_COUNT); // Award points for each AI unit
-		score -= (opponentUnits.length * EVALUATION_WEIGHT.UNIT_COUNT); // Penalize for each opponent unit
-
-		aiUnits.forEach(unit => {
-			score += Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR); // Add unit value to score
-			if (unit.isGuarding) score += EVALUATION_WEIGHT.GUARD; // Bonus for guarding units
-		});
-
-		opponentUnits.forEach(unit => {
-			score -= Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR); // Penalize for opponent unit value
-		});
-
-		// 2. Positional Scoring (towards opponent's base)
-		const opponentBaseHex = this.getHex(opponentPlayer.baseHexId, state);
-		if (opponentBaseHex) {
-			aiUnits.forEach(unit => {
-				const unitHex = this.getHex(unit.hexId, state);
-				if (unitHex) {
-					const distanceToOpponentBase = this.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
-					// The closer to the opponent's base, the higher the score
-					score += ((R * 2 - distanceToOpponentBase) * EVALUATION_WEIGHT.DISTANCE); // R*2 is roughly max distance
-				}
-			});
-		}
-
-		// 3. Threat and Vulnerability (simplified)
-		let totalThreatScore = 0;
-		let totalVulnerabilityScore = 0;
-		let opponentThreats = new Set();
-
-		// Calculate threat score for each AI unit
-		aiUnits.forEach(aiUnit => {
-			let aiUnitThreat = 0;
-			opponentUnits.forEach(opponentUnit => {
-				if (this.canUnitAttackTarget(opponentUnit, aiUnit, state)) {
-					opponentThreats.add(opponentUnit.hexId)
-					aiUnitThreat += (aiUnit.value + opponentUnit.value);
-				}
-			});
-			totalThreatScore += aiUnitThreat;
-		});
-
-		// Calculate vulnerability score for each opponent unit
-		opponentUnits.forEach(opponentUnit => {
-			let opponentUnitVulnerability = 0;
-			aiUnits.forEach(aiUnit => {
-				if (this.canUnitAttackTarget(aiUnit, opponentUnit, state)) {
-					opponentUnitVulnerability += (aiUnit.value + opponentUnit.value) * (opponentThreats.has(opponentUnit.hexId) ? 2 : 1);
-				}
-			});
-			totalVulnerabilityScore += opponentUnitVulnerability;
-		});
-
-		score -= (totalThreatScore * EVALUATION_WEIGHT.THREAT); // Penalize for AI units being threatened
-		score += (totalVulnerabilityScore * EVALUATION_WEIGHT.VULNERABLE); // Reward for opponent units being vulnerable
-
-		// Consider merges
-		aiUnits.forEach(aiUnit => {
-			const validMerges = this.calcValidMoves(aiUnit.hexId, true, state);
-			validMerges.forEach(mergeTargetHexId => {
-				const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
-				if (targetUnit) {
-					score -= (aiUnit.value + targetUnit.value);
-					score += (aiUnit.value + targetUnit.value) > 6 ? EVALUATION_WEIGHT.MERGE_GT_6 : (aiUnit.value + targetUnit.value);
-				}
-			});
-		});
-
-		// Brave Charge opportunities
-		aiUnits.forEach(aiUnit => {
-			if (aiUnit.value === 1) {
-				const braveChargeMoves = this.calcValidBraveChargeMoves(aiUnit.hexId);
-				braveChargeMoves.forEach(moveHexId => {
-					// Check neighbors of the potential move hex for high armor enemy targets
-					const moveHex = this.getHex(moveHexId, state);
-					this.getNeighbors(moveHex, state).forEach(neighborHex => {
-						const targetUnit = this.getUnitOnHex(neighborHex.id, state);
-						if (targetUnit && targetUnit.playerId !== aiPlayerIndex && this.calcDefenderEffectiveArmor(neighborHex.id, state) >= 6) {
-							score += (targetUnit.value * EVALUATION_WEIGHT.BRAVE_CHARGE); // Reward for potential Brave Charge on high-value enemy
-						}
-					});
-				});
-			}
-		});
-
-		// 4. Check Win/Loss conditions (Highest priority)
-		if (state.phase === 'GAME_OVER') {
-			if (state.winnerPlayerIndex === aiPlayerIndex) score = Infinity; // AI wins
-			else if (state.winnerPlayerIndex === opponentPlayerIndex) score = -Infinity; // AI loses
-			else score = 0; // Draw
-		}
-
-		return score;
-	},
-	generateAllPossibleMoves(state) {
-		const moves = [];
-		const currentPlayer = state.players[state.currentPlayerIndex];
-		// Units that are deployed, not dead, and haven't acted this turn
-		const unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
-
-		// If no units can act, the only possible move is to end the turn.
-		if (unitsThatCanAct.length === 0) {
-			moves.push({ actionType: 'END_TURN' });
-			return moves;
-		}
-
-		unitsThatCanAct.forEach(unit => {
-			const unitHexId = unit.hexId;
-			const unitValue = unit.value;
-
-			// 1. Basic Moves (and implied melee attacks on occupied hexes)
-			// `calcValidMoves(unitHexId, isForMerge, state)` - assuming this signature
-			const validMoves = this.calcValidMoves(unitHexId, false, state);
-			validMoves.forEach(targetHexId => {
-				moves.push({ actionType: 'MOVE', unitHexId, targetHexId });
-			});
-
-			// 2. Ranged Attack (Dice 5)
-			if (unitValue === 5) {
-				const validRangedTargets = this.calcValidRangedTargets(unitHexId, state);
-				validRangedTargets.forEach(targetHexId => {
-					moves.push({ actionType: 'RANGED_ATTACK', unitHexId, targetHexId });
-				});
-			}
-
-			// 3. Command Conquer (Dice 6)
-			if (unitValue === 6) {
-				const validSpecialTargets = this.calcValidSpecialAttackTargets(unitHexId, state);
-				validSpecialTargets.forEach(targetHexId => {
-					moves.push({ actionType: 'COMMAND_CONQUER', unitHexId, targetHexId });
-				});
-			}
-
-			// 4. Brave Charge (Dice 1) - move to front for better move ordering
-			if (unitValue === 1) {
-				const opponentUnits = state.players[(state.currentPlayerIndex + 1) % state.players.length].dice.filter(d => d.isDeployed && !d.isDeath);
-				opponentUnits.forEach(opponentUnit => {
-					if (this.canUnitAttackTarget(unit, opponentUnit, state)) {
-						// Prioritize high-value targets first for better pruning
-						moves.unshift({
-							actionType: 'BRAVE_CHARGE',
-							unitHexId,
-							targetHexId: opponentUnit.hexId,
-							_priority: opponentUnit.value // Add heuristic for move ordering
-						});
-					}
-				});
-			}
-
-			// // 5. Merges
-			// const validMerges = this.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
-			// validMerges.forEach(mergeTargetHexId => {
-			// 	const targetUnit = this.getUnitOnHex(mergeTargetHexId, state);
-			// 	// Ensure it's another friendly unit and not the unit itself
-			// 	if (targetUnit && targetUnit.playerId === state.currentPlayerIndex && targetUnit.hexId !== unitHexId) {
-			// 		moves.push({ actionType: 'MERGE', unitHexId, targetHexId: mergeTargetHexId });
-			// 	}
-			// });
-
-			// // 6. Reroll
-			// moves.push({ actionType: 'REROLL', unitHexId });
-
-			// // 7. Guard
-			// if (!unit.isGuarding) { // Only allow if unit is not already guarding
-			// 	moves.push({ actionType: 'GUARD', unitHexId });
-			// }
-		});
-
-		// Always include the option to end the turn, as it might be the best strategic choice
-		// (e.g., no good moves, or to force opponent into a bad position)
-		// moves.push({ actionType: 'END_TURN' });
-
-		return moves;
-	},
-	applyMove(move, state) {
-		const applyState = state ? clone(state) : undefined; // Deep copy the state to modify
-
-		switch (move.actionType) {
-			case 'MOVE': this.performMove(move.unitHexId, move.targetHexId, applyState);break;
-			case 'RANGED_ATTACK': this.performRangedAttack(move.unitHexId, move.targetHexId, applyState);break;
-			case 'COMMAND_CONQUER': this.performComandConquer(move.unitHexId, move.targetHexId, applyState);break;
-			case 'BRAVE_CHARGE': this.performBraveCharge(move.unitHexId, move.targetHexId, applyState);break;
-			case 'MERGE': this.performMerge(move.unitHexId, move.targetHexId, true, applyState);break;
-			case 'REROLL': this.performUnitReroll(move.unitHexId, applyState);break;
-			case 'GUARD': this.performGuard(move.unitHexId, applyState);break;
-			// case 'END_TURN': this.endTurn(applyState); break;
-		}
-
-		// this.checkWinConditions(applyState);
-
-		if (applyState) {
-			// Clean up transient state properties
-			delete applyState.validMoves;
-			delete applyState.validTargets;
-			delete applyState.selectedUnitHexId;
-		}
-
-		return applyState;
-	},
-	canUnitAttackTarget(attackerUnit, targetUnit, state) {
-		if (!attackerUnit || !targetUnit || attackerUnit.playerId === targetUnit.playerId) return false;
-
-		const attackerHex = this.getHex(attackerUnit.hexId, state);
-		const targetHex = this.getHex(targetUnit.hexId, state);
-
-		if (!attackerHex || !targetHex) return false;
-
-		const distance = this.axialDistance(attackerHex.q, attackerHex.r, targetHex.q, targetHex.r);
-
-		// Melee attack (implicitly part of move)
-		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, state); // Need to make calcValidMoves work with passed gameState
-		if (validMeleeMoves.includes(targetHex.id)) return true;
-
-		// Ranged attack (Dice 5)
-		if (attackerUnit.value === 5) {
-			const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
-			if (validRangedTargets.includes(targetHex.id)) return true;
-		}
-
-		// Special attack (Dice 6)
-		if (attackerUnit.value === 6) {
-			const validSpecialTargets = this.calcValidSpecialAttackTargets(attackerUnit.hexId, state); // Need to make calcValidSpecialAttackTargets work with passed gameState
-			if (validSpecialTargets.includes(targetHex.id)) return true;
-		}
-
-		// Brave Charge (Dice 1)
-		if (attackerUnit.value === 1 && distance === 1) {
-			// Check if target has effective armor >= 6
-			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state); // Need to make calcDefenderEffectiveArmor work with passed gameState
-			if (defenderEffectiveArmor >= 6) return true;
-		}
-
-		return false;
-	},
 
 	/* --- UTILITIES --- */
+	cloneState(game) { // Very low performance
+		let data = JSON.parse(JSON.stringify((game || this).$data));
+
+		delete data.trail;
+		delete data.messageLog;
+
+		return data;
+	},
 	addLog(message, state) {
 		if (state) return; console.debug(' >', message);
 		
