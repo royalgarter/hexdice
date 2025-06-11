@@ -421,6 +421,8 @@ function alpineHexDiceTacticGame() { return {
 	startGamePlay() {
 		this.phase = 'PLAYER_TURN';
 		this.currentPlayerIndex = 0; // Player 1 starts the game
+		this.trail = {fromHex: null, toHex: null, unit: null, path: []};
+
 		this.resetTurnActionsForAllUnits();
 		this.addLog("---");
 		this.addLog("P1 turn.");

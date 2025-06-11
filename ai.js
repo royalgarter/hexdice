@@ -19,6 +19,7 @@ function performAI_Greedy(GAME) {
 
 		const evaluation = boardEvaluation(GAME, nextState);
 		move.evaluation = evaluation;
+		console.log(move);
 		move.nextState = nextState;
 
 		if (evaluation > bestScore) {
@@ -30,6 +31,8 @@ function performAI_Greedy(GAME) {
 
 	// Execute best move if found
 	if (bestMove) applyMove(GAME, bestMove);
+
+	console.log('bestMove', bestMove);
 }
 
 function boardEvaluation(GAME, state) {
