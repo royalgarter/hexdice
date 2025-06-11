@@ -1,4 +1,122 @@
-function performAI_Greedy(GAME) {
+const AI_PRESET_EVALUATION_WEIGHTS = {
+	GREEDY: {
+		note: '1. Greed is good',
+		UNIT_COUNT: 150,      // Higher value for each deployed AI unit / Penalty for enemy units
+		UNIT_FACTOR: 120,      // Multiplier for unit's dice value (stronger units = more value)
+		GUARD: 10,            // Bonus for guarding units
+		ADVANCE: 5,           // Points for the whole formation moving closer to opponent's base
+		RETREAT_PENALTY: 15,  // Penalty for opponent formation moving closer to AI's base
+		MUTUAL_SUPPORT: 2,    // Bonus for friendly units being adjacent
+		BASE_PROTECTION: 20,  // Bonus for AI units protecting their own base
+		THREAT: 5,           // Penalty for AI units being threatened
+		VULNERABLE: 8,       // Reward for opponent units being vulnerable (potential future attacks)
+		MERGE_GT_6: 150,      // Bonus for merging into a unit with value > 6
+		BRAVE_CHARGE: 80      // Reward for potential Brave Charge
+	},
+	AGGRESSIVE: {
+		note: '2. Aggressive AI (Prioritizes offense, advancing, and taking out threats)',
+		UNIT_COUNT: 200,      // Very high value for eliminating enemy units
+		UNIT_FACTOR: 150,     // Stronger units for offense are more valued
+		GUARD: 5,             // Less emphasis on guarding
+		ADVANCE: 25,          // Strong push towards opponent base
+		RETREAT_PENALTY: 40,  // Strong penalty for enemy moving towards AI base
+		MUTUAL_SUPPORT: 5,    // Small bonus for staying together
+		BASE_PROTECTION: 60,  // High importance for defending own base
+		THREAT: 3,            // Less fearful of threats, willing to take risks
+		VULNERABLE: 8,       // Reduced, as actual kills are now more heavily rewarded via UNIT_COUNT/FACTOR
+		MERGE_GT_6: 100,      // Merges are good, but less critical than direct attack
+		BRAVE_CHARGE: 150     // Higher reward for brave charges
+	},
+	DEFENSIVE: {
+		note: '3. Defensive/Turtle AI (Focuses on protecting units, consolidating, and surviving)',
+		UNIT_COUNT: 120,      // Wants to maintain high unit count
+		UNIT_FACTOR: 90,      // Values unit strength, but survival is key
+		GUARD: 40,            // High reward for guarding
+		ADVANCE: 2,           // Less emphasis on pushing forward
+		RETREAT_PENALTY: 50,  // Very high penalty for enemy moving towards AI base
+		MUTUAL_SUPPORT: 15,   // High bonus for staying together
+		BASE_PROTECTION: 80,  // Extremely high importance for defending own base
+		THREAT: 15,           // Very high penalty for threatened units
+		VULNERABLE: 3,        // Low reward for attacking unless it's a clear advantage
+		MERGE_GT_6: 200,      // High reward for strong defensive units
+		BRAVE_CHARGE: 10      // Brave charges are risky, less desirable
+	},
+	JUGGLING: {
+		note: '4. Juggling/Value Maximizer AI (Prioritizes creating high-value units and strategic merges)',
+		UNIT_COUNT: 70,       // Unit count is important, but quality over quantity
+		UNIT_FACTOR: 150,     // Very high value for unit strength
+		GUARD: 15,            // Guards good for protecting high-value units
+		ADVANCE: 5,           // Standard positional
+		RETREAT_PENALTY: 15,  // Standard positional
+		MUTUAL_SUPPORT: 7,    // Moderate bonus for cohesion
+		BASE_PROTECTION: 30,  // Moderate importance for defending own base
+		THREAT: 7,            // Moderate threat avoidance to protect key units
+		VULNERABLE: 7,        // Moderate reward for attacking, but not primary focus
+		MERGE_GT_6: 300,      // Extremely high reward for merges > 6
+		BRAVE_CHARGE: 50      // Brave charges are fine for removing threats, but not primary
+	},
+	SWARM: {
+		note: '5. Swarm AI (Focuses on deploying many units and overwhelming the opponent with numbers)',
+		UNIT_COUNT: 200,      // Extremely high reward for unit count
+		UNIT_FACTOR: 50,      // Less emphasis on individual unit strength
+		GUARD: 5,             // Not a priority, better to push
+		ADVANCE: 10,          // Push forward to get more units on the board
+		RETREAT_PENALTY: 10,  // Less penalty, expects some units to be lost
+		MUTUAL_SUPPORT: 3,    // Low bonus, as units are meant to spread and overwhelm
+		BASE_PROTECTION: 20,  // Less importance, units are expendable
+		THREAT: 5,            // Moderate threat, expects some units to be lost
+		VULNERABLE: 8,        // Rewards finding openings for mass attacks
+		MERGE_GT_6: 50,       // Less important, as units are meant to be numerous
+		BRAVE_CHARGE: 60      // Good for breaking through quickly
+	},
+	OPPORTUNISTIC: {
+		note: '6. Opportunistic AI (Waits for weaknesses, focuses on exploiting vulnerabilities and high-impact plays)',
+		UNIT_COUNT: 150,       // Wants units, but will sacrifice for big plays
+		UNIT_FACTOR: 100,
+		GUARD: 10,            // Guards are good for maintaining position
+		ADVANCE: 5,           // Standard positional
+		RETREAT_PENALTY: 15,  // Standard positional
+		MUTUAL_SUPPORT: 5,    // Standard cohesion
+		BASE_PROTECTION: 40,  // Good importance for defending own base
+		THREAT: 10,           // Avoids unnecessary threats, preserves units for opportunities
+		VULNERABLE: 15,       // High reward for vulnerable enemy units
+		MERGE_GT_6: 120,      // Merges are good for stronger units that can exploit
+		BRAVE_CHARGE: 150     // Extremely high reward for Brave Charge opportunities
+	},
+	RANDOMISH: {
+		note: '7. Random-ish AI (Weights are low or balanced, relying more on the top-3 random selection)',
+		UNIT_COUNT: 1,
+		UNIT_FACTOR: 1,
+		GUARD: 1,
+		ADVANCE: 1,
+		RETREAT_PENALTY: 1,
+		MUTUAL_SUPPORT: 1,
+		BASE_PROTECTION: 1,
+		THREAT: 1,
+		VULNERABLE: 1,
+		MERGE_GT_6: 1,
+		BRAVE_CHARGE: 1
+	},
+
+	getRandomPreset: function(key) {
+		if (this[key]) return this[key];
+
+		const keys = Object.keys(this).filter(key => typeof this[key] === 'object'); // Filter out the function itself
+		const randomKey = keys[Math.floor(Math.random() * keys.length)];
+		return this[randomKey];
+	}
+};
+
+const EVALUATION_WEIGHT = AI_PRESET_EVALUATION_WEIGHTS.getRandomPreset('AGGRESSIVE'); console.log(EVALUATION_WEIGHT);
+
+function softmax(logits) {
+	const highest = Math.max(...logits);
+	const shifted = logits.map(score => Math.exp(score - highest));
+	const total = shifted.reduce((acc, val) => acc + val, 0);
+	return shifted.map(prob => prob / total);
+}
+
+function performAIByWeight(GAME) {
 	if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
 
 	const currentState = GAME.cloneState();
@@ -18,12 +136,12 @@ function performAI_Greedy(GAME) {
 
 		nextState = applyMove(GAME, move, nextState);
 
-		console.time('boardEvaluation-' + i)
+		// console.time('boardEvaluation-' + i)
 		const evaluation = boardEvaluation(GAME, nextState);
-		console.timeEnd('boardEvaluation-' + i)
+		// console.timeEnd('boardEvaluation-' + i)
 		move.evaluation = evaluation;
-		console.log(move);
-		move.nextState = nextState;
+		// console.log(move);
+		// move.nextState = nextState;
 
 		if (evaluation > bestScore) {
 			bestScore = evaluation;
@@ -31,21 +149,33 @@ function performAI_Greedy(GAME) {
 		}
 	});
 
+	possibleMoves.sort((a, b) => b.evaluation - a.evaluation);
+	console.log(possibleMoves);
+
+	const probabilities = softmax(possibleMoves.map(x => x.evaluation));
+	const randomNumber = Math.random();
+	let cumulativeProbability = 0;
+	for (let i = 0; i < probabilities.length; i++) {
+		cumulativeProbability += probabilities[i];
+		if (randomNumber < cumulativeProbability) {
+			bestMove = possibleMoves[i];
+			break;
+		}
+	}
+
 	// Execute best move if found
 	if (bestMove) applyMove(GAME, bestMove);
 
 	console.log('bestMove', bestMove);
 }
 
-const ATTACK_LOG_LOOKUP = [0]; // ATTACK_LOG_LOOKUP[attack] = Math.round(Math.log(attack) * EVALUATION_WEIGHT.UNIT_FACTOR)
-for (let i = 1; i < 100; i++) { // Assuming max attack value is less than 100
-	ATTACK_LOG_LOOKUP.push(Math.round(Math.log(i) * EVALUATION_WEIGHT.UNIT_FACTOR));
-}
-
-function boardEvaluation(GAME, state) {
+function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 	state = state || GAME;
 
 	if (state.phase === 'GAME_OVER') {
+		const aiPlayerIndex = (state.players[0].isAI) ? 0 : 1; // AI is P1 if P1 is AI, else P2
+		const opponentPlayerIndex = (aiPlayerIndex === 0) ? 1 : 0;
+
 		if (state.winnerPlayerIndex === aiPlayerIndex) return Infinity;
 		if (state.winnerPlayerIndex === opponentPlayerIndex) return -Infinity;
 		return 0; // Draw
@@ -64,13 +194,13 @@ function boardEvaluation(GAME, state) {
 	// 1. Unit Count and Value
 	const aiUnitCount = aiUnits.length;
 	const opponentUnitCount = opponentUnits.length;
-	score += (aiUnitCount * EVALUATION_WEIGHT.UNIT_COUNT);
-	score -= (opponentUnitCount * EVALUATION_WEIGHT.UNIT_COUNT);
+	score += (aiUnitCount * WEIGHT.UNIT_COUNT);
+	score -= (opponentUnitCount * WEIGHT.UNIT_COUNT);
 
 	for (let i = 0; i < aiUnitCount; i++) {
 		const unit = aiUnits[i];
-		score += Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR);
-		if (unit.isGuarding) score += EVALUATION_WEIGHT.GUARD;
+		score += Math.round(Math.log1p(unit.attack) * WEIGHT.UNIT_FACTOR); // Use log1p to avoid log(0)
+		if (unit.isGuarding) score += WEIGHT.GUARD;
 
 		if (unit.value === 6) {
 			const neighbors = GAME.getNeighbors(GAME.getHex(unit.hexId, state), state);
@@ -78,7 +208,7 @@ function boardEvaluation(GAME, state) {
 				const neighbor = neighbors[j];
 				const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
 				if (neighborUnit && neighborUnit.playerId === aiPlayerIndex) {
-					score += (EVALUATION_WEIGHT.GUARD >> 3);
+					score += (WEIGHT.GUARD >> 3); // Small bonus for buffing friendly units
 				}
 			}
 		}
@@ -86,91 +216,149 @@ function boardEvaluation(GAME, state) {
 
 	for (let i = 0; i < opponentUnitCount; i++) {
 		const unit = opponentUnits[i];
-		score -= Math.round(Math.log(unit.attack) * EVALUATION_WEIGHT.UNIT_FACTOR);
+		score -= Math.round(Math.log1p(unit.attack) * WEIGHT.UNIT_FACTOR); // Use log1p
 	}
 
-	// 2. Positional Scoring
+	// 2. Positional Scoring - Formation Advancement
 	const opponentBaseHex = GAME.getHex(opponentPlayer.baseHexId, state);
+	const aiBaseHex = GAME.getHex(aiPlayer.baseHexId, state);
+
+	let aiTotalAdvanceScore = 0;
 	if (opponentBaseHex) {
 		for (let i = 0; i < aiUnitCount; i++) {
 			const unit = aiUnits[i];
 			const unitHex = GAME.getHex(unit.hexId, state);
 			if (unitHex) {
 				const distanceToOpponentBase = GAME.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
-				score += ((R * 2 - distanceToOpponentBase) * EVALUATION_WEIGHT.DISTANCE);
+				aiTotalAdvanceScore += (R * 2 - distanceToOpponentBase); // Reward for being closer
 			}
 		}
 	}
+	score += (aiTotalAdvanceScore * WEIGHT.ADVANCE);
 
-	// 3. Threat and Vulnerability
+	let opponentTotalAdvanceScore = 0;
+	if (aiBaseHex) {
+		for (let i = 0; i < opponentUnitCount; i++) {
+			const unit = opponentUnits[i];
+			const unitHex = GAME.getHex(unit.hexId, state);
+			if (unitHex) {
+				const distanceToAIBase = GAME.axialDistance(unitHex.q, unitHex.r, aiBaseHex.q, aiBaseHex.r);
+				opponentTotalAdvanceScore += (R * 2 - distanceToAIBase); // Score for opponent being closer to AI base
+			}
+		}
+	}
+	score -= (opponentTotalAdvanceScore * WEIGHT.RETREAT_PENALTY); // Penalize opponent being close to AI base more heavily
+
+	// 3. Threat and Vulnerability (Existing)
 	let totalThreatScore = 0;
 	let totalVulnerabilityScore = 0;
-	let opponentThreats = new Set();
+	let aiUnitsThreatened = new Set(); // AI units that are currently threatened by opponent
+	let opponentUnitsThreatened = new Set(); // Opponent units that are currently threatened by AI
 
+	// Calculate threats to AI units (from opponent perspective)
 	for (let i = 0; i < aiUnitCount; i++) {
 		const aiUnit = aiUnits[i];
 		let aiUnitThreat = 0;
 		for (let j = 0; j < opponentUnitCount; j++) {
 			const opponentUnit = opponentUnits[j];
+			// Can opponentUnit attack aiUnit?
 			if (GAME.canUnitAttackTarget(opponentUnit, aiUnit, state)) {
-				opponentThreats.add(opponentUnit.hexId);
+				aiUnitsThreatened.add(aiUnit.hexId);
+				// Threat value increases with both units' values
 				aiUnitThreat += (aiUnit.value + opponentUnit.value);
 			}
 		}
 		totalThreatScore += aiUnitThreat;
 	}
 
+	// Calculate vulnerability of opponent units (from AI perspective)
 	for (let i = 0; i < opponentUnitCount; i++) {
 		const opponentUnit = opponentUnits[i];
 		let opponentUnitVulnerability = 0;
 		for (let j = 0; j < aiUnitCount; j++) {
 			const aiUnit = aiUnits[j];
+			// Can aiUnit attack opponentUnit?
 			if (GAME.canUnitAttackTarget(aiUnit, opponentUnit, state)) {
-				opponentUnitVulnerability += (aiUnit.value + opponentUnit.value) * (opponentThreats.has(opponentUnit.hexId) ? 2 : 1);
+				opponentUnitsThreatened.add(opponentUnit.hexId);
+				// Vulnerability value increases with both units' values
+				// Give higher weight if the opponent unit is also threatening AI units
+				opponentUnitVulnerability += (aiUnit.value + opponentUnit.value) * (aiUnitsThreatened.has(opponentUnit.hexId) ? 1.5 : 1);
 			}
 		}
 		totalVulnerabilityScore += opponentUnitVulnerability;
 	}
 
-	score -= (totalThreatScore * EVALUATION_WEIGHT.THREAT);
-	score += (totalVulnerabilityScore * EVALUATION_WEIGHT.VULNERABLE);
+	score -= (totalThreatScore * WEIGHT.THREAT);
+	score += (totalVulnerabilityScore * WEIGHT.VULNERABLE);
 
-	// Consider merges
+	// 4. Mutual Support / Cohesion
+	let cohesionScore = 0;
 	for (let i = 0; i < aiUnitCount; i++) {
 		const aiUnit = aiUnits[i];
-		const validMerges = GAME.calcValidMoves(aiUnit.hexId, true, state);
+		const aiUnitHex = GAME.getHex(aiUnit.hexId, state);
+		if (aiUnitHex) {
+			let friendlyNeighbors = 0;
+			for (let neighborHex of GAME.getNeighbors(aiUnitHex, state)) {
+				if (neighborHex) {
+					const neighborUnit = GAME.getUnitOnHex(neighborHex.id, state);
+					if (neighborUnit && neighborUnit.playerId === aiPlayerIndex && neighborUnit.id !== aiUnit.id) {
+						friendlyNeighbors++;
+					}
+				}
+			}
+			cohesionScore += friendlyNeighbors;
+		}
+	}
+	score += (cohesionScore * WEIGHT.MUTUAL_SUPPORT);
+
+	// 5. Base Protection (Explicit)
+	if (aiBaseHex) {
+		let unitsNearAIBase = 0;
+		const baseProtectionHexes = [aiBaseHex.id, ...GAME.getNeighbors(aiBaseHex, state).map(h => h.id)].filter(Boolean);
+		for (let i = 0; i < baseProtectionHexes.length; i++) {
+			const hexId = baseProtectionHexes[i];
+			const unit = GAME.getUnitOnHex(hexId, state);
+			if (unit && unit.playerId === aiPlayerIndex) {
+				unitsNearAIBase++;
+			}
+		}
+		score += (unitsNearAIBase * WEIGHT.BASE_PROTECTION);
+	}
+
+	// 6. Merges (AI's perspective)
+	for (let i = 0; i < aiUnitCount; i++) {
+		const aiUnit = aiUnits[i];
+		const validMerges = GAME.calcValidMoves(aiUnit.hexId, true, state); // `true` indicates searching for merge targets
 		for (let j = 0; j < validMerges.length; j++) {
 			const mergeTargetHexId = validMerges[j];
 			const targetUnit = GAME.getUnitOnHex(mergeTargetHexId, state);
 			if (targetUnit) {
-				const mergeValue = aiUnit.value + targetUnit.value;
-				score -= mergeValue;
-				score += mergeValue > 6 ? EVALUATION_WEIGHT.MERGE_GT_6 : mergeValue;
+				const sumValue = aiUnit.value + targetUnit.value;
+				let mergeBonus = 0;
+				if (sumValue <= 6) {
+					mergeBonus = sumValue; // Reward for creating a stable unit
+				} else {
+					mergeBonus = WEIGHT.MERGE_GT_6 + (sumValue - 6); // Extra bonus for exceeding 6
+				}
+				score += mergeBonus;
 			}
 		}
 	}
 
-	// Brave Charge opportunities
+	// 7. Brave Charge opportunities (AI's perspective)
 	for (let i = 0; i < aiUnitCount; i++) {
 		const aiUnit = aiUnits[i];
-		if (aiUnit.value === 1) {
-			const braveChargeMoves = GAME.calcValidBraveChargeMoves(aiUnit.hexId);
-			for (let j = 0; j < braveChargeMoves.length; j++) {
-				const moveHexId = braveChargeMoves[j];
-				const moveHex = GAME.getHex(moveHexId, state);
-				const neighbors = GAME.getNeighbors(moveHex, state);
-				for (let k = 0; k < neighbors.length; k++) {
-					const neighborHex = neighbors[k];
-					const targetUnit = GAME.getUnitOnHex(neighborHex.id, state);
-					if (targetUnit && targetUnit.playerId !== aiPlayerIndex && GAME.calcDefenderEffectiveArmor(neighborHex.id, state) >= 6) {
-						score += (targetUnit.value * EVALUATION_WEIGHT.BRAVE_CHARGE);
-					}
+		if (aiUnit.value === 1) { // Only Dice 1 can Brave Charge
+			const braveChargeTargets = GAME.calcValidSpecialAttackTargets(aiUnit.hexId, state); // This actually gets adjacent targets for Brave Charge if condition met
+			braveChargeTargets.forEach(targetHexId => {
+				const targetUnit = GAME.getUnitOnHex(targetHexId, state);
+				if (targetUnit && targetUnit.playerId !== aiPlayerIndex && GAME.calcDefenderEffectiveArmor(targetHexId, state) >= 6) {
+					score += (targetUnit.value * WEIGHT.BRAVE_CHARGE);
 				}
-			}
+			});
 		}
 	}
 
-	// 4. Check Win/Loss conditions
 	return score;
 }
 
@@ -191,7 +379,6 @@ function generateAllPossibleMoves(GAME, state) {
 		const unitValue = unit.value;
 
 		// 1. Basic Moves (and implied melee attacks on occupied hexes)
-		// `calcValidMoves(unitHexId, isForMerge, state)` - assuming this signature
 		const validMoves = GAME.calcValidMoves(unitHexId, false, state);
 		validMoves.forEach(targetHexId => {
 			moves.push({ actionType: 'MOVE', unitHexId, targetHexId });
@@ -213,42 +400,43 @@ function generateAllPossibleMoves(GAME, state) {
 			});
 		}
 
-		// 4. Brave Charge (Dice 1) - move to front for better move ordering
+		// 4. Brave Charge (Dice 1)
 		if (unitValue === 1) {
-			const opponentUnits = state.players[(state.currentPlayerIndex + 1) % state.players.length].dice.filter(d => d.isDeployed && !d.isDeath);
-			opponentUnits.forEach(opponentUnit => {
-				if (GAME.canUnitAttackTarget(unit, opponentUnit, state)) {
-					// Prioritize high-value targets first for better pruning
-					moves.unshift({
-						actionType: 'BRAVE_CHARGE',
-						unitHexId,
-						targetHexId: opponentUnit.hexId,
-						_priority: opponentUnit.value // Add heuristic for move ordering
-					});
-				}
+			const validBraveChargeMoves = GAME.calcValidBraveChargeMoves(unitHexId, state);
+			validBraveChargeMoves.forEach(intermediateHexId => {
+				// After moving to intermediateHexId, the unit needs to attack an adjacent enemy
+				// This implies a two-step action, which needs to be modeled carefully.
+				// For now, let's assume validBraveChargeMoves gives hexes from which a target is *possible*.
+				// The actual target selection for brave charge is handled in performBraveCharge
+				// However, for AI evaluation, we need to know the *final* outcome.
+				// This might require adding a nested action in `applyMove` or generating more complex moves.
+				// For simplicity here, if the move is valid for brave charge, just push it.
+				// A more advanced AI would consider *which* target is hit after the move.
+				const tempStateAfterMove = structuredClone(state);
+				GAME.performMove(unitHexId, intermediateHexId, tempStateAfterMove); // Simulate the move
+				const potentialTargets = GAME.calcValidSpecialAttackTargets(intermediateHexId, tempStateAfterMove);
+				potentialTargets.forEach(targetHexId => {
+					moves.push({ actionType: 'BRAVE_CHARGE', unitHexId, targetHexId: targetHexId, intermediateHexId: intermediateHexId });
+				});
 			});
 		}
 
-		// 5. Merges (Temporary disable as merging need to is complicated to evaluation)
+		// 5. Merges
 		// const validMerges = GAME.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
 		// validMerges.forEach(mergeTargetHexId => {
-		// 	const targetUnit = GAME.getUnitOnHex(mergeTargetHexId, state);
-		// 	// Ensure it's another friendly unit and not the unit itself
-		// 	if (targetUnit && targetUnit.playerId === state.currentPlayerIndex && targetUnit.hexId !== unitHexId) {
-		// 		moves.push({ actionType: 'MERGE', unitHexId, targetHexId: mergeTargetHexId });
-		// 	}
+		// 	moves.push({ actionType: 'MERGE', unitHexId, targetHexId: mergeTargetHexId });
 		// });
 
-		// 6. Reroll (Temporary disable as reroll give a random evaluation based on luck)
+		// 6. Reroll
 		// moves.push({ actionType: 'REROLL', unitHexId });
 
 		// 7. Guard
-		if (!unit.isGuarding) { // Only allow if unit is not already guarding
-			moves.push({ actionType: 'GUARD', unitHexId });
-		}
+		// if (!unit.isGuarding) { // Only allow if unit is not already guarding
+		// 	moves.push({ actionType: 'GUARD', unitHexId });
+		// }
 	});
 
-	// moves.push({ actionType: 'END_TURN' });
+	// moves.push({ actionType: 'END_TURN' }); // Always an option
 
 	return moves;
 }
@@ -257,23 +445,64 @@ function applyMove(GAME, move, state) {
 	const applyState = state ? structuredClone(state) : undefined; // Deep copy the state to modify
 
 	switch (move.actionType) {
-		case 'MOVE': GAME.performMove(move.unitHexId, move.targetHexId, applyState);break;
-		case 'RANGED_ATTACK': GAME.performRangedAttack(move.unitHexId, move.targetHexId, applyState);break;
-		case 'COMMAND_CONQUER': GAME.performComandConquer(move.unitHexId, move.targetHexId, applyState);break;
-		case 'BRAVE_CHARGE': GAME.performBraveCharge(move.unitHexId, move.targetHexId, applyState);break;
-		case 'MERGE': GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState);break;
-		case 'REROLL': GAME.performUnitReroll(move.unitHexId, applyState);break;
-		case 'GUARD': GAME.performGuard(move.unitHexId, applyState);break;
-		// case 'END_TURN': GAME.endTurn(applyState); break;
+		case 'MOVE':
+			GAME.performMove(move.unitHexId, move.targetHexId, applyState);
+			break;
+		case 'RANGED_ATTACK':
+			GAME.performRangedAttack(move.unitHexId, move.targetHexId, applyState);
+			break;
+		case 'COMMAND_CONQUER':
+			GAME.performComandConquer(move.unitHexId, move.targetHexId, applyState);
+			break;
+		case 'BRAVE_CHARGE':
+			// Brave Charge is a two-step action: move then attack.
+			// The `performBraveCharge` function handles both, but here we need to simulate the move first
+			// if `intermediateHexId` is provided.
+			if (move.intermediateHexId) {
+				GAME.performMove(move.unitHexId, move.intermediateHexId, applyState);
+				// Now the unit is at intermediateHexId, and perform the attack from there
+				GAME.performBraveCharge(move.intermediateHexId, move.targetHexId, applyState);
+			} else {
+				// If no intermediate move, it implies the charge is from current hex to adjacent target
+				GAME.performBraveCharge(move.unitHexId, move.targetHexId, applyState);
+			}
+			break;
+		case 'MERGE':
+			GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState); // Pass true for isAI
+			break;
+		case 'REROLL':
+			GAME.performUnitReroll(move.unitHexId, applyState);
+			break;
+		case 'GUARD':
+			GAME.performGuard(move.unitHexId, applyState);
+			break;
+		case 'END_TURN':
+			// Do nothing, evaluation won't change
+			break;
 	}
 
-	// GAME.checkWinConditions(applyState);
+	// GAME.checkWinConditions(applyState); // Check win conditions after each action to ensure score reflects game end
 
 	if (applyState) {
-		// Clean up transient state properties
+		// Clean up transient state properties that are not part of the game state
 		delete applyState.validMoves;
 		delete applyState.validTargets;
 		delete applyState.selectedUnitHexId;
+		delete applyState.hovering;
+		delete applyState.trail;
+		delete applyState.messageLog;
+		delete applyState.selectedDieToDeploy;
+		delete applyState.diceToReroll;
+		delete applyState.logCounter;
+		delete applyState.winnerMessage;
+		delete applyState.actionMode;
+		delete applyState.debug;
+
+		// Ensure all units have their `hasMovedOrAttackedThisTurn` and `actionsTakenThisTurn` reset
+		// This should happen at the start of a new turn, `endTurn` handles it.
+		// If we are simulating mid-turn, we need to respect the unit's action status.
+		// The `generateAllPossibleMoves` already filters for `!d.hasMovedOrAttackedThisTurn`
+		// So we just need to ensure `performX` functions correctly update this flag in `applyState`.
 	}
 
 	return applyState;

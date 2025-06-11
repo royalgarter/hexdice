@@ -182,7 +182,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
+	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs font-mono h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message"></p>
 		</template>

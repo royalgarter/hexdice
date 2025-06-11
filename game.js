@@ -31,17 +31,6 @@ const PLAYER_PRIMARY_AXIS = {
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 
-const EVALUATION_WEIGHT = {
-	UNIT_COUNT: 100,      // Value for each deployed AI unit
-	UNIT_FACTOR: 100,      // Multiplier for unit's dice value
-	GUARD: 10,            // Bonus for guarding units
-	DISTANCE: 5,          // Points per hex closer to opponent's base
-	THREAT: 4,           // Penalty for AI units being threatened (multiplied by opponent's attack)
-	VULNERABLE: 5,       // Reward for opponent units being vulnerable (multiplied by AI's attack)
-	MERGE_GT_6: 150,      // Bonus for merging into a unit with value > 6 (e.g., reaching 6)
-	BRAVE_CHARGE: 70      // Reward for potential Brave Charge (multiplied by target's value)
-};
-
 Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
 
 function alpineHexDiceTacticGame() { return {
@@ -73,7 +62,7 @@ function alpineHexDiceTacticGame() { return {
 		coordinate: new URLSearchParams(location.search).get('mode')?.includes('coordinate'),
 		skipReroll: new URLSearchParams(location.search).get('mode')?.includes('debug'),
 		skipDeploy: new URLSearchParams(location.search).get('mode')?.includes('debug'),
-		autoPlay: new URLSearchParams(location.search).get('mode')?.includes('autoPlay'),
+		autoPlay: new URLSearchParams(location.search).get('mode')?.includes('auto'),
 	},
 
 	/* --- INITIALIZATION --- */
@@ -150,8 +139,10 @@ function alpineHexDiceTacticGame() { return {
 	axialDistance(q1, r1, q2, r2) {
 		const dq = q1 - q2;
 		const dr = r1 - r2;
-		const ds = (-q1 - r1) - (-q2 - r2);
-		return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
+		return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)); // Optimized
+
+		// const ds = (-q1 - r1) - (-q2 - r2);
+		// return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
 	},
 	getHex(id, state) {
 		return (state || this).hexes[id]; /*(state || this).hexes.find(h => h.id === id);*/
@@ -207,7 +198,7 @@ function alpineHexDiceTacticGame() { return {
 		else if (state.validMoves?.includes(hex.id)) cls = 'bg-hexmove saturate-50';
 		else if (state.validMerges?.includes(hex.id)) cls = 'bg-hexmerge saturate-50';
 		else if (state.validTargets?.includes(hex.id)) cls = 'bg-hextarget saturate-50';
-		
+
 		if (state.phase === 'SETUP_DEPLOY' && this.calcValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
 			cls = 'bg-hexdeploy';
 		}
@@ -240,18 +231,18 @@ function alpineHexDiceTacticGame() { return {
 		if (unit) {
 			const {value, playerId} = unit;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/d${value}${playerId == 0 ? 'blue' : 'red' }.gif");`);
+			style.push(`background-image: url("/assets/sprites/fe_mystery/d${value}${playerId == 0 ? 'blue' : 'red' }.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
 
-		let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 50];
+		let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 15];
 		if (hex.id == trail?.fromHex?.id) {
-			style.push(`filter: sepia(${step}%);`);
+			style.push(`filter: grayscale(${step}%);`);
 		} else if (hex.id == trail?.toHex?.id) {
-			style.push(`filter: sepia(${(trail.path.length+2) * step}%);`);
+			style.push(`filter: grayscale(${(trail.path.length+2) * step}%);`);
 		} else if (trailIdx >= 0) {
-			style.push(`filter: sepia(${(trailIdx+2) * step}%);`);
+			style.push(`filter: grayscale(${(trailIdx+2) * step}%);`);
 		}
 
 		return style.join('');
@@ -359,7 +350,6 @@ function alpineHexDiceTacticGame() { return {
 		this.players[this.currentPlayerIndex].rerollsUsed++; // Mark as reroll phase completed
 		this.diceToReroll = [];
 		this.nextPlayerSetupRerollOrDeploy();
-
 	},
 	nextPlayerSetupRerollOrDeploy() {
 		if (this.currentPlayerIndex === 0 && this.players[1].rerollsUsed === 0) {
@@ -435,7 +425,7 @@ function alpineHexDiceTacticGame() { return {
 		this.currentPlayerIndex = 0; // Player 1 starts the game
 		this.trail = {fromHex: null, toHex: null, unit: null, path: []};
 
-		this.resetTurnActionsForAllUnits();
+		this.resetTurnActionsForPlayer(this.currentPlayerIndex);
 		this.addLog("---");
 		this.addLog("P1 turn.");
 
@@ -868,9 +858,9 @@ function alpineHexDiceTacticGame() { return {
 			this.selectUnit(newUnit.hexId, state); // Select the new unit so player can act with it
 			this.addLog(`New Dice ${newUnit.value} selected. Choose an action.`, state);
 			// if (isAI) this.performAITurn();
-		} else {
+		} /*else {
 			this.endTurn(state);
-		}
+		}*/
 		this.checkWinConditions(state);
 	},
 	performRangedAttack(attackerHexId, targetHexId, state) {
@@ -938,6 +928,18 @@ function alpineHexDiceTacticGame() { return {
 		this.applyDamage(targetHexId, 6, state); // Apply 6 damage, handle unit removal if armor <= 0
 
 		this.endTurn(state); // End the player's turn after the charge
+	},
+	performAITurn() {
+		// let choice = ['Simple', 'Analyze', 'Random', 'Minimax', 'Greedy'].random();
+		// this.addLog(`AI persona: ${choice}`);
+		// this['performAI_' + choice]();
+
+		console.time('performAITurn')
+		performAIByWeight(this);
+
+		this.deselectUnit();
+		this.endTurn();
+		console.timeEnd('performAITurn')
 	},
 
 	/* --- CALCULATE --- */
@@ -1294,7 +1296,7 @@ function alpineHexDiceTacticGame() { return {
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 
 		if (defenderUnit.armorReduction >= UNIT_STATS[defenderUnit.value].armor || attackerUnit.attack >= defenderEffectiveArmor) { // Attacker wins
-			
+
 			// Remove defender
 			this.removeUnit(defenderHexId, state);
 			defenderHex.unitId = null;
@@ -1355,7 +1357,7 @@ function alpineHexDiceTacticGame() { return {
 		if ((damage > 1) && unit.effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
 	},
 
-	/* --- TURN MANAGEMENT & WIN CONDITIONS --- */
+	/* --- TURN --- */
 	endTurn(state) {
 		let isState = !!state;
 		state = state || this;
@@ -1369,17 +1371,17 @@ function alpineHexDiceTacticGame() { return {
 		if (state.phase !== 'PLAYER_TURN') return;
 
 		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
-		this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
-		this.addLog(`---`, isState ? state : undefined);
+		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
+		// this.addLog(`---`, isState ? state : undefined);
 
 		this.deselectUnit(state); // Clear selection
 		state.actionMode = null; // Clear action mode
 
 		state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-		this.resetTurnActionsForAllUnits(state);
+		this.resetTurnActionsForPlayer(state.currentPlayerIndex, state);
 
 		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
-		this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1} turn started (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
+		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1} turn started (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
 
 		this.checkWinConditions(state); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
 
@@ -1391,15 +1393,14 @@ function alpineHexDiceTacticGame() { return {
 			this.autoPlay();
 		}
 	},
-	resetTurnActionsForAllUnits(state) {
-		(state || this).players.forEach(player => {
-			player.dice.forEach(die => {
-				if(die.isDeployed) {
-					die.hasMovedOrAttackedThisTurn = false;
-					die.actionsTakenThisTurn = 0;
-					// Guard status persists until the unit moves or rerolls.
-				}
-			});
+	resetTurnActionsForPlayer(playerId, state) {
+		const player = (state || this).players[playerId];
+		player.dice.forEach(die => {
+			if(die.isDeployed) {
+				die.hasMovedOrAttackedThisTurn = false;
+				die.actionsTakenThisTurn = 0;
+				// Guard status persists until the unit moves or rerolls.
+			}
 		});
 	},
 	checkWinConditions(state) {
@@ -1448,21 +1449,6 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog(`Game Over: ${this.winnerMessage}`);
 	},
 
-	/* --- AI OPPONENT --- */
-	performAITurn() {
-		// let choice = ['Simple', 'Analyze', 'Random', 'Minimax', 'Greedy'].random();
-		// this.addLog(`AI persona: ${choice}`);
-		// this['performAI_' + choice]();
-
-		console.time('performAITurn')
-		performAI_Greedy(this);
-
-		this.deselectUnit();
-		this.endTurn();
-		console.timeEnd('performAITurn')
-	},
-
-
 	/* --- UTILITIES --- */
 	cloneState(game) { // Very low performance
 		let data = JSON.parse(JSON.stringify((game || this).$data));
@@ -1474,8 +1460,13 @@ function alpineHexDiceTacticGame() { return {
 	},
 	addLog(message, state) {
 		if (state) return; console.debug(' >', message);
-		
-		this.messageLog.unshift({ id: this.logCounter++, message: `[${new Date().toLocaleTimeString()}] ${message}` });
+
+		message = [
+			`${new Date().toLocaleTimeString()}: ${message}`,
+			this.phase == 'PLAYER_TURN' ? `[${boardEvaluation(this)}]` : '',
+		].join(' ').trim();
+
+		this.messageLog.unshift({ id: this.logCounter++, message });
 		if (this.messageLog.length > 50) this.messageLog.pop();
 		
 		// Auto-scroll log
