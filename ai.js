@@ -10,7 +10,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 5,           // Penalty for AI units being threatened
 		VULNERABLE: 8,       // Reward for opponent units being vulnerable (potential future attacks)
 		MERGE_GT_6: 150,      // Bonus for merging into a unit with value > 6
-		BRAVE_CHARGE: 80      // Reward for potential Brave Charge
+		BRAVE_CHARGE: 80,      // Reward for potential Brave Charge
+		PST_WEIGHT: 30,       // NEW: Aggressively weight the PST
 	},
 	AGGRESSIVE: {
 		note: '2. Aggressive AI (Prioritizes offense, advancing, and taking out threats)',
@@ -23,7 +24,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 3,            // Less fearful of threats, willing to take risks
 		VULNERABLE: 8,       // Reduced, as actual kills are now more heavily rewarded via UNIT_COUNT/FACTOR
 		MERGE_GT_6: 100,      // Merges are good, but less critical than direct attack
-		BRAVE_CHARGE: 150     // Higher reward for brave charges
+		BRAVE_CHARGE: 150,     // Higher reward for brave charges
+		PST_WEIGHT: 40,       // NEW: Very aggressively weight the PST
 	},
 	DEFENSIVE: {
 		note: '3. Defensive/Turtle AI (Focuses on protecting units, consolidating, and surviving)',
@@ -36,7 +38,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 15,           // Very high penalty for threatened units
 		VULNERABLE: 3,        // Low reward for attacking unless it's a clear advantage
 		MERGE_GT_6: 200,      // High reward for strong defensive units
-		BRAVE_CHARGE: 10      // Brave charges are risky, less desirable
+		BRAVE_CHARGE: 10,      // Brave charges are risky, less desirable
+		PST_WEIGHT: 60,       // NEW: Very aggressively weight the PST
 	},
 	JUGGLING: {
 		note: '4. Juggling/Value Maximizer AI (Prioritizes creating high-value units and strategic merges)',
@@ -49,7 +52,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 7,            // Moderate threat avoidance to protect key units
 		VULNERABLE: 7,        // Moderate reward for attacking, but not primary focus
 		MERGE_GT_6: 300,      // Extremely high reward for merges > 6
-		BRAVE_CHARGE: 50      // Brave charges are fine for removing threats, but not primary
+		BRAVE_CHARGE: 50,      // Brave charges are fine for removing threats, but not primary
+		PST_WEIGHT: 40,       // NEW: Very aggressively weight the PST
 	},
 	SWARM: {
 		note: '5. Swarm AI (Focuses on deploying many units and overwhelming the opponent with numbers)',
@@ -62,7 +66,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 5,            // Moderate threat, expects some units to be lost
 		VULNERABLE: 8,        // Rewards finding openings for mass attacks
 		MERGE_GT_6: 50,       // Less important, as units are meant to be numerous
-		BRAVE_CHARGE: 60      // Good for breaking through quickly
+		BRAVE_CHARGE: 60,      // Good for breaking through quickly
+		PST_WEIGHT: 10,       // NEW: Low weight, swarm cares less about perfect positioning
 	},
 	OPPORTUNISTIC: {
 		note: '6. Opportunistic AI (Waits for weaknesses, focuses on exploiting vulnerabilities and high-impact plays)',
@@ -75,7 +80,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 10,           // Avoids unnecessary threats, preserves units for opportunities
 		VULNERABLE: 15,       // High reward for vulnerable enemy units
 		MERGE_GT_6: 120,      // Merges are good for stronger units that can exploit
-		BRAVE_CHARGE: 150     // Extremely high reward for Brave Charge opportunities
+		BRAVE_CHARGE: 150,     // Extremely high reward for Brave Charge opportunities
+		PST_WEIGHT: 50,       // NEW: Very aggressively weight the PST
 	},
 	RANDOMISH: {
 		note: '7. Random-ish AI (Weights are low or balanced, relying more on the top-3 random selection)',
@@ -88,7 +94,8 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		THREAT: 1,
 		VULNERABLE: 1,
 		MERGE_GT_6: 1,
-		BRAVE_CHARGE: 1
+		BRAVE_CHARGE: 1,
+		PST_WEIGHT: 1,
 	},
 
 	getRandomPreset: function(key) {
@@ -232,7 +239,7 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 		const unit = aiUnits[i];
 		const unitHex = GAME.getHex(unit.hexId, state);
 		if (unitHex) {
-			score += getHexPSTScore(GAME, unit, unitHex, state); // Add score for AI's units based on position
+			score += getHexPSTScore(GAME, unit, unitHex, state) * WEIGHT.PST_WEIGHT; // Add score for AI's units based on position
 		}
 	}
 
@@ -240,7 +247,7 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 		const unit = opponentUnits[i];
 		const unitHex = GAME.getHex(unit.hexId, state);
 		if (unitHex) {
-			score -= getHexPSTScore(GAME, unit, unitHex, state); // Subtract score for Opponent's units
+			score -= getHexPSTScore(GAME, unit, unitHex, state) * WEIGHT.PST_WEIGHT; // Subtract score for Opponent's units
 		}
 	}
 
@@ -509,9 +516,17 @@ function getHexPSTScore(GAME, unit, hex, state) { // Piece Square Tables (PSTs) 
 	const { q, r } = hex;
 	const unitValue = unit.value;
 
-	// Get the base hex for the unit's player and the opponent's player
-	const playerBaseHex = GAME.getHex(state.players[unit.playerId].baseHexId, state);
-	const opponentBaseHex = GAME.getHex(state.players[(unit.playerId + 1) % state.players.length].baseHexId, state);
+	score += centralityScore(GAME, hex, unit, state);
+	score += advancementScore(GAME, hex, unit, state);
+	score += proximityScore(GAME, hex, unit, state);
+	score += specialHexBonuses(GAME, hex, unit, state);
+
+	return score;
+}
+
+function centralityScore(GAME, hex, unit, state) {
+	let score = 0;
+	const { q, r } = hex;
 
 	// 1. Centrality (general board control):
 	// Units generally prefer to be closer to the center of the board (0,0).
@@ -521,8 +536,15 @@ function getHexPSTScore(GAME, unit, hex, state) { // Piece Square Tables (PSTs) 
 	// Reward for being closer to center, scaled (smaller distance = higher score)
 	score += (R - distanceFromCenter) * 0.5;
 
-	// 2. Unit-specific positional preferences:
-	// These preferences are relative to the unit's own player's objectives.
+	return score;
+}
+
+function advancementScore(GAME, hex, unit, state) {
+	let score = 0;
+	const { q, r } = hex;
+	const unitValue = unit.value;
+
+	const opponentBaseHex = GAME.getHex(state.players[(unit.playerId + 1) % state.players.length].baseHexId, state);
 
 	// A. Advancement toward opponent's base (typically for lower value, more aggressive units)
 	if (unitValue <= 3) { // Dice 1, 2, 3 might be more expendable or designed for pushing
@@ -533,6 +555,16 @@ function getHexPSTScore(GAME, unit, hex, state) { // Piece Square Tables (PSTs) 
 		}
 	}
 
+	return score
+}
+
+function proximityScore(GAME, hex, unit, state) {
+	let score = 0;
+	const { q, r } = hex;
+	const unitValue = unit.value;
+
+	const playerBaseHex = GAME.getHex(state.players[unit.playerId].baseHexId, state);
+
 	// B. Proximity to own base (typically for higher value, more defensive/control units)
 	if (unitValue >= 4) { // Dice 4, 5, 6 might prefer more defensive or central-control positions
 		if (playerBaseHex) {
@@ -542,6 +574,14 @@ function getHexPSTScore(GAME, unit, hex, state) { // Piece Square Tables (PSTs) 
 		}
 	}
 
+	return score;
+}
+
+function specialHexBonuses(GAME, hex, unit, state) {
+	let score = 0;
+	const { q, r } = hex;
+	const unitValue = unit.value;
+
 	// C. Special hex bonuses (e.g., central column, specific choke points):
 	// This is an example of a general board feature, independent of specific bases.
 	if (Math.abs(q) === 0) { // Bonus for being on the central column (q=0)
@@ -550,5 +590,5 @@ function getHexPSTScore(GAME, unit, hex, state) { // Piece Square Tables (PSTs) 
 	// You can add more specific hex-ID based bonuses here if your board has unique strategic hexes.
 	// Example: if (hex.id === 'central_chokepoint_hex') score += 5;
 
-	return score;
+	return score
 }
