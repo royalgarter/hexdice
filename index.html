@@ -40,19 +40,6 @@
 <body class="text-white p-2 flex flex-col items-center bg-stone-700 font-sans" x-data="alpineHexDiceTacticGame()">
 	<!-- <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
-	<!-- Movement Trail Arrow -->
-	<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="my-2 absolute pointer-events-none z-10" x-show="trail.fromHex && trail.toHex">
-		<circle :cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0" r="5" style="fill: DodgerBlue;fill-opacity: 0.8" />
-		<line
-		:x1="trail.fromHex?.trailX || 0"
-		:y1="trail.fromHex?.trailY || 0"
-		:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-		:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-		style="stroke-width: 5;stroke: DodgerBlue;stroke-opacity: 0.8;stroke-linecap:round;"
-	/>
-	</svg>
-
-
 	<!-- Hex Grid -->
 	<div class="hex-grid-container relative m-2 mb-8" :style="hexGrid.style">
 		<template x-for="hex in hexes" :key="hex.id">
@@ -194,6 +181,18 @@
 			>Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
 		</p>
 	</div>
+
+	<!-- Movement Trail Arrow -->
+	<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="my-2 absolute pointer-events-none" x-show="trail.fromHex && trail.toHex">
+		<line
+			:x1="trail.fromHex?.trailX || 0"
+			:y1="trail.fromHex?.trailY || 0"
+			:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+			:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+			style="stroke-width: 3;stroke: DodgerBlue;stroke-opacity: 0.5;"
+		/>
+		<circle :cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0" r="3" style="fill: DodgerBlue;fill-opacity: 0.8;" />
+	</svg>
 
 	<!-- Message Log -->
 	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs font-mono h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
