@@ -102,7 +102,7 @@ const AI_PRESET_EVALUATION_WEIGHTS = {
 		if (this[key]) return this[key];
 
 		const keys = Object.keys(this).filter(key => typeof this[key] === 'object'); // Filter out the function itself
-		const randomKey = keys[Math.floor(Math.random() * keys.length)];
+		const randomKey = keys[Math.floor(random() * keys.length)];
 		return this[randomKey];
 	}
 };
@@ -151,7 +151,7 @@ function performAIByWeight(GAME) {
 	console.log(possibleMoves);
 
 	const probabilities = softmax(possibleMoves.map(x => x.evaluation));
-	const randomNumber = Math.random();
+	const randomNumber = random();
 	let cumulativeProbability = 0;
 	for (let i = 0; i < probabilities.length; i++) {
 		cumulativeProbability += probabilities[i];

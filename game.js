@@ -31,13 +31,20 @@ const PLAYER_PRIMARY_AXIS = {
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 
-Array.prototype.random = function () { return this[Math.floor((Math.random() * this.length))]; }
+function random() {
+	const array = new Uint32Array(1);
+	crypto.getRandomValues(array);
+	return array[0] / 4294967296; // 2^32
+}
+
+Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
 
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
 	rules: {
 		dicePerPlayer: 12,
 	},
+	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
 	players: [
@@ -102,7 +109,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- HEX GRID --- */
-	generateHexGrid(radius) {
+	generateHexGrid(radius, padding=0) {
 		this.hexes = [];
 		this.hexesQR = {};
 		let id = 0;
@@ -118,6 +125,29 @@ function alpineHexDiceTacticGame() { return {
 					id++;
 				}
 			}
+		}
+
+		const allX = this.hexes.map(h => h.visualX);
+		const allY = this.hexes.map(h => h.visualY);
+		const minX = Math.min(...allX);
+		const maxX = Math.max(...allX);
+		const minY = Math.min(...allY);
+		const maxY = Math.max(...allY);
+		const gridWidth = maxX - minX + HEX_WIDTH;
+		const gridHeight = maxY - minY + HEX_HEIGHT; // Approx
+
+		const style = `width: ${gridWidth}px; height: ${gridHeight}px;`;
+
+		this.hexGrid = {allX, allY, minX, minY, gridWidth, gridHeight, style};
+
+		for (let i=0; i<this.hexes.length; i++) {
+			this.hexes[i].left = this.hexes[i].visualX - this.hexGrid.minX + padding;
+			this.hexes[i].top = this.hexes[i].visualY - this.hexGrid.minY + padding;
+			this.hexes[i].width = HEX_WIDTH - (padding << 1);
+			this.hexes[i].height = HEX_HEIGHT - (padding << 1);
+
+			this.hexes[i].trailX = this.hexes[i].left + (this.hexes[i].width / 2);
+			this.hexes[i].trailY = this.hexes[i].top + (this.hexes[i].height / 2);
 		}
 	},
 	determineBaseLocations() {
@@ -173,18 +203,6 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- UI STYLING --- */
-	gridContainerStyle() {
-		const allX = this.hexes.map(h => h.visualX);
-		const allY = this.hexes.map(h => h.visualY);
-		const minX = Math.min(...allX);
-		const maxX = Math.max(...allX);
-		const minY = Math.min(...allY);
-		const maxY = Math.max(...allY);
-		const gridWidth = maxX - minX + HEX_WIDTH;
-		const gridHeight = maxY - minY + HEX_HEIGHT; // Approx
-
-		return `width: ${gridWidth}px; height: ${gridHeight}px;`;
-	},
 	hexColor(hex, state) {
 		// const unit = this.getUnitOnHex(hex.id, state);
 
@@ -216,16 +234,21 @@ function alpineHexDiceTacticGame() { return {
 	hexStyle(hex, padding=0) {
 		// Calculate offset for positioning
 		// Find minX and minY to offset all hexes so they start near 0,0 of the container
-		const allX = this.hexes.map(h => h.visualX);
-		const allY = this.hexes.map(h => h.visualY);
-		const minX = Math.min(...allX);
-		const minY = Math.min(...allY);
+		// const allX = this.hexes.map(h => h.visualX);
+		// const allY = this.hexes.map(h => h.visualY);
+		// const minX = Math.min(...allX);
+		// const minY = Math.min(...allY);
+
+		hex.left = hex.visualX - this.hexGrid.minX + padding;
+		hex.top = hex.visualY - this.hexGrid.minY + padding;
+		hex.width = HEX_WIDTH - (padding << 1);
+		hex.height = HEX_HEIGHT - (padding << 1);
 
 		let style = [
-			`left: ${hex.visualX - minX + padding}px;`,
-			`top: ${hex.visualY - minY + padding}px;`,
-			`width: ${HEX_WIDTH - (padding << 1)}px;`,
-			`height: ${HEX_HEIGHT - (padding << 1)}px;`,
+			`left: ${hex.left}px;`,
+			`top: ${hex.top}px;`,
+			`width: ${hex.width}px;`,
+			`height: ${hex.height}px;`,
 		];
 
 		const unit = this.getUnitOnHex(hex.id);
@@ -237,14 +260,14 @@ function alpineHexDiceTacticGame() { return {
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
 
-		let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 15];
-		if (hex.id == trail?.fromHex?.id) {
-			style.push(`filter: grayscale(${step}%);`);
-		} else if (hex.id == trail?.toHex?.id) {
-			style.push(`filter: grayscale(${(trail.path.length+2) * step}%);`);
-		} else if (trailIdx >= 0) {
-			style.push(`filter: grayscale(${(trailIdx+2) * step}%);`);
-		}
+		// let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 15];
+		// if (hex.id == trail?.fromHex?.id) {
+		// 	style.push(`filter: grayscale(${step}%);`);
+		// } else if (hex.id == trail?.toHex?.id) {
+		// 	style.push(`filter: grayscale(${(trail.path.length+2) * step}%);`);
+		// } else if (trailIdx >= 0) {
+		// 	style.push(`filter: grayscale(${(trailIdx+2) * step}%);`);
+		// }
 
 		return style.join('');
 	},
@@ -282,7 +305,7 @@ function alpineHexDiceTacticGame() { return {
 		const player = this.players[playerId];
 		player.dice = [];
 		for (let i = 0; i < this.rules.dicePerPlayer; i++) {
-			const roll = Math.floor(Math.random() * 6) + 1;
+			const roll = Math.floor(random() * 6) + 1;
 			player.dice.push({
 				id: `${playerId}_${i}`, // Unique ID for the die unit
 				originalIndex: i, // to link back to player.dice array
@@ -333,7 +356,7 @@ function alpineHexDiceTacticGame() { return {
 		const player = this.players[this.currentPlayerIndex];
 		let rerolledValues = [];
 		this.diceToReroll.forEach(diceIndex => {
-			const newRoll = Math.floor(Math.random() * 6) + 1;
+			const newRoll = Math.floor(random() * 6) + 1;
 			player.dice[diceIndex].value = newRoll;
 			// Update stats based on new roll
 			Object.assign(player.dice[diceIndex], UNIT_STATS[newRoll]);
@@ -680,6 +703,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (fromHex && toHex) {
 			const dist = this.axialDistance(fromHex.q, fromHex.r, toHex.q, toHex.r);
+			this.trail.dist = dist;
 			// (unit.playerId==0) && console.log('trail.dist', dist, fromHex.q, fromHex.r, toHex.q, toHex.r);
 			if (dist > 1) {
 				const stepQ = (toHex.q - fromHex.q) / dist;
@@ -756,7 +780,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return;
 
 		const oldVal = unit.value;
-		const newRoll = Math.floor(Math.random() * 6) + 1;
+		const newRoll = Math.floor(random() * 6) + 1;
 		unit.value = newRoll;
 		Object.assign(unit, UNIT_STATS[newRoll]); // Update stats
 		unit.currentArmor = UNIT_STATS[newRoll].armor;
