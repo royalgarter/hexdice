@@ -138,8 +138,9 @@ function performAIByWeight(GAME) {
 		const evaluation = boardEvaluation(GAME, nextState);
 		// console.timeEnd('boardEvaluation-' + i)
 		move.evaluation = evaluation;
-		move.render = GAME.renderMono(nextState);
-		console.log(move);
+		let render = GAME.renderMono(nextState);
+		console.log(move)
+		console.log(render);
 		// move.nextState = nextState;
 
 		if (evaluation > bestScore) {

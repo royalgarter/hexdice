@@ -182,17 +182,39 @@
 		</p>
 	</div>
 
-	<!-- Movement Trail Arrow -->
-	<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="my-2 absolute pointer-events-none" x-show="trail.fromHex && trail.toHex">
-		<line
-			:x1="trail.fromHex?.trailX || 0"
-			:y1="trail.fromHex?.trailY || 0"
-			:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-			:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-			style="stroke-width: 3;stroke: DodgerBlue;stroke-opacity: 0.5;"
-		/>
-		<circle :cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0" r="3" style="fill: DodgerBlue;fill-opacity: 0.8;" />
+	<!-- Trail Arrow -->
+	<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="my-2 absolute pointer-events-none">
+		<!-- Movement -->
+		<g x-show="trail && trail.fromHex && trail.toHex">
+			<circle
+				:cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0"
+				r="3" style="fill: DodgerBlue;fill-opacity: 0.8;"
+			/>
+			<line
+				:x1="trail.fromHex?.trailX || 0"
+				:y1="trail.fromHex?.trailY || 0"
+				:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+				:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+				style="stroke-width: 3;stroke: DodgerBlue;stroke-opacity: 0.5;"
+			/>
+		</g>
+
+		<!-- Attack -->
+		<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
+			<circle
+				:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
+				r="3" style="fill: FireBrick;fill-opacity: 0.8;"
+			/>
+			<line
+				:x1="trailAttack.fromHex?.trailX || 0"
+				:y1="trailAttack.fromHex?.trailY || 0"
+				:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
+				:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
+				style="stroke-width: 3;stroke: FireBrick;stroke-opacity: 0.5;"
+			/>
+		</g>
 	</svg>
+
 
 	<!-- Message Log -->
 	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs font-mono h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">

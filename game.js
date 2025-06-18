@@ -114,6 +114,7 @@ function alpineHexDiceTacticGame() { return {
 	hovering: {},
 	unitstat: null,
 	trail: {fromHex: null, toHex: null, unit: null, path: []},
+	trailAttack: {fromHex: null, toHex: null, unit: null},
 	validMoves: [], // array of hex IDs
 	validMerges: [], // array of hex IDs
 	validTargets: [], // array of hex IDs for attacks/merges
@@ -262,7 +263,7 @@ function alpineHexDiceTacticGame() { return {
 
 		let render = state.hexes.reduce((render, hex) => render.replace(
 			hex.id.toString().padStart(3, `0`),
-			hex.unit ? `${hex.unit.playerId}.${hex.unit.value}` : ` . `,
+			hex.unit ? `${hex.unit.playerId}-${hex.unit.value}` : ` . `,
 		), BOARD_NUM);
 
 		return render;
@@ -771,7 +772,7 @@ function alpineHexDiceTacticGame() { return {
 			const dist = this.axialDistance(fromHex.q, fromHex.r, toHex.q, toHex.r);
 			this.trail.dist = dist;
 			// (unit.playerId==0) && console.log('trail.dist', dist, fromHex.q, fromHex.r, toHex.q, toHex.r);
-			if (dist > 1) {
+			if (false && dist > 1) {
 				const stepQ = (toHex.q - fromHex.q) / dist;
 				const stepR = (toHex.r - fromHex.r) / dist;
 				// (unit.playerId==0) && console.log('trail.step', stepQ, stepR);
@@ -793,6 +794,10 @@ function alpineHexDiceTacticGame() { return {
 					this.trail.path.push(checkHex.id)
 				}
 			}
+		}
+
+		if (this.trailAttack?.unit && (this.trailAttack.unit != fromHex.unit)) {
+			this.trailAttack = {};
 		}
 	},
 	performMove(unitHexId, targetHexId, state) {
@@ -1420,6 +1425,8 @@ function alpineHexDiceTacticGame() { return {
 			attackerUnit.hasMovedOrAttackedThisTurn = true;
 			attackerUnit.actionsTakenThisTurn++;
 
+			this.trailAttack = {};
+
 		} else { // Attacker fails
 			this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
 			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
@@ -1438,6 +1445,13 @@ function alpineHexDiceTacticGame() { return {
 
 			attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
 			attackerUnit.actionsTakenThisTurn++;
+
+			this.trailAttack = {
+				fromHex: attackerHex,
+				toHex: defenderHex,
+				unit: attackerUnit,
+				dist: this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r),
+			};
 		}
 		// If attack failed, unit stays selected for potential other actions if this was not its main action
 		// But for this game, Move/Attack is one action. So, deselect.
