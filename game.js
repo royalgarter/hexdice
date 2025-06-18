@@ -23,6 +23,62 @@ const UNIT_STATS = {
 	6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: '0' },
 };
 
+const BOARD_DOT = [
+	`                         .`,
+	`                     .       .`,
+	`                 .       .       .`,
+	`             .       .       .       .`,
+	`         .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	`         .       .       .       .       .`,
+	`             .       .       .       .`,
+	`                 .       .       .`,
+	`                     .       .`,
+	`                         .`,
+].join('\n');
+
+const BOARD_NUM = [
+	`                        057`,
+	`                    045     070`,
+	`                034     058     082`,
+	`            024     046     071     093`,
+	`        015     035     059     083     103`,
+	`    007     025     047     072     094     112`,
+	`000     016     036     060     084     104     120`,
+	`    008     026     048     073     095     113`,
+	`001     017     037     061     085     105     121`,
+	`    009     027     049     074     096     114`,
+	`002     018     038     062     086     106     122`,
+	`    010     028     050     075     097     115`,
+	`003     019     039     063     087     107     123`,
+	`    011     029     051     076     098     116`,
+	`004     020     040     064     088     108     124`,
+	`    012     030     052     077     099     117`,
+	`005     021     041     065     089     109     125`,
+	`    013     031     053     078     100     118`,
+	`006     022     042     066     090     110     126`,
+	`    014     032     054     079     101     119`,
+	`        023     043     067     091     111`,
+	`            033     055     080     102`,
+	`                044     068     092`,
+	`                    056     081`,
+	`                        069`,
+].join('\n');
+
 const PLAYER_PRIMARY_AXIS = {
 	1: [ AXES[5] ],
 	2: [ AXES[5], AXES[2] ],
@@ -200,6 +256,16 @@ function alpineHexDiceTacticGame() { return {
 	getNeighbors(hex, state) {
 		if (!hex) return [];
 		return AXES.map(dir => this.getHexByQR(hex.q + dir.q, hex.r + dir.r, state)).filter(Boolean);
+	},
+	renderMono(state) {
+		state = state || this;
+
+		let render = state.hexes.reduce((render, hex) => render.replace(
+			hex.id.toString().padStart(3, `0`),
+			hex.unit ? `${hex.unit.playerId}.${hex.unit.value}` : ` . `,
+		), BOARD_NUM);
+
+		return render;
 	},
 
 	/* --- UI STYLING --- */
