@@ -116,45 +116,99 @@ function softmax(logits) {
 	return shifted.map(prob => prob / total);
 }
 
+const AI_SEARCH_DEPTH = 3; // Depth for the minimax search. Higher values are smarter but slower.
+
+// Simulates the end of a turn for minimax evaluation
+function simulateEndTurn(state) {
+    const newState = structuredClone(state);
+    newState.currentPlayerIndex = (newState.currentPlayerIndex + 1) % newState.players.length;
+    // Reset action flags for the new current player
+    newState.players[newState.currentPlayerIndex].dice.forEach(d => {
+        d.hasMovedOrAttackedThisTurn = false;
+    });
+    return newState;
+}
+
+/**
+ * Implements the minimax algorithm with alpha-beta pruning to find the best move.
+ * @param {object} GAME - The global game object with utility functions.
+ * @param {object} state - The current game state to evaluate.
+ * @param {number} depth - The remaining search depth.
+ * @param {number} alpha - The alpha value for pruning.
+ * @param {number} beta - The beta value for pruning.
+ * @param {boolean} isMaximizingPlayer - True if the current player is the AI (maximizer).
+ * @returns {number} The evaluated score of the board state.
+ */
+function minimax(GAME, state, depth, alpha, beta, isMaximizingPlayer) {
+    if (depth === 0 || state.phase === 'GAME_OVER') {
+        return boardEvaluation(GAME, state);
+    }
+
+    const possibleMoves = generateAllPossibleMoves(GAME, state);
+    possibleMoves.push({ actionType: 'END_TURN' });
+
+    if (isMaximizingPlayer) {
+        let maxEval = -Infinity;
+        for (const move of possibleMoves) {
+            const stateAfterMove = applyMove(GAME, move, state);
+            const stateAfterTurn = simulateEndTurn(stateAfterMove); // Opponent's turn now
+            const eval = minimax(GAME, stateAfterTurn, depth - 1, alpha, beta, false);
+            maxEval = Math.max(maxEval, eval);
+            alpha = Math.max(alpha, eval);
+            if (beta <= alpha) break; // Pruning
+        }
+        return maxEval;
+    } else { // Minimizing player
+        let minEval = Infinity;
+        for (const move of possibleMoves) {
+            const stateAfterMove = applyMove(GAME, move, state);
+            const stateAfterTurn = simulateEndTurn(stateAfterMove); // AI's turn now
+            const eval = minimax(GAME, stateAfterTurn, depth - 1, alpha, beta, true);
+            minEval = Math.min(minEval, eval);
+            beta = Math.min(beta, eval);
+            if (beta <= alpha) break; // Pruning
+        }
+        return minEval;
+    }
+}
+
 function performAIByWeight(GAME) {
 	if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
 
 	const currentState = GAME.cloneState();
-
 	const possibleMoves = generateAllPossibleMoves(GAME, currentState);
+    possibleMoves.push({ actionType: 'END_TURN' });
 
-	let bestScore = -Infinity;
-	let bestMove = null;
+	if (possibleMoves.length === 1 && possibleMoves[0].actionType === 'END_TURN') {
+		console.log('AI has no other moves, ending turn.');
+		applyMove(GAME, possibleMoves[0]);
+		return;
+	}
 
-	console.log('currentScore', boardEvaluation(GAME, currentState), currentState);
+	console.log('AI thinking... Searching with depth:', AI_SEARCH_DEPTH);
 
-	// Evaluate all possible moves
-	possibleMoves.forEach((move, i) => {
-		let nextState = structuredClone(currentState);
-
-		nextState = applyMove(GAME, move, nextState);
-
-		// console.time('boardEvaluation-' + i)
-		const evaluation = boardEvaluation(GAME, nextState);
-		// console.timeEnd('boardEvaluation-' + i)
-		move.evaluation = evaluation;
-		let render = GAME.renderMono(nextState);
-		console.log(move)
-		console.log(render);
-		// move.nextState = nextState;
-
-		if (evaluation > bestScore) {
-			bestScore = evaluation;
-			bestMove = move;
+	// Evaluate all possible moves using minimax
+	possibleMoves.forEach(move => {
+		const stateAfterMove = applyMove(GAME, move, currentState);
+		let score;
+		if (stateAfterMove.phase === 'GAME_OVER') {
+			score = boardEvaluation(GAME, stateAfterMove);
+		} else {
+			const stateAfterTurn = simulateEndTurn(stateAfterMove);
+			score = minimax(GAME, stateAfterTurn, AI_SEARCH_DEPTH - 1, -Infinity, Infinity, false); // false for minimizing player
 		}
+		move.evaluation = score; // Attach score to the move object
 	});
 
 	possibleMoves.sort((a, b) => b.evaluation - a.evaluation);
-	console.log(possibleMoves);
+	console.log('Evaluated moves:', possibleMoves.map(m => ({ move: m, score: m.evaluation })));
 
+	// Use softmax to pick a move, favoring better ones but allowing some randomness
 	const probabilities = softmax(possibleMoves.map(x => x.evaluation));
 	const randomNumber = random();
 	let cumulativeProbability = 0;
+	let bestMove = possibleMoves[0]; // Default to best move
+
 	for (let i = 0; i < probabilities.length; i++) {
 		cumulativeProbability += probabilities[i];
 		if (randomNumber < cumulativeProbability) {
@@ -163,10 +217,14 @@ function performAIByWeight(GAME) {
 		}
 	}
 
-	// Execute best move if found
-	if (bestMove) applyMove(GAME, bestMove);
-
-	console.log('bestMove', bestMove);
+	// Execute best move
+	if (bestMove) {
+		console.log('AI chose move:', bestMove, 'with score:', bestMove.evaluation);
+		applyMove(GAME, bestMove);
+	} else {
+        // This case should not be reached if END_TURN is always an option
+		console.error('AI failed to select a move.');
+	}
 }
 
 function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
