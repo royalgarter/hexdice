@@ -173,6 +173,8 @@ function minimax(GAME, state, depth, alpha, beta, isMaximizingPlayer) {
 }
 
 function performAIByWeight(GAME) {
+	return performAIByPriority(GAME);
+
 	if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
 
 	const currentState = GAME.cloneState();
