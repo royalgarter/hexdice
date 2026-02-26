@@ -37,8 +37,8 @@
 	<script src="ai.js"></script>
 </head>
 
-<body class="text-black p-2 flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
-	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
+<body class="text-white p-2 flex flex-col items-center bg-stone-700 font-sans" x-data="alpineHexDiceTacticGame()">
+	<!-- <h1 class="text-xl text-gray-500 font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Hex Grid -->
 	<div class="hex-grid-container relative m-2 mb-8" :style="hexGrid.style">
@@ -51,8 +51,8 @@
 					@click="handleHexClick(hex.id)"
 				>
 					<!-- @mouseenter="hoverHex(hex.id)" @mouseleave="hoverHex()" -->
-					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
-					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
+					<div class="hex-id fixed self-start text-[8px] text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
+					<div class="hex-coordinate fixed self-end text-[10px] text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-sm text-center font-bold relative"
 						@click="unitstat=hex.id"
 					>
@@ -67,8 +67,8 @@
 						>
 						</span>
 						<span class="absolute top-1 right-4 text-yellow-700" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
-						<span class="absolute -top-4 -right-3 text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)"></span>
-						<span class="absolute top-6 -right-3 text-red-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
+						<span class="absolute -top-4 -right-3 text-zinc-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)"></span>
+						<span class="absolute top-6 -right-3 text-rose-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
 				</div>
 			</div>
@@ -77,37 +77,37 @@
 	</div>
 
 	<!-- Game Setup -->
-	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 border border-black text-center">
+	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 bg-slate-700 rounded shadow-lg text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="phase === 'SETUP_ROLL'">
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="resetGame({isP2AI: true});rollInitialDice(1)" >[ Play Against AI ]</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0].initialRollDone" @click="rollInitialDice(0)" >[ Roll Player 1 Dice ]</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="rollInitialDice(1)" >[ Roll Player 2 Dice ]</button>
+			<button class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone" @click="resetGame({isP2AI: true});rollInitialDice(1)" >Play Against AI</button>
+			<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" x-show="!players[0].initialRollDone" @click="rollInitialDice(0)" >Roll Player 1 Dice</button>
+			<button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" x-show="!players[1].initialRollDone" @click="rollInitialDice(1)" >Roll Player 2 Dice</button>
 		</div>
 		<div x-show="phase === 'SETUP_REROLL'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
 			<div class="flex justify-center space-x-2 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
-					<div x-show="!die.isDeployed" class="p-2 border border-black cursor-pointer"
-						 :class="{'bg-black text-white': diceToReroll.includes(index)}"
+					<div x-show="!die.isDeployed" class="p-2 border rounded cursor-pointer"
+						 :class="{'bg-yellow-400': diceToReroll.includes(index)}"
 						 @click="toggleRerollSelection(index)">
 						<span x-text="die.value"></span>
 					</div>
 				</template>
 			</div>
-			<button @click="performReroll()" class="border border-black px-4 py-2 hover:bg-black hover:text-white" :disabled="!canConfirmReroll()">[ Confirm Reroll (<span x-text="diceToReroll.length"></span>) ]</button>
-			<button @click="skipReroll()" class="border border-black px-4 py-2 hover:bg-black hover:text-white ml-2">[ Skip Reroll ]</button>
+			<button @click="performReroll()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span> selected)</button>
+			<button @click="skipReroll()" class="bg-slate-500 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded ml-2">Skip Reroll</button>
 		</div>
 		 <div x-show="phase === 'SETUP_DEPLOY'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
 			<div class="flex justify-center space-x-1 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
 					<div
-						class="p-1 border border-black text-xs cursor-pointer"
+						class="p-1 border rounded text-xs cursor-pointer"
 						:class="
 							[
-								selectedDieToDeploy === index ? 'bg-black text-white font-bold' : '',
-								players[currentPlayerIndex]?.dice[index]?.isDeployed ? 'border-dashed' : '',
+								selectedDieToDeploy === index ? 'bg-yellow-400' : '',
+								players[currentPlayerIndex]?.dice[index]?.isDeployed ? 'bg-green-500' : '',
 							].join(' ')
 						"
 						@click="selectDieToDeploy(index)">
@@ -119,62 +119,66 @@
 	</div>
 
 	<!-- Game Over -->
-	<div x-cloak x-show="phase === 'GAME_OVER'" class="mb-2 py-2 px-4 border border-black text-center">
-		<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
+	<div x-cloak x-show="phase === 'GAME_OVER'" class="mb-2 py-2 px-4 bg-green-700 rounded shadow-lg text-center">
+		<h2 class="text-2xl mb-2">Game Over!</h2>
 		<p x-text="winnerMessage"></p>
-		<button class="mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
+		<button class="mt-3 bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
 			@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})" 
-		>[ New Game ]</button>
+		>New Game</button>
 	</div>
 
 	<!-- Action Mode Info -->
-	<div x-cloak x-show="false && (actionMode !== null)" class="mb-2 py-2 px-4 border border-black text-center">
+	<div x-cloak x-show="false && (actionMode !== null)" class="mb-2 py-2 px-4 bg-yellow-600 rounded shadow-lg text-center">
 		<p x-text="actionModeMessage()"></p>
-		<button @click="cancelAction()" class="mt-2 border border-black px-3 py-1 text-sm hover:bg-black hover:text-white">[ Cancel Action ]</button>
+		<button @click="cancelAction()" class="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Cancel Action</button>
 	</div>
 
 	<!-- Game Info -->
-	<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="mb-2 py-2 px-4 border border-black text-center">
+	<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="mb-2 py-2 px-4 bg-slate-700 rounded shadow-lg text-center">
 		<div class="my-2 space-x-2">
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			<button class="action-button p-1 text-gray-100 bg-hexmove disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')" 
 				@click="initiateAction('MOVE')" 
-			>[ MOVE ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			>Move</button>
+			<button class="action-button p-1 text-gray-100 bg-yellow-500 disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')" 
 				@click="performAction('REROLL', selectedUnitHexId)"
-			>[ REROLL ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			>Reroll</button>
+			<button class="action-button p-1 text-gray-100 bg-blue-500 disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')" 
 				@click="performAction('GUARD', selectedUnitHexId)"
-			>[ GUARD ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			>Guard</button>
+			<button class="action-button p-1 text-gray-100 bg-hextarget disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')" 
 				@click="initiateAction('RANGED_ATTACK')"
-			>[ RNG ATK ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			>Rng Atk</button>
+			<button class="action-button p-1 text-gray-100 bg-hextarget disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" 
 				@click="initiateAction('SPECIAL_ATTACK')"
-			>[ SPL ATK ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			>Spl Atk</button>
+			<button class="action-button p-1 text-gray-100 bg-orange-500 disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'BRAVE_CHARGE')" 
 				@click="initiateAction('BRAVE_CHARGE')"
-			>[ BRAVE CHARGE ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
+			>Brave Charge</button>
+			<button class="action-button p-1 text-gray-100 bg-hexmerge disabled:opacity-30 hover:opacity-80" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
 				@click="initiateAction('MERGE')"
-			>[ MERGE ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white font-bold"
+			>Merge</button>
+			<button class="action-button p-1 text-white bg-red-500 hover:opacity-80 font-bold"
 				x-show="actionMode !== null"
 				@click="cancelAction()" 
-			>[ CANCEL ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white font-bold" 
+			>Cancel</button>
+			<button class="action-button p-1 text-white bg-slate-500 hover:opacity-80 font-bold" 
 				@click="endTurn()"
-			>[ END TURN ]</button>
+			>End Turn</button>
 		</div>
 		
-		<p class="text-sm font-bold">
-			Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
+		<p class="text-sm"
+			:class="{
+				'text-blue-500': currentPlayerIndex === 0,
+				'text-red-500': currentPlayerIndex === 1,
+			}"
+			>Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
 		</p>
 	</div>
 
@@ -184,14 +188,14 @@
 		<g x-show="trail && trail.fromHex && trail.toHex">
 			<circle
 				:cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0"
-				r="3" style="fill: black;"
+				r="3" style="fill: DodgerBlue;fill-opacity: 0.8;"
 			/>
 			<line
 				:x1="trail.fromHex?.trailX || 0"
 				:y1="trail.fromHex?.trailY || 0"
 				:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
 				:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-				style="stroke-width: 2;stroke: black;"
+				style="stroke-width: 3;stroke: DodgerBlue;stroke-opacity: 0.5;"
 			/>
 		</g>
 
@@ -199,21 +203,21 @@
 		<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
 			<circle
 				:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
-				r="3" style="fill: gray;"
+				r="3" style="fill: FireBrick;fill-opacity: 0.8;"
 			/>
 			<line
 				:x1="trailAttack.fromHex?.trailX || 0"
 				:y1="trailAttack.fromHex?.trailY || 0"
 				:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
 				:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
-				style="stroke-width: 2;stroke: gray;stroke-dasharray: 4;"
+				style="stroke-width: 3;stroke: FireBrick;stroke-opacity: 0.5;"
 			/>
 		</g>
 	</svg>
 
 
 	<!-- Message Log -->
-	<div class="fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
+	<div class="fixed bottom-0 left-0 w-full text-gray-300 bg-slate-900 p-2 text-xs font-mono h-24 overflow-y-auto border-t border-gray-700" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message"></p>
 		</template>
