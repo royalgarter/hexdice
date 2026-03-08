@@ -410,7 +410,8 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 		}
 	}
 
-	// 7. Brave Charge opportunities (AI's perspective)
+	// 7. Brave Charge opportunities (DEPRECATED for v1.0 - Use for v1.1+)
+	/*
 	for (let i = 0; i < aiUnitCount; i++) {
 		const aiUnit = aiUnits[i];
 		if (aiUnit.value === 1) { // Only Dice 1 can Brave Charge
@@ -423,6 +424,7 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 			});
 		}
 	}
+	*/
 
 	return score;
 }
@@ -465,18 +467,11 @@ function generateAllPossibleMoves(GAME, state) {
 			});
 		}
 
-		// 4. Brave Charge (Dice 1)
+		// 4. Brave Charge (Dice 1) - DEPRECATED for v1.0
+		/*
 		if (unitValue === 1) {
 			const validBraveChargeMoves = GAME.calcValidBraveChargeMoves(unitHexId, state);
 			validBraveChargeMoves.forEach(intermediateHexId => {
-				// After moving to intermediateHexId, the unit needs to attack an adjacent enemy
-				// This implies a two-step action, which needs to be modeled carefully.
-				// For now, let's assume validBraveChargeMoves gives hexes from which a target is *possible*.
-				// The actual target selection for brave charge is handled in performBraveCharge
-				// However, for AI evaluation, we need to know the *final* outcome.
-				// This might require adding a nested action in `applyMove` or generating more complex moves.
-				// For simplicity here, if the move is valid for brave charge, just push it.
-				// A more advanced AI would consider *which* target is hit after the move.
 				const tempStateAfterMove = structuredClone(state);
 				GAME.performMove(unitHexId, intermediateHexId, tempStateAfterMove); // Simulate the move
 				const potentialTargets = GAME.calcValidSpecialAttackTargets(intermediateHexId, tempStateAfterMove);
@@ -485,6 +480,7 @@ function generateAllPossibleMoves(GAME, state) {
 				});
 			});
 		}
+		*/
 
 		// 5. Merges
 		// const validMerges = GAME.calcValidMoves(unitHexId, true, state); // `true` indicates searching for merge targets
