@@ -12,7 +12,36 @@
 
 	<link rel="canonical" :href="host">
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
-	
+	<link rel="stylesheet" href="https://cdn.tailwind-lite.com/2.0.1.css" />
+	<style>
+		.hexagon {
+			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+		}
+		.bg-hexdefault {
+			background-color: #20bf6b;
+		}
+		.bg-hexselect {
+			background-color: #26de81;
+		}
+		.bg-hexmove {
+			background-color: #0fb9b1;
+		}
+		.bg-hexmerge {
+			background-color: #2bcbba;
+		}
+		.bg-hextarget {
+			background-color: #fed330;
+		}
+		.bg-hexdeploy {
+			background-color: #f7b731;
+		}
+		.bg-hexred {
+			background-color: #eb3b5a;
+		}
+		.bg-hexblue {
+			background-color: #3867d6;
+		}
+	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
 
@@ -26,12 +55,8 @@
 			--color-hexred: var(--color-red-700);
 			--color-hexblue: var(--color-blue-700);
 		}
-
-		.hexagon {
-			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
-		}
 	</style>
-	<script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
 	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	<script src="game.js"></script>
 	<script src="ai.js"></script>
