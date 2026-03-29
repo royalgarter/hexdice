@@ -16,7 +16,7 @@
 
 ---
 
-## **\[v1.5\] Tactical Dice Combat on a Hexagonal Grid board game**
+## **\[v1.6\] Tactical Dice Combat on a Hexagonal Grid board game**
 
 ![Hexagonal Grid board](board.png)
 
@@ -59,16 +59,16 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 
 ### **4\. Dice Soldiers (Unit Types)**
 
-Its face value (1-6) determines each dice unit's capabilities according to the table below. The rolled value is kept face up on the board.
+Its face value (1-6) determines each dice unit's capabilities according to the table below. The rolled value is kept face up on the board. The core rule is **Attack + Armor + Move = 6** (Specialties like Range subtract from this total).
 
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | **Infantry** | 3 | 3 | 0 | 2 | \| | Balanced Core |
-| 2 | **Archer** | 2 | 2 | 2 | 2 | \* | "Quad-2" Sniper |
-| 3 | **Knight** | 2 | 3 | 0 | 3 | L | 3-Step Diver; Jump |
-| 4 | **Assault** | 2 | 4 | 0 | 2 | X | 4-Attack Crusher |
-| 5 | **Tanker** | 5 | 2 | 0 | 1 | \* | 5-Armor Wall |
-| 6 | **Balance** | 6 | 2 | 1 | 0 | 0 | 6-Armor Glacier |
+| 1 | **Infantry** | 2 | 2 | 0 | 2 | \| | Balanced Standard |
+| 2 | **Archer** | 0 | 2 | 2 | 2 | \* | Glass Sniper (Range costs 2) |
+| 3 | **Knight** | 1 | 2 | 0 | 3 | L | Fast Scout (Move costs 1) |
+| 4 | **Assault** | 1 | 3 | 0 | 2 | X | Tank-Cracker |
+| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield |
+| 6 | **Balance** | 5 | 1 | 1 | 0 | 0 | Stationary Bunker |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -139,7 +139,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 2 (Archer)
 
-* Can move to any adjacent hex (up to 2 steps distance).
+* Can move up to 2 steps in any adjacent hex (star pattern).
 * Can perform ranged attacks to any single enemy unit located **exactly 2 hexes away**.
 
 ```
@@ -168,7 +168,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 3 (Knight)
 * Can move 3 steps following an 'L' pattern: 2 steps in a straight line along one of 6 hex axes, then 1 step into an adjacent hex along a different facing outward hex axis.
-* Can jump over friendly units: This unit ignores hexes occupied by other friendly units but not enemy units for movement purposes, but cannot end its movement on an occupied hex unless performing combat with enemy units.
+* Can jump over friendly units.
 
 ```
                     .
@@ -196,7 +196,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 4 (Assault)
 
-* Can move up to 2 steps along the left & right diagonal axes (forming an 'X' pattern based on primary axis).
+* Can move up to 2 steps along the left & right diagonal axes (forming an 'X' pattern).
 
 ```
                     .
@@ -251,7 +251,6 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 6 (Balance)
 * Cannot move except winning combat.
-* Any unit adjacent (* in diagram) to Dice 6 has their Armor + 1.
 * Special Attack: Can attack neighbors (Range 1) and move to their hex if successful.
 
 ```
@@ -287,8 +286,6 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
               R     R     R
            .     R     R     .
         .     .     R     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
      .     .     .     .     .     .
         .     .     .     .     .
      .     .     .     .     .     .
@@ -341,11 +338,10 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 * ##### **Ranged Attack (Dice 2\)**
 
   * Choose one of your Dice 2 Archer units.  
-  * The unit stays in its current hex.  
-  * Target any single enemy unit located **exactly 2 hexes away** in a straight line along any of the 6 radial axes. Units in adjacent hexes (1 away) or hexes 3+ away cannot be targeted by Ranged Attack.  
+  * Target any single enemy unit located **exactly 2 hexes away** in a straight line along any of the 6 radial axes. 
   * Combat occurs (see Section 6: Combat) between the attacking Dice 2 and the targeted enemy unit.  
   * Regardless of the combat outcome, the attacking Dice 2 unit **remains in its current hex**.  
-  * Action complete. This unit cannot Move or Reroll this turn.
+  * Action complete.
 
 * ##### **Special Attack (Dice 6\)**
 
@@ -353,7 +349,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * Target any single enemy unit located **exactly 1 hex away** along any of the 6 radial axes.  
   * Combat occurs (see Section 6: Combat) between the attacking Dice 6 and the targeted enemy unit.  
   * If the attack is successful, the Dice 6 **moves into the target hex**. If unsuccessful, **it remains in its original hex**.  
-  * Action complete. This unit cannot Move or Reroll this turn.
+  * Action complete.
 
 ### **6\. Combat**
 
@@ -365,7 +361,7 @@ Combat occurs when:
 
 Combat is deterministic:
 
-- A unit's Effective Armor value used in combat is its base Armor value (from the Dice Soldiers table) minus the total value of any Armor Reduction tokens currently on it. A unit's Effective Armor cannot go below 0 for combat comparison.  
+- A unit's Effective Armor value used in combat is its base Armor value minus the total value of any Armor Reduction tokens currently on it. A unit's Effective Armor cannot go below 0 for combat comparison.  
 - Compare the **Attacking** unit's **Attack** value to the **Defending** unit's **Armor** value.  
 - If the Attacking unit's **Attack is greater than or equal to** the Defending unit's **Armor** (Attacker.Attack ≥ Defender.Armor), the attack is successful. The Defending unit is defeated and removed from the board.  
   - In Melee Combat, the Attacking unit then moves into the hex vacated by the defeated unit.  
@@ -375,7 +371,7 @@ Combat is deterministic:
   - Armor reductions from failed attacks stack cumulatively.  
   - The minimum trackable Armor value is 0\.  
   - If a unit's Armor reaches 0, the next attack it suffers, regardless of the attacker's Attack value, automatically defeats it.  
-  - Armor reduction is indicated using Armor Reduction Token (could be another mini red dice) from a value range **from \[-1\] to \[-6\]**.
+  - Armor reduction is indicated using Armor Reduction Token from a value range **from \[-1\] to \[-6\]**.
 
 ### **7\. Winning the Game**
 
