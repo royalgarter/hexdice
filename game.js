@@ -1,5 +1,5 @@
 // deno-lint-ignore-file
-const R = 6; // Map size radius
+const R = 5; // Map size radius
 const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
@@ -15,12 +15,12 @@ const AXES = [
 ];
 
 const UNIT_STATS = {
-	1: { name: "Pawn", armor: 1, attack: 2, range: 0, distance: 3, movement: '|' },
-	2: { name: "Bishop", armor: 2, attack: 3, range: 0, distance: 3, movement: 'X' },
-	3: { name: "Knight", armor: 3, attack: 4, range: 0, distance: 3, movement: 'L' },
-	4: { name: "Rook", armor: 4, attack: 5, range: 0, distance: 2, movement: '+' },
-	5: { name: "Archer", armor: 5, attack: 6, range: "2-2", distance: 1, movement: '*' },
-	6: { name: "Legion", armor: 6, attack: 6, range: 1, distance: 0, movement: '0' },
+	1: { name: "Infantry", armor: 3, attack: 3, range: 0, distance: 2, movement: '|' },
+	2: { name: "Archer", armor: 2, attack: 2, range: "2-2", distance: 2, movement: '*' },
+	3: { name: "Knight", armor: 2, attack: 3, range: 0, distance: 3, movement: 'L' },
+	4: { name: "Assault", armor: 2, attack: 4, range: 0, distance: 2, movement: 'X' },
+	5: { name: "Tanker", armor: 5, attack: 2, range: 0, distance: 1, movement: '*' },
+	6: { name: "Balance", armor: 6, attack: 2, range: 1, distance: 0, movement: '0' },
 };
 
 const BOARD_DOT = [
@@ -350,11 +350,11 @@ function alpineHexDiceTacticGame() { return {
 			this.hovering.validMoves = this.calcValidMoves(hexId);
 			this.hovering.validMerges = this.calcValidMoves(hexId, 'MERGE');
 
-			if (this.hovering.unit?.value == 5) {
-				this.hovering.validTargets = this.calcValidRangedTargets(hexId, null, true);
-			}
+			if (this.hovering.unit?.value == 2) {
+	this.hovering.validTargets = this.calcValidRangedTargets(hexId, null, true);
+}
 
-			if (this.hovering.unit?.value == 6) {
+if (this.hovering.unit?.value == 6) {
 				this.hovering.validTargets = this.calcValidSpecialAttackTargets(hexId, null, true);
 			}
 		}
@@ -527,6 +527,24 @@ function alpineHexDiceTacticGame() { return {
 			this.autoPlay();
 		}
 	},
+	randomStart() {
+		// Roll initial dice for both players
+		this.rollInitialDice(0);
+		this.rollInitialDice(1);
+		
+		// Deploy all dice randomly for both players
+		this.players.forEach((player, playerIdx) => {
+			player.dice.forEach((dice, diceIdx) => {
+				const validHexes = this.calcValidDeploymentHexes(playerIdx);
+				if (validHexes.length > 0) {
+					this.selectedDieToDeploy = diceIdx;
+					this.deployUnit(validHexes.random());
+				}
+			});
+		});
+		
+		this.addLog("Random start completed! Player 1's turn.");
+	},
 	autoPlay() {
 		setTimeout(() => this.performAITurn(), 1e3);
 	},
@@ -577,11 +595,11 @@ function alpineHexDiceTacticGame() { return {
 		this.validMerges = this.calcValidMoves(this.selectedUnitHexId, 'MERGE');
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 
-		if (unit.value == 5) {
-			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
-		}
+		if (unit.value == 2) {
+	this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
+}
 
-		if (unit.value == 6) {
+if (unit.value == 6) {
 			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 		}
 
@@ -692,11 +710,11 @@ function alpineHexDiceTacticGame() { return {
 			this.performMerge(this.selectedUnitHexId, targetHexId);
 			// New merge unit could take action if sum > 6
 			return;
-		} else if (unit.value == 5 && this.validTargets.includes(targetHexId)) {
-			this.performRangedAttack(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
-			return;
-		} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
+		} else if (unit.value == 2 && this.validTargets.includes(targetHexId)) {
+	this.performRangedAttack(this.selectedUnitHexId, targetHexId);
+	this.endTurn();
+	return;
+} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
 			this.performComandConquer(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
@@ -717,10 +735,13 @@ function alpineHexDiceTacticGame() { return {
 			case 'MOVE': return true;
 			case 'REROLL': return true;
 			case 'GUARD': return true;
-			case 'RANGED_ATTACK': return unit.value === 5;
-			case 'SPECIAL_ATTACK': return unit.value === 6;
-			case 'BRAVE_CHARGE': return unit.value === 1;
-			case 'MERGE': return true;
+			case 'RANGED_ATTACK': return unit.value === 2;
+case 'SPECIAL_ATTACK': return unit.value === 6;
+// DEPRECATED: Brave Charge not in v1.5 rules
+/*
+case 'BRAVE_CHARGE': return unit.value === 1;
+*/
+case 'MERGE': return true;
 			default: return false;
 		}
 	},
@@ -1052,7 +1073,7 @@ function alpineHexDiceTacticGame() { return {
 	calcValidRangedTargets(attackerHexId, state, isHovering) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
-		if (!attackerUnit || attackerUnit.value !== 5 || !attackerHex) return [];
+		if (!attackerUnit || attackerUnit.value !== 2 || !attackerHex) return [];
 
 		let [min, max] = attackerUnit.range.split('-').map(x => parseInt(x, 10));
 		let targets = [];
@@ -1120,7 +1141,8 @@ function alpineHexDiceTacticGame() { return {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
 
-		if (!attackerUnit || ![1, 6].includes(attackerUnit.value) || !attackerHex) return [];
+		if (!attackerUnit || ![6].includes(attackerUnit.value) || !attackerHex) return [];
+		// DEPRECATED: if (!attackerUnit || ![1, 6].includes(attackerUnit.value) || !attackerHex) return [];
 
 		let targets = [];
 		this.getNeighbors(attackerHex, state).forEach(neighborHex => {
@@ -1184,9 +1206,8 @@ function alpineHexDiceTacticGame() { return {
 					possibleMoves.push(this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state)?.id);
 				}
 
-				for (let i = 1; i <= unitStats.armor; i++) {
-					possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i, state)?.id);
-				}
+				// Backward 1 step
+				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state)?.id);
 				break;
 			case 'X': // Dice 2
 				for (let axis of axes_x) {
@@ -1229,11 +1250,33 @@ function alpineHexDiceTacticGame() { return {
 				}
 
 				break;
-			case '*': // Dice 5
-				this.getNeighbors(startHex, state)
-					.map(hex => hex.id)
-					.filter(hexId => !this.getUnitOnHex(hexId, state) || (unit.playerId == this.getUnitOnHex(hexId, state)?.playerId) )
-					.forEach(neighbor => possibleMoves.push(neighbor));
+			case '*': // Dice 2, 5
+				{
+					let q = [startHex];
+					let visited = new Set([startHex.id]);
+					for (let step = 1; step <= unitStats.distance; step++) {
+						let nextQ = [];
+						for (let curr of q) {
+							this.getNeighbors(curr, state).forEach(n => {
+								if (n && !visited.has(n.id)) {
+									const unitOnN = this.getUnitOnHex(n.id, state);
+									if (!unitOnN || unitOnN.isDeath) {
+										possibleMoves.push(n.id);
+										nextQ.push(n);
+										visited.add(n.id);
+									} else if (isForMerging && unitOnN.playerId === unit.playerId) {
+										possibleMoves.push(n.id);
+										visited.add(n.id);
+									} else if (!isForMerging && unitOnN.playerId !== unit.playerId) {
+										possibleMoves.push(n.id);
+										visited.add(n.id);
+									}
+								}
+							});
+						}
+						q = nextQ;
+					}
+				}
 				break;
 			case '0': // Dice 6
 				 // Dice 6 cannot initiate a move action, only special attack or move after combat.
@@ -1365,11 +1408,11 @@ function alpineHexDiceTacticGame() { return {
 		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, state); // Need to make calcValidMoves work with passed gameState
 		if (validMeleeMoves.includes(targetHex.id)) return true;
 
-		// Ranged attack (Dice 5)
-		if (attackerUnit.value === 5) {
-			const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
-			if (validRangedTargets.includes(targetHex.id)) return true;
-		}
+		// Ranged attack (Dice 2)
+if (attackerUnit.value === 2) {
+	const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
+	if (validRangedTargets.includes(targetHex.id)) return true;
+}
 
 		// Special attack (Dice 6)
 		if (attackerUnit.value === 6) {
@@ -1377,12 +1420,13 @@ function alpineHexDiceTacticGame() { return {
 			if (validSpecialTargets.includes(targetHex.id)) return true;
 		}
 
-		// Brave Charge (Dice 1)
-		if (attackerUnit.value === 1 && distance === 1) {
-			// Check if target has effective armor >= 6
-			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state); // Need to make calcDefenderEffectiveArmor work with passed gameState
-			if (defenderEffectiveArmor >= 6) return true;
-		}
+		// DEPRECATED: Brave Charge (Dice 1) not in v1.5 rules
+/*
+if (attackerUnit.value === 1 && distance === 1) {
+	const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state);
+	if (defenderEffectiveArmor >= 6) return true;
+}
+*/
 
 		return false;
 	},

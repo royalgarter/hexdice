@@ -105,6 +105,7 @@
 	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 border border-black text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="phase === 'SETUP_ROLL'">
+			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >[ Random Start ]</button>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="resetGame({isP2AI: true});rollInitialDice(1)" >[ Play Against AI ]</button>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0].initialRollDone" @click="rollInitialDice(0)" >[ Roll Player 1 Dice ]</button>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="rollInitialDice(1)" >[ Roll Player 2 Dice ]</button>
@@ -181,10 +182,6 @@
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" 
 				@click="initiateAction('SPECIAL_ATTACK')"
 			>[ SPL ATK ]</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'BRAVE_CHARGE')" 
-				@click="initiateAction('BRAVE_CHARGE')"
-			>[ BRAVE CHARGE ]</button>
 			<button class="border border-black p-1 hover:bg-black hover:text-white" 
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
 				@click="initiateAction('MERGE')"

@@ -452,12 +452,12 @@ function generateAllPossibleMoves(GAME, state) {
 		});
 
 		// 2. Ranged Attack (Dice 5)
-		if (unitValue === 5) {
-			const validRangedTargets = GAME.calcValidRangedTargets(unitHexId, state);
-			validRangedTargets.forEach(targetHexId => {
-				moves.push({ actionType: 'RANGED_ATTACK', unitHexId, targetHexId });
-			});
-		}
+		if (unitValue === 2) {
+	const validRangedTargets = GAME.calcValidRangedTargets(unitHexId, state);
+	validRangedTargets.forEach(targetHexId => {
+		moves.push({ actionType: 'RANGED_ATTACK', unitHexId, targetHexId });
+	});
+}
 
 		// 3. Command Conquer (Dice 6)
 		if (unitValue === 6) {
@@ -624,7 +624,7 @@ function proximityScore(GAME, hex, unit, state) {
 	const playerBaseHex = GAME.getHex(state.players[unit.playerId].baseHexId, state);
 
 	// B. Proximity to own base (typically for higher value, more defensive/control units)
-	if (unitValue >= 4) { // Dice 4, 5, 6 might prefer more defensive or central-control positions
+	if (unitValue >= 5) { // Dice 5 (Tanker), 6 (Balance) might prefer more defensive or central-control positions
 		if (playerBaseHex) {
 			const distanceToOwnBase = GAME.axialDistance(q, r, playerBaseHex.q, playerBaseHex.r);
 			// Reward for being closer to own base (smaller distance = higher score)
@@ -706,24 +706,24 @@ function performAIByPriority(GAME) {
         }
 
         // Check for Ranged Attacks (Dice 5)
-        if (unit.value === 5) {
-            const validRanged = GAME.calcValidRangedTargets(unit.hexId, state);
-            for (const targetHexId of validRanged) {
-                // Must be visible
-                if (visibleHexes.has(targetHexId)) {
-                    const targetUnit = GAME.getUnitOnHex(targetHexId, state);
-                    const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, state);
-                     // Dice 5 attack is 6.
-                    if (6 >= defenderArmor) {
-                         const priorityScore = 1 - (targetUnit.value / 100);
-                         if (priorityScore < bestPriority) {
-                            bestPriority = priorityScore;
-                            bestMove = { actionType: 'RANGED_ATTACK', unitHexId: unit.hexId, targetHexId: targetHexId };
-                         }
-                    }
-                }
+        if (unit.value === 2) {
+    const validRanged = GAME.calcValidRangedTargets(unit.hexId, state);
+    for (const targetHexId of validRanged) {
+        // Must be visible
+        if (visibleHexes.has(targetHexId)) {
+            const targetUnit = GAME.getUnitOnHex(targetHexId, state);
+            const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, state);
+             // Dice 2 attack is now 2.
+            if (2 >= defenderArmor) {
+                 const priorityScore = 1 - (targetUnit.value / 100);
+                 if (priorityScore < bestPriority) {
+                    bestPriority = priorityScore;
+                    bestMove = { actionType: 'RANGED_ATTACK', unitHexId: unit.hexId, targetHexId: targetHexId };
+                 }
             }
         }
+    }
+}
 
         // Check for Special Attacks (Dice 6)
         if (unit.value === 6) {
@@ -877,7 +877,7 @@ function calculateVisibility(GAME, state, playerIndex) {
         if (!unitHex) return;
 
         // Base Vision Range
-        let visionRange = (unit.value === 5) ? 3 : 2;
+        let visionRange = (unit.value === 2) ? 3 : 2;
         
         // Terrain Modifiers
         // Assuming hex objects have terrain property (Forest, Mountain, etc.)
