@@ -92,7 +92,7 @@
 						>
 						</span>
 						<span style="top:4px;right:-24px;" class="absolute text-yellow-700" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
-						<span style="top:-14px;right:-12px;" class="absolute text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)" :class="calcDefenderEffectiveArmor(hex.id) > getUnitOnHex(hex.id) ? 'font-bold': ''"></span>
+						<span style="top:-14px;right:-12px;" class="absolute text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)" :class="calcDefenderEffectiveArmor(hex.id) > getUnitOnHex(hex.id).armor ? 'font-bold': ''"></span>
 						<span style="top:-14px;right:12px;" class="absolute text-red-700" x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id).attack"></span>
 						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
