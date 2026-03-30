@@ -1,0 +1,91 @@
+/**
+ * Random-Greedy AI Strategy for Hex Dice
+ * Picks a random unit that can act, then picks its most greedy move.
+ */
+
+function performAIByRandom(GAME) {
+    if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
+
+    console.log("AI (Random Greedy) thinking...");
+    const state = GAME.cloneState();
+    const currentPlayer = state.players[state.currentPlayerIndex];
+    
+    // Identify AI Units that can act
+    const availableUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+
+    if (availableUnits.length === 0) {
+        console.log("AI has no units to act. Ending turn.");
+        applyMove(GAME, { actionType: 'END_TURN' });
+        return;
+    }
+
+    // 1. Pick a random unit from available units
+    const randomUnitIndex = Math.floor(Math.random() * availableUnits.length);
+    const unit = availableUnits[randomUnitIndex];
+
+    // 2. Find all moves for this unit
+    const allMoves = generateAllPossibleMoves(GAME, state);
+    const unitMoves = allMoves.filter(m => m.unitHexId === unit.hexId);
+
+    if (unitMoves.length === 0) {
+        // This specific unit has no moves (shouldn't happen if generateAllPossibleMoves is correct)
+        // Fallback to End Turn or pick another unit
+        applyMove(GAME, { actionType: 'END_TURN' });
+        return;
+    }
+
+    // 3. Score moves to find the "greediest"
+    const opponentIndex = (state.currentPlayerIndex + 1) % state.players.length;
+    const opponentBaseHexId = state.players[opponentIndex].baseHexId;
+    const opponentBaseHex = GAME.getHex(opponentBaseHexId, state);
+
+    unitMoves.forEach(move => {
+        let score = 0;
+        
+        // Attack that kills
+        const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+        if (targetUnit && targetUnit.playerId !== state.currentPlayerIndex) {
+            const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
+            let attackValue = unit.attack;
+            
+            if (move.actionType === 'RANGED_ATTACK') attackValue = 2; // Fixed for Dice 2
+            if (move.actionType === 'COMMAND_CONQUER') attackValue = 6; // Fixed for Dice 6
+
+            if (attackValue >= defenderArmor) {
+                score += 1000 + targetUnit.value;
+            } else {
+                score += 100 + targetUnit.value; // Regular attack
+            }
+        }
+
+        // Advancement towards enemy base
+        if (move.actionType === 'MOVE' && !targetUnit && opponentBaseHex) {
+            const targetHex = GAME.getHex(move.targetHexId, state);
+            const dist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
+            score += (50 - dist); // Higher score for being closer
+        }
+
+        // Merge bonus
+        if (move.actionType === 'MERGE') {
+            const targetUnitForMerge = GAME.getUnitOnHex(move.targetHexId, state);
+            if (targetUnitForMerge) {
+                const sumValue = unit.value + targetUnitForMerge.value;
+                score -= (sumValue > 6) ? 500 : 200;
+            }
+        }
+
+        // Guard
+        if (move.actionType === 'GUARD') {
+            score -= 50;
+        }
+
+        move.greedyScore = score;
+    });
+
+    // 4. Sort and pick the best (most greedy)
+    unitMoves.sort((a, b) => b.greedyScore - a.greedyScore);
+    const bestMove = unitMoves[0];
+
+    console.log("AI Random Greedy selected unit at", unit.hexId, "and move:", bestMove);
+    applyMove(GAME, bestMove);
+}

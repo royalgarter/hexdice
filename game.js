@@ -723,10 +723,10 @@ if (unit.value == 6) {
 			// New merge unit could take action if sum > 6
 			return;
 		} else if (unit.value == 2 && this.validTargets.includes(targetHexId)) {
-	this.performRangedAttack(this.selectedUnitHexId, targetHexId);
-	this.endTurn();
-	return;
-} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
+			this.performRangedAttack(this.selectedUnitHexId, targetHexId);
+			this.endTurn();
+			return;
+		} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
 			this.performComandConquer(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
@@ -748,12 +748,9 @@ if (unit.value == 6) {
 			case 'REROLL': return true;
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
-case 'SPECIAL_ATTACK': return unit.value === 6;
-// DEPRECATED: Brave Charge not in v1.5 rules
-/*
-case 'BRAVE_CHARGE': return unit.value === 1;
-*/
-case 'MERGE': return true;
+			case 'SPECIAL_ATTACK': return unit.value === 6;
+			case 'BRAVE_CHARGE': return unit.value === 1;
+			case 'MERGE': return true;
 			default: return false;
 		}
 	},
