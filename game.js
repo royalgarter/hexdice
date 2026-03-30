@@ -596,6 +596,7 @@ if (this.hovering.unit?.value == 6) {
 	selectUnit(hexId, state) {
 		if (state) return;
 		const unit = this.getUnitOnHex(hexId);
+
 		if (!unit || unit.playerId !== this.currentPlayerIndex || unit.hasMovedOrAttackedThisTurn) {
 			if(unit && unit.hasMovedOrAttackedThisTurn) this.addLog("This unit has already acted this turn.");
 			this.deselectUnit();
@@ -608,10 +609,10 @@ if (this.hovering.unit?.value == 6) {
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 
 		if (unit.value == 2) {
-	this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
-}
+			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
+		}
 
-if (unit.value == 6) {
+		if (unit.value == 6) {
 			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 		}
 
@@ -685,7 +686,7 @@ if (unit.value == 6) {
 		if (!this.actionMode) return;
 
 		const unit = this.getUnitOnHex(this.selectedUnitHexId);
-		const target = this.getUnitOnHex(this.targetHexId);
+		const target = this.getUnitOnHex(targetHexId);
 		const action = this.actionMode;
 		this.actionMode = null; // Clear action mode first
 
@@ -700,7 +701,15 @@ if (unit.value == 6) {
 			return;
 		}
 
-		if (this.validMoves.includes(targetHexId)) {
+		if (unit.value == 2 && this.validTargets.includes(targetHexId)) {
+			this.performRangedAttack(this.selectedUnitHexId, targetHexId);
+			this.endTurn();
+			return;
+		} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
+			this.performComandConquer(this.selectedUnitHexId, targetHexId);
+			this.endTurn();
+			return;
+		} else if (this.validMoves.includes(targetHexId)) {
 			if (unit.playerId == target?.playerId) {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
 				// New merge unit could take action if sum > 6
@@ -719,15 +728,6 @@ if (unit.value == 6) {
 
 			return;
 		} else if (this.validMerges.includes(targetHexId)){
-			this.performMerge(this.selectedUnitHexId, targetHexId);
-			// New merge unit could take action if sum > 6
-			return;
-		} else if (unit.value == 2 && this.validTargets.includes(targetHexId)) {
-			this.performRangedAttack(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
-			return;
-		} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
-			this.performComandConquer(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
 		}
@@ -1218,7 +1218,7 @@ if (unit.value == 6) {
 				// Backward 1 step
 				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state)?.id);
 				break;
-			case 'X': // Dice 2
+			case 'X': // Dice 4
 				for (let axis of axes_x) {
 					for (let i = 1; i <= unitStats.distance; i++) {
 						possibleMoves.push(this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i, state)?.id);
@@ -1276,7 +1276,7 @@ if (unit.value == 6) {
 									} else if (isForMerging && unitOnN.playerId === unit.playerId) {
 										possibleMoves.push(n.id);
 										visited.add(n.id);
-									} else if (!isForMerging && unitOnN.playerId !== unit.playerId) {
+									} else if (!isForMerging && unitOnN.playerId !== unit.playerId && !unit.range) {
 										possibleMoves.push(n.id);
 										visited.add(n.id);
 									}
@@ -1394,7 +1394,7 @@ if (unit.value == 6) {
 		const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
 		const unit = this.getUnitOnHex(hexId, state);
 
-		if (!unit || unit.isDeath) return;
+		if (!unit || unit.isDeath) return '';
 
 		this.calcDefenderEffectiveArmor(hexId, state);
 

@@ -4,7 +4,10 @@
  */
 
 function performAIByRandom(GAME) {
-    if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
+    if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) {
+        console.log("AI stupid. Ending turn.");
+        return;
+    }
 
     console.log("AI (Random Greedy) thinking...");
     const state = GAME.cloneState();
@@ -30,6 +33,7 @@ function performAIByRandom(GAME) {
     if (unitMoves.length === 0) {
         // This specific unit has no moves (shouldn't happen if generateAllPossibleMoves is correct)
         // Fallback to End Turn or pick another unit
+        console.log("AI ending turn.");
         applyMove(GAME, { actionType: 'END_TURN' });
         return;
     }
@@ -76,7 +80,46 @@ function performAIByRandom(GAME) {
 
         // Guard
         if (move.actionType === 'GUARD') {
-            score -= 50;
+            score -= 500;
+        }
+
+        // --- Threat Assessment ---
+        // Evaluate the safety of the destination hex
+        const nextState = applyMove(GAME, move, state);
+        if (nextState) {
+            const aiUnitNext = nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+
+            if (aiUnitNext && !aiUnitNext.isDeath) {
+                let isThreatened = false;
+                let canBeKilled = false;
+
+                // Check all opponents
+                for (let pIdx = 0; pIdx < nextState.players.length; pIdx++) {
+                    if (pIdx === state.currentPlayerIndex) continue;
+
+                    const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
+                    for (const opp of opponents) {
+                        if (GAME.canUnitAttackTarget(opp, aiUnitNext, nextState)) {
+                            isThreatened = true;
+
+                            const defenderArmor = GAME.calcDefenderEffectiveArmor(aiUnitNext.hexId, nextState);
+                            const oppAttack = opp.attack;
+
+                            if (oppAttack >= defenderArmor) {
+                                canBeKilled = true;
+                                break; 
+                            }
+                        }
+                    }
+                    if (canBeKilled) break;
+                }
+
+                if (canBeKilled) {
+                    score -= 1000; // Large penalty for potentially being killed
+                } else if (isThreatened) {
+                    score -= 250; // Moderate penalty for being attackable
+                }
+            }
         }
 
         move.greedyScore = score;

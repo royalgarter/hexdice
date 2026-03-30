@@ -81,8 +81,8 @@
 					<!-- @mouseenter="hoverHex(hex.id)" @mouseleave="hoverHex()" -->
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
-					<div class="hex-content text-xs text-center font-bold relative"
-						@click="unitstat=hex.id"
+					<div class="hex-content text-xs text-center relative"
+						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
 					>
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
@@ -95,7 +95,7 @@
 						>
 						</span>
 						<span style="top:4px;right:-24px;" class="absolute text-yellow-700" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
-						<span style="top:-14px;right:-12px;" class="absolute text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)" :class="calcDefenderEffectiveArmor(hex.id) > getUnitOnHex(hex.id).armor ? 'font-bold': ''"></span>
+						<span style="top:-14px;right:-12px;" class="absolute text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)" :class="getUnitOnHex(hex.id).effectiveArmor > getUnitOnHex(hex.id).armor ? 'text-sm font-bold' : ''"></span>
 						<span style="top:-14px;right:12px;" class="absolute text-red-700" x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id).attack"></span>
 						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
 					</div>
@@ -241,7 +241,11 @@
 	<!-- Message Log -->
 	<div class="fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
-			<p x-text="log.message"></p>
+			<p x-text="log.message" :class="[
+				(log.id == messageLog[0].id) ? 'font-bold text-sm' : '',
+				log.message.includes('Player 1') || log.message.includes('P1') ? 'text-blue-500' : '',
+				log.message.includes('Player 2') || log.message.includes('P2') ? 'text-red-500' : '',
+			].join(' ')"></p>
 		</template>
 	</div>
 </body>

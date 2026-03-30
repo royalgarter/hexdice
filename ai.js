@@ -59,16 +59,16 @@ function generateAllPossibleMoves(GAME, state) {
 			});
 		}
 		
-		// 5. Merges
-		const validMerges = GAME.calcValidMoves(unitHexId, true, state);
-		validMerges.forEach(targetHexId => {
-			moves.push({ actionType: 'MERGE', unitHexId, targetHexId });
-		});
+		// // 5. Merges
+		// const validMerges = GAME.calcValidMoves(unitHexId, true, state);
+		// validMerges.forEach(targetHexId => {
+		// 	moves.push({ actionType: 'MERGE', unitHexId, targetHexId });
+		// });
 
-		// 7. Guard
-		if (!unit.isGuarding) {
-			moves.push({ actionType: 'GUARD', unitHexId });
-		}
+		// // 7. Guard
+		// if (!unit.isGuarding) {
+		// 	moves.push({ actionType: 'GUARD', unitHexId });
+		// }
 	});
 
 	return moves;
@@ -94,6 +94,8 @@ function applyMove(GAME, move, state) {
 			GAME.performGuard(move.unitHexId, applyState);
 			break;
 		case 'END_TURN':
+			GAME.addLog('AI END_TURN')
+			GAME.endTurn();
 			break;
 	}
 
