@@ -334,7 +334,7 @@ function alpineHexDiceTacticGame() { return {
 		if (unit) {
 			const {value, playerId} = unit;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/fe_mystery/d${value}${playerId == 0 ? 'blue' : 'red' }.gif");`);
+			style.push(`background-image: url("/assets/sprites/fe_awakening_sum6/d${value}${playerId == 0 ? 'blue' : 'red' }.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
