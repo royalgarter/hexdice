@@ -3,7 +3,7 @@
  */
 
 function performAIByWeight(GAME) {
-	return performAIByRandom(GAME);
+	return performAIByHeuristic(GAME);
 	
 	// Priority order: Priority Bot -> Random Greedy -> Minimax (Fallback)
 	if (typeof performAIByPriority === 'function') {
