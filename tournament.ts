@@ -7,12 +7,12 @@
  * which strategy performs best.
  *
  * Usage:
- *   deno run --allow-all simulate-heuristics.ts --games=10 --output=heuristic-results
- *   deno run --allow-all simulate-heuristics.ts -g=20 -o=tournament -v
+ *   deno run --allow-all tournament.ts --games=10 --output=logs
+ *   deno run --allow-all tournament.ts -g=20 -o=tournaments -v
  *
  * Options:
- *   --games, -g     Number of games per matchup (default: 10)
- *   --output, -o    Output directory for results (default: heuristic-results)
+ *   --games, -g     Number of games per matchup (default: 1)
+ *   --output, -o    Output directory for results (default: tournaments)
  *   --verbose, -v   Verbose output (default: false)
  *   --profiles      Comma-separated list of profiles to test (default: all)
  */
@@ -41,8 +41,8 @@ const args = parse(Deno.args, {
         h: "help",
     },
     default: {
-        games: 10,
-        output: "heuristic-results",
+        games: 1,
+        output: "tournaments",
         verbose: false,
     },
 });
@@ -52,20 +52,20 @@ if (args.help) {
 Hex Dice Heuristic Profile Tournament
 
 Usage:
-  deno run --allow-all simulate-heuristics.ts [options]
+  deno run --allow-all tournament.ts [options]
 
 Options:
   --games, -g <n>      Number of games per matchup (default: 10)
-  --output, -o <dir>   Output directory for results (default: heuristic-results)
+  --output, -o <dir>   Output directory for results (default: tournaments)
   --verbose, -v        Show detailed move-by-move output
   --profiles <list>    Comma-separated profiles to test (default: all)
                        Available: baseline, berserker, turtle, tactician, swarmer, assassin
   --help, -h           Show this help message
 
 Examples:
-  deno run --allow-all simulate-heuristics.ts -g=20
-  deno run --allow-all simulate-heuristics.ts --games=10 --profiles=baseline,berserker,turtle
-  deno run --allow-all simulate-heuristics.ts -g=5 -o=my-tournament -v
+  deno run --allow-all tournament.ts -g=20
+  deno run --allow-all tournament.ts --games=10 --profiles=baseline,berserker,turtle
+  deno run --allow-all tournament.ts -g=5 -o=my-tournament -v
 `);
     Deno.exit(0);
 }
@@ -468,7 +468,7 @@ function calculateStandings(matchups: MatchupResult[], profiles: string[]): Prof
 // Main tournament runner
 async function runTournament() {
     const numGames = parseInt(args.games as string) || 10;
-    const outputDir = (args.output as string) || "heuristic-results";
+    const outputDir = (args.output as string) || "tournaments";
     const verbose = !!args.verbose;
 
     // Parse profiles to test

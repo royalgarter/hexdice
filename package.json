@@ -2,10 +2,10 @@
   "scripts": {
     "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts",
     "simulate": "deno run --allow-all simulate.ts",
-    "simulate:heuristics": "deno run --allow-all simulate-heuristics.ts",
-    "simulate:heuristics:test": "deno run --allow-all simulate-heuristics.ts -g=5 --profiles=baseline,berserker,turtle",
-    "simulate:heuristics:full": "deno run --allow-all simulate-heuristics.ts -g=20",
+    "tournament": "deno run --allow-all tournament.ts",
+    "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",
+    "tournament:full": "deno run --allow-all tournament.ts -g=20",
     "replay": "deno run --allow-read replay.ts",
-    "replay:latest": "deno run --allow-read replay.ts heuristic-results/tournament_*.json"
+    "replay:latest": "deno run --allow-read replay.ts tournaments/*.json"
   }
 }
