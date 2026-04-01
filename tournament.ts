@@ -8,12 +8,14 @@
  *
  * Usage:
  *   deno run --allow-all tournament.ts --games=10 --output=logs
- *   deno run --allow-all tournament.ts -g=20 -o=tournaments -v
+ *   deno run --allow-all tournament.ts -g=20 -o=tournaments -v -q -p=4
  *
  * Options:
  *   --games, -g     Number of games per matchup (default: 1)
  *   --output, -o    Output directory for results (default: tournaments)
  *   --verbose, -v   Verbose output (default: false)
+ *   --quiet, -q     Quiet mode - suppress AI move logs (default: false)
+ *   --parallel, -p  Number of parallel games (default: 1)
  *   --profiles      Comma-separated list of profiles to test (default: all)
  */
 
@@ -32,18 +34,22 @@ const PROFILE_NAMES = [
 
 // CLI Arguments
 const args = parse(Deno.args, {
-    string: ["games", "output", "profiles"],
-    boolean: ["verbose", "help"],
+    string: ["games", "output", "profiles", "parallel"],
+    boolean: ["verbose", "quiet", "help"],
     alias: {
         g: "games",
         o: "output",
         v: "verbose",
+        q: "quiet",
+        p: "parallel",
         h: "help",
     },
     default: {
         games: 1,
         output: "tournaments",
         verbose: false,
+        quiet: false,
+        parallel: 1,
     },
 });
 
@@ -58,6 +64,8 @@ Options:
   --games, -g <n>      Number of games per matchup (default: 10)
   --output, -o <dir>   Output directory for results (default: tournaments)
   --verbose, -v        Show detailed move-by-move output
+  --quiet, -q          Quiet mode - suppress AI move logs (faster)
+  --parallel, -p <n>   Number of parallel games (default: 1)
   --profiles <list>    Comma-separated profiles to test (default: all)
                        Available: baseline, berserker, turtle, tactician, swarmer, assassin
   --help, -h           Show this help message
@@ -66,6 +74,7 @@ Examples:
   deno run --allow-all tournament.ts -g=20
   deno run --allow-all tournament.ts --games=10 --profiles=baseline,berserker,turtle
   deno run --allow-all tournament.ts -g=5 -o=my-tournament -v
+  deno run --allow-all tournament.ts -g=10 -q -p=4  # Fast mode: quiet + 4 parallel
 `);
     Deno.exit(0);
 }
@@ -121,12 +130,15 @@ function stubBrowserAPIs() {
 // Logger for simulation
 class SimulationLogger {
     private verbose: boolean;
+    private quiet: boolean;
 
-    constructor(verbose: boolean = false) {
+    constructor(verbose: boolean = false, quiet: boolean = false) {
         this.verbose = verbose;
+        this.quiet = quiet;
     }
 
     log(message: string, type: string = "game") {
+        if (this.quiet) return; // Suppress all logs in quiet mode
         if (this.verbose || type === "result") {
             const prefix = type === "ai" ? "[AI]" : type === "result" ? "[🏆]" : "";
             console.log(`${prefix} ${message}`);
@@ -207,9 +219,10 @@ function runHeuristicGame(
     profile1: string,
     profile2: string,
     verbose: boolean,
+    quiet: boolean,
     engine: any
 ): { winner: number | -1; winnerReason: string; totalTurns: number } {
-    const logger = new SimulationLogger(verbose);
+    const logger = new SimulationLogger(verbose, quiet);
 
     const game = createSimulationGame(logger, engine);
 
@@ -233,11 +246,11 @@ function runHeuristicGame(
         const currentPlayerIdx = this.currentPlayerIndex;
         const profileName = currentPlayerIdx === 0 ? profile1 : profile2;
 
-        logger.log(`P${currentPlayerIdx + 1} (${profileName}) thinking...`, "ai");
+        if (verbose) logger.log(`P${currentPlayerIdx + 1} (${profileName}) thinking...`, "ai");
 
         try {
             if (engine.performAIByHeuristic) {
-                engine.performAIByHeuristic(this, profileName);
+                engine.performAIByHeuristic(this, profileName, verbose);
             } else {
                 logger.log(`AI function not found!`, "error");
                 this.endTurn();
@@ -372,9 +385,10 @@ function runMatchup(
     profile2: string,
     numGames: number,
     verbose: boolean,
+    quiet: boolean,
     engine: any
 ): MatchupResult {
-    console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
+    if (!quiet) console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
 
     let p1Wins = 0;
     let p2Wins = 0;
@@ -386,7 +400,7 @@ function runMatchup(
             console.log(`\n  Game ${i}/${numGames}`);
         }
 
-        const result = runHeuristicGame(i, profile1, profile2, verbose, engine);
+        const result = runHeuristicGame(i, profile1, profile2, verbose, quiet, engine);
 
         if (result.winner === 0) p1Wins++;
         else if (result.winner === 1) p2Wins++;
@@ -394,14 +408,14 @@ function runMatchup(
 
         totalTurns += result.totalTurns;
 
-        if (!verbose) {
+        if (!verbose && !quiet) {
             const bar1 = '█'.repeat(Math.round((p1Wins / i) * 20));
             const bar2 = '█'.repeat(Math.round((p2Wins / i) * 20));
             console.log(`\r  Progress: ${i}/${numGames} | ${profile1}: ${p1Wins} ${bar1} | ${profile2}: ${p2Wins} ${bar2} | Draws: ${draws}`);
         }
     }
 
-    if (!verbose) console.log();
+    if (!verbose && !quiet) console.log();
 
     return {
         profile1,
@@ -465,11 +479,96 @@ function calculateStandings(matchups: MatchupResult[], profiles: string[]): Prof
         .sort((a, b) => b.winRate - a.winRate);
 }
 
+/**
+ * Run a matchup with parallel game execution
+ */
+async function runMatchupParallel(
+    profile1: string,
+    profile2: string,
+    numGames: number,
+    verbose: boolean,
+    quiet: boolean,
+    parallel: number,
+    engine: any
+): Promise<MatchupResult> {
+    if (!quiet) console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
+
+    let p1Wins = 0;
+    let p2Wins = 0;
+    let draws = 0;
+    let totalTurns = 0;
+
+    // Run games in parallel batches
+    const batchSize = parallel;
+    const batches: Promise<{ winner: number | -1; totalTurns: number }[]>[] = [];
+
+    for (let i = 0; i < numGames; i += batchSize) {
+        const batchPromises: Promise<{ winner: number | -1; totalTurns: number }>[] = [];
+        const gamesInBatch = Math.min(batchSize, numGames - i);
+
+        for (let j = 0; j < gamesInBatch; j++) {
+            batchPromises.push(
+                runHeuristicGameAsync(i + j + 1, profile1, profile2, verbose, quiet, engine)
+            );
+        }
+
+        batches.push(Promise.all(batchPromises));
+    }
+
+    // Process batches sequentially to avoid overwhelming the system
+    for (const batchPromise of batches) {
+        const batchResults = await batchPromise;
+        for (const result of batchResults) {
+            if (result.winner === 0) p1Wins++;
+            else if (result.winner === 1) p2Wins++;
+            else draws++;
+            totalTurns += result.totalTurns;
+        }
+
+        if (!quiet) {
+            const totalProcessed = Math.min(numGames, p1Wins + p2Wins + draws);
+            const bar1 = '█'.repeat(Math.round((p1Wins / totalProcessed) * 20));
+            const bar2 = '█'.repeat(Math.round((p2Wins / totalProcessed) * 20));
+            console.log(`\r  Progress: ${totalProcessed}/${numGames} | ${profile1}: ${p1Wins} ${bar1} | ${profile2}: ${p2Wins} ${bar2} | Draws: ${draws}`);
+        }
+    }
+
+    if (!quiet) console.log();
+
+    return {
+        profile1,
+        profile2,
+        p1Wins,
+        p2Wins,
+        draws,
+        totalGames: numGames,
+        p1WinRate: p1Wins / numGames,
+        p2WinRate: p2Wins / numGames,
+        avgTurns: totalTurns / numGames,
+    };
+}
+
+/**
+ * Async wrapper for runHeuristicGame
+ */
+async function runHeuristicGameAsync(
+    gameNumber: number,
+    profile1: string,
+    profile2: string,
+    verbose: boolean,
+    quiet: boolean,
+    engine: any
+): Promise<{ winner: number | -1; winnerReason: string; totalTurns: number }> {
+    return runHeuristicGame(gameNumber, profile1, profile2, verbose, quiet, engine);
+}
+
 // Main tournament runner
 async function runTournament() {
     const numGames = parseInt(args.games as string) || 10;
     const outputDir = (args.output as string) || "tournaments";
     const verbose = !!args.verbose;
+    const quiet = !!args.quiet;
+    const parallel = parseInt(args.parallel as string) || 1;
 
     // Parse profiles to test
     let profilesToTest = PROFILE_NAMES;
@@ -487,13 +586,17 @@ async function runTournament() {
     console.log("╚════════════════════════════════════════╝");
     console.log(`Games per matchup: ${numGames}`);
     console.log(`Profiles: ${profilesToTest.join(', ')}`);
+    console.log(`Parallel: ${parallel}`);
+    console.log(`Quiet: ${quiet}`);
     console.log(`Verbose: ${verbose}`);
     console.log("");
 
     // Load game engine
-    console.log("Loading game engine...");
+    if (!quiet) {
+        console.log("Loading game engine...");
+    }
     const engine = await loadGameEngine();
-    console.log("Engine loaded.\n");
+    if (!quiet) console.log("Engine loaded.\n");
 
     // Ensure output directory exists
     await ensureDir(outputDir);
@@ -516,19 +619,55 @@ async function runTournament() {
     };
 
     // Run all matchups (round-robin)
-    for (let i = 0; i < profilesToTest.length; i++) {
-        for (let j = i + 1; j < profilesToTest.length; j++) {
-            const matchup = runMatchup(
-                profilesToTest[i],
-                profilesToTest[j],
-                numGames,
-                verbose,
-                engine
-            );
-            results.matchups.push(matchup);
-            results.summary.totalGames += matchup.totalGames;
-            results.summary.totalTurns += matchup.avgTurns * matchup.totalGames;
+    const matchups: MatchupResult[] = [];
+    
+    if (parallel > 1) {
+        // Parallel execution
+        console.log(`Running tournament with ${parallel} parallel games...`);
+        const matchupPromises: Promise<MatchupResult>[] = [];
+        
+        for (let i = 0; i < profilesToTest.length; i++) {
+            for (let j = i + 1; j < profilesToTest.length; j++) {
+                // Run matchups in parallel batches
+                matchupPromises.push(
+                    runMatchupParallel(
+                        profilesToTest[i],
+                        profilesToTest[j],
+                        numGames,
+                        verbose,
+                        quiet,
+                        parallel,
+                        engine
+                    )
+                );
+            }
         }
+        
+        const resolvedMatchups = await Promise.all(matchupPromises);
+        matchups.push(...resolvedMatchups);
+    } else {
+        // Sequential execution
+        for (let i = 0; i < profilesToTest.length; i++) {
+            for (let j = i + 1; j < profilesToTest.length; j++) {
+                const matchup = runMatchup(
+                    profilesToTest[i],
+                    profilesToTest[j],
+                    numGames,
+                    verbose,
+                    quiet,
+                    engine
+                );
+                matchups.push(matchup);
+            }
+        }
+    }
+    
+    results.matchups = matchups;
+
+    // Calculate summary
+    for (const matchup of matchups) {
+        results.summary.totalGames += matchup.totalGames;
+        results.summary.totalTurns += matchup.avgTurns * matchup.totalGames;
     }
 
     // Calculate standings

@@ -35,7 +35,7 @@ const DEFAULT_PROFILE = {
     unitSelection: 'leastMoved'
 };
 
-function performAIByHeuristic(GAME, profileName = 'baseline') {
+function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) {
         console.log("AI stupid. Ending turn.");
         return;
@@ -49,7 +49,9 @@ function performAIByHeuristic(GAME, profileName = 'baseline') {
         profile = heuristicProfiles[profileName];
     }
 
-    // console.log(`AI (Heuristic: ${profile.name}) thinking...`);
+    if (verbose) {
+        console.log(`AI (Heuristic: ${profile.name}) thinking...`);
+    }
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
     const opponentIndex = (state.currentPlayerIndex + 1) % state.players.length;
@@ -87,7 +89,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline') {
 
     // Execute moves by priority order from profile
     for (const priority of profile.priorityOrder) {
-        const result = executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId);
+        const result = executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId, verbose);
         if (result) return;
     }
 
@@ -99,7 +101,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline') {
 /**
  * Execute moves for a given priority category
  */
-function executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId) {
+function executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId, verbose = true) {
     const w = profile.weights;
 
     switch (priority) {
@@ -108,7 +110,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
             const captureMoves = scoredMoves.filter(m => m.canCapture);
             if (captureMoves.length > 0) {
                 captureMoves.sort((a, b) => b.captureScore - a.captureScore);
-                console.log(`AI Heuristic (${profile.name}): Capturing base!`, captureMoves[0].move);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Capturing base!`, captureMoves[0].move);
                 applyMove(GAME, captureMoves[0].move);
                 return true;
             }
@@ -120,12 +122,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
             const killMoves = scoredMoves.filter(m => m.canKillEnemy);
             if (killMoves.length > 0) {
                 killMoves.sort((a, b) => {
-                    // Apply risk tolerance: berserker ignores safety more
                     const safetyWeight = (1 - profile.riskTolerance) * 2;
                     if (b.isSafe !== a.isSafe) return (b.isSafe - a.isSafe) * safetyWeight;
                     return (b.targetValue || 0) - (a.targetValue || 0);
                 });
-                console.log(`AI Heuristic (${profile.name}): Found kill opportunity!`, killMoves[0].move);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Found kill opportunity!`, killMoves[0].move);
                 applyMove(GAME, killMoves[0].move);
                 return true;
             }
@@ -133,7 +134,6 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
         }
 
         case 'attack': {
-            // Find moves that attack but don't kill
             const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
             if (attackMoves.length > 0) {
                 attackMoves.sort((a, b) => {
@@ -141,7 +141,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
                     if (b.isSafe !== a.isSafe) return (b.isSafe - a.isSafe) * safetyWeight;
                     return (b.targetValue || 0) - (a.targetValue || 0);
                 });
-                console.log(`AI Heuristic (${profile.name}): Found attack opportunity!`, attackMoves[0].move);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Found attack opportunity!`, attackMoves[0].move);
                 applyMove(GAME, attackMoves[0].move);
                 return true;
             }
@@ -149,10 +149,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
         }
 
         case 'dodge': {
-            // Find moves that escape danger
             const threatenedMoves = scoredMoves.filter(m => m.isThreatened || m.canBeKilled);
             if (threatenedMoves.length > 0) {
-                // Group by unit
                 const unitEscapeMoves = new Map();
                 threatenedMoves.forEach(m => {
                     if (!unitEscapeMoves.has(m.unit.id)) {
@@ -161,7 +159,6 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
                     unitEscapeMoves.get(m.unit.id).push(m);
                 });
 
-                // Find best escape move
                 let bestEscape = null;
                 let bestEscapeScore = -Infinity;
 
@@ -185,7 +182,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
                 }
 
                 if (bestEscape) {
-                    console.log(`AI Heuristic (${profile.name}): Dodging to safety!`, bestEscape.move);
+                    if (verbose) console.log(`AI Heuristic (${profile.name}): Dodging to safety!`, bestEscape.move);
                     applyMove(GAME, bestEscape.move);
                     return true;
                 }
@@ -194,41 +191,35 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
         }
 
         case 'position': {
-            // Strategic positioning moves
             const strategicMoves = scoredMoves.filter(m => !m.isThreatened);
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
                     let positionScore = m.score;
                     const w = profile.weights;
 
-                    // Apply profile weights
                     if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
                     if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
 
-                    // Advance toward enemy base
                     if (m.move.actionType === 'MOVE' && opponentBaseHex) {
                         const targetHex = GAME.getHex(m.move.targetHexId, state);
                         const dist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
                         positionScore += (w.advanceBonus * (5 - Math.min(dist, 5)));
                     }
 
-                    // Capture bonus (moving to enemy base)
                     if (m.move.targetHexId === opponentBaseHexId) {
                         positionScore += w.captureBonus;
                     }
 
-                    // Merge penalty/bonus
                     if (m.move.actionType === 'MERGE') {
                         const targetUnit = GAME.getUnitOnHex(m.move.targetHexId, state);
                         if (targetUnit) {
                             const sumValue = m.unit.value + targetUnit.value;
                             if (sumValue > 6) {
-                                positionScore += w.mergeOver6Penalty; // Can be positive for swarmer
+                                positionScore += w.mergeOver6Penalty;
                             }
                         }
                     }
 
-                    // Guard penalty
                     if (m.move.actionType === 'GUARD') {
                         positionScore += w.guardPenalty;
                     }
@@ -237,7 +228,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
                 });
 
                 strategicMoves.sort((a, b) => b.positionScore - a.positionScore);
-                console.log(`AI Heuristic (${profile.name}): Strategic positioning`, strategicMoves[0].move);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Strategic positioning`, strategicMoves[0].move);
                 applyMove(GAME, strategicMoves[0].move);
                 return true;
             }
