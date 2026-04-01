@@ -1059,6 +1059,15 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- CALCULATE --- */
+	/**
+	 * Calculate valid targets for ranged attack (Dice 2 Archer).
+	 * Ranged attack is blocked if any enemy unit is adjacent to the attacker.
+	 * Requires clear line of sight (no units blocking the path).
+	 * @param {number} attackerHexId - Hex ID of the attacking unit
+	 * @param {object} state - Optional game state for simulation
+	 * @param {boolean} isHovering - If true, show all hexes in range (for UI preview)
+	 * @returns {number[]} Array of valid target hex IDs
+	 */
 	calcValidRangedTargets(attackerHexId, state, isHovering) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
@@ -1068,6 +1077,7 @@ function alpineHexDiceTacticGame() { return {
 		max = max || min;
 		let targets = [];
 
+		// Archer cannot ranged attack if any enemy is adjacent (engaged in melee)
 		let isEnemyAdjacent = false;
 		for (let neighborHex of this.getNeighbors(attackerHex, state)) {
 			if (neighborHex) {
@@ -1089,44 +1099,78 @@ function alpineHexDiceTacticGame() { return {
 			) {
 				const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
 
-				// Check for straight line (simplified: axial distance check implies straight line on hex grid)
-				// More robust line of sight would check for blocking units/terrain. Not implemented here.
 				if (dist >= min && dist <= max) {
-					// Check Line of Sight: Iterate through hexes between attacker and target
-					let blocked = false;
-					const stepQ = (potentialTargetHex.q - attackerHex.q) / dist;
-					const stepR = (potentialTargetHex.r - attackerHex.r) / dist;
-
-					// Start checking from 1 hex away from attacker up to 1 hex away from target
-					for (let i = 1; i < dist; i++) {
-						let checkQ, checkR, intermediateHex, intermediateUnit;
-
-						checkQ = Math.ceil(attackerHex.q + stepQ * i);
-						checkR = Math.ceil(attackerHex.r + stepR * i);
-						intermediateHex = this.getHexByQR(checkQ, checkR, state);
-						intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
-						if (intermediateHex && (intermediateHex.id != attackerHexId) && intermediateUnit && !intermediateUnit.isDeath) {
-							blocked = true;
-							break;
-						}
-
-						checkQ = Math.floor(attackerHex.q + stepQ * i);
-						checkR = Math.floor(attackerHex.r + stepR * i);
-						intermediateHex = this.getHexByQR(checkQ, checkR, state);
-						intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
-						if (intermediateHex && (intermediateHex.id != attackerHexId) && intermediateUnit && !intermediateUnit.isDeath) {
-							blocked = true;
-							break;
-						}
+					// Check Line of Sight: iterate through hexes between attacker and target
+					if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) {
+						return; // Blocked, skip this target
 					}
-
-					if (!blocked) targets.push(potentialTargetHex.id);
+					targets.push(potentialTargetHex.id);
 				}
 			}
 		});
 
 		return targets;
 	},
+	/**
+	 * Check if there is a clear line of sight between two hexes.
+	 * Returns false if any non-dead unit blocks the path.
+	 * Uses proper hex linear interpolation for axial coordinates.
+	 * @param {object} fromHex - Starting hex
+	 * @param {object} toHex - Target hex
+	 * @param {number} attackerHexId - Attacker's hex ID (to exclude from blocking check)
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {boolean} True if path is clear
+	 */
+	hasLineOfSight(fromHex, toHex, attackerHexId, state) {
+		const dist = this.axialDistance(fromHex.q, fromHex.r, toHex.q, toHex.r);
+		if (dist <= 1) return true; // Adjacent hexes always have LoS
+
+		// Linear interpolation for hex coordinates
+		// Check each intermediate hex (1 step away from attacker, up to dist-1)
+		for (let i = 1; i < dist; i++) {
+			// Calculate interpolated position
+			const lerpQ = fromHex.q + (toHex.q - fromHex.q) * i / dist;
+			const lerpR = fromHex.r + (toHex.r - fromHex.r) * i / dist;
+
+			// Round to nearest hex using cube coordinate rounding
+			const lerpS = -lerpQ - lerpR;
+			let roundQ = Math.round(lerpQ);
+			let roundR = Math.round(lerpR);
+			let roundS = Math.round(lerpS);
+
+			// Adjust rounding to ensure q + r + s = 0
+			const qDiff = Math.abs(roundQ - lerpQ);
+			const rDiff = Math.abs(roundR - lerpR);
+			const sDiff = Math.abs(roundS - lerpS);
+
+			if (roundQ + roundR + roundS !== 0) {
+				if (qDiff > rDiff && qDiff > sDiff) {
+					roundQ = -roundR - roundS;
+				} else if (rDiff > sDiff) {
+					roundR = -roundQ - roundS;
+				} else {
+					roundS = -roundQ - roundR;
+				}
+			}
+
+			const intermediateHex = this.getHexByQR(roundQ, roundR, state);
+			if (!intermediateHex || intermediateHex.id === attackerHexId || intermediateHex.id === toHex.id) continue;
+
+			const intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
+			if (intermediateUnit && !intermediateUnit.isDeath) {
+				return false; // Blocked by unit
+			}
+		}
+		return true; // Path is clear
+	},
+	/**
+	 * Calculate valid targets for special attack (Dice 6 Legate Command & Conquer).
+	 * Only adjacent enemy units are valid targets.
+	 * @param {number} attackerHexId - Hex ID of the attacking unit
+	 * @param {object} state - Optional game state for simulation
+	 * @param {boolean} isHovering - If true, show all adjacent hexes (for UI preview)
+	 * @returns {number[]} Array of valid target hex IDs
+	 */
 	calcValidSpecialAttackTargets(attackerHexId, state, isHovering) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
@@ -1144,21 +1188,20 @@ function alpineHexDiceTacticGame() { return {
 
 				const targetUnit = this.getUnitOnHex(neighborHex.id, state);
 				if (targetUnit && targetUnit.playerId !== attackerUnit.playerId) {
-
-					if (attackerUnit.value == 1) {
-						const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(neighborHex.id, state);
-
-						if (defenderEffectiveArmor >= 6) {
-							targets.push(neighborHex.id);
-						}
-					} else {
-						targets.push(neighborHex.id);
-					}
+					targets.push(neighborHex.id);
 				}
 			}
 		});
 		return targets;
 	},
+	/**
+	 * Calculate valid moves for a unit.
+	 * Movement patterns: | (primary axis), L (knight-like), X (diagonal), + (complex), * (any direction), 0 (stationary).
+	 * @param {number} unitHexId - Hex ID of the unit to move
+	 * @param {boolean} isForMerging - If true, calculate moves for merging with friendly units
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {number[]} Array of valid destination hex IDs
+	 */
 	calcValidMoves(unitHexId, isForMerging = false, state) {
 		const unit = this.getUnitOnHex(unitHexId, state);
 		const startHex = this.getHex(unitHexId, state);
@@ -1166,48 +1209,26 @@ function alpineHexDiceTacticGame() { return {
 
 		let possibleMoves = [];
 		const unitStats = UNIT_STATS[unit.value];
-
-		// const checkNextHexBreak = (nextHex) => {
-		// 	if (!nextHex) return false; // Off map
-
-		// 	if (this.getUnitOnHex(nextHex.id) && !isForMerging) { // Occupied by any unit
-		// 		if (this.getUnitOnHex(nextHex.id).playerId !== unit.playerId) possibleMoves.push(nextHex.id); // Can attack enemy
-		// 		// break; // Blocked
-
-		// 		return false; // Blocked
-		// 	}
-		// 	if (this.getUnitOnHex(nextHex.id) && isForMerging && this.getUnitOnHex(nextHex.id).playerId === unit.playerId) {
-		// 		possibleMoves.push(nextHex.id); // Can merge with friendly
-		// 		// Don't break, can potentially move past to another friendly for merge if rules allowed (not typical)
-		// 	}
-		// 	if (!this.getUnitOnHex(nextHex.id)) possibleMoves.push(nextHex.id); // Empty hex
-
-		// 	return true;
-		// }
-
 		const primary = PLAYER_PRIMARY_AXIS[this.players.length][unit.playerId];
 		const mod3 = primary.i % 3;
-		const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3) );
-		const axes_x = AXES.filter(({i}) => (i % 3) != mod3 );
+		const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3));
+		const axes_x = AXES.filter(({i}) => (i % 3) != mod3);
 
 		switch (unitStats.movement) {
-			case '|': // Dice 1
+			case '|': // Dice 1 (Fencer) - primary axis forward, 1 step backward
 				for (let i = 1; i <= unitStats.distance; i++) {
 					possibleMoves.push(this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state)?.id);
 				}
-
-				// Backward 1 step
 				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state)?.id);
 				break;
-			case 'X': // Dice 4
+			case 'X': // Dice 4 (Knight) - diagonal axes only
 				for (let axis of axes_x) {
 					for (let i = 1; i <= unitStats.distance; i++) {
 						possibleMoves.push(this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i, state)?.id);
 					}
 				}
-
 				break;
-			case 'L': // Dice 3
+			case 'L': // Dice 3 (Hussar) - L-shaped jumps
 				const dValidsLShape = [
 					[-1, -2], [-2, -1],
 					[-3, 1], [-3, 2],
@@ -1216,18 +1237,14 @@ function alpineHexDiceTacticGame() { return {
 					[3, -1], [3, -2],
 					[2, -3], [1, -3],
 				];
-
 				for (let valid of dValidsLShape) {
 					possibleMoves.push(this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1], state)?.id);
 				}
-
 				break;
-			case '+': // Dice 4
+			case '+': // Dice 4 variant - primary + adjacent axes
 				this.getNeighbors(startHex, state).forEach(neighbor => possibleMoves.push(neighbor?.id));
-
 				possibleMoves.push(this.getHexByQR(startHex.q + primary.q * 2, startHex.r + primary.r * 2, state)?.id);
 				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 2, startHex.r + axes_b.r * 2, state)?.id);
-
 				if (mod3 == 2) {
 					possibleMoves.push(this.getHexByQR(startHex.q + -2, startHex.r + 1, state)?.id);
 					possibleMoves.push(this.getHexByQR(startHex.q + 2, startHex.r + -1, state)?.id);
@@ -1238,44 +1255,15 @@ function alpineHexDiceTacticGame() { return {
 					possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + -1, state)?.id);
 					possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + 1, state)?.id);
 				}
-
 				break;
-			case '*': // Dice 2, 5
-				{
-					let q = [startHex];
-					let visited = new Set([startHex.id]);
-					for (let step = 1; step <= unitStats.distance; step++) {
-						let nextQ = [];
-						for (let curr of q) {
-							this.getNeighbors(curr, state).forEach(n => {
-								if (n && !visited.has(n.id)) {
-									const unitOnN = this.getUnitOnHex(n.id, state);
-									if (!unitOnN || unitOnN.isDeath) {
-										possibleMoves.push(n.id);
-										nextQ.push(n);
-										visited.add(n.id);
-									} else if (isForMerging && unitOnN.playerId === unit.playerId) {
-										possibleMoves.push(n.id);
-										visited.add(n.id);
-									} else if (!isForMerging && unitOnN.playerId !== unit.playerId && !unit.range) {
-										possibleMoves.push(n.id);
-										visited.add(n.id);
-									}
-								}
-							});
-						}
-						q = nextQ;
-					}
-				}
+			case '*': // Dice 2, 5 (Archer, Tanker) - BFS any direction
+				this.bfsValidMoves(startHex, unit, isForMerging, state, possibleMoves);
 				break;
-			case '0': // Dice 6
-				 // Dice 6 cannot initiate a move action, only special attack or move after combat.
+			case '0': // Dice 6 (Legate) - stationary
 				break;
 		}
 
 		possibleMoves = [...new Set(possibleMoves.filter(x => x))];
-
-		// console.dir({calcValidMoves: unit, startHex, possibleMoves})
 
 		// Filter based on target: empty or enemy (for move), or friendly (for merge)
 		return possibleMoves.filter(hexId => {
@@ -1287,6 +1275,55 @@ function alpineHexDiceTacticGame() { return {
 			}
 		});
 	},
+	/**
+	 * BFS helper for calculating valid moves in any direction (Dice 2, 5).
+	 * Handles empty hexes, friendly merges, and enemy attacks.
+	 * @param {object} startHex - Starting hex
+	 * @param {object} unit - Unit object with playerId and range
+	 * @param {boolean} isForMerging - If true, look for friendly units to merge
+	 * @param {object} state - Optional game state for simulation
+	 * @param {number[]} possibleMoves - Array to populate with valid move hex IDs
+	 */
+	bfsValidMoves(startHex, unit, isForMerging, state, possibleMoves) {
+		let q = [startHex];
+		let visited = new Set([startHex.id]);
+		for (let step = 1; step <= unit.distance; step++) {
+			let nextQ = [];
+			for (let curr of q) {
+				this.getNeighbors(curr, state).forEach(n => {
+					if (n && !visited.has(n.id)) {
+						const unitOnN = this.getUnitOnHex(n.id, state);
+						if (!unitOnN || unitOnN.isDeath) {
+							// Empty hex - can move here
+							possibleMoves.push(n.id);
+							nextQ.push(n);
+							visited.add(n.id);
+						} else if (isForMerging && unitOnN.playerId === unit.playerId) {
+							// Friendly unit - can merge (but can't move through)
+							possibleMoves.push(n.id);
+							visited.add(n.id);
+						} else if (!isForMerging && unitOnN.playerId !== unit.playerId && !unit.range) {
+							// Enemy unit, melee attacker - can attack (but can't move through)
+							possibleMoves.push(n.id);
+							visited.add(n.id);
+						}
+						// Other cases: blocked (enemy for ranged unit, or wrong type)
+					}
+				});
+			}
+			q = nextQ;
+		}
+	},
+	/**
+	 * Calculate valid deployment hexes for a player during setup phase.
+	 * Deployment area expands based on dicePerPlayer count:
+	 * - <=6: Base hex + adjacent ring
+	 * - <=9: Above + 2 special offset positions
+	 * - <=14: Base + 2-ring expansion
+	 * @param {number} playerId - Player ID (0 or 1)
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {number[]} Array of valid deployment hex IDs
+	 */
 	calcValidDeploymentHexes(playerId, state) {
 		state = state || this;
 		const player = state.players[playerId];
@@ -1300,8 +1337,9 @@ function alpineHexDiceTacticGame() { return {
 		this.getNeighbors(baseHex, state).forEach(neighbor => deploymentHexes.push(neighbor));
 
 		if (this.rules.dicePerPlayer <= 6) {
-
+			// Base + adjacent only
 		} else if (this.rules.dicePerPlayer <= 9) {
+			// Add 2 special offset positions based on primary axis modulo
 			if (mod3 == 2) {
 				deploymentHexes.push(this.getHexByQR(baseHex.q + -2, baseHex.r + 1, state));
 				deploymentHexes.push(this.getHexByQR(baseHex.q + 2, baseHex.r + -1, state));
@@ -1313,23 +1351,34 @@ function alpineHexDiceTacticGame() { return {
 				deploymentHexes.push(this.getHexByQR(baseHex.q + 1, baseHex.r + 1, state));
 			}
 		} else if (this.rules.dicePerPlayer <= 14) {
-			this.getNeighbors(baseHex, state).forEach(neighbor => this.getNeighbors(neighbor, state).forEach(neighbor => deploymentHexes.push(neighbor)));
+			// Full 2-ring expansion
+			this.getNeighbors(baseHex, state).forEach(neighbor => {
+				this.getNeighbors(neighbor, state).forEach(neighbor => deploymentHexes.push(neighbor));
+			});
 		}
 
-		// Filter out hexes that are already occupied by friendly units
+		// Filter out hexes that are already occupied
 		return deploymentHexes
 			.filter(x => x)
 			.filter(hex => !this.getUnitOnHex(hex.id, state)) // Ensure hex is empty
 			.map(hex => hex.id);
 	},
+	/**
+	 * Calculate effective armor for a defender including buffs.
+	 * Includes: base armor, guard bonus (+1), adjacent Legate bonus (+1 each), minus armor reduction.
+	 * Does NOT mutate the unit object (pure function).
+	 * @param {number} defenderHexId - Hex ID of the defending unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {number} Effective armor value (minimum 0)
+	 */
 	calcDefenderEffectiveArmor(defenderHexId, state) {
 		const defenderUnit = this.getUnitOnHex(defenderHexId, state);
-		if (!defenderUnit) return 0; // Or some error state
+		if (!defenderUnit) return 0;
 
 		let effectiveArmor = defenderUnit.currentArmor;
 		if (defenderUnit.isGuarding) effectiveArmor++;
 
-		// Dice 6 adjacent buff - check neighbors of defender
+		// Dice 6 (Legate) adjacent buff - check neighbors of defender
 		this.getNeighbors(this.getHex(defenderHexId, state), state).forEach(neighbor => {
 			const neighborUnit = this.getUnitOnHex(neighbor.id, state);
 			if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
@@ -1338,9 +1387,16 @@ function alpineHexDiceTacticGame() { return {
 		});
 		effectiveArmor -= defenderUnit.armorReduction;
 
-		defenderUnit.effectiveArmor = Math.max(0, effectiveArmor);
-		return defenderUnit.effectiveArmor;
+		return Math.max(0, effectiveArmor);
 	},
+	/**
+	 * Calculate valid positions for Dice 1 (Fencer) Brave Charge.
+	 * Fencer can move along primary axis (forward) or 1 step backward (axis_b).
+	 * Target must be an adjacent enemy with effective armor >= 6.
+	 * @param {number} unitHexId - Hex ID of the Fencer unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {number[]} Array of valid hex IDs for Brave Charge
+	 */
 	calcValidBraveChargeMoves(unitHexId, state) {
 		state = state || this;
 		const unit = this.getUnitOnHex(unitHexId, state);
@@ -1349,28 +1405,51 @@ function alpineHexDiceTacticGame() { return {
 
 		let possibleMoves = [];
 		const primary = PLAYER_PRIMARY_AXIS[state.players.length][unit.playerId];
+		const mod3 = primary.i % 3;
+		const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3));
 
+		// Check forward movement along primary axis
 		for (let i = 1; i <= unit.distance; i++) {
 			let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
-
 			if (!hex || this.getUnitOnHex(hex.id, state)) continue;
 
-			let foundEnemy = this.getNeighbors(hex, state).find(neighborHex => {
-				const targetUnit = this.getUnitOnHex(neighborHex.id, state);
+			if (this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
+				possibleMoves.push(hex.id);
+			}
+		}
 
-				const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(neighborHex.id, state);
-				if (targetUnit && targetUnit.playerId !== unit.playerId && defenderEffectiveArmor >= 6) {
-					return true;
+		// Check backward movement (1 step only, matching Fencer's standard movement)
+		if (axes_b) {
+			let hex = this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state);
+			if (hex && !this.getUnitOnHex(hex.id, state)) {
+				if (this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
+					possibleMoves.push(hex.id);
 				}
-
-				return false;
-			})
-
-			if (foundEnemy) possibleMoves.push(hex?.id);
+			}
 		}
 
 		return possibleMoves;
 	},
+	/**
+	 * Helper to check if a hex has an adjacent enemy with effective armor >= 6.
+	 * @param {object} hex - Hex to check neighbors of
+	 * @param {object} unit - The attacking unit (for player ID comparison)
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {boolean} True if high-armor enemy is adjacent
+	 */
+	hasAdjacentHighArmorEnemy(hex, unit, state) {
+		return this.getNeighbors(hex, state).some(neighborHex => {
+			const targetUnit = this.getUnitOnHex(neighborHex.id, state);
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(neighborHex.id, state);
+			return targetUnit && targetUnit.playerId !== unit.playerId && defenderEffectiveArmor >= 6;
+		});
+	},
+	/**
+	 * Get unit stats for UI display.
+	 * @param {number} hexId - Hex ID containing the unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {string} HTML-formatted unit stats
+	 */
 	calcUIDiceStat(hexId, state) {
 		const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
 		const unit = this.getUnitOnHex(hexId, state);
@@ -1384,6 +1463,14 @@ function alpineHexDiceTacticGame() { return {
 			.map(x => x.join(': '))
 			.join('<br>');
 	},
+	/**
+	 * Check if an attacker unit can attack a target unit.
+	 * Validates melee, ranged (Dice 2), and special (Dice 6) attack capabilities.
+	 * @param {object} attackerUnit - The attacking unit
+	 * @param {object} targetUnit - The target unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {boolean} True if attack is valid
+	 */
 	canUnitAttackTarget(attackerUnit, targetUnit, state) {
 		if (!attackerUnit || !targetUnit || attackerUnit.playerId === targetUnit.playerId) return false;
 
@@ -1392,36 +1479,35 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!attackerHex || !targetHex) return false;
 
-		const distance = this.axialDistance(attackerHex.q, attackerHex.r, targetHex.q, targetHex.r);
-
 		// Melee attack (implicitly part of move)
-		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, state); // Need to make calcValidMoves work with passed gameState
+		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, state);
 		if (validMeleeMoves.includes(targetHex.id)) return true;
 
 		// Ranged attack (Dice 2)
 		if (attackerUnit.value === 2) {
-			const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
+			const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state);
 			if (validRangedTargets.includes(targetHex.id)) return true;
 		}
 
 		// Special attack (Dice 6)
 		if (attackerUnit.value === 6) {
-			const validSpecialTargets = this.calcValidSpecialAttackTargets(attackerUnit.hexId, state); // Need to make calcValidSpecialAttackTargets work with passed gameState
+			const validSpecialTargets = this.calcValidSpecialAttackTargets(attackerUnit.hexId, state);
 			if (validSpecialTargets.includes(targetHex.id)) return true;
 		}
-
-		// DEPRECATED: Brave Charge (Dice 1) not in v1.5 rules
-		/*
-		if (attackerUnit.value === 1 && distance === 1) {
-			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state);
-			if (defenderEffectiveArmor >= 6) return true;
-		}
-		*/
 
 		return false;
 	},
 
 	/* --- COMBAT --- */
+	/**
+	 * Resolve combat between attacker and defender.
+	 * Attacker wins if: defender's armor is depleted (reduction >= base armor) OR attacker's attack >= defender's effective armor.
+	 * On failed attack, both units suffer 1 armor reduction.
+	 * @param {number} attackerHexId - Hex ID of the attacking unit
+	 * @param {number} defenderHexId - Hex ID of the defending unit
+	 * @param {string} combatType - 'MELEE', 'RANGED_ATTACK', or 'COMMAND_CONQUER'
+	 * @param {object} state - Optional game state for simulation
+	 */
 	handleCombat(attackerHexId, defenderHexId, combatType, state) { // combatType: 'MELEE', 'RANGED_ATTACK', 'COMMAND_CONQUER'
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const defenderUnit = this.getUnitOnHex(defenderHexId, state);
@@ -1434,23 +1520,29 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
+		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
 
-		if (defenderUnit.armorReduction >= UNIT_STATS[defenderUnit.value].armor || attackerUnit.attack >= defenderEffectiveArmor) { // Attacker wins
+		// Attacker wins if armor is depleted OR attack beats effective armor
+		const isArmorDepleted = defenderUnit.armorReduction >= defenderBaseArmor;
+		const attackWins = attackerUnit.attack >= defenderEffectiveArmor;
+		const attackerWins = isArmorDepleted || attackWins;
 
+		// Set combat trail for visual feedback (all combats)
+		this.trailAttack = {
+			fromHex: attackerHex,
+			toHex: defenderHex,
+			unit: attackerUnit,
+			dist: this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r),
+		};
+
+		if (attackerWins) {
 			// Remove defender
 			this.removeUnit(defenderHexId, state);
 			defenderHex.unitId = null;
 
-			if (combatType === 'MELEE' || (combatType === 'COMMAND_CONQUER' && attackerUnit.value === 6)) {
-				// Attacker moves into vacated hex (melee, special, or if specifically allowed)
-
+			if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
-				// attackerHex.unit = null;
-				// attackerHex.unitId = null;
-				// defenderHex.unit = attackerUnit;
-				// defenderHex.unitId = attackerUnit.id;
-				// attackerUnit.hexId = defenderHex.id;
-
 				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
 			} else {
 				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
@@ -1468,29 +1560,17 @@ function alpineHexDiceTacticGame() { return {
 			this.applyDamage(attackerHexId, 1, state);
 			this.applyDamage(defenderHexId, 1, state);
 
-			// defenderUnit.armorReduction++;
-			// defenderUnit.currentArmor = UNIT_STATS[defenderUnit.value].armor; // Reset base armor for clarity if needed, reduction is separate
-
-			// If armor reaches 0 conceptually (base_armor - reduction <= 0) it's defeated on next hit rule.
-			// The rule is "If a unit's Armor reaches 0, the next attack it suffers, regardless of the attacker's Attack value, automatically defeats it."
-			// And "Effective Armor cannot go below 0 for combat comparison."
-			// So, if defenderEffectiveArmor was 0 (because base_armor - reduction tokens <=0), it should have been defeated.
-			// The condition `defenderUnit.armorReduction >= defenderUnit.armor` handles the "Armor reaches 0" case.
-
 			attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
 			attackerUnit.actionsTakenThisTurn++;
-
-			this.trailAttack = {
-				fromHex: attackerHex,
-				toHex: defenderHex,
-				unit: attackerUnit,
-				dist: this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r),
-			};
 		}
-		// If attack failed, unit stays selected for potential other actions if this was not its main action
-		// But for this game, Move/Attack is one action. So, deselect.
+		// Deselect after combat resolution
 		this.deselectUnit();
 	},
+	/**
+	 * Remove a unit from the board (mark as death and clear hex).
+	 * @param {number} hexId - Hex ID containing the unit to remove
+	 * @param {object} state - Optional game state for simulation
+	 */
 	removeUnit(hexId, state) {
 		const unit = this.getUnitOnHex(hexId, state);
 		if (!unit) return;
@@ -1498,12 +1578,19 @@ function alpineHexDiceTacticGame() { return {
 		(state || this).players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
 		this.getHex(hexId, state).unitId = null; // Clear hex
 	},
+	/**
+	 * Apply armor reduction damage to a unit.
+	 * If effective armor reaches 0, the unit is automatically removed.
+	 * @param {number} hexId - Hex ID containing the unit
+	 * @param {number} damage - Amount of armor reduction to apply (default: 1)
+	 * @param {object} state - Optional game state for simulation
+	 */
 	applyDamage(hexId, damage=1, state) {
 		const unit = this.getUnitOnHex(hexId, state);
 		if (!unit) return;
 		unit.armorReduction += damage;
-		this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
-		if ((damage > 1) && unit.effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
+		const effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
+		if (effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
 	},
 
 	/* --- TURN --- */
