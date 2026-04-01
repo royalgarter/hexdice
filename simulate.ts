@@ -585,7 +585,8 @@ async function runSimulation() {
     replayData.summary.avgTurnsPerGame = replayData.summary.totalTurns / numGames;
     
     // Print summary
-    console.log("\n╔════════════════════════════════════════╗");
+    console.log("\n");
+    console.log("╔════════════════════════════════════════╗");
     console.log("║           Simulation Summary           ║");
     console.log("╚════════════════════════════════════════╝");
     console.log(`P1 (${aiTypes[0]}): ${replayData.summary.p1Wins} wins`);
