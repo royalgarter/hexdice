@@ -23,6 +23,7 @@
  */
 
 import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
+import { TextLineStream } from "https://deno.land/std@0.208.0/streams/text_line_stream.ts";
 
 // ANSI color codes for terminal output
 const COLORS = {
@@ -248,9 +249,18 @@ class ReplayViewer {
     private gameState: Map<number, { value: number; playerId: number; isDeath: boolean }> = new Map();
     private showBoard: boolean = true;
 
-    constructor(filePath: string) {
-        const content = Deno.readTextFileSync(filePath);
-        this.data = JSON.parse(content) as ReplayData;
+    constructor(data: ReplayData) {
+        this.data = data;
+    }
+
+    static async load(filePath: string): Promise<ReplayViewer> {
+        try {
+            const content = await Deno.readTextFile(filePath);
+            const data = JSON.parse(content) as ReplayData;
+            return new ReplayViewer(data);
+        } catch (e) {
+            throw new Error(`Failed to load or parse replay file: ${e}`);
+        }
     }
 
     get currentGame(): GameReplay {
@@ -501,7 +511,7 @@ class ReplayViewer {
         console.log("  q, quit       - Exit");
     }
 
-    runInteractive() {
+    async runInteractive() {
         console.log("\n");
         console.log("╔════════════════════════════════════════╗");
         console.log("║     Hex Dice Replay Viewer             ║");
@@ -526,14 +536,20 @@ class ReplayViewer {
 
         this.showCurrentState();
 
-        // Read-eval loop using Deno.stdin
-        const buf = new Uint8Array(1024);
-        while (true) {
-            Deno.stdout.writeSync(new TextEncoder().encode("\n> "));
-            const n = Deno.stdin.readSync(buf);
-            if (n === null) break;
-            const input = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
-            if (!input) continue;
+        // Use streams for robust line-by-line input processing
+        const lineStream = Deno.stdin.readable
+            .pipeThrough(new TextDecoderStream())
+            .pipeThrough(new TextLineStream());
+
+        const encoder = new TextEncoder();
+        await Deno.stdout.write(encoder.encode("\n> "));
+
+        for await (const line of lineStream) {
+            const input = line.trim().toLowerCase();
+            if (!input) {
+                await Deno.stdout.write(encoder.encode("> "));
+                continue;
+            }
 
             const parts = input.split(/\s+/);
             const cmd = parts[0];
@@ -642,6 +658,9 @@ class ReplayViewer {
                 default:
                     console.log(`Unknown command: ${cmd}. Type 'help' for commands.`);
             }
+
+            // Prompt for next input
+            await Deno.stdout.write(encoder.encode("\n> "));
         }
     }
 }
@@ -655,14 +674,14 @@ if (!replayFile) {
 }
 
 try {
-    const viewer = new ReplayViewer(replayFile);
+    const viewer = await ReplayViewer.load(replayFile);
 
     if (args.stats) {
         viewer.showStats();
     } else {
-        viewer.runInteractive();
+        await viewer.runInteractive();
     }
 } catch (error) {
-    console.error(`Error loading replay: ${error}`);
+    console.error(error.message || `Error loading replay: ${error}`);
     Deno.exit(1);
 }
