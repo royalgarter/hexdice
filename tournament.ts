@@ -143,6 +143,7 @@ async function loadGameEngine(engineCodes?: Record<string, string>): Promise<any
             return {
                 createGame: alpineHexDiceTacticGame,
                 setRandomSeed: setRandomSeed,
+                random: () => _internalRandom(),
                 performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
                 performAIByRandom: typeof performAIByRandom !== 'undefined' ? performAIByRandom : null,
                 performAIByPriority: typeof performAIByPriority !== 'undefined' ? performAIByPriority : null,
@@ -237,7 +238,8 @@ function runHeuristicGame(
                         const die = undeployedDice[0];
                         const dieIndex = player.dice.indexOf(die);
                         this.selectDieToDeploy(dieIndex);
-                        const randomHex = validHexes[Math.floor(Math.random() * validHexes.length)];
+                        const r = engine.random ? engine.random() : Math.random();
+                        const randomHex = validHexes[Math.floor(r * validHexes.length)];
                         this.deployUnit(randomHex);
                     } else {
                         break;
@@ -406,23 +408,38 @@ async function runTournament(args: any) {
  * Pool of workers for running games in parallel
  */
 class GameWorkerPool {
-    private workers: Worker[] = [];
+    private workers: Set<Worker> = new Set();
     private idleWorkers: Worker[] = [];
     private queue: { data: any; resolve: (v: any) => void; reject: (e: any) => void }[] = [];
+    private engineCodes: Record<string, string>;
+    private scriptUrl: string;
+    private size: number;
 
     constructor(size: number, engineCodes: Record<string, string>) {
-        const scriptUrl = new URL(import.meta.url).href;
+        this.size = size;
+        this.engineCodes = engineCodes;
+        this.scriptUrl = new URL(import.meta.url).href;
         for (let i = 0; i < size; i++) {
-            const worker = new Worker(scriptUrl, { type: "module" });
-            worker.onmessage = (e) => {
-                const msg = e.data;
-                if (msg.type === 'ready') { this.idleWorkers.push(worker); this.process(); }
-                else if (msg.type === 'result') { this.handleResult(worker, msg.result); }
-            };
-            worker.onerror = (e) => this.handleError(worker, e);
-            worker.postMessage({ type: 'init', engineCodes });
-            this.workers.push(worker);
+            this.createWorker();
         }
+    }
+
+    private createWorker() {
+        const worker = new Worker(this.scriptUrl, { type: "module" });
+        worker.onmessage = (e) => {
+            const msg = e.data;
+            if (msg.type === 'ready') {
+                this.idleWorkers.push(worker);
+                this.process();
+            } else if (msg.type === 'result') {
+                this.handleResult(worker, msg.result);
+            }
+        };
+        worker.onerror = (e) => {
+            this.handleError(worker, e);
+        };
+        worker.postMessage({ type: 'init', engineCodes: this.engineCodes });
+        this.workers.add(worker);
     }
 
     private handleResult(worker: Worker, result: any) {
@@ -435,8 +452,20 @@ class GameWorkerPool {
 
     private handleError(worker: Worker, err: any) {
         const current = (worker as any).current;
-        if (current) current.reject(err);
-        (worker as any).current = null;
+        if (current) {
+            current.reject(err);
+            (worker as any).current = null;
+        }
+        
+        this.workers.delete(worker);
+        const idleIdx = this.idleWorkers.indexOf(worker);
+        if (idleIdx > -1) this.idleWorkers.splice(idleIdx, 1);
+        
+        try { worker.terminate(); } catch(_) { /* ignore */ }
+
+        if (this.workers.size < this.size) {
+            this.createWorker();
+        }
     }
 
     private process() {
@@ -449,10 +478,17 @@ class GameWorkerPool {
     }
 
     run(data: any): Promise<any> {
-        return new Promise((resolve, reject) => { this.queue.push({ data, resolve, reject }); this.process(); });
+        return new Promise((resolve, reject) => {
+            this.queue.push({ data, resolve, reject });
+            this.process();
+        });
     }
 
-    terminate() { this.workers.forEach((w) => w.terminate()); }
+    terminate() {
+        this.workers.forEach((w) => w.terminate());
+        this.workers.clear();
+        this.idleWorkers = [];
+    }
 }
 
 // Entry point
