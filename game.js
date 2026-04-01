@@ -4,38 +4,8 @@ const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
-// Axial directions
-const AXES = [
-	{i: 0, q: 1, r: -1, name: '2h'},
-	{i: 1, q: 1, r: 0, name: '4h'},
-	{i: 2, q: 0, r: 1, name: '6h'},
-	{i: 3, q: -1, r: 1, name: '8h'},
-	{i: 4, q: -1, r: 0, name: '10h'},
-	{i: 5, q: 0, r: -1, name: '12h'},
-];
-
-/* DEPRECATED v1.5 (Sum of 8 / Specialty Stat)
-const UNIT_STATS = {
-	1: { name: "Infantry", armor: 3, attack: 3, range: 0, distance: 2, movement: '|' },
-	2: { name: "Archer", armor: 2, attack: 2, range: "2-2", distance: 2, movement: '*' },
-	3: { name: "Knight", armor: 2, attack: 3, range: 0, distance: 3, movement: 'L' },
-	4: { name: "Assault", armor: 2, attack: 4, range: 0, distance: 2, movement: 'X' },
-	5: { name: "Tanker", armor: 5, attack: 2, range: 0, distance: 1, movement: '*' },
-	6: { name: "Balance", armor: 6, attack: 2, range: 1, distance: 0, movement: '0' },
-};
-*/
-
-// v1.6 Strict Sum of 6 (Attack + Armor + Move = 6)
-const UNIT_STATS = {
-	1: { name: "Infantry", armor: 2, attack: 2, range: 0, distance: 2, movement: '|' },
-	2: { name: "Archer", armor: 0, attack: 2, range: "2-2", distance: 2, movement: '*' },
-	3: { name: "Knight", armor: 1, attack: 2, range: 0, distance: 3, movement: 'L' },
-	4: { name: "Assault", armor: 1, attack: 3, range: 0, distance: 2, movement: 'X' },
-	5: { name: "Tanker", armor: 4, attack: 1, range: 0, distance: 1, movement: '*' },
-	6: { name: "Balance", armor: 5, attack: 1, range: 1, distance: 0, movement: '0' },
-};
-
 const BOARD_DOT = [
+
 	`                         .`,
 	`                     .       .`,
 	`                 .       .       .`,
@@ -62,7 +32,6 @@ const BOARD_DOT = [
 	`                     .       .`,
 	`                         .`,
 ].join('\n');
-
 const BOARD_NUM = [
 	`                        057`,
 	`                    045     070`,
@@ -91,6 +60,22 @@ const BOARD_NUM = [
 	`                        069`,
 ].join('\n');
 
+const UNIT_STATS = {
+	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
+	2: { name: "Archer", attack: 2, armor: 0, range: 2, distance: 2, movement: '*' },
+	3: { name: "Hussar", attack: 3, armor: 0, range: 0, distance: 3, movement: 'L' },
+	4: { name: "Knight", attack: 2, armor: 1, range: 0, distance: 3, movement: 'X' },
+	5: { name: "Tanker", attack: 1, armor: 4, range: 0, distance: 1, movement: '*' },
+	6: { name: "Legate", attack: 1, armor: 5, range: 1, distance: 0, movement: '0' },
+};
+const AXES = [
+	{i: 0, q: +1, r: -1, name: '2h'},
+	{i: 1, q: +1, r: +0, name: '4h'},
+	{i: 2, q: +0, r: +1, name: '6h'},
+	{i: 3, q: -1, r: +1, name: '8h'},
+	{i: 4, q: -1, r: +0, name: '10h'},
+	{i: 5, q: +0, r: -1, name: '12h'},
+];
 const PLAYER_PRIMARY_AXIS = {
 	1: [ AXES[5] ],
 	2: [ AXES[5], AXES[2] ],
@@ -99,13 +84,8 @@ const PLAYER_PRIMARY_AXIS = {
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 
-function random() {
-	const array = new Uint32Array(1);
-	crypto.getRandomValues(array);
-	return array[0] / 4294967296; // 2^32
-}
-
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
+const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
 
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
@@ -363,10 +343,10 @@ function alpineHexDiceTacticGame() { return {
 			this.hovering.validMerges = this.calcValidMoves(hexId, 'MERGE');
 
 			if (this.hovering.unit?.value == 2) {
-	this.hovering.validTargets = this.calcValidRangedTargets(hexId, null, true);
-}
+				this.hovering.validTargets = this.calcValidRangedTargets(hexId, null, true);
+			}
 
-if (this.hovering.unit?.value == 6) {
+			if (this.hovering.unit?.value == 6) {
 				this.hovering.validTargets = this.calcValidSpecialAttackTargets(hexId, null, true);
 			}
 		}
@@ -1084,7 +1064,8 @@ if (this.hovering.unit?.value == 6) {
 		const attackerHex = this.getHex(attackerHexId, state);
 		if (!attackerUnit || attackerUnit.value !== 2 || !attackerHex) return [];
 
-		let [min, max] = attackerUnit.range.split('-').map(x => parseInt(x, 10));
+		let [min, max] = attackerUnit.range.toString().split('-').map(x => parseInt(x, 10));
+		max = max || min;
 		let targets = [];
 
 		let isEnemyAdjacent = false;
@@ -1418,10 +1399,10 @@ if (this.hovering.unit?.value == 6) {
 		if (validMeleeMoves.includes(targetHex.id)) return true;
 
 		// Ranged attack (Dice 2)
-if (attackerUnit.value === 2) {
-	const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
-	if (validRangedTargets.includes(targetHex.id)) return true;
-}
+		if (attackerUnit.value === 2) {
+			const validRangedTargets = this.calcValidRangedTargets(attackerUnit.hexId, state); // Need to make calcValidRangedTargets work with passed gameState
+			if (validRangedTargets.includes(targetHex.id)) return true;
+		}
 
 		// Special attack (Dice 6)
 		if (attackerUnit.value === 6) {
@@ -1430,12 +1411,12 @@ if (attackerUnit.value === 2) {
 		}
 
 		// DEPRECATED: Brave Charge (Dice 1) not in v1.5 rules
-/*
-if (attackerUnit.value === 1 && distance === 1) {
-	const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state);
-	if (defenderEffectiveArmor >= 6) return true;
-}
-*/
+		/*
+		if (attackerUnit.value === 1 && distance === 1) {
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(targetHex.id, state);
+			if (defenderEffectiveArmor >= 6) return true;
+		}
+		*/
 
 		return false;
 	},

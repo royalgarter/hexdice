@@ -85,6 +85,8 @@
 					<div class="hex-content text-xs text-center relative"
 						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
 					>
+						<span style="top:-8px;right:-6px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
 							:class="{
@@ -95,10 +97,20 @@
 							x-text="getUnitOnHex(hex.id)?.value"
 						>
 						</span>
-						<span style="top:4px;right:-24px;" class="absolute text-yellow-700" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
-						<span style="top:-14px;right:-12px;" class="absolute text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)" :class="getUnitOnHex(hex.id).effectiveArmor > getUnitOnHex(hex.id).armor ? 'text-sm font-bold' : ''"></span>
-						<span style="top:-14px;right:12px;" class="absolute text-red-700" x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id).attack"></span>
-						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
+
+						<span style="top:4px;right:-24px;" class="absolute text-yellow-700"
+							x-show="getUnitOnHex(hex.id)?.isGuarding">🛡️
+						</span>
+						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
+							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'text-sm font-bold' : ''"
+							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
+						</span>
+						<span style="top:-14px;right:12px;" class="absolute text-red-700"
+							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
+						</span>
+						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700"
+							x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction">
+						</span>
 					</div>
 				</div>
 			</div>
