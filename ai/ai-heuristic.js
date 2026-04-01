@@ -299,9 +299,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
 
         if (attackValue >= defenderArmor) {
             analysis.canKillEnemy = true;
-            analysis.score += w.killBonus + targetValue;
+            analysis.score += w.killBonus + targetUnit.value;
         } else {
-            analysis.score += w.attackBonus + targetValue;
+            analysis.score += w.attackBonus + targetUnit.value;
         }
     }
 

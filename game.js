@@ -1573,7 +1573,10 @@ function alpineHexDiceTacticGame() { return {
 	removeUnit(hexId, state) {
 		const unit = this.getUnitOnHex(hexId, state);
 		if (!unit) return;
-		this.addLog(`P${unit.playerId+1} D${unit.value} removed (${this.getHex(hexId, state).q},${this.getHex(hexId, state).r}).`);
+		// Only log when not simulating (state is provided)
+		if (!state) {
+			this.addLog(`P${unit.playerId+1} D${unit.value} removed (${this.getHex(hexId, state).q},${this.getHex(hexId, state).r}).`);
+		}
 		(state || this).players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
 		this.getHex(hexId, state).unitId = null; // Clear hex
 	},
