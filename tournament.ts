@@ -1,23 +1,4 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-net
-
-/**
- * Heuristic Profile Tournament Simulation
- *
- * Simulates games between different heuristic profiles to determine
- * which strategy performs best.
- *
- * Usage:
- *   deno run --allow-all tournament.ts --games=10 --output=logs
- *   deno run --allow-all tournament.ts -g=20 -o=tournaments -v -q -p=4
- *
- * Options:
- *   --games, -g     Number of games per matchup (default: 1)
- *   --output, -o    Output directory for results (default: tournaments)
- *   --verbose, -v   Verbose output (default: false)
- *   --quiet, -q     Quiet mode - suppress AI move logs (default: false)
- *   --parallel, -p  Number of parallel games (default: 1)
- *   --profiles      Comma-separated list of profiles to test (default: all)
- */
+#!/usr/bin/env -S deno run --allow-all
 
 import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.208.0/fs/ensure_dir.ts";
@@ -32,54 +13,7 @@ const PROFILE_NAMES = [
     'assassin'
 ];
 
-// CLI Arguments
-const args = parse(Deno.args, {
-    string: ["games", "output", "profiles", "parallel"],
-    boolean: ["verbose", "quiet", "help"],
-    alias: {
-        g: "games",
-        o: "output",
-        v: "verbose",
-        q: "quiet",
-        p: "parallel",
-        h: "help",
-    },
-    default: {
-        games: 1,
-        output: "tournaments",
-        verbose: false,
-        quiet: false,
-        parallel: 1,
-    },
-});
-
-if (args.help) {
-    console.log(`
-Hex Dice Heuristic Profile Tournament
-
-Usage:
-  deno run --allow-all tournament.ts [options]
-
-Options:
-  --games, -g <n>      Number of games per matchup (default: 10)
-  --output, -o <dir>   Output directory for results (default: tournaments)
-  --verbose, -v        Show detailed move-by-move output
-  --quiet, -q          Quiet mode - suppress AI move logs (faster)
-  --parallel, -p <n>   Number of parallel games (default: 1)
-  --profiles <list>    Comma-separated profiles to test (default: all)
-                       Available: baseline, berserker, turtle, tactician, swarmer, assassin
-  --help, -h           Show this help message
-
-Examples:
-  deno run --allow-all tournament.ts -g=20
-  deno run --allow-all tournament.ts --games=10 --profiles=baseline,berserker,turtle
-  deno run --allow-all tournament.ts -g=5 -o=my-tournament -v
-  deno run --allow-all tournament.ts -g=10 -q -p=4  # Fast mode: quiet + 4 parallel
-`);
-    Deno.exit(0);
-}
-
-// Tournament results tracking
+// Results tracking interfaces
 interface MatchupResult {
     profile1: string;
     profile2: string;
@@ -120,11 +54,25 @@ interface TournamentResults {
     };
 }
 
+// Global state for progress tracking (only used in main process)
+let totalGamesScheduled = 0;
+let totalGamesCompleted = 0;
+
+function updateGlobalProgress(quiet: boolean, verbose: boolean) {
+    if (quiet || verbose) return;
+    const pct = totalGamesScheduled > 0 ? Math.round((totalGamesCompleted / totalGamesScheduled) * 100) : 0;
+    const barWidth = 40;
+    const filled = Math.round((pct / 100) * barWidth);
+    const bar = '█'.repeat(filled);
+    const empty = '░'.repeat(barWidth - filled);
+    Deno.stdout.writeSync(new TextEncoder().encode(`\r  Overall Progress: [${bar}${empty}] ${pct}% (${totalGamesCompleted}/${totalGamesScheduled})`));
+}
+
 // Stub browser APIs
 function stubBrowserAPIs() {
-    (globalThis as any).location = { search: '?mode=headless' };
-    (globalThis as any).document = { getElementById: () => null };
-    (globalThis as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { /* ignore */ } };
+    if (typeof (globalThis as any).$nextTick === 'undefined') {
+        (globalThis as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { /* ignore */ } };
+    }
 }
 
 // Logger for simulation
@@ -138,7 +86,7 @@ class SimulationLogger {
     }
 
     log(message: string, type: string = "game") {
-        if (this.quiet) return; // Suppress all logs in quiet mode
+        if (this.quiet) return;
         if (this.verbose || type === "result") {
             const prefix = type === "ai" ? "[AI]" : type === "result" ? "[🏆]" : "";
             console.log(`${prefix} ${message}`);
@@ -147,52 +95,67 @@ class SimulationLogger {
 }
 
 // Load game engine with heuristic profiles
-async function loadGameEngine(): Promise<any> {
+async function loadGameEngine(engineCodes?: Record<string, string>): Promise<any> {
     stubBrowserAPIs();
 
-    let gameCode = await Deno.readTextFile("./game.js");
-    const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
-    const aiRandomCode = await Deno.readTextFile("./ai/ai-random.js");
-    const aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
-    const aiPriorityCode = await Deno.readTextFile("./ai/ai-priority.js");
-    const aiMinimaxCode = await Deno.readTextFile("./ai/ai-minimax.js");
-    const heuristicProfilesCode = await Deno.readTextFile("./ai/heuristic-profiles.js");
+    let gameCode: string, aiCoreCode: string, aiRandomCode: string, aiHeuristicCode: string, aiPriorityCode: string, aiMinimaxCode: string, heuristicProfilesCode: string;
 
-    // Use seeded random for reproducibility
+    if (engineCodes) {
+        gameCode = engineCodes.gameCode;
+        aiCoreCode = engineCodes.aiCoreCode;
+        aiRandomCode = engineCodes.aiRandomCode;
+        aiHeuristicCode = engineCodes.aiHeuristicCode;
+        aiPriorityCode = engineCodes.aiPriorityCode;
+        aiMinimaxCode = engineCodes.aiMinimaxCode;
+        heuristicProfilesCode = engineCodes.heuristicProfilesCode;
+    } else {
+        gameCode = await Deno.readTextFile("./game.js");
+        aiCoreCode = await Deno.readTextFile("./ai/ai.js");
+        aiRandomCode = await Deno.readTextFile("./ai/ai-random.js");
+        aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
+        aiPriorityCode = await Deno.readTextFile("./ai/ai-priority.js");
+        aiMinimaxCode = await Deno.readTextFile("./ai/ai-minimax.js");
+        heuristicProfilesCode = await Deno.readTextFile("./ai/heuristic-profiles.js");
+    }
+
     gameCode = gameCode.replace(
         'const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}',
-        'var random = () => Math.random()'
+        'var random = () => _internalRandom()'
     );
 
     const fullCode = `
-        var _seed = ${Date.now()};
-        var random = () => {
-            _seed = (_seed * 9301 + 49297) % 233280;
-            return _seed / 233280;
-        };
+        return (function(location, document) {
+            var _seed = ${Date.now()};
+            var _internalRandom = () => {
+                _seed = (_seed * 9301 + 49297) % 233280;
+                return _seed / 233280;
+            };
+            var setRandomSeed = (s) => { _seed = s; };
 
-        ${gameCode}
-        ${heuristicProfilesCode}
-        ${aiCoreCode}
-        ${aiRandomCode}
-        ${aiHeuristicCode}
-        ${aiMinimaxCode}
-        ${aiPriorityCode}
+            ${gameCode}
+            ${heuristicProfilesCode}
+            ${aiCoreCode}
+            ${aiRandomCode}
+            ${aiHeuristicCode}
+            ${aiMinimaxCode}
+            ${aiPriorityCode}
 
-        return {
-            createGame: alpineHexDiceTacticGame,
-            performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
-            performAIByRandom: typeof performAIByRandom !== 'undefined' ? performAIByRandom : null,
-            performAIByPriority: typeof performAIByPriority !== 'undefined' ? performAIByPriority : null,
-            performAIByMinimax: typeof performAIByMinimax !== 'undefined' ? performAIByMinimax : null,
-            generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
-            applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
-            boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
-        };
+            return {
+                createGame: alpineHexDiceTacticGame,
+                setRandomSeed: setRandomSeed,
+                performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
+                performAIByRandom: typeof performAIByRandom !== 'undefined' ? performAIByRandom : null,
+                performAIByPriority: typeof performAIByPriority !== 'undefined' ? performAIByPriority : null,
+                performAIByMinimax: typeof performAIByMinimax !== 'undefined' ? performAIByMinimax : null,
+                generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
+                applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
+                boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
+            };
+        })(location, document);
     `;
 
-    const createModule = new Function(fullCode);
-    return createModule();
+    const createModule = new Function('location', 'document', fullCode);
+    return createModule({ search: '?mode=headless' }, { getElementById: () => null });
 }
 
 // Create game instance
@@ -202,17 +165,6 @@ function createSimulationGame(logger: SimulationLogger, engine: any) {
     return game;
 }
 
-// Calculate state hash
-function calculateStateHash(game: any): string {
-    const state = {
-        p1Dice: game.players[0].dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|"),
-        p2Dice: game.players[1].dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|"),
-        turn: game.currentPlayerIndex,
-        phase: game.phase,
-    };
-    return btoa(JSON.stringify(state));
-}
-
 // Run a single game between two profiles
 function runHeuristicGame(
     gameNumber: number,
@@ -220,18 +172,19 @@ function runHeuristicGame(
     profile2: string,
     verbose: boolean,
     quiet: boolean,
-    engine: any
+    engine: any,
+    seed?: number
 ): { winner: number | -1; winnerReason: string; totalTurns: number } {
     const logger = new SimulationLogger(verbose, quiet);
 
-    const game = createSimulationGame(logger, engine);
+    if (seed !== undefined && engine.setRandomSeed) {
+        engine.setRandomSeed(seed);
+    }
 
-    // Store profile names
+    const game = createSimulationGame(logger, engine);
     (game as any).heuristicProfiles = { p1: profile1, p2: profile2 };
 
-    // Override AI turn to use heuristic with specific profile
     const originalEndTurn = game.endTurn.bind(game);
-
     game.endTurn = function(state?: any) {
         const ai0 = this.players[0].isAI;
         const ai1 = this.players[1].isAI;
@@ -245,23 +198,18 @@ function runHeuristicGame(
     game.performAITurn = function() {
         const currentPlayerIdx = this.currentPlayerIndex;
         const profileName = currentPlayerIdx === 0 ? profile1 : profile2;
-
         if (verbose) logger.log(`P${currentPlayerIdx + 1} (${profileName}) thinking...`, "ai");
-
         try {
             if (engine.performAIByHeuristic) {
                 engine.performAIByHeuristic(this, profileName, verbose);
             } else {
-                logger.log(`AI function not found!`, "error");
                 this.endTurn();
             }
         } catch (e) {
-            logger.log(`AI error: ${e}`, "error");
             this.endTurn();
         }
     };
 
-    // Handle setup phase
     game.handleSetupPhase = function() {
         if (this.phase === "SETUP_ROLL") {
             for (let i = 0; i < 2; i++) {
@@ -270,7 +218,6 @@ function runHeuristicGame(
                 }
             }
         }
-
         if (this.phase === "SETUP_REROLL") {
             for (let i = 0; i < 2; i++) {
                 if (this.players[i].rerollsUsed === 0) {
@@ -279,16 +226,13 @@ function runHeuristicGame(
                 }
             }
         }
-
         if (this.phase === "SETUP_DEPLOY") {
             for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
                 const player = this.players[playerIdx];
                 this.currentPlayerIndex = playerIdx;
-
                 while (player.dice.some((d: any) => !d.isDeployed)) {
                     const validHexes = this.calcValidDeploymentHexes(playerIdx);
                     const undeployedDice = player.dice.filter((d: any) => !d.isDeployed);
-
                     if (undeployedDice.length > 0 && validHexes.length > 0) {
                         const die = undeployedDice[0];
                         const dieIndex = player.dice.indexOf(die);
@@ -307,420 +251,238 @@ function runHeuristicGame(
     game.init();
     game.handleSetupPhase();
 
-    // Set up AI players
     game.players[0].isAI = true;
     game.players[1].isAI = true;
 
-    // Override cloneState
     game.cloneState = function() {
         return {
             players: this.players.map((p: any) => ({
-                id: p.id,
-                color: p.color,
-                dice: p.dice.map((d: any) => ({ ...d })),
-                initialRollDone: p.initialRollDone,
-                baseHexId: p.baseHexId,
-                rerollsUsed: p.rerollsUsed,
-                isAI: p.isAI,
+                id: p.id, color: p.color, dice: p.dice.map((d: any) => ({ ...d })),
+                initialRollDone: p.initialRollDone, baseHexId: p.baseHexId, rerollsUsed: p.rerollsUsed, isAI: p.isAI,
             })),
             hexes: this.hexes.map((h: any) => ({ ...h })),
-            hexesQR: this.hexesQR,
-            phase: this.phase,
-            currentPlayerIndex: this.currentPlayerIndex,
-            selectedUnitHexId: this.selectedUnitHexId,
-            actionMode: this.actionMode,
-            validMoves: this.validMoves,
-            validTargets: this.validTargets,
-            validMerges: this.validMerges,
-            trail: { ...this.trail },
-            rules: { ...this.rules },
-            hexGrid: { ...this.hexGrid },
+            hexesQR: this.hexesQR, phase: this.phase, currentPlayerIndex: this.currentPlayerIndex,
+            selectedUnitHexId: this.selectedUnitHexId, actionMode: this.actionMode,
+            validMoves: this.validMoves, validTargets: this.validTargets, validMerges: this.validMerges,
+            trail: { ...this.trail }, rules: { ...this.rules }, hexGrid: { ...this.hexGrid },
         };
     };
 
     let turnCount = 0;
     const maxTurns = 500;
-
     while (game.phase !== "GAME_OVER" && turnCount < maxTurns) {
-        const currentPlayer = game.players[game.currentPlayerIndex];
-
-        if (game.phase === "PLAYER_TURN") {
-            if (currentPlayer.isAI) {
-                game.performAITurn();
-            } else {
-                game.endTurn();
-            }
+        if (game.phase === "PLAYER_TURN" && game.players[game.currentPlayerIndex].isAI) {
+            game.performAITurn();
         } else {
             game.endTurn();
         }
-
         turnCount++;
     }
 
-    // Determine winner
     let winner: number | -1 = -1;
     let winnerReason = "Max turns reached";
-
     if (game.phase === "GAME_OVER") {
-        if (game.winnerMessage.includes("Player 1")) {
-            winner = 0;
-            winnerReason = game.winnerMessage;
-        } else if (game.winnerMessage.includes("Player 2")) {
-            winner = 1;
-            winnerReason = game.winnerMessage;
-        } else if (game.winnerMessage.includes("draw") || game.winnerMessage.includes("Mutual")) {
-            winner = -1;
-            winnerReason = game.winnerMessage;
-        }
+        if (game.winnerMessage.includes("Player 1")) { winner = 0; winnerReason = game.winnerMessage; }
+        else if (game.winnerMessage.includes("Player 2")) { winner = 1; winnerReason = game.winnerMessage; }
+        else { winner = -1; winnerReason = game.winnerMessage; }
     }
-
     logger.log(`Game ${gameNumber} ended: ${winnerReason}`, "result");
-
     return { winner, winnerReason, totalTurns: turnCount };
 }
 
 // Run a matchup between two profiles (multiple games)
-function runMatchup(
-    profile1: string,
-    profile2: string,
-    numGames: number,
-    verbose: boolean,
-    quiet: boolean,
-    engine: any
-): MatchupResult {
-    if (!quiet) console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
-
-    let p1Wins = 0;
-    let p2Wins = 0;
-    let draws = 0;
-    let totalTurns = 0;
+async function runMatchup(
+    profile1: string, profile2: string, numGames: number,
+    verbose: boolean, quiet: boolean, engine: any, pool?: GameWorkerPool
+): Promise<MatchupResult> {
+    if (!quiet && !pool) console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
+    let p1Wins = 0, p2Wins = 0, draws = 0, totalTurns = 0;
+    const gamePromises: Promise<any>[] = [];
 
     for (let i = 1; i <= numGames; i++) {
-        if (verbose) {
-            console.log(`\n  Game ${i}/${numGames}`);
+        const seed = Date.now() + Math.floor(Math.random() * 1000000) + (i * 1000);
+        let p: Promise<any>;
+        if (pool) {
+            p = pool.run({ gameNumber: i, profile1, profile2, verbose, quiet, seed });
+        } else {
+            p = Promise.resolve(runHeuristicGame(i, profile1, profile2, verbose, quiet, engine, seed));
         }
-
-        const result = runHeuristicGame(i, profile1, profile2, verbose, quiet, engine);
-
-        if (result.winner === 0) p1Wins++;
-        else if (result.winner === 1) p2Wins++;
-        else draws++;
-
-        totalTurns += result.totalTurns;
-
-        if (!verbose && !quiet) {
-            const bar1 = '█'.repeat(Math.round((p1Wins / i) * 20));
-            const bar2 = '█'.repeat(Math.round((p2Wins / i) * 20));
-            console.log(`\r  Progress: ${i}/${numGames} | ${profile1}: ${p1Wins} ${bar1} | ${profile2}: ${p2Wins} ${bar2} | Draws: ${draws}`);
-        }
+        p.then((result) => {
+            if (result.winner === 0) p1Wins++;
+            else if (result.winner === 1) p2Wins++;
+            else draws++;
+            totalTurns += result.totalTurns;
+            totalGamesCompleted++;
+            updateGlobalProgress(quiet, verbose);
+        });
+        gamePromises.push(p);
     }
-
-    if (!verbose && !quiet) console.log();
-
-    return {
-        profile1,
-        profile2,
-        p1Wins,
-        p2Wins,
-        draws,
-        totalGames: numGames,
-        p1WinRate: p1Wins / numGames,
-        p2WinRate: p2Wins / numGames,
-        avgTurns: totalTurns / numGames,
-    };
+    await Promise.all(gamePromises);
+    return { profile1, profile2, p1Wins, p2Wins, draws, totalGames: numGames, p1WinRate: p1Wins / numGames, p2WinRate: p2Wins / numGames, avgTurns: totalTurns / numGames };
 }
 
 // Calculate profile standings
 function calculateStandings(matchups: MatchupResult[], profiles: string[]): ProfileStats[] {
     const stats: Record<string, ProfileStats> = {};
-
-    // Initialize stats for each profile
     profiles.forEach(name => {
-        stats[name] = {
-            name,
-            totalWins: 0,
-            totalLosses: 0,
-            totalDraws: 0,
-            totalGames: 0,
-            winRate: 0,
-            avgTurnsInGames: 0,
-            winsAsP1: 0,
-            winsAsP2: 0,
-        };
+        stats[name] = { name, totalWins: 0, totalLosses: 0, totalDraws: 0, totalGames: 0, winRate: 0, avgTurnsInGames: 0, winsAsP1: 0, winsAsP2: 0 };
     });
-
-    // Aggregate results
     matchups.forEach(matchup => {
-        const p1 = stats[matchup.profile1];
-        const p2 = stats[matchup.profile2];
-
-        p1.totalWins += matchup.p1Wins;
-        p1.totalLosses += matchup.p2Wins;
-        p1.totalDraws += matchup.draws;
-        p1.totalGames += matchup.totalGames;
-        p1.winsAsP1 += matchup.p1Wins;
-
-        p2.totalWins += matchup.p2Wins;
-        p2.totalLosses += matchup.p1Wins;
-        p2.totalDraws += matchup.draws;
-        p2.totalGames += matchup.totalGames;
-        p2.winsAsP2 += matchup.p2Wins;
+        const p1 = stats[matchup.profile1], p2 = stats[matchup.profile2];
+        p1.totalWins += matchup.p1Wins; p1.totalLosses += matchup.p2Wins; p1.totalDraws += matchup.draws; p1.totalGames += matchup.totalGames; p1.winsAsP1 += matchup.p1Wins;
+        p2.totalWins += matchup.p2Wins; p2.totalLosses += matchup.p1Wins; p2.totalDraws += matchup.draws; p2.totalGames += matchup.totalGames; p2.winsAsP2 += matchup.p2Wins;
     });
-
-    // Calculate win rates
-    profiles.forEach(name => {
-        const s = stats[name];
-        s.winRate = s.totalGames > 0 ? s.totalWins / s.totalGames : 0;
-    });
-
-    // Sort by win rate
-    return profiles
-        .map(name => stats[name])
-        .sort((a, b) => b.winRate - a.winRate);
-}
-
-/**
- * Run a matchup with parallel game execution
- */
-async function runMatchupParallel(
-    profile1: string,
-    profile2: string,
-    numGames: number,
-    verbose: boolean,
-    quiet: boolean,
-    parallel: number,
-    engine: any
-): Promise<MatchupResult> {
-    if (!quiet) console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
-
-    let p1Wins = 0;
-    let p2Wins = 0;
-    let draws = 0;
-    let totalTurns = 0;
-
-    // Run games in parallel batches
-    const batchSize = parallel;
-    const batches: Promise<{ winner: number | -1; totalTurns: number }[]>[] = [];
-
-    for (let i = 0; i < numGames; i += batchSize) {
-        const batchPromises: Promise<{ winner: number | -1; totalTurns: number }>[] = [];
-        const gamesInBatch = Math.min(batchSize, numGames - i);
-
-        for (let j = 0; j < gamesInBatch; j++) {
-            batchPromises.push(
-                runHeuristicGameAsync(i + j + 1, profile1, profile2, verbose, quiet, engine)
-            );
-        }
-
-        batches.push(Promise.all(batchPromises));
-    }
-
-    // Process batches sequentially to avoid overwhelming the system
-    for (const batchPromise of batches) {
-        const batchResults = await batchPromise;
-        for (const result of batchResults) {
-            if (result.winner === 0) p1Wins++;
-            else if (result.winner === 1) p2Wins++;
-            else draws++;
-            totalTurns += result.totalTurns;
-        }
-
-        if (!quiet) {
-            const totalProcessed = Math.min(numGames, p1Wins + p2Wins + draws);
-            const bar1 = '█'.repeat(Math.round((p1Wins / totalProcessed) * 20));
-            const bar2 = '█'.repeat(Math.round((p2Wins / totalProcessed) * 20));
-            console.log(`\r  Progress: ${totalProcessed}/${numGames} | ${profile1}: ${p1Wins} ${bar1} | ${profile2}: ${p2Wins} ${bar2} | Draws: ${draws}`);
-        }
-    }
-
-    if (!quiet) console.log();
-
-    return {
-        profile1,
-        profile2,
-        p1Wins,
-        p2Wins,
-        draws,
-        totalGames: numGames,
-        p1WinRate: p1Wins / numGames,
-        p2WinRate: p2Wins / numGames,
-        avgTurns: totalTurns / numGames,
-    };
-}
-
-/**
- * Async wrapper for runHeuristicGame
- */
-async function runHeuristicGameAsync(
-    gameNumber: number,
-    profile1: string,
-    profile2: string,
-    verbose: boolean,
-    quiet: boolean,
-    engine: any
-): Promise<{ winner: number | -1; winnerReason: string; totalTurns: number }> {
-    return runHeuristicGame(gameNumber, profile1, profile2, verbose, quiet, engine);
+    profiles.forEach(name => { stats[name].winRate = stats[name].totalGames > 0 ? stats[name].totalWins / stats[name].totalGames : 0; });
+    return profiles.map(name => stats[name]).sort((a, b) => b.winRate - a.winRate);
 }
 
 // Main tournament runner
-async function runTournament() {
-    const numGames = parseInt(args.games as string) || 10;
-    const outputDir = (args.output as string) || "tournaments";
+async function runTournament(args: any) {
+    const numGames = parseInt(args.games) || 10;
+    const outputDir = args.output || "tournaments";
     const verbose = !!args.verbose;
     const quiet = !!args.quiet;
-    const parallel = parseInt(args.parallel as string) || 1;
+    const parallel = parseInt(args.parallel) || 1;
 
-    // Parse profiles to test
     let profilesToTest = PROFILE_NAMES;
     if (args.profiles) {
-        const requested = (args.profiles as string).split(',').map(p => p.trim().toLowerCase());
+        const requested = args.profiles.split(',').map((p: any) => p.trim().toLowerCase());
         profilesToTest = PROFILE_NAMES.filter(p => requested.includes(p));
-        if (profilesToTest.length === 0) {
-            console.error("No valid profiles specified. Available:", PROFILE_NAMES.join(', '));
-            Deno.exit(1);
-        }
     }
 
     console.log("╔════════════════════════════════════════╗");
     console.log("║   Heuristic Profile Tournament         ║");
     console.log("╚════════════════════════════════════════╝");
-    console.log(`Games per matchup: ${numGames}`);
-    console.log(`Profiles: ${profilesToTest.join(', ')}`);
-    console.log(`Parallel: ${parallel}`);
-    console.log(`Quiet: ${quiet}`);
-    console.log(`Verbose: ${verbose}`);
+    console.log(`Games per matchup: ${numGames} | Profiles: ${profilesToTest.join(', ')} | Parallel: ${parallel}`);
     console.log("");
 
-    // Load game engine
-    if (!quiet) {
-        console.log("Loading game engine...");
-    }
-    const engine = await loadGameEngine();
-    if (!quiet) console.log("Engine loaded.\n");
-
-    // Ensure output directory exists
-    await ensureDir(outputDir);
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const results: TournamentResults = {
-        metadata: {
-            date: timestamp,
-            gamesPerMatchup: numGames,
-            profiles: profilesToTest,
-            version: "1.0",
-        },
-        matchups: [],
-        standings: [],
-        summary: {
-            totalGames: 0,
-            totalTurns: 0,
-            avgTurnsPerGame: 0,
-        },
+    const engineCodes = {
+        gameCode: await Deno.readTextFile("./game.js"),
+        aiCoreCode: await Deno.readTextFile("./ai/ai.js"),
+        aiRandomCode: await Deno.readTextFile("./ai/ai-random.js"),
+        aiHeuristicCode: await Deno.readTextFile("./ai/ai-heuristic.js"),
+        aiPriorityCode: await Deno.readTextFile("./ai/ai-priority.js"),
+        aiMinimaxCode: await Deno.readTextFile("./ai/ai-minimax.js"),
+        heuristicProfilesCode: await Deno.readTextFile("./ai/heuristic-profiles.js"),
     };
 
-    // Run all matchups (round-robin)
-    const matchups: MatchupResult[] = [];
-    
-    if (parallel > 1) {
-        // Parallel execution
-        console.log(`Running tournament with ${parallel} parallel games...`);
-        const matchupPromises: Promise<MatchupResult>[] = [];
-        
-        for (let i = 0; i < profilesToTest.length; i++) {
-            for (let j = i + 1; j < profilesToTest.length; j++) {
-                // Run matchups in parallel batches
-                matchupPromises.push(
-                    runMatchupParallel(
-                        profilesToTest[i],
-                        profilesToTest[j],
-                        numGames,
-                        verbose,
-                        quiet,
-                        parallel,
-                        engine
-                    )
-                );
-            }
-        }
-        
-        const resolvedMatchups = await Promise.all(matchupPromises);
-        matchups.push(...resolvedMatchups);
-    } else {
-        // Sequential execution
-        for (let i = 0; i < profilesToTest.length; i++) {
-            for (let j = i + 1; j < profilesToTest.length; j++) {
-                const matchup = runMatchup(
-                    profilesToTest[i],
-                    profilesToTest[j],
-                    numGames,
-                    verbose,
-                    quiet,
-                    engine
-                );
-                matchups.push(matchup);
-            }
+    const engine = await loadGameEngine(engineCodes);
+    await ensureDir(outputDir);
+    const pool = parallel > 1 ? new GameWorkerPool(parallel, engineCodes) : undefined;
+
+    const numMatchups = (profilesToTest.length * (profilesToTest.length - 1)) / 2;
+    totalGamesScheduled = numMatchups * numGames;
+    totalGamesCompleted = 0;
+
+    const matchupPromises: Promise<MatchupResult>[] = [];
+    for (let i = 0; i < profilesToTest.length; i++) {
+        for (let j = i + 1; j < profilesToTest.length; j++) {
+            matchupPromises.push(runMatchup(profilesToTest[i], profilesToTest[j], numGames, verbose, quiet, engine, pool));
         }
     }
-    
-    results.matchups = matchups;
+    if (pool && !quiet) updateGlobalProgress(quiet, verbose);
+    const matchups = await Promise.all(matchupPromises);
+    if (pool) pool.terminate();
+    if (!quiet) console.log("\n\nAll games completed.");
 
-    // Calculate summary
-    for (const matchup of matchups) {
-        results.summary.totalGames += matchup.totalGames;
-        results.summary.totalTurns += matchup.avgTurns * matchup.totalGames;
-    }
-
-    // Calculate standings
-    results.standings = calculateStandings(results.matchups, profilesToTest);
+    const standings = calculateStandings(matchups, profilesToTest);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const results = { metadata: { date: timestamp, gamesPerMatchup: numGames, profiles: profilesToTest, version: "1.0" }, matchups, standings, summary: { totalGames: totalGamesScheduled, totalTurns: matchups.reduce((a, b) => a + b.avgTurns * b.totalGames, 0), avgTurnsPerGame: 0 } };
     results.summary.avgTurnsPerGame = results.summary.totalTurns / results.summary.totalGames;
 
-    // Print standings
-    console.log("\n");
-    console.log("╔════════════════════════════════════════╗");
-    console.log("║         Tournament Standings           ║");
-    console.log("╚════════════════════════════════════════╝");
-    console.log("");
-    console.log("Profile         | W    | L    | D    | Win%  | W(P1)| W(P2)");
+    console.log("\nProfile         | W    | L    | D    | Win%  | W(P1)| W(P2)");
     console.log("────────────────|──────|──────|──────|───────|──────|──────");
-
-    results.standings.forEach(s => {
+    standings.forEach(s => {
         const winPct = (s.winRate * 100).toFixed(1);
-        console.log(
-            `${s.name.padEnd(15)} | ${s.totalWins.toString().padStart(4)} | ${s.totalLosses.toString().padStart(4)} | ${s.totalDraws.toString().padStart(4)} | ${winPct.padStart(5)}% | ${s.winsAsP1.toString().padStart(4)} | ${s.winsAsP2.toString().padStart(4)}`
-        );
+        console.log(`${s.name.padEnd(15)} | ${s.totalWins.toString().padStart(4)} | ${s.totalLosses.toString().padStart(4)} | ${s.totalDraws.toString().padStart(4)} | ${winPct.padStart(5)}% | ${s.winsAsP1.toString().padStart(4)} | ${s.winsAsP2.toString().padStart(4)}`);
     });
 
-    console.log("");
-    console.log(`Total games: ${results.summary.totalGames}`);
-    console.log(`Avg turns/game: ${results.summary.avgTurnsPerGame.toFixed(1)}`);
-
-    // Save results
     const resultsFile = `${outputDir}/tournament_${timestamp}.json`;
     await Deno.writeTextFile(resultsFile, JSON.stringify(results, null, 2));
     console.log(`\n📄 Results saved to: ${resultsFile}`);
-
-    // Save standings as CSV
-    const csvFile = `${outputDir}/standings_${timestamp}.csv`;
-    const csvContent = [
-        ['Profile', 'Wins', 'Losses', 'Draws', 'TotalGames', 'WinRate', 'WinsAsP1', 'WinsAsP2'].join(','),
-        ...results.standings.map(s =>
-            [s.name, s.totalWins, s.totalLosses, s.totalDraws, s.totalGames, s.winRate.toFixed(4), s.winsAsP1, s.winsAsP2].join(',')
-        )
-    ].join('\n');
-    await Deno.writeTextFile(csvFile, csvContent);
-    console.log(`📊 Standings CSV saved to: ${csvFile}`);
-
-    // Save matchup details
-    const matchupFile = `${outputDir}/matchups_${timestamp}.txt`;
-    const matchupContent = results.matchups.map(m =>
-        `${m.profile1} vs ${m.profile2}: ${m.p1Wins}-${m.p2Wins}-${m.draws} (Win rates: ${(m.p1WinRate * 100).toFixed(1)}% - ${(m.p2WinRate * 100).toFixed(1)}%)`
-    ).join('\n');
-    await Deno.writeTextFile(matchupFile, matchupContent);
-    console.log(`📝 Matchup details saved to: ${matchupFile}`);
 }
 
-// Run tournament
-runTournament().catch((error) => {
-    console.error("Tournament failed:", error);
-    Deno.exit(1);
-});
+/**
+ * Pool of workers for running games in parallel
+ */
+class GameWorkerPool {
+    private workers: Worker[] = [];
+    private idleWorkers: Worker[] = [];
+    private queue: { data: any; resolve: (v: any) => void; reject: (e: any) => void }[] = [];
+
+    constructor(size: number, engineCodes: Record<string, string>) {
+        const scriptUrl = new URL(import.meta.url).href;
+        for (let i = 0; i < size; i++) {
+            const worker = new Worker(scriptUrl, { type: "module" });
+            worker.onmessage = (e) => {
+                const msg = e.data;
+                if (msg.type === 'ready') { this.idleWorkers.push(worker); this.process(); }
+                else if (msg.type === 'result') { this.handleResult(worker, msg.result); }
+            };
+            worker.onerror = (e) => this.handleError(worker, e);
+            worker.postMessage({ type: 'init', engineCodes });
+            this.workers.push(worker);
+        }
+    }
+
+    private handleResult(worker: Worker, result: any) {
+        const current = (worker as any).current;
+        if (current) current.resolve(result);
+        (worker as any).current = null;
+        this.idleWorkers.push(worker);
+        this.process();
+    }
+
+    private handleError(worker: Worker, err: any) {
+        const current = (worker as any).current;
+        if (current) current.reject(err);
+        (worker as any).current = null;
+    }
+
+    private process() {
+        while (this.idleWorkers.length > 0 && this.queue.length > 0) {
+            const worker = this.idleWorkers.pop()!;
+            const task = this.queue.shift()!;
+            (worker as any).current = task;
+            worker.postMessage({ type: 'task', task: task.data });
+        }
+    }
+
+    run(data: any): Promise<any> {
+        return new Promise((resolve, reject) => { this.queue.push({ data, resolve, reject }); this.process(); });
+    }
+
+    terminate() { this.workers.forEach((w) => w.terminate()); }
+}
+
+// Entry point
+const isWorker = typeof (globalThis as any).WorkerGlobalScope !== "undefined";
+
+if (import.meta.main && !isWorker) {
+    const args = parse(Deno.args, {
+        string: ["games", "output", "profiles", "parallel"],
+        boolean: ["verbose", "quiet", "help"],
+        alias: { g: "games", o: "output", v: "verbose", q: "quiet", p: "parallel", h: "help" },
+        default: { games: 1, output: "tournaments", verbose: false, quiet: false, parallel: 1 },
+    });
+
+    if (args.help) {
+        console.log(`Hex Dice Heuristic Profile Tournament\nUsage: deno run --allow-all tournament.ts [options]`);
+        Deno.exit(0);
+    }
+
+    runTournament(args).catch(e => { console.error("Tournament failed:", e); Deno.exit(1); });
+} else {
+    // Worker runner logic
+    let engine: any = null;
+    (self as any).onmessage = async (e: any) => {
+        const { type, engineCodes, task } = e.data;
+        if (type === 'init') {
+            engine = await loadGameEngine(engineCodes);
+            (self as any).postMessage({ type: 'ready' });
+        } else if (type === 'task') {
+            const result = runHeuristicGame(task.gameNumber, task.profile1, task.profile2, task.verbose, task.quiet, engine, task.seed);
+            (self as any).postMessage({ type: 'result', result });
+        }
+    };
+}
