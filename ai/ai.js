@@ -94,7 +94,6 @@ function applyMove(GAME, move, state) {
 			GAME.performGuard(move.unitHexId, applyState);
 			break;
 		case 'END_TURN':
-			GAME.addLog('AI END_TURN')
 			GAME.endTurn();
 			break;
 	}
