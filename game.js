@@ -5,7 +5,6 @@ const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
 const BOARD_DOT = [
-
 	`                         .`,
 	`                     .       .`,
 	`                 .       .       .`,

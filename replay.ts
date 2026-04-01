@@ -2,13 +2,13 @@
 
 /**
  * Hex Dice Replay Viewer
- * 
+ *
  * Load and analyze simulated games step-by-step.
- * 
+ *
  * Usage:
  *   deno run --allow-read replay.ts <replay_file.json>
- *   deno run --allow-read replay.ts simulations/replay_2026-04-01T12-00-00-000Z.json
- * 
+ *   deno run --allow-read replay.ts simulations/replay_*.json
+ *
  * Commands (interactive mode):
  *   n, next      - Next move
  *   p, prev      - Previous move
@@ -16,11 +16,148 @@
  *   t <num>      - Go to turn number
  *   s, state     - Show current state summary
  *   m, moves     - Show last 5 moves
+ *   l, logs      - Show last 10 logs
+ *   b, board     - Toggle board display
  *   h, help      - Show commands
  *   q, quit      - Exit
  */
 
 import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
+
+// ANSI color codes for terminal output
+const COLORS = {
+    reset: '\x1b[0m',
+    blue: '\x1b[94m',      // Bright blue for Player 1
+    red: '\x1b[91m',       // Bright red for Player 2
+    bold: '\x1b[1m',
+    dim: '\x1b[2m',
+};
+
+// Board configuration for R=5
+const BOARD_CONFIG = {
+    R: 5,                          // Map radius
+    monoSpace: 8,                  // Space between hex centers in same row (chars) - matches BOARD_DOT
+    rowShift: 4,                   // Horizontal shift between adjacent rows (chars)
+    baseCol: 1,                    // Starting column for leftmost hex in widest row
+};
+
+// Board template for ASCII rendering (R=5, 21 lines, 91 hexes)
+// Matches BOARD_DOT in game.js
+const BOARD_DOT = [
+  `                     .`,
+  `                 .       .`,
+  `             .       .       .`,
+  `         .       .       .       .`,
+  `     .       .       .       .       .`,
+  ` .       .       .       .       .       .`,
+  `     .       .       .       .       .`,
+  ` .       .       .       .       .       .`,
+  `     .       .       .       .       .`,
+  ` .       .       .       .       .       .`,
+  `     .       .       .       .       .`,
+  ` .       .       .       .       .       .`,
+  `     .       .       .       .       .`,
+  ` .       .       .       .       .       .`,
+  `     .       .       .       .       .`,
+  ` .       .       .       .       .       .`,
+  `     .       .       .       .       .`,
+  `         .       .       .       .`,
+  `             .       .       .`,
+  `                 .       .`,
+  `                     .`,
+].join('\n');
+
+/**
+ * Calculate hex positions algorithmically based on BOARD_DOT pattern
+ *
+ * The hex IDs in game.js are assigned by axial coordinate iteration:
+ * for q from -R to +R:
+ *   for r from -R to +R:
+ *     if s (-q-r) is also in range, assign next hex ID
+ *
+ * This creates a specific visual pattern where hex IDs don't follow simple row order.
+ * For R=5: 21 rows, 91 hexes (IDs 0-90)
+ * Column spacing: 8 chars between hex centers
+ */
+function calculateHexPositions(): Record<number, { row: number, col: number }> {
+    const positions: Record<number, { row: number, col: number }> = {};
+    const R = BOARD_CONFIG.R;
+
+    // Generate hex grid using the same axial coordinate algorithm as game.js
+    const hexGrid: Array<{ id: number; q: number; r: number; s: number }> = [];
+    let id = 0;
+    for (let q = -R; q <= R; q++) {
+        for (let r = -R; r <= R; r++) {
+            const s = -q - r;
+            if (s >= -R && s <= R) {
+                hexGrid.push({ id, q, r, s });
+                id++;
+            }
+        }
+    }
+
+    // Map hex IDs to visual rows based on axial coordinates
+    // Visual row is determined by the pixel Y position: y = HEX_HEIGHT * (r + q / 2)
+    // Hexes with the same (r + q/2) value are on the same visual row
+    // We group by (2*r + q) to avoid floating point, then sort
+    const rowMap = new Map<number, number[]>();
+    for (const hex of hexGrid) {
+        const visualRowKey = 2 * hex.r + hex.q;
+        if (!rowMap.has(visualRowKey)) {
+            rowMap.set(visualRowKey, []);
+        }
+        rowMap.get(visualRowKey)!.push(hex.id);
+    }
+
+    // Sort rows by visual row key (top to bottom)
+    const sortedRowKeys = Array.from(rowMap.keys()).sort((a, b) => b - a);
+
+    // Build rowHexIds array from sorted rows
+    const rowHexIds: Array<number[]> = sortedRowKeys.map(key => {
+        const hexIds = rowMap.get(key)!;
+        // Sort hexes within each row by column (right to left for rendering)
+        return hexIds.sort((a, b) => {
+            const hexA = hexGrid.find(h => h.id === a)!;
+            const hexB = hexGrid.find(h => h.id === b)!;
+            return hexB.q - hexA.q;
+        });
+    });
+
+    // Calculate board dimensions dynamically based on R
+    // Visual row keys range from -2R to +2R, so total rows = 4R + 1
+    const totalRows = rowHexIds.length;
+    const maxHexId = R === 5 ? 90 : (2 * R + 1) * (2 * R + 1) - 1; // Max hex ID for this R
+
+    // Calculate maxCol based on the widest row
+    // For the staggered hex layout, max hexes in a visual row = R + 1
+    // maxCol = baseCol + (maxHexesInRow - 1) * monoSpace
+    const maxHexesInRow = R + 1;
+    const maxCol = BOARD_CONFIG.baseCol + (maxHexesInRow - 1) * BOARD_CONFIG.monoSpace;
+
+    for (let row = 0; row < rowHexIds.length; row++) {
+        const hexIds = rowHexIds[row];
+        const validHexIds = hexIds.filter(id => id <= maxHexId);
+
+        if (validHexIds.length > 0) {
+            // Calculate start column based on number of hexes in this row
+            // Center the hexes in the row based on maxCol
+            const numHexes = validHexIds.length;
+            const rowWidth = (numHexes - 1) * BOARD_CONFIG.monoSpace;
+            const startCol = BOARD_CONFIG.baseCol + (maxCol - BOARD_CONFIG.baseCol - rowWidth) / 2;
+
+            for (let i = 0; i < validHexIds.length; i++) {
+                const hexId = validHexIds[i];
+                const col = startCol + i * BOARD_CONFIG.monoSpace;
+                positions[hexId] = { row, col };
+            }
+        }
+    }
+
+    return positions;
+}
+
+// Generate hex positions
+const HEX_POSITIONS = calculateHexPositions();
 
 const args = parse(Deno.args, {
     string: ["game", "turn"],
@@ -54,6 +191,7 @@ Interactive Commands:
   s, state           - Show current state summary
   m, moves           - Show last 5 moves
   l, logs            - Show last 10 log messages
+  b, board           - Toggle board display
   h, help            - Show commands
   q, quit            - Exit
 
@@ -107,6 +245,8 @@ class ReplayViewer {
     private data: ReplayData;
     private currentGameIdx: number = 0;
     private currentTurnIdx: number = 0;
+    private gameState: Map<number, { value: number; playerId: number; isDeath: boolean }> = new Map();
+    private showBoard: boolean = true;
 
     constructor(filePath: string) {
         const content = Deno.readTextFileSync(filePath);
@@ -122,6 +262,101 @@ class ReplayViewer {
             return null;
         }
         return this.currentGame.moves[this.currentTurnIdx];
+    }
+
+    /**
+     * Reconstruct game state from state hash at current turn
+     */
+    reconstructGameState() {
+        this.gameState = new Map();
+
+        if (this.currentTurnIdx >= 0 && this.currentTurnIdx < this.currentGame.moves.length) {
+            const move = this.currentGame.moves[this.currentTurnIdx];
+            try {
+                const state = JSON.parse(atob(move.stateHash));
+
+                // Parse P1 dice (playerId = 0, Blue)
+                if (state.p1Dice) {
+                    state.p1Dice.split('|').forEach((entry: string) => {
+                        if (entry) {
+                            const [value, hexId, isDeath] = entry.split('-');
+                            this.gameState.set(parseInt(hexId, 10), {
+                                value: parseInt(value, 10),
+                                playerId: 0,
+                                isDeath: isDeath === 'true',
+                            });
+                        }
+                    });
+                }
+
+                // Parse P2 dice (playerId = 1, Red)
+                if (state.p2Dice) {
+                    state.p2Dice.split('|').forEach((entry: string) => {
+                        if (entry) {
+                            const [value, hexId, isDeath] = entry.split('-');
+                            this.gameState.set(parseInt(hexId, 10), {
+                                value: parseInt(value, 10),
+                                playerId: 1,
+                                isDeath: isDeath === 'true',
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                // Failed to parse state, show empty board
+            }
+        }
+    }
+
+    /**
+     * Render ASCII board with current unit positions (with ANSI colors)
+     */
+    renderBoard(): string {
+        const boardLines = BOARD_DOT.split('\n');
+        const result: string[] = [];
+
+        // Build a map of positions to units (with colors)
+        const unitAtPosition: Map<string, { display: string; colored: string }> = new Map();
+        for (const [hexId, unit] of this.gameState.entries()) {
+            if (unit.isDeath) continue;
+            const pos = HEX_POSITIONS[hexId];
+            if (pos) {
+                const key = `${pos.row},${pos.col}`;
+                const display = unit.playerId === 0 ? `B${unit.value}` : `R${unit.value}`;
+                const color = unit.playerId === 0 ? COLORS.blue : COLORS.red;
+                const colored = `${color}${display}${COLORS.reset}`;
+                unitAtPosition.set(key, { display, colored });
+            }
+        }
+
+        // Render each line, replacing hex positions with colored unit markers
+        for (let row = 0; row < boardLines.length; row++) {
+            let line = boardLines[row];
+
+            // Sort positions by column (right to left) to avoid offset issues when replacing
+            const positionsInRow = Array.from(unitAtPosition.entries())
+                .filter(([posKey]) => posKey.startsWith(`${row},`))
+                .sort((a, b) => {
+                    const colA = parseInt(a[0].split(',')[1]);
+                    const colB = parseInt(b[0].split(',')[1]);
+                    return colB - colA; // Right to left
+                });
+
+            for (const [posKey, unit] of positionsInRow) {
+                const c = parseInt(posKey.split(',')[1]);
+                if (c < line.length - 2) {
+                    // Replace 3 chars at position with colored unit marker
+                    const before = line.substring(0, c);
+                    const after = line.substring(c + 3);
+                    // Pad colored display to maintain alignment (color codes don't count for display width)
+                    const padding = Math.max(0, 3 - unit.display.length);
+                    line = before + unit.colored + ' '.repeat(padding) + after;
+                }
+            }
+            result.push(line);
+        }
+
+        return result.join('\n');
     }
 
     goToGame(gameNumber: number): boolean {
@@ -174,7 +409,7 @@ class ReplayViewer {
         console.log("");
         console.log(`Avg Turns/Game: ${this.data.summary.avgTurnsPerGame.toFixed(1)}`);
         console.log(`Total Turns: ${this.data.summary.totalTurns}`);
-        
+
         // Game by game breakdown
         console.log("\nGame Results:");
         this.data.games.forEach(g => {
@@ -186,13 +421,30 @@ class ReplayViewer {
     showCurrentState() {
         const game = this.currentGame;
         const move = this.currentMove;
-        
-        console.log("\n╔════════════════════════════════════════╗");
-        console.log(`║  Game ${game.gameNumber}/${this.data.games.length}  Turn ${this.currentTurnIdx}/${game.totalTurns}`);
-        console.log("╚════════════════════════════════════════╝");
-        
+
+        // Reconstruct and render board
+        if (this.showBoard) {
+            this.reconstructGameState();
+            const board = this.renderBoard();
+
+            console.log("\n╔════════════════════════════════════════╗");
+            console.log(`║  Game ${game.gameNumber}/${this.data.games.length}  Turn ${this.currentTurnIdx}/${game.totalTurns}`);
+            console.log("╚════════════════════════════════════════╝");
+
+            // Show board
+            console.log("\n" + board);
+
+            // Legend with colors
+            console.log(`\nLegend: ${COLORS.blue}B1-B6${COLORS.reset} = Player 1 (Blue), ${COLORS.red}R1-R6${COLORS.reset} = Player 2 (Red)`);
+        } else {
+            console.log("\n╔════════════════════════════════════════╗");
+            console.log(`║  Game ${game.gameNumber}/${this.data.games.length}  Turn ${this.currentTurnIdx}/${game.totalTurns}`);
+            console.log("╚════════════════════════════════════════╝");
+        }
+
         if (move) {
-            console.log(`Player: P${move.player + 1} (${move.aiType})`);
+            const playerColor = move.player === 0 ? COLORS.blue : COLORS.red;
+            console.log(`\n${playerColor}Player: P${move.player + 1}${COLORS.reset} (${move.aiType})`);
             console.log(`Action: ${move.actionType}`);
             if (move.logMessage) {
                 console.log(`Log: ${move.logMessage}`);
@@ -209,7 +461,7 @@ class ReplayViewer {
     showRecentMoves(count: number = 5) {
         const start = Math.max(0, this.currentTurnIdx - count + 1);
         const moves = this.currentGame.moves.slice(start, this.currentTurnIdx + 1);
-        
+
         console.log("\nRecent Moves:");
         moves.forEach((m, i) => {
             const marker = (start + i === this.currentTurnIdx) ? "▶" : " ";
@@ -220,7 +472,7 @@ class ReplayViewer {
     showRecentLogs(count: number = 10) {
         const start = Math.max(0, this.currentTurnIdx - count + 1);
         const moves = this.currentGame.moves.slice(start, this.currentTurnIdx + 1);
-        
+
         console.log("\nRecent Logs:");
         moves.forEach((m, i) => {
             const marker = (start + i === this.currentTurnIdx) ? "▶" : " ";
@@ -238,8 +490,10 @@ class ReplayViewer {
         console.log("  s, state      - Show current state");
         console.log("  m, moves      - Show last 5 moves");
         console.log("  l, logs       - Show last 10 logs");
+        console.log("  b, board      - Toggle board display");
         console.log("  f, final      - Jump to game end");
         console.log("  0, start      - Jump to game start");
+        console.log("  stats         - Show full statistics");
         console.log("  h, help       - Show commands");
         console.log("  q, quit       - Exit");
     }
@@ -253,34 +507,32 @@ class ReplayViewer {
         console.log("\nType 'help' for commands\n");
 
         // Go to specified game/turn if provided
-        if (args.game && typeof args.game === "number") {
-            if (this.goToGame(args.game)) {
-                console.log(`Jumped to Game ${args.game}`);
+        if (args.game) {
+            const gameNum = parseInt(args.game as string, 10);
+            if (this.goToGame(gameNum)) {
+                console.log(`Jumped to Game ${gameNum}`);
             }
         }
-        if (args.turn && typeof args.turn === "number") {
-            if (this.goToTurn(args.turn)) {
-                console.log(`Jumped to Turn ${args.turn}`);
+        if (args.turn) {
+            const turnNum = parseInt(args.turn as string, 10);
+            if (this.goToTurn(turnNum)) {
+                console.log(`Jumped to Turn ${turnNum}`);
             }
         }
 
         this.showCurrentState();
 
-        // Read-eval loop
-        const readLine = (): string | null => {
-            const buf = new Uint8Array(1024);
-            Deno.stdin.readSync(buf);
-            const line = new TextDecoder().decode(buf).trim();
-            return line || null;
-        };
-
+        // Read-eval loop using Deno.stdin
+        const buf = new Uint8Array(1024);
         while (true) {
             Deno.stdout.writeSync(new TextEncoder().encode("\n> "));
-            const input = readLine();
+            const n = Deno.stdin.readSync(buf);
+            if (n === null) break;
+            const input = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
             if (!input) continue;
 
             const parts = input.split(/\s+/);
-            const cmd = parts[0]?.toLowerCase();
+            const cmd = parts[0];
             const arg = parts[1];
 
             switch (cmd) {
@@ -348,6 +600,13 @@ class ReplayViewer {
                     this.showRecentLogs();
                     break;
 
+                case "b":
+                case "board":
+                    this.showBoard = !this.showBoard;
+                    console.log(`Board display: ${this.showBoard ? 'ON' : 'OFF'}`);
+                    this.showCurrentState();
+                    break;
+
                 case "f":
                 case "final":
                 case "end":
@@ -393,7 +652,7 @@ if (!replayFile) {
 
 try {
     const viewer = new ReplayViewer(replayFile);
-    
+
     if (args.stats) {
         viewer.showStats();
     } else {
