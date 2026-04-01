@@ -137,3 +137,4 @@ dist
 .aider*
 /simulations
 /heuristic-results
+/.qwen
