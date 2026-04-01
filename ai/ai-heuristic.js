@@ -1,22 +1,55 @@
 /**
- * Heuristic-Priority AI Strategy for Hex Dice
- * 
- * Priority Order:
- * 1. Scan all units
- * 2. If unit can be killed or attacked, dodge (prioritize safety)
- * 3. If unit can kill or attack enemy, do it (prioritize kills)
- * 4. Pick least moved or farthest away unit, choose best move
- *    - Prefer moves in protected range of friendly units
- *    - Prefer moves near friendly Dice 6 (for armor buff)
+ * Heuristic-Priority AI Strategy for Hex Dice (Profile-Driven)
+ *
+ * Priority Order (configurable per profile):
+ * 1. capture - Move to enemy base (win condition)
+ * 2. kill - Move that destroys enemy unit
+ * 3. attack - Move that damages enemy (not lethal)
+ * 4. dodge - Escape threatened position
+ * 5. position - Strategic positioning (advancement, merging, guarding)
+ *
+ * Usage:
+ *   performAIByHeuristic(GAME) - Uses baseline profile
+ *   performAIByHeuristic(GAME, 'berserker') - Uses specified profile
  */
 
-function performAIByHeuristic(GAME) {
+// Default profile if none specified
+const DEFAULT_PROFILE = {
+    name: "Baseline",
+    priorityOrder: ['capture', 'kill', 'attack', 'dodge', 'position'],
+    weights: {
+        captureBonus: 10000,
+        killBonus: 1000,
+        attackBonus: 100,
+        safeBonus: 500,
+        threatPenalty: -250,
+        protectedRangeBonus: 50,
+        friendlySixBonus: 100,
+        advanceBonus: 50,
+        guardPenalty: -500,
+        mergeOver6Penalty: -500
+    },
+    riskTolerance: 0.5,
+    targetSelection: 'highestValue',
+    positioningStyle: 'balanced',
+    unitSelection: 'leastMoved'
+};
+
+function performAIByHeuristic(GAME, profileName = 'baseline') {
     if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) {
         console.log("AI stupid. Ending turn.");
         return;
     }
 
-    console.log("AI (Heuristic Priority) thinking...");
+    // Load profile (use inline definition if heuristic-profiles.js not loaded)
+    let profile = DEFAULT_PROFILE;
+    if (typeof getProfile === 'function') {
+        profile = getProfile(profileName);
+    } else if (typeof heuristicProfiles !== 'undefined' && heuristicProfiles[profileName]) {
+        profile = heuristicProfiles[profileName];
+    }
+
+    console.log(`AI (Heuristic: ${profile.name}) thinking...`);
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
     const opponentIndex = (state.currentPlayerIndex + 1) % state.players.length;
@@ -30,7 +63,7 @@ function performAIByHeuristic(GAME) {
         return;
     }
 
-    // Get opponent base for positioning
+    // Get opponent base for capture/positioning
     const opponentBaseHexId = state.players[opponentIndex].baseHexId;
     const opponentBaseHex = GAME.getHex(opponentBaseHexId, state);
 
@@ -44,7 +77,7 @@ function performAIByHeuristic(GAME) {
         const unit = currentPlayer.dice.find(d => d.hexId === move.unitHexId);
         if (!unit) continue;
 
-        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex);
+        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, opponentBaseHexId, profile);
         scoredMoves.push({
             move,
             unit,
@@ -52,127 +85,10 @@ function performAIByHeuristic(GAME) {
         });
     }
 
-    // Priority 1: Find moves that kill enemies (offensive opportunity)
-    const killMoves = scoredMoves.filter(m => m.canKillEnemy);
-    if (killMoves.length > 0) {
-        // Pick the best kill move (highest value target or safest)
-        killMoves.sort((a, b) => {
-            if (b.isSafe !== a.isSafe) return b.isSafe - a.isSafe; // Prefer safe moves
-            return b.targetValue - a.targetValue; // Then by target value
-        });
-        const bestKillMove = killMoves[0];
-        console.log("AI Heuristic: Found kill opportunity!", bestKillMove.move);
-        applyMove(GAME, bestKillMove.move);
-        return;
-    }
-
-    // Priority 2: Find moves that attack enemies (aggressive opportunity)
-    const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
-    if (attackMoves.length > 0) {
-        // Pick the best attack move (safest first)
-        attackMoves.sort((a, b) => {
-            if (b.isSafe !== a.isSafe) return b.isSafe - a.isSafe;
-            return b.targetValue - a.targetValue;
-        });
-        const bestAttackMove = attackMoves[0];
-        console.log("AI Heuristic: Found attack opportunity!", bestAttackMove.move);
-        applyMove(GAME, bestAttackMove.move);
-        return;
-    }
-
-    // Priority 3: Dodge dangerous positions (defensive maneuver)
-    const threatenedUnits = scoredMoves.filter(m => m.isThreatened || m.canBeKilled);
-    if (threatenedUnits.length > 0) {
-        // Group by unit to find safest move for each threatened unit
-        const unitEscapeMoves = new Map();
-        threatenedUnits.forEach(m => {
-            if (!unitEscapeMoves.has(m.unit.id)) {
-                unitEscapeMoves.set(m.unit.id, []);
-            }
-            unitEscapeMoves.get(m.unit.id).push(m);
-        });
-
-        // Find the unit in most danger that can escape
-        let bestEscape = null;
-        let bestEscapeScore = -Infinity;
-
-        for (const [unitId, moves] of unitEscapeMoves) {
-            // Sort moves by safety and protection
-            moves.sort((a, b) => {
-                // Prefer moves that escape kill threat
-                if (a.canBeKilled && !b.canBeKilled) return 1;
-                if (!a.canBeKilled && b.canBeKilled) return -1;
-                
-                // Prefer safer positions
-                if (b.isSafe !== a.isSafe) return b.isSafe - a.isSafe;
-                
-                // Prefer protected positions
-                if (b.isInProtectedRange !== a.isInProtectedRange) return b.isInProtectedRange - a.isInProtectedRange;
-                
-                // Prefer near Dice 6
-                if (b.nearFriendlySix !== a.nearFriendlySix) return b.nearFriendlySix - a.nearFriendlySix;
-                
-                return b.score - a.score;
-            });
-
-            const bestMoveForUnit = moves[0];
-            if (bestMoveForUnit.isSafe && !bestMoveForUnit.canBeKilled) {
-                // This is a good escape
-                if (!bestEscape || bestMoveForUnit.score > bestEscapeScore) {
-                    bestEscape = bestMoveForUnit;
-                    bestEscapeScore = bestMoveForUnit.score;
-                }
-            }
-        }
-
-        if (bestEscape) {
-            console.log("AI Heuristic: Dodging to safety!", bestEscape.move);
-            applyMove(GAME, bestEscape.move);
-            return;
-        }
-    }
-
-    // Priority 4: Strategic positioning (select unit and move)
-    // Pick unit that has moved least or is farthest from enemy base
-    const strategicMoves = scoredMoves.filter(m => !m.isThreatened);
-    
-    if (strategicMoves.length > 0) {
-        // Score based on positioning preferences
-        strategicMoves.forEach(m => {
-            let positionScore = m.score;
-
-            // Bonus for being in protected range
-            if (m.isInProtectedRange) positionScore += 200;
-
-            // Bonus for being near friendly Dice 6
-            if (m.nearFriendlySix) positionScore += 150;
-
-            // Bonus for advancing toward enemy base (for moves)
-            if (m.move.actionType === 'MOVE' && opponentBaseHex) {
-                const targetHex = GAME.getHex(m.move.targetHexId, state);
-                const dist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
-                positionScore += (50 - dist);
-            }
-
-            // Penalty for merging into dangerous sums
-            if (m.move.actionType === 'MERGE') {
-                const targetUnit = GAME.getUnitOnHex(m.move.targetHexId, state);
-                if (targetUnit) {
-                    const sumValue = m.unit.value + targetUnit.value;
-                    if (sumValue > 6) positionScore -= 500;
-                }
-            }
-
-            m.positionScore = positionScore;
-        });
-
-        // Sort by position score
-        strategicMoves.sort((a, b) => b.positionScore - a.positionScore);
-
-        const bestStrategicMove = strategicMoves[0];
-        console.log("AI Heuristic: Strategic positioning", bestStrategicMove.move);
-        applyMove(GAME, bestStrategicMove.move);
-        return;
+    // Execute moves by priority order from profile
+    for (const priority of profile.priorityOrder) {
+        const result = executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId);
+        if (result) return;
     }
 
     // Fallback: End turn
@@ -181,18 +97,173 @@ function performAIByHeuristic(GAME) {
 }
 
 /**
+ * Execute moves for a given priority category
+ */
+function executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId) {
+    const w = profile.weights;
+
+    switch (priority) {
+        case 'capture': {
+            // Find moves that capture enemy base (win condition)
+            const captureMoves = scoredMoves.filter(m => m.canCapture);
+            if (captureMoves.length > 0) {
+                captureMoves.sort((a, b) => b.captureScore - a.captureScore);
+                console.log(`AI Heuristic (${profile.name}): Capturing base!`, captureMoves[0].move);
+                applyMove(GAME, captureMoves[0].move);
+                return true;
+            }
+            break;
+        }
+
+        case 'kill': {
+            // Find moves that kill enemies
+            const killMoves = scoredMoves.filter(m => m.canKillEnemy);
+            if (killMoves.length > 0) {
+                killMoves.sort((a, b) => {
+                    // Apply risk tolerance: berserker ignores safety more
+                    const safetyWeight = (1 - profile.riskTolerance) * 2;
+                    if (b.isSafe !== a.isSafe) return (b.isSafe - a.isSafe) * safetyWeight;
+                    return (b.targetValue || 0) - (a.targetValue || 0);
+                });
+                console.log(`AI Heuristic (${profile.name}): Found kill opportunity!`, killMoves[0].move);
+                applyMove(GAME, killMoves[0].move);
+                return true;
+            }
+            break;
+        }
+
+        case 'attack': {
+            // Find moves that attack but don't kill
+            const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
+            if (attackMoves.length > 0) {
+                attackMoves.sort((a, b) => {
+                    const safetyWeight = (1 - profile.riskTolerance) * 2;
+                    if (b.isSafe !== a.isSafe) return (b.isSafe - a.isSafe) * safetyWeight;
+                    return (b.targetValue || 0) - (a.targetValue || 0);
+                });
+                console.log(`AI Heuristic (${profile.name}): Found attack opportunity!`, attackMoves[0].move);
+                applyMove(GAME, attackMoves[0].move);
+                return true;
+            }
+            break;
+        }
+
+        case 'dodge': {
+            // Find moves that escape danger
+            const threatenedMoves = scoredMoves.filter(m => m.isThreatened || m.canBeKilled);
+            if (threatenedMoves.length > 0) {
+                // Group by unit
+                const unitEscapeMoves = new Map();
+                threatenedMoves.forEach(m => {
+                    if (!unitEscapeMoves.has(m.unit.id)) {
+                        unitEscapeMoves.set(m.unit.id, []);
+                    }
+                    unitEscapeMoves.get(m.unit.id).push(m);
+                });
+
+                // Find best escape move
+                let bestEscape = null;
+                let bestEscapeScore = -Infinity;
+
+                for (const [unitId, moves] of unitEscapeMoves) {
+                    moves.sort((a, b) => {
+                        if (a.canBeKilled && !b.canBeKilled) return 1;
+                        if (!a.canBeKilled && b.canBeKilled) return -1;
+                        if (b.isSafe !== a.isSafe) return b.isSafe - a.isSafe;
+                        if (b.isInProtectedRange !== a.isInProtectedRange) return b.isInProtectedRange - a.isInProtectedRange;
+                        if (b.nearFriendlySix !== a.nearFriendlySix) return b.nearFriendlySix - a.nearFriendlySix;
+                        return b.score - a.score;
+                    });
+
+                    const bestMoveForUnit = moves[0];
+                    if (bestMoveForUnit.isSafe && !bestMoveForUnit.canBeKilled) {
+                        if (!bestEscape || bestMoveForUnit.score > bestEscapeScore) {
+                            bestEscape = bestMoveForUnit;
+                            bestEscapeScore = bestMoveForUnit.score;
+                        }
+                    }
+                }
+
+                if (bestEscape) {
+                    console.log(`AI Heuristic (${profile.name}): Dodging to safety!`, bestEscape.move);
+                    applyMove(GAME, bestEscape.move);
+                    return true;
+                }
+            }
+            break;
+        }
+
+        case 'position': {
+            // Strategic positioning moves
+            const strategicMoves = scoredMoves.filter(m => !m.isThreatened);
+            if (strategicMoves.length > 0) {
+                strategicMoves.forEach(m => {
+                    let positionScore = m.score;
+                    const w = profile.weights;
+
+                    // Apply profile weights
+                    if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
+                    if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
+
+                    // Advance toward enemy base
+                    if (m.move.actionType === 'MOVE' && opponentBaseHex) {
+                        const targetHex = GAME.getHex(m.move.targetHexId, state);
+                        const dist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
+                        positionScore += (w.advanceBonus * (5 - Math.min(dist, 5)));
+                    }
+
+                    // Capture bonus (moving to enemy base)
+                    if (m.move.targetHexId === opponentBaseHexId) {
+                        positionScore += w.captureBonus;
+                    }
+
+                    // Merge penalty/bonus
+                    if (m.move.actionType === 'MERGE') {
+                        const targetUnit = GAME.getUnitOnHex(m.move.targetHexId, state);
+                        if (targetUnit) {
+                            const sumValue = m.unit.value + targetUnit.value;
+                            if (sumValue > 6) {
+                                positionScore += w.mergeOver6Penalty; // Can be positive for swarmer
+                            }
+                        }
+                    }
+
+                    // Guard penalty
+                    if (m.move.actionType === 'GUARD') {
+                        positionScore += w.guardPenalty;
+                    }
+
+                    m.positionScore = positionScore;
+                });
+
+                strategicMoves.sort((a, b) => b.positionScore - a.positionScore);
+                console.log(`AI Heuristic (${profile.name}): Strategic positioning`, strategicMoves[0].move);
+                applyMove(GAME, strategicMoves[0].move);
+                return true;
+            }
+            break;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Analyze a single move for tactical value
  */
-function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex) {
+function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, opponentBaseHexId, profile = DEFAULT_PROFILE) {
+    const w = profile.weights;
     const analysis = {
         canKillEnemy: false,
         canAttackEnemy: false,
+        canCapture: false,
         isThreatened: false,
         canBeKilled: false,
         isSafe: true,
         isInProtectedRange: false,
         nearFriendlySix: false,
         targetValue: 0,
+        captureScore: 0,
         score: 0
     };
 
@@ -206,6 +277,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex) 
         analysis.isSafe = false;
         analysis.canBeKilled = true;
         return analysis;
+    }
+
+    // Check for capture (moving to enemy base)
+    if (move.targetHexId === opponentBaseHexId) {
+        analysis.canCapture = true;
+        analysis.captureScore = w.captureBonus;
     }
 
     // Check if this move kills or attacks an enemy
@@ -222,9 +299,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex) 
 
         if (attackValue >= defenderArmor) {
             analysis.canKillEnemy = true;
-            analysis.score += 1000 + targetUnit.value;
+            analysis.score += w.killBonus + targetValue;
         } else {
-            analysis.score += 100 + targetUnit.value;
+            analysis.score += w.attackBonus + targetValue;
         }
     }
 
@@ -256,9 +333,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex) 
     analysis.canBeKilled = canBeKilledByAny;
     if (canBeKilledByAny) {
         analysis.isSafe = false;
-        analysis.score -= 1000;
+        analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
     } else if (analysis.isThreatened) {
-        analysis.score -= 250 * threatCount;
+        analysis.score += w.threatPenalty * threatCount;
     }
 
     // Check if position is protected by friendly units
@@ -272,12 +349,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex) 
             if (neighborUnit && neighborUnit.playerId === state.currentPlayerIndex) {
                 // Friendly unit adjacent - provides some protection
                 analysis.isInProtectedRange = true;
-                analysis.score += 50;
+                analysis.score += w.protectedRangeBonus;
 
                 // Check if it's a Dice 6 (provides armor buff)
                 if (neighborUnit.value === 6) {
                     analysis.nearFriendlySix = true;
-                    analysis.score += 100;
+                    analysis.score += w.friendlySixBonus;
                     break;
                 }
             }
@@ -286,7 +363,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex) 
 
     // Guard action penalty
     if (move.actionType === 'GUARD') {
-        analysis.score -= 500;
+        analysis.score += w.guardPenalty;
     }
 
     return analysis;

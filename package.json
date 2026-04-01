@@ -1,5 +1,9 @@
 {
   "scripts": {
-    "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts"
+    "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts",
+    "simulate": "deno run --allow-all simulate.ts",
+    "simulate:heuristics": "deno run --allow-all simulate-heuristics.ts",
+    "simulate:heuristics:test": "deno run --allow-all simulate-heuristics.ts -g=5 --profiles=baseline,berserker,turtle",
+    "simulate:heuristics:full": "deno run --allow-all simulate-heuristics.ts -g=20"
   }
 }
