@@ -185,7 +185,7 @@ function performAIByMinimax(GAME) {
 		return;
 	}
 
-	console.log('AI thinking... Searching with depth:', AI_SEARCH_DEPTH);
+	// console.log('AI thinking... Searching with depth:', AI_SEARCH_DEPTH);
 
 	// Evaluate all possible moves using minimax
 	possibleMoves.forEach(move => {

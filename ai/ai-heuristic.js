@@ -49,7 +49,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline') {
         profile = heuristicProfiles[profileName];
     }
 
-    console.log(`AI (Heuristic: ${profile.name}) thinking...`);
+    // console.log(`AI (Heuristic: ${profile.name}) thinking...`);
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
     const opponentIndex = (state.currentPlayerIndex + 1) % state.players.length;

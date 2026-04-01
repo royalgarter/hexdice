@@ -5,7 +5,7 @@
 function performAIByPriority(GAME) {
     if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
 
-    console.log("AI (Priority Bot) thinking...");
+    // console.log("AI (Priority Bot) thinking...");
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
     const aiPlayerIndex = state.currentPlayerIndex;
