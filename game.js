@@ -1556,8 +1556,13 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
 			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
 
-			this.applyDamage(attackerHexId, 1, state);
-			this.applyDamage(defenderHexId, 1, state);
+			// Ranged attacks don't receive counter-damage (attacker is at safe distance)
+			if (combatType === 'RANGED_ATTACK') {
+				this.applyDamage(defenderHexId, 1, state);
+			} else {
+				this.applyDamage(attackerHexId, 1, state);
+				this.applyDamage(defenderHexId, 1, state);
+			}
 
 			attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
 			attackerUnit.actionsTakenThisTurn++;
