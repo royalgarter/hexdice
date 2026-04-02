@@ -94,8 +94,21 @@ function applyMove(GAME, move, state) {
 			GAME.performGuard(move.unitHexId, applyState);
 			break;
 		case 'END_TURN':
-			GAME.addLog('AI END_TURN')
-			GAME.endTurn();
+			// When analyzing (state provided), just advance turn in cloned state
+			// When executing (no state), actually end the turn
+			if (applyState) {
+				const nextPlayerIndex = (applyState.currentPlayerIndex + 1) % applyState.players.length;
+				applyState.currentPlayerIndex = nextPlayerIndex;
+				// Reset turn actions for the next player in cloned state
+				applyState.players[nextPlayerIndex].dice.forEach(die => {
+					if (die.isDeployed) {
+						die.hasMovedOrAttackedThisTurn = false;
+						die.actionsTakenThisTurn = 0;
+					}
+				});
+			} else {
+				GAME.endTurn();
+			}
 			break;
 	}
 

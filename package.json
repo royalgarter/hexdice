@@ -1,5 +1,12 @@
 {
   "scripts": {
-    "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts"
+    "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts",
+    "simulate": "deno run --allow-all simulate.ts",
+    "tournament": "deno run --allow-all tournament.ts",
+    "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",
+    "tournament:full": "deno run --allow-all tournament.ts -g=20",
+    "tournament:fast": "deno run --allow-all tournament.ts -q -p=4",
+    "replay": "deno run --allow-read replay.ts",
+    "replay:latest": "deno run --allow-read replay.ts tournaments/*.json"
   }
 }

@@ -59,11 +59,11 @@
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
 	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	<script src="game.js"></script>
-	<script src="ai.js"></script>
-	<script src="ai-minimax.js"></script>
-	<script src="ai-priority.js"></script>
-	<script src="ai-random.js"></script>
-	<script src="ai-heuristic.js"></script>
+	<script src="/ai/ai.js"></script>
+	<script src="/ai/ai-minimax.js"></script>
+	<script src="/ai/ai-priority.js"></script>
+	<script src="/ai/ai-random.js"></script>
+	<script src="/ai/ai-heuristic.js"></script>
 </head>
 
 <body class="text-black p-2 flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
@@ -85,6 +85,8 @@
 					<div class="hex-content text-xs text-center relative"
 						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
 					>
+						<span style="top:-8px;right:-6px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
 							:class="{
@@ -95,10 +97,20 @@
 							x-text="getUnitOnHex(hex.id)?.value"
 						>
 						</span>
-						<span style="top:4px;right:-24px;" class="absolute text-yellow-700" x-show="getUnitOnHex(hex.id)?.isGuarding" >🛡️</span>
-						<span style="top:-14px;right:-12px;" class="absolute text-gray-700" x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)" :class="getUnitOnHex(hex.id).effectiveArmor > getUnitOnHex(hex.id).armor ? 'text-sm font-bold' : ''"></span>
-						<span style="top:-14px;right:12px;" class="absolute text-red-700" x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id).attack"></span>
-						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700" x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction"></span>
+
+						<span style="top:4px;right:-24px;" class="absolute text-yellow-700"
+							x-show="getUnitOnHex(hex.id)?.isGuarding">🛡️
+						</span>
+						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
+							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'text-sm font-bold' : ''"
+							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
+						</span>
+						<span style="top:-14px;right:12px;" class="absolute text-red-700"
+							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
+						</span>
+						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700"
+							x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction">
+						</span>
 					</div>
 				</div>
 			</div>

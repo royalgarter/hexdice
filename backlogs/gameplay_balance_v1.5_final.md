@@ -15,6 +15,17 @@ Every unit is built on a base profile (Atk 3 / Def 2 / Mov 2) and specializes ba
 | **#5** | **Tanker** | 2 | **5** | 1 | 0 | **5 is for 5 Defense:** Slow blocker. |
 | **#6** | **Balance** | 2 | **6** | 0 | 1 | **6 is for 6 Defense:** Immovable Glacier. |
 
+```js
+const UNIT_STATS = {
+	1: { name: "Infantry", armor: 3, attack: 3, range: 0, distance: 2, movement: '|' },
+	2: { name: "Archer", armor: 2, attack: 2, range: 2, distance: 2, movement: '*' },
+	3: { name: "Knight", armor: 2, attack: 3, range: 0, distance: 3, movement: 'L' },
+	4: { name: "Assault", armor: 2, attack: 4, range: 0, distance: 2, movement: 'X' },
+	5: { name: "Tanker", armor: 5, attack: 2, range: 0, distance: 1, movement: '*' },
+	6: { name: "Balance", armor: 6, attack: 2, range: 1, distance: 0, movement: '0' },
+};
+```
+
 ---
 
 ## Unit Roles & Tactical Meta

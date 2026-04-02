@@ -9,7 +9,7 @@ function performAIByRandom(GAME) {
         return;
     }
 
-    console.log("AI (Random Greedy) thinking...");
+    // console.log("AI (Random Greedy) thinking...");
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
     
