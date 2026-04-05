@@ -5,7 +5,8 @@
     "tournament": "deno run --allow-all tournament.ts",
     "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",
     "tournament:full": "deno run --allow-all tournament.ts -g=20",
-    "tournament:fast": "deno run --allow-all tournament.ts -q -p=4",
+    "tournament:fast": "deno run --allow-all tournament.ts -q -p=4 -g=4",
+    "tournament:mutate": "deno run --allow-all tournament.ts -m -r=0.1 -g=1 --profiles=baseline,berserker,turtle",
     "replay": "deno run --allow-read replay.ts",
     "replay:latest": "deno run --allow-read replay.ts tournaments/*.json"
   }
