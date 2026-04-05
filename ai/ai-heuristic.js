@@ -27,7 +27,9 @@ const DEFAULT_PROFILE = {
         friendlySixBonus: 100,
         advanceBonus: 50,
         guardPenalty: -500,
-        mergeOver6Penalty: -500
+        mergeOver6Penalty: -500,
+        backAndForthPenalty: -300,
+        teamPositionWeight: 0.5
     },
     riskTolerance: 0.5,
     targetSelection: 'highestValue',
@@ -270,6 +272,18 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
         return analysis;
     }
 
+    // Team Position Score calculation
+    if (typeof calculateTeamScore === 'function') {
+        const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBaseHex);
+        const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBaseHex);
+        analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
+    }
+
+    // Penalty for back-and-forth movement (avoiding repetitive patterns)
+    if (unit.lastHexId && move.targetHexId === unit.lastHexId && move.actionType === 'MOVE') {
+        analysis.score += (w.backAndForthPenalty || -300);
+    }
+
     // Check for capture (moving to enemy base)
     if (move.targetHexId === opponentBaseHexId) {
         analysis.canCapture = true;
@@ -358,4 +372,34 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
     }
 
     return analysis;
+}
+
+/**
+ * Calculate the overall strategic score for a player's team position.
+ * This encourages units to move towards the enemy base while remaining grouped.
+ */
+function calculateTeamScore(GAME, state, playerIndex, opponentBaseHex) {
+    if (!opponentBaseHex) return 0;
+    const player = state.players[playerIndex];
+    let score = 0;
+    for (const unit of player.dice) {
+        if (!unit.isDeployed || unit.isDeath) continue;
+        const hex = GAME.getHex(unit.hexId, state);
+        if (!hex) continue;
+
+        // 1. Advancement: Bonus for being closer to opponent base
+        const dist = GAME.axialDistance(hex.q, hex.r, opponentBaseHex.q, opponentBaseHex.r);
+        score += (10 - Math.min(dist, 10)) * 10;
+
+        // 2. Grouping/Support: Bonus for being near teammates
+        const neighbors = GAME.getNeighbors(hex, state);
+        for (const neighbor of neighbors) {
+            const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+            if (neighborUnit && neighborUnit.playerId === playerIndex && neighborUnit.id !== unit.id) {
+                score += 5; // Basic grouping/cohesion bonus
+                if (neighborUnit.value === 6) score += 15; // Extra bonus for proximity to protective "6"
+            }
+        }
+    }
+    return score;
 }

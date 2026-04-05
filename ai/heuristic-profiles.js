@@ -28,7 +28,9 @@ const heuristicProfiles = {
             friendlySixBonus: 100,    // Adjacent to friendly Dice 6
             advanceBonus: 50,         // Moving toward enemy base
             guardPenalty: -500,       // Discourage guard actions
-            mergeOver6Penalty: -500   // Merging into sum > 6
+            mergeOver6Penalty: -500,  // Merging into sum > 6
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5
         },
         riskTolerance: 0.5,           // Balanced risk assessment
         targetSelection: 'highestValue',  // Target highest value enemies
@@ -53,7 +55,9 @@ const heuristicProfiles = {
             friendlySixBonus: 50,
             advanceBonus: 100,        // Aggressive advancement
             guardPenalty: -1000,      // Never guards
-            mergeOver6Penalty: -200
+            mergeOver6Penalty: -200,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.2
         },
         riskTolerance: 0.9,           // Very high risk tolerance
         targetSelection: 'highestValue',  // Hunt big targets
@@ -78,7 +82,9 @@ const heuristicProfiles = {
             friendlySixBonus: 300,    // Clusters around Dice 6
             advanceBonus: 10,         // Slow advancement
             guardPenalty: -100,       // Willing to guard
-            mergeOver6Penalty: -50
+            mergeOver6Penalty: -50,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5
         },
         riskTolerance: 0.1,           // Very low risk tolerance
         targetSelection: 'threatRemoval', // Remove threats first
@@ -103,7 +109,9 @@ const heuristicProfiles = {
             friendlySixBonus: 200,
             advanceBonus: 75,         // Calculated advancement
             guardPenalty: -300,       // Guards when tactical
-            mergeOver6Penalty: -400
+            mergeOver6Penalty: -400,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5
         },
         riskTolerance: 0.4,           // Moderate-low risk
         targetSelection: 'lowArmor',      // Pick easy fights
@@ -128,7 +136,9 @@ const heuristicProfiles = {
             friendlySixBonus: 150,
             advanceBonus: 30,         // Slow, methodical advance
             guardPenalty: -200,
-            mergeOver6Penalty: 200    // Bonus for merging over 6!
+            mergeOver6Penalty: 200,   // Bonus for merging over 6!
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5
         },
         riskTolerance: 0.3,           // Cautious with valuable units
         targetSelection: 'highestValue',
@@ -153,7 +163,9 @@ const heuristicProfiles = {
             friendlySixBonus: 100,
             advanceBonus: 60,
             guardPenalty: -400,
-            mergeOver6Penalty: -450
+            mergeOver6Penalty: -450,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5
         },
         riskTolerance: 0.6,           // Moderate-high risk for good targets
         targetSelection: 'lowArmor',      // Pick easiest kills
@@ -233,7 +245,9 @@ function generateRandomProfile() {
             friendlySixBonus: Math.floor(Math.random() * 250) + 50,
             advanceBonus: Math.floor(Math.random() * 90) + 10,
             guardPenalty: Math.floor(Math.random() * -900) - 100,
-            mergeOver6Penalty: Math.floor(Math.random() * 600) - 500
+            mergeOver6Penalty: Math.floor(Math.random() * 600) - 500,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.1
         },
         riskTolerance: Math.random(),
         targetSelection: ['highestValue', 'lowArmor', 'threatRemoval'][Math.floor(Math.random() * 3)],

@@ -759,6 +759,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit) return;
 
 		if (fromHex) {
+			unit.lastHexId = fromHex.id; // Store last position
 			fromHex.unit = null;
 			fromHex.unitId = null;
 			this.trail.fromHex = state ? null : fromHex;
