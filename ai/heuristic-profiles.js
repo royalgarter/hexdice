@@ -30,7 +30,8 @@ const heuristicProfiles = {
             guardPenalty: -500,       // Discourage guard actions
             mergeOver6Penalty: -500,  // Merging into sum > 6
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.5,           // Balanced risk assessment
         targetSelection: 'highestValue',  // Target highest value enemies
@@ -57,7 +58,8 @@ const heuristicProfiles = {
             guardPenalty: -1000,      // Never guards
             mergeOver6Penalty: -200,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.2
+            teamPositionWeight: 0.2,
+            pressureWeight: 0.1
         },
         riskTolerance: 0.9,           // Very high risk tolerance
         targetSelection: 'highestValue',  // Hunt big targets
@@ -84,7 +86,8 @@ const heuristicProfiles = {
             guardPenalty: -100,       // Willing to guard
             mergeOver6Penalty: -50,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.1,           // Very low risk tolerance
         targetSelection: 'threatRemoval', // Remove threats first
@@ -111,7 +114,8 @@ const heuristicProfiles = {
             guardPenalty: -300,       // Guards when tactical
             mergeOver6Penalty: -400,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.4,           // Moderate-low risk
         targetSelection: 'lowArmor',      // Pick easy fights
@@ -138,7 +142,8 @@ const heuristicProfiles = {
             guardPenalty: -200,
             mergeOver6Penalty: 200,   // Bonus for merging over 6!
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.3,           // Cautious with valuable units
         targetSelection: 'highestValue',
@@ -165,7 +170,8 @@ const heuristicProfiles = {
             guardPenalty: -400,
             mergeOver6Penalty: -450,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.6,           // Moderate-high risk for good targets
         targetSelection: 'lowArmor',      // Pick easiest kills
@@ -192,7 +198,8 @@ const heuristicProfiles = {
             guardPenalty: -400,
             mergeOver6Penalty: -300,
             backAndForthPenalty: -400, // Extra penalty for retreating
-            teamPositionWeight: 0.6    // Strong focus on collective advancement
+            teamPositionWeight: 0.6,    // Strong focus on collective advancement
+            pressureWeight: 0.3
         },
         riskTolerance: 0.7,
         targetSelection: 'highestValue',
@@ -219,7 +226,8 @@ const heuristicProfiles = {
             guardPenalty: -200,
             mergeOver6Penalty: -500,
             backAndForthPenalty: -200,
-            teamPositionWeight: 0.4
+            teamPositionWeight: 0.4,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.1,          // Very low risk
         targetSelection: 'lowArmor',
@@ -246,7 +254,8 @@ const heuristicProfiles = {
             guardPenalty: -100,       // Willing to guard
             mergeOver6Penalty: -100,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.8    // Maximum focus on team formation
+            teamPositionWeight: 0.8,    // Maximum focus on team formation
+            pressureWeight: 0.3
         },
         riskTolerance: 0.3,
         targetSelection: 'threatRemoval',
@@ -273,7 +282,8 @@ const heuristicProfiles = {
             guardPenalty: -600,
             mergeOver6Penalty: -400,
             backAndForthPenalty: -500, // Prefers to keep moving
-            teamPositionWeight: 0.3
+            teamPositionWeight: 0.3,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.8,          // High risk for high reward kills
         targetSelection: 'highestValue',
@@ -355,7 +365,8 @@ function generateRandomProfile() {
             guardPenalty: Math.floor(Math.random() * -900) - 100,
             mergeOver6Penalty: Math.floor(Math.random() * 600) - 500,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.1
+            teamPositionWeight: 0.1,
+            pressureWeight: 0.2
         },
         riskTolerance: Math.random(),
         targetSelection: ['highestValue', 'lowArmor', 'threatRemoval'][Math.floor(Math.random() * 3)],
