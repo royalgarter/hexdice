@@ -115,6 +115,7 @@ function alpineHexDiceTacticGame() { return {
 	winnerMessage: "",
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
 	debug: {
+		quiet: false,
 		coordinate: new URLSearchParams(location.search).get('mode')?.includes('coordinate'),
 		skipReroll: new URLSearchParams(location.search).get('mode')?.includes('debug'),
 		skipDeploy: new URLSearchParams(location.search).get('mode')?.includes('debug'),
@@ -839,9 +840,12 @@ function alpineHexDiceTacticGame() { return {
 			// Combat occurs
 			this.handleCombat(unitHexId, targetHexId, 'MELEE', state);
 		} else { // Moving to an empty hex
-			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} moved (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
-
-
+			this.addLog([
+				`P${attackerUnit.playerId+1} D${attackerUnit.value} moved `,
+				`[${attackerHex.id}](${attackerHex.q},${attackerHex.r},${attackerHex.s})`,
+				`->`,
+				`[${defenderHex.id}](${defenderHex.q},${defenderHex.r},${defenderHex.s}).`
+			].join(''), state);
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			// attackerHex.unit = null;
 			// attackerHex.unitId = null;
@@ -1703,6 +1707,8 @@ function alpineHexDiceTacticGame() { return {
 		return data;
 	},
 	addLog(message, state) {
+		if (this.debug.quiet) return;
+
 		if (state) return; console.debug(' >', message);
 
 		message = [

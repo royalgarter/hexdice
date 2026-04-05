@@ -185,6 +185,8 @@ function runHeuristicGame(
     const game = createSimulationGame(logger, engine);
     (game as any).heuristicProfiles = { p1: profile1, p2: profile2 };
 
+    game.debug.quiet = quiet;
+
     const originalEndTurn = game.endTurn.bind(game);
     game.endTurn = function(state?: any) {
         const ai0 = this.players[0].isAI;

@@ -62,7 +62,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     const availableUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
 
     if (availableUnits.length === 0) {
-        console.log("AI has no units to act. Ending turn.");
+        GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No units to act. Ending turn.`);
         applyMove(GAME, { actionType: 'END_TURN' });
         return;
     }
@@ -96,7 +96,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     }
 
     // Fallback: End turn
-    console.log("AI Heuristic: No good moves. Ending turn.");
+    GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No good moves. Ending turn.`);
     applyMove(GAME, { actionType: 'END_TURN' });
 }
 
