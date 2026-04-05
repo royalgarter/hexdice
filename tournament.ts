@@ -3,16 +3,6 @@
 import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.208.0/fs/ensure_dir.ts";
 
-// Available heuristic profiles
-const PROFILE_NAMES = [
-    'baseline',
-    'berserker',
-    'turtle',
-    'tactician',
-    'swarmer',
-    'assassin'
-];
-
 // Results tracking interfaces
 interface MatchupResult {
     profile1: string;
@@ -42,7 +32,7 @@ interface TournamentResults {
     metadata: {
         date: string;
         gamesPerMatchup: number;
-        profiles: string[];
+        profiles: any[];
         version: string;
     };
     matchups: MatchupResult[];
@@ -151,6 +141,7 @@ async function loadGameEngine(engineCodes?: Record<string, string>): Promise<any
                 generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
                 applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
                 boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
+                heuristicProfiles: typeof heuristicProfiles !== 'undefined' ? heuristicProfiles : {},
             };
         })(location, document);
     `;
@@ -348,18 +339,6 @@ async function runTournament(args: any) {
     const quiet = !!args.quiet;
     const parallel = parseInt(args.parallel) || 1;
 
-    let profilesToTest = PROFILE_NAMES;
-    if (args.profiles) {
-        const requested = args.profiles.split(',').map((p: any) => p.trim().toLowerCase());
-        profilesToTest = PROFILE_NAMES.filter(p => requested.includes(p));
-    }
-
-    console.log("╔════════════════════════════════════════╗");
-    console.log("║   Heuristic Profile Tournament         ║");
-    console.log("╚════════════════════════════════════════╝");
-    console.log(`Games per matchup: ${numGames} | Profiles: ${profilesToTest.join(', ')} | Parallel: ${parallel}`);
-    console.log("");
-
     const engineCodes = {
         gameCode: await Deno.readTextFile("./game.js"),
         aiCoreCode: await Deno.readTextFile("./ai/ai.js"),
@@ -371,6 +350,20 @@ async function runTournament(args: any) {
     };
 
     const engine = await loadGameEngine(engineCodes);
+    const availableProfiles = Object.keys(engine.heuristicProfiles);
+
+    let profilesToTest = availableProfiles;
+    if (args.profiles) {
+        const requested = args.profiles.split(',').map((p: any) => p.trim().toLowerCase());
+        profilesToTest = availableProfiles.filter(p => requested.includes(p));
+    }
+
+    console.log("╔════════════════════════════════════════╗");
+    console.log("║   Heuristic Profile Tournament         ║");
+    console.log("╚════════════════════════════════════════╝");
+    console.log(`Games per matchup: ${numGames} | Profiles: ${profilesToTest.join(', ')} | Parallel: ${parallel}`);
+    console.log("");
+
     await ensureDir(outputDir);
     const pool = parallel > 1 ? new GameWorkerPool(parallel, engineCodes) : undefined;
 
@@ -391,7 +384,28 @@ async function runTournament(args: any) {
 
     const standings = calculateStandings(matchups, profilesToTest);
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const results = { metadata: { date: timestamp, gamesPerMatchup: numGames, profiles: profilesToTest, version: "1.0" }, matchups, standings, summary: { totalGames: totalGamesScheduled, totalTurns: matchups.reduce((a, b) => a + b.avgTurns * b.totalGames, 0), avgTurnsPerGame: 0 } };
+    
+    // Get full profile details for the results
+    const fullProfiles = profilesToTest.map(name => {
+        const profile = engine.heuristicProfiles[name] || {};
+        return { name, ...profile };
+    });
+
+    const results: TournamentResults = { 
+        metadata: { 
+            date: timestamp, 
+            gamesPerMatchup: numGames, 
+            profiles: fullProfiles, 
+            version: "1.0" 
+        }, 
+        matchups, 
+        standings, 
+        summary: { 
+            totalGames: totalGamesScheduled, 
+            totalTurns: matchups.reduce((a, b) => a + b.avgTurns * b.totalGames, 0), 
+            avgTurnsPerGame: 0 
+        } 
+    };
     results.summary.avgTurnsPerGame = results.summary.totalTurns / results.summary.totalGames;
 
     console.log("\nProfile         | W    | L    | D    | Win%  | W(P1)| W(P2)");

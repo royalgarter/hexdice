@@ -171,6 +171,114 @@ const heuristicProfiles = {
         targetSelection: 'lowArmor',      // Pick easiest kills
         positioningStyle: 'flank',        // Find weak spots
         unitSelection: 'highestValue'     // Use best units for kills
+    },
+
+    // =========================================================================
+    // VANGUARD - Front-line map control specialist
+    // =========================================================================
+    vanguard: {
+        name: "Vanguard",
+        description: "Front-line pusher: Aggressively pushes for ground, values map control",
+        priorityOrder: ['capture', 'position', 'kill', 'attack', 'dodge'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 1200,
+            attackBonus: 200,
+            safeBonus: 400,
+            threatPenalty: -200,
+            protectedRangeBonus: 100,
+            friendlySixBonus: 150,
+            advanceBonus: 150,        // High advancement bonus
+            guardPenalty: -400,
+            mergeOver6Penalty: -300,
+            backAndForthPenalty: -400, // Extra penalty for retreating
+            teamPositionWeight: 0.6    // Strong focus on collective advancement
+        },
+        riskTolerance: 0.7,
+        targetSelection: 'highestValue',
+        positioningStyle: 'rush',
+        unitSelection: 'leastMoved'
+    },
+
+    // =========================================================================
+    // SNIPER - Cautious long-range specialist
+    // =========================================================================
+    sniper: {
+        name: "Sniper",
+        description: "Cautious assassin: Stays safe, takes shots from distance, hates being touched",
+        priorityOrder: ['capture', 'dodge', 'attack', 'kill', 'position'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 1500,
+            attackBonus: 1000,       // Values ranged harass even if not lethal
+            safeBonus: 2000,         // Extremely values safety
+            threatPenalty: -800,     // Hates being threatened
+            protectedRangeBonus: 150,
+            friendlySixBonus: 200,
+            advanceBonus: 20,
+            guardPenalty: -200,
+            mergeOver6Penalty: -500,
+            backAndForthPenalty: -200,
+            teamPositionWeight: 0.4
+        },
+        riskTolerance: 0.1,          // Very low risk
+        targetSelection: 'lowArmor',
+        positioningStyle: 'flank',
+        unitSelection: 'mostThreatened'
+    },
+
+    // =========================================================================
+    // JUGGERNAUT - Heavy formation specialist
+    // =========================================================================
+    juggernaut: {
+        name: "Juggernaut",
+        description: "Moving fortress: Slow, methodical, indestructible formation",
+        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 1200,
+            attackBonus: 150,
+            safeBonus: 800,
+            threatPenalty: -150,     // Not very bothered by threats due to armor
+            protectedRangeBonus: 400, // Extremely values being grouped
+            friendlySixBonus: 500,    // Extremely values Legate protection
+            advanceBonus: 30,         // Slow advancement
+            guardPenalty: -100,       // Willing to guard
+            mergeOver6Penalty: -100,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.8    // Maximum focus on team formation
+        },
+        riskTolerance: 0.3,
+        targetSelection: 'threatRemoval',
+        positioningStyle: 'turtle',
+        unitSelection: 'highestValue'
+    },
+
+    // =========================================================================
+    // STALKER - Precision flanking specialist
+    // =========================================================================
+    stalker: {
+        name: "Stalker",
+        description: "Precision hunter: Flanks and eliminates threats one by one",
+        priorityOrder: ['capture', 'kill', 'dodge', 'attack', 'position'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 2500,         // Extremely high value on kills
+            attackBonus: 400,
+            safeBonus: 600,
+            threatPenalty: -400,
+            protectedRangeBonus: 50,
+            friendlySixBonus: 100,
+            advanceBonus: 80,
+            guardPenalty: -600,
+            mergeOver6Penalty: -400,
+            backAndForthPenalty: -500, // Prefers to keep moving
+            teamPositionWeight: 0.3
+        },
+        riskTolerance: 0.8,          // High risk for high reward kills
+        targetSelection: 'highestValue',
+        positioningStyle: 'flank',
+        unitSelection: 'highestValue'
     }
 };
 
