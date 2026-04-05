@@ -102,7 +102,7 @@
 							x-show="getUnitOnHex(hex.id)?.isGuarding">🛡️
 						</span>
 						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
-							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'text-sm font-bold' : ''"
+							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
 							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
 						</span>
 						<span style="top:-14px;right:12px;" class="absolute text-red-700"
@@ -184,7 +184,7 @@
 				@click="initiateAction('MOVE')" 
 			>MOVE</button>
 			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')" 
+				x-show="options.includes('r') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 				@click="performAction('REROLL', selectedUnitHexId)"
 			>REROLL</button>
 			<button class="border border-black p-1 hover:bg-black hover:text-white" 
@@ -200,7 +200,7 @@
 				@click="initiateAction('SPECIAL_ATTACK')"
 			>SPL ATK</button>
 			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
+				x-show="options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 				@click="initiateAction('MERGE')"
 			>MERGE</button>
 			<button class="border border-black p-1 hover:bg-black hover:text-white font-bold"

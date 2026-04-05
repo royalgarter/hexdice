@@ -91,6 +91,7 @@ function alpineHexDiceTacticGame() { return {
 	rules: {
 		dicePerPlayer: 12,
 	},
+	options: '', //'rm', // Default: Reroll and Merge enabled
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
@@ -126,6 +127,7 @@ function alpineHexDiceTacticGame() { return {
 	init() {
 		this.generateHexGrid(R);
 		this.determineBaseLocations();
+		this.options = new URLSearchParams(location.search).get('options') ||  ''; //'rm';
 		this.addLog("Game started. Welcome to Hex Dice!");
 		this.resetGame({
 			isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign',
@@ -585,7 +587,7 @@ function alpineHexDiceTacticGame() { return {
 		this.selectedUnitHexId = hexId;
 		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 		this.validTargets = []; // Will be calculated if attack action is chosen
-		this.validMerges = this.calcValidMoves(this.selectedUnitHexId, 'MERGE');
+		this.validMerges = this.options.includes('m') ? this.calcValidMoves(this.selectedUnitHexId, 'MERGE') : [];
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 
 		if (unit.value == 2) {
@@ -723,14 +725,16 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(unitHexId, state);
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
 
+		const options = (state || this).options || ''; //'rm';
+
 		switch(actionType) {
 			case 'MOVE': return true;
-			case 'REROLL': return true;
+			case 'REROLL': return options.includes('r');
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
-			case 'MERGE': return true;
+			case 'MERGE': return options.includes('m');
 			default: return false;
 		}
 	},
