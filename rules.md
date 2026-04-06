@@ -14,12 +14,13 @@
 
 ## *Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)*
 
+
 ---
 
-## **\[v1.6\] Tactical Dice Combat on a Hexagonal Grid board game**
+
+## **Tactical Dice Combat on a Hexagonal Grid board game**
 
 ![Hexagonal Grid board](board.png)
-
 
 ### **1\. Overview**
 
@@ -27,7 +28,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 
 ### **2\. Components**
 
-- 1 Hexagonal Map (R=6 size)  
+- 1 Hexagonal Map (**Dynamic Size**: R=5 for 2-3 players, R=6 for 4-6 players)
 - Standard 6-sided dice: Multiple sets of distinct colors are required, one color per player.  
   - For 2 Players: 2 distinct colors (Red/Blue), 12 dice each (Total 24).
   - For 3 Players: 3 distinct colors, 8 dice each (Total 24).
@@ -43,43 +44,46 @@ Hex Dice is a tactical board game where players command armies of dice, using th
    - The face values of these dice determine the types of units available to that player for the entire game.   
    - The dice are placed showing the rolled value face up.   
    - A hex can hold a maximum of one unit at all times.   
-   - Each player is able to choose ⅓ of maximum dice amount (round down) to reroll after their initial roll once (e.g., 2 players \-\> 12 dices each \-\> 4 maximum reroll, 3 players \-\> 8 dices each \-\> 2 maximum reroll)  
+   - Each player is able to choose ⅓ of maximum dice amount (round down) to reroll after their initial roll once (e.g., 2 players \-\> 12 dices each \-\> 4 maximum reroll, 3 players \-\> 8 dices each \-\> 2 maximum reroll)
 4. **Base Locations & Deployment:**  
-   - **2 Players:** The two dark-colored cells on the map are the Base cells for each team. Each player's Base cell is their starting deployment zone. Players deploy their rolled dice units onto *any* empty hexes within their own Base cell or its immediate adjacent hexes. Each hex can initially hold only one unit.  
-   - **3, 4, or 6 Players:** The 6 hexes furthest from the center ("corner" hexes) are the potential Base locations. Players occupy these corners:  
-     - **3 Players:** Players choose 3 corners spaced evenly around the map (e.g., skipping one corner between each player).  
-     - **4 Players:** Players choose 4 corners, ideally spaced for balance.  
-     - **6 Players:** Players occupy all 6 corner hexes.  
-     * **Deployment Area:** Each player's deployment area consists of their chosen corner hex and its immediate adjacent hexes that point towards the center of the map. Players deploy their rolled dice units onto any empty hexes within *their* defined Base deployment area. Each hex can initially hold only one unit.  
-2. **Determine the first player** (e.g., by rolling a dice , highest roll goes first). In multiplayer games, establish the turn order (e.g., clockwise around the table).  
+   - **Deployment Area Scaling:** The deployment area expands based on the number of dice per player:
+     - **6 dice or fewer:** The Base cell and its immediate adjacent hexes.
+     - **7 to 9 dice:** The Base cell, its adjacent hexes, and two specific offset hexes along the primary axis.
+     - **10 to 14 dice:** The Base cell and a full 2-ring expansion around it.
+   - **2 Players:** The two far ends of the map along the vertical axis are the Base cells. Players deploy their rolled dice units onto empty hexes within their defined deployment area.
+   - **3, 4, or 6 Players:** Corner hexes serve as potential Base locations, with deployment areas extending towards the center based on the scaling rules above.
+5. **Determine the first player** (e.g., by rolling a dice , highest roll goes first). In multiplayer games, establish the turn order (e.g., clockwise around the table).
  
 
 
 ### **4\. Dice Soldiers (Unit Types)**
 
-Its face value (1-6) determines each dice unit's capabilities according to the table below. The rolled value is kept face up on the board. The core rule is **Attack + Armor + Move = 6** (Specialties like Range subtract from this total).
+Its face value (1-6) determines each dice unit's capabilities according to the table below. The rolled value is kept face up on the board.
 
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | **Infantry** | 2 | 2 | 0 | 2 | \| | Balanced Standard |
-| 2 | **Archer** | 0 | 2 | 2 | 2 | \* | Glass Sniper (Range costs 2) |
-| 3 | **Knight** | 1 | 2 | 0 | 3 | L | Fast Scout (Move costs 1) |
-| 4 | **Assault** | 1 | 3 | 0 | 2 | X | Tank-Cracker |
-| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield |
-| 6 | **Balance** | 5 | 1 | 1 | 0 | 0 | Stationary Bunker |
+| 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
+| 2 | **Archer** | 0 | 2 | 2 | 2 | \* | Ranged Specialist (LoS required) |
+| 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
+| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
+| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
+| 6 | **Legate** | 5 | 1 | 1 | 0 | 0 | Aura Buff (+1 Armor to neighbors) |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
 * **Range:** Ranged/Special attack from current hex.  
-* **Distance:** The maximum distance (number of steps from the starting point) a unit can move following its shape pattern in a single turn.  
-* **Movement:** The pattern the unit can follow when moving.
+* **Distance:** The maximum distance a unit can move following its pattern.
+* **Movement:** The pattern the unit follows:
+    - **`*`**: BFS movement (any direction, can move through empty hexes).
+    - **`L`**: L-shaped jump (2 steps straight, then 1 step offset).
+    - **`X`**: Diagonal movement (only along the four diagonal axes).
+    - **`0`**: Stationary (cannot move except when attacking).
 
 **Dice Visualization Diagram**
 
 #### Hexagon Grid Monospace Diagram
 
 * Each player's primary axis on the board extends from their starting area towards the central hexagon.
-* The game grid can be expanded accordingly for larger maps (e.g. 8 hex radius R=8).
 * Moveable hex will be marked by + in diagrams below
 
 ```
@@ -106,10 +110,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     |
 ```
 
-#### Dice 1 (Infantry)
+#### Dice 1 (Fencer)
 
-* Forward: Players can move up to 2 steps straight ahead along their primary axis on the hex grid.
-* Backward: Players can move 1 step straight backward along their primary axis on the hex grid.
+* Can move up to 2 steps in any direction (BFS pattern).
 
 ```
                     .
@@ -119,14 +122,14 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
         .     .     .     .     .
      .     .     .     .     .     .
         .     .     +     .     .
-     .     .     .     .     .     .
+     .     .     +     +     .     .
+        .     +     +     +     .
+     .     +     +     +     +     .
+        +     +     1     +     +
+     .     +     +     +     +     .
+        .     +     +     +     .
+     .     .     +     +     .     .
         .     .     +     .     .
-     .     .     .     .     .     .
-        .     .     1     .     .
-     .     .     .     .     .     .
-        .     .     +     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
      .     .     .     .     .     .
         .     .     .     .     .
            .     .     .     .
@@ -137,8 +140,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 2 (Archer)
 
-* Can move up to 2 steps in any adjacent hex (star pattern).
-* Can perform ranged attacks to any single enemy unit located **exactly 2 hexes away**.
+* Can move up to 2 steps in any direction (BFS pattern).
+* **Ranged Attack**: Can target an enemy exactly 2 hexes away.
+* **Line of Sight**: Attack is blocked by any unit on the path.
+* **Engaged Restriction**: Cannot perform ranged attacks if an enemy unit is in an adjacent hex.
 
 ```
                     .
@@ -151,7 +156,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
      .     .     x     x     .     .
         .     x     +     x     .
      .     x     +     +     x     .
-        .     x     2     x     .
+        x     +     2     +     x
      .     x     +     +     x     .
         .     x     +     x     .
      .     .     x     x     .     .
@@ -164,9 +169,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-#### Dice 3 (Knight)
-* Can move 3 steps following an 'L' pattern: 2 steps in a straight line along one of 6 hex axes, then 1 step into an adjacent hex along a different facing outward hex axis.
-* Can jump over friendly units.
+#### Dice 3 (Hussar)
+* Can move 3 steps following an 'L' pattern: 2 steps in a straight line, then 1 step into an adjacent hex along a different axis.
+* Can jump over units.
 
 ```
                     .
@@ -192,9 +197,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-#### Dice 4 (Assault)
+#### Dice 4 (Knight)
 
-* Can move up to 2 steps along the left & right diagonal axes (forming an 'X' pattern).
+* Can move up to 3 steps along the four diagonal axes (forming an 'X' pattern).
 
 ```
                     .
@@ -204,13 +209,13 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
         .     .     .     .     .
      .     .     .     .     .     .
         .     .     .     .     .
-     .     .     .     .     .     .
+     .     +     .     .     +     .
         .     +     .     +     .
      .     .     +     +     .     .
         .     .     4     .     .
      .     .     +     +     .     .
         .     +     .     +     .
-     .     .     .     .     .     .
+     .     +     .     .     +     .
         .     .     .     .     .
      .     .     .     .     .     .
         .     .     .     .     .
@@ -221,7 +226,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 ```
 
 #### Dice 5 (Tanker)
-* Can move to any adjacent hex (1 step distance).
+* Can move to any adjacent hex (1 step BFS).
 
 ```
                     .
@@ -232,11 +237,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
      .     .     .     .     .     .
         .     .     .     .     .
      .     .     .     .     .     .
-        .     .     .     .     .
+        .     .     +     .     .
      .     .     +     +     .     .
         .     +     5     +     .
      .     .     +     +     .     .
-        .     .     .     .     .
+        .     .     +     .     .
      .     .     .     .     .     .
         .     .     .     .     .
      .     .     .     .     .     .
@@ -247,9 +252,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-#### Dice 6 (Balance)
-* Cannot move except winning combat.
-* Special Attack: Can attack neighbors (Range 1) and move to their hex if successful.
+#### Dice 6 (Legate)
+* Cannot move except via Command & Conquer.
+* **Aura Buff**: All friendly units adjacent to a Legate receive **+1 Effective Armor**.
+* **Command & Conquer**: Can attack adjacent enemies (Range 1) and move to their hex if successful.
 
 ```
                     .
@@ -304,9 +310,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 The gameplay will proceed with an **Alternating Activations** turn structure (players activating one unit each turn) to enhance player engagement, tactical responsiveness, and balance.
 
-Players take turns in set order. On a player's turn, they activate one of their units currently on the board. Once a unit is activated, it performs one action: **Move, Reroll, Guard, Ranged Attack, Special Attack, or Merging**. After the unit completes its action, the turn passes to the next player in order, who then activates one of their units.
+Players take turns in set order. On a player's turn, they activate one of their units currently on the board. Once a unit is activated, it performs one action: **Move, Reroll, Guard, Ranged Attack, Command & Conquer, or Merging**. After the unit completes its action, the turn passes to the next player in order, who then activates one of their units.
 
-Units cannot move through hexes occupied by other units (friendly or enemy) unless the Movement explicitly allows it.
+Units cannot move through hexes occupied by other units (friendly or enemy) unless the Movement explicitly allows it (e.g., Dice 3 jump).
 
 #### **Actions**
 
@@ -314,63 +320,63 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 
   * Choose one of your units.  
   * Determine its valid move destinations based on its current face value, Movement, and Distance.  
-  * Choose an empty hex or an enemy-occupied hex within range and reachable by the unit's shape.  
+  * Choose an empty hex or an enemy-occupied hex within range and reachable by the unit's pattern.
   * If moving to an empty hex, the unit occupies that hex. Action complete.  
-  * If moving to an enemy-occupied hex, combat occurs (see Section 6: Combat). If the attacker wins, it moves to the hex. If it fails, it stays in its original hex. Action complete.
+  * If moving to an enemy-occupied hex, melee combat occurs (see Section 6: Combat). If the attacker wins, it moves to the hex. If it fails, it stays in its original hex. Action complete.
 
 * ##### **Reroll**
 
   * Choose one of your units.  
   * The unit stays in its current hex.  
-  * Roll the dice. The new face value determines the unit's type and stats for the rest of the game (or until rerolled).  
-  * **Penalty**: The rerolled unit has **0 Effective Armor** until its owner's next turn starts. This makes them extremely vulnerable to any attack.
+  * Roll the dice. The new face value determines the unit's type and stats.
+  * **Penalty**: The rerolled unit has **0 Effective Armor** until its owner's next turn starts.
   * Action complete. This unit cannot Move or Attack this turn.
 
 * ##### **Guard**
 
   * Choose one of your units.  
-  * Declare “Activate Guard Mode” to add their Armor \+ 1  
-  * The unit stays in its current hex and is given a guard token (could be a mini blue dice, face 1 up), indicating it’s in Guard Mode.  
-  * Guard Mode is automatically deactivated (remove guard token) if the unit moves next turn.  
+  * Declare “Activate Guard Mode” to add **+1 Effective Armor**.
+  * The unit stays in its current hex. Guard Mode is automatically deactivated if the unit moves next turn.
   * Action complete. This unit cannot Move or Attack this turn.
 
 * ##### **Ranged Attack (Dice 2\)**
 
   * Choose one of your Dice 2 Archer units.  
-  * Target any single enemy unit located **exactly 2 hexes away** in a straight line along any of the 6 radial axes. 
-  * Combat occurs (see Section 6: Combat) between the attacking Dice 2 and the targeted enemy unit.  
-  * Regardless of the combat outcome, the attacking Dice 2 unit **remains in its current hex**.  
+  * **Restrictions**: Cannot attack if an enemy is adjacent. Requires clear Line of Sight.
+  * Target any single enemy unit located **exactly 2 hexes away**.
+  * Combat occurs. Regardless of the outcome, the attacking Dice 2 unit **remains in its current hex** and does not suffer counter-damage on failure.
   * Action complete.
 
-* ##### **Special Attack (Dice 6\)**
+* ##### **Command & Conquer (Dice 6\)**
 
   * Choose one of your Dice 6 units.  
-  * Target any single enemy unit located **exactly 1 hex away** along any of the 6 radial axes.  
-  * Combat occurs (see Section 6: Combat) between the attacking Dice 6 and the targeted enemy unit.  
-  * If the attack is successful, the Dice 6 **moves into the target hex**. If unsuccessful, **it remains in its original hex**.  
+  * Target any single enemy unit located **exactly 1 hex away**.
+  * Combat occurs. If the attack is successful, the Dice 6 **moves into the target hex**. If unsuccessful, it remains in its original hex.
+  * Action complete.
+
+* ##### **Merging**
+
+  * Choose one of your units and move it onto a hex occupied by another friendly unit.
+  * **Result**: The two dice are removed and replaced by a single new unit.
+    - **Sum ≤ 6**: The new unit's value is the sum of the two dice.
+    - **Sum > 6**: The player chooses a new value from 1 to 6.
+  - **Bonus**: If the target unit had not yet acted this turn, the new merged unit may immediately perform one action.
   * Action complete.
 
 ### **6\. Combat**
 
-Combat occurs when:
+Combat is deterministic and occurs when a unit enters an enemy hex or uses a special/ranged attack.
 
-1. A unit uses a Move action to enter an enemy-occupied hex (Melee Combat).  
-2. A Dice 2 unit uses a Ranged Attack action on an enemy unit at range (Ranged Combat).  
-3. A Dice 6 unit uses a Special Attack action on an enemy unit at range.
+**Effective Armor calculation:**
+`Base Armor + Guard Bonus (+1) + Legate Buff (+1 per adjacent Legate) - Armor Reduction`.
 
-Combat is deterministic:
-
-- A unit's Effective Armor value used in combat is its base Armor value minus the total value of any Armor Reduction tokens currently on it. A unit's Effective Armor cannot go below 0 for combat comparison.  
-- Compare the **Attacking** unit's **Attack** value to the **Defending** unit's **Armor** value.  
-- If the Attacking unit's **Attack is greater than or equal to** the Defending unit's **Armor** (Attacker.Attack ≥ Defender.Armor), the attack is successful. The Defending unit is defeated and removed from the board.  
-  - In Melee Combat, the Attacking unit then moves into the hex vacated by the defeated unit.  
-  - In Ranged Combat, the Attacking Dice 2 unit remains in its original hex.  
-  - In Special Combat, the Attacking Dice 6 unit moves to its target hex.  
-- If the Attacking unit's **Attack is less than** the Defending unit's **Armor** (Attacker.Attack \< Defender.Armor), the attack fails. Both the Attacking and Defending units suffer **Armor \- 1** reduction.  
-  - Armor reductions from failed attacks stack cumulatively.  
-  - The minimum trackable Armor value is 0\.  
-  - If a unit's Armor reaches 0, the next attack it suffers, regardless of the attacker's Attack value, automatically defeats it.  
-  - Armor reduction is indicated using Armor Reduction Token from a value range **from \[-1\] to \[-6\]**.
+* **Attacker Wins** if:
+  1. **Attack ≥ Defender's Effective Armor**, OR
+  2. **Defender's Armor Reduction ≥ Defender's Base Armor** (Armor Depleted).
+* **On Success**: The defending unit is removed. The attacker moves into the hex (except for Ranged Attacks).
+* **On Failure**: Both units suffer **1 Armor Reduction**.
+  - **Exception**: Ranged attackers do not suffer armor reduction on failure.
+  - Armor reduction is cumulative. If Effective Armor reaches 0, the next attack automatically defeats the unit.
 
 ### **7\. Winning the Game**
 
@@ -387,7 +393,11 @@ The conditions for winning depend on the number of players:
 
 ### **8\. Map Description**
 
-The map is an R=6 hexagonal grid, meaning it extends 6 hexes in any straight direction from the center to the edge. Movement is measured in steps between adjacent hexes. Specific hexes are marked as Base locations for 2-player games, and the corner hexes serve as Base locations for multiplayer games.
+The map is a hexagonal grid with a dynamic radius:
+- **2-3 Players**: R=5 (extends 5 hexes from the center).
+- **4-6 Players**: R=6 (extends 6 hexes from the center).
+
+Movement is measured in steps between adjacent hexes. Specific hexes are marked as Base locations for 2-player games, and the corner hexes serve as Base locations for multiplayer games.
 
 ### **9\. Development References**
 

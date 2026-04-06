@@ -130,13 +130,16 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- INITIALIZATION --- */
 	init() {
-		this.generateHexGrid(R);
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+		
+		// Map size modifier: 2, 3 players -> R=5; 4, 6 players -> R=6
+		const radius = (this.playerCount <= 3) ? 5 : 6;
+		this.generateHexGrid(radius);
 
 		// Adjust dice per player based on player count (Total 24 dice)
 		this.rules.dicePerPlayer = Math.floor(24 / this.playerCount);
 
-		this.determineBaseLocations();
+		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
 		const url = new URL(location);
@@ -163,8 +166,10 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 
+		const radius = (this.playerCount <= 3) ? 5 : 6;
+		this.generateHexGrid(radius);
 		this.hexes.forEach(h => h.unitId = null); // Clear units from hexes
-		this.determineBaseLocations(); // Redetermine bases on reset
+		this.determineBaseLocations(radius); // Redetermine bases on reset
 		this.phase = 'SETUP_ROLL';
 		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
@@ -227,8 +232,8 @@ function alpineHexDiceTacticGame() { return {
 			this.hexes[i].trailY = this.hexes[i].top + (this.hexes[i].height / 2);
 		}
 	},
-	determineBaseLocations() {
-		let radius = -(R-1);
+	determineBaseLocations(radius) {
+		let radiusOffset = -(radius - 1);
 
 		// Clear existing base assignments
 		this.hexes.forEach(h => {
@@ -239,7 +244,7 @@ function alpineHexDiceTacticGame() { return {
 			const primary = PLAYER_PRIMARY_AXIS[this.players.length][i];
 			if (!primary) continue;
 
-			const baseHex = this.getHexByQR(primary.q * radius, primary.r * radius);
+			const baseHex = this.getHexByQR(primary.q * radiusOffset, primary.r * radiusOffset);
 			if (baseHex) {
 				baseHex.basePlayerId = i;
 				this.players[i].baseHexId = baseHex.id;

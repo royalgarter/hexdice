@@ -42,7 +42,7 @@
 			background-color: #3867d6;
 		}
 		.bg-hexgreen {
-			background-color: #26de81;
+			background-color: #19ad62;
 		}
 		.bg-hexpurple {
 			background-color: #a55eea;
@@ -93,7 +93,7 @@
 					<div class="hex-content text-xs text-center relative"
 						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
 					>
-						<span style="top:-8px;right:-6px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+						<span style="top:-8px;right:-8px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
 
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
@@ -103,15 +103,15 @@
 						>
 						</span>
 
-						<span style="top:4px;right:-24px;" class="absolute text-yellow-700"
-							x-show="getUnitOnHex(hex.id)?.isGuarding">🛡️
+						<span style="top:4px;right:-22px;" class="absolute text-blue-700"
+							x-show="getUnitOnHex(hex.id)?.isGuarding">⛨
 						</span>
 						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
 							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
 							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
 						</span>
-						<span style="top:-14px;right:-24px;" class="absolute text-xs"
-							x-show="getUnitOnHex(hex.id)?.isRerolled">🔄
+						<span style="top:-14px;right:-4px;" class="absolute text-blue-700"
+							x-show="getUnitOnHex(hex.id)?.isRerolled">♡
 						</span>
 						<span style="top:-14px;right:12px;" class="absolute text-red-700"
 							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
@@ -268,7 +268,7 @@
 	<div class="fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="[
-				(log.id == messageLog[0].id) ? 'font-bold text-sm' : '',
+				(log.id == messageLog[0].id) ? 'font-bold' : '',
 				(log.message.includes('Player 1') || log.message.includes('P1')) ? PLAYER_CONFIG[0].logColor : '',
 				(log.message.includes('Player 2') || log.message.includes('P2')) ? PLAYER_CONFIG[1].logColor : '',
 				(log.message.includes('Player 3') || log.message.includes('P3')) ? PLAYER_CONFIG[2].logColor : '',
