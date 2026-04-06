@@ -29,7 +29,7 @@ const AI_TYPES: Record<string, string> = {
 
 // CLI Arguments
 const args = parse(Deno.args, {
-    string: ["games", "type", "output", "depth"],
+    string: ["games", "type", "output", "depth", "players"],
     boolean: ["verbose", "help"],
     alias: {
         g: "games",
@@ -38,6 +38,7 @@ const args = parse(Deno.args, {
         d: "depth",
         v: "verbose",
         h: "help",
+        pl: "players",
     },
     default: {
         games: 1,
@@ -45,6 +46,7 @@ const args = parse(Deno.args, {
         output: "simulations",
         depth: 3,
         verbose: false,
+        players: 2,
     },
 });
 
@@ -57,8 +59,9 @@ Usage:
 
 Options:
   --games, -g <n>      Number of games to simulate (default: 1)
-  --type, -t <p1,p2>   AI types for P1 and P2 (default: random,heuristic)
+  --type, -t <p1,p2,p3..> AI types for each player (default: random,heuristic)
                        Available: random, heuristic, minimax, priority
+  --players, -pl <n>   Number of players (default: 2, supports 2,3,4,6)
   --output, -o <dir>   Output directory for logs (default: simulations)
   --depth, -d <n>      Minimax search depth (default: 3)
   --verbose, -v        Show detailed move-by-move output
@@ -66,6 +69,7 @@ Options:
 
 Examples:
   deno run --allow-all simulate.ts -g=10 -t=random,heuristic
+  deno run --allow-all simulate.ts -pl=3 -t=random,heuristic,priority
   deno run --allow-all simulate.ts --games=5 --type=minimax,priority --verbose
   deno run --allow-all simulate.ts -g=1 -t=heuristic,heuristic -o=my_logs
 `);
@@ -116,14 +120,14 @@ interface ReplayData {
     metadata: {
         date: string;
         games: number;
-        aiTypes: [string, string];
+        aiTypes: string[];
         minimaxDepth: number;
         version: string;
+        playerCount: number;
     };
     games: GameReplay[];
     summary: {
-        p1Wins: number;
-        p2Wins: number;
+        wins: number[]; // Index maps to player seat
         draws: number;
         totalTurns: number;
         avgTurnsPerGame: number;
@@ -148,10 +152,12 @@ interface MoveRecord {
 }
 
 // Stub browser APIs for headless execution
-function stubBrowserAPIs() {
+function stubBrowserAPIs(playerCount: number = 2) {
     // Stub location
     (globalThis as any).location = {
-        search: '?mode=headless',
+        search: `?mode=headless&players=${playerCount}`,
+        href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
+        toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
     };
     
     // Stub document
@@ -178,8 +184,8 @@ function createSimulationGame(logger: SimulationLogger, aiType: string, engine: 
 }
 
 // Load all game and AI code
-async function loadGameEngine(): Promise<any> {
-    stubBrowserAPIs();
+async function loadGameEngine(playerCount: number = 2): Promise<any> {
+    stubBrowserAPIs(playerCount);
     
     let gameCode = await Deno.readTextFile("./game.js");
     const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
@@ -231,9 +237,12 @@ async function loadGameEngine(): Promise<any> {
 
 // Calculate state hash for replay
 function calculateStateHash(game: any): string {
+    const playersDice = game.players.map((p: any, i: number) => 
+        `p${i}Dice:` + p.dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|")
+    ).join(";");
+    
     const state = {
-        p1Dice: game.players[0].dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|"),
-        p2Dice: game.players[1].dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|"),
+        playersDice,
         turn: game.currentPlayerIndex,
         phase: game.phase,
     };
@@ -243,7 +252,7 @@ function calculateStateHash(game: any): string {
 // Run a single game simulation
 function runGame(
     gameNumber: number,
-    aiTypes: [string, string],
+    aiTypes: string[],
     minimaxDepth: number,
     verbose: boolean,
     engine: any
@@ -251,7 +260,13 @@ function runGame(
     const logger = new SimulationLogger(verbose);
 
     // Create fresh game instance with stubs
-    const game = createSimulationGame(logger, aiTypes[1], engine);
+    const game = engine.createGame();
+    game.playerCount = aiTypes.length;
+
+    // Add $nextTick to game instance (Vue.js compatibility)
+    (game as any).$nextTick = (fn: any) => { 
+        try { fn(); } catch(e) { /* ignore */ }
+    };
 
     // Store AI types for use in performAITurn
     (game as any).aiTypes = aiTypes;
@@ -270,16 +285,13 @@ function runGame(
     // Override endTurn to disable setTimeout for AI (we handle it in the game loop)
     game.endTurn = function(state?: any) {
         // Temporarily disable isAI to prevent setTimeout in endTurn
-        const ai0 = this.players[0].isAI;
-        const ai1 = this.players[1].isAI;
-        this.players[0].isAI = false;
-        this.players[1].isAI = false;
+        const originalAIStates = this.players.map((p: any) => p.isAI);
+        this.players.forEach((p: any) => p.isAI = false);
         
         originalEndTurn(state);
         
         // Restore AI flags
-        this.players[0].isAI = ai0;
-        this.players[1].isAI = ai1;
+        this.players.forEach((p: any, idx: number) => p.isAI = originalAIStates[idx]);
     };
 
     game.performAITurn = function() {
@@ -304,9 +316,8 @@ function runGame(
 
     // Handle setup phase automatically
     game.handleSetupPhase = function() {
-        // SETUP_ROLL: Roll dice for both players
         if (this.phase === "SETUP_ROLL") {
-            for (let i = 0; i < 2; i++) {
+            for (let i = 0; i < this.playerCount; i++) {
                 if (!this.players[i].initialRollDone) {
                     logger.log(`P${i + 1} rolling initial dice`, "game");
                     this.rollInitialDice(i);
@@ -314,9 +325,8 @@ function runGame(
             }
         }
         
-        // SETUP_REROLL: Skip reroll for both players
         if (this.phase === "SETUP_REROLL") {
-            for (let i = 0; i < 2; i++) {
+            for (let i = 0; i < this.playerCount; i++) {
                 if (this.players[i].rerollsUsed === 0) {
                     logger.log(`P${i + 1} skipping reroll`, "game");
                     this.currentPlayerIndex = i;
@@ -325,9 +335,8 @@ function runGame(
             }
         }
         
-        // SETUP_DEPLOY: Deploy all dice for both players
         if (this.phase === "SETUP_DEPLOY") {
-            for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
+            for (let playerIdx = 0; playerIdx < this.playerCount; playerIdx++) {
                 const player = this.players[playerIdx];
                 this.currentPlayerIndex = playerIdx;
                 
@@ -347,7 +356,6 @@ function runGame(
                     }
                 }
             }
-            // Start gameplay after all deployments
             this.startGamePlay();
         }
     };
@@ -356,75 +364,21 @@ function runGame(
     game.init();
     game.handleSetupPhase();
     
-    // NOW set up AI players (after init and setup, as startGamePlay might reset them)
-    game.players[0].isAI = true;
-    game.players[1].isAI = true;
-    logger.log(`AI setup: P1=${game.players[0].isAI}, P2=${game.players[1].isAI}, phase=${game.phase}`, "ai");
+    // NOW set up AI players
+    game.players.forEach((p: any) => p.isAI = true);
     
-    // Override cloneState for simulation (Vue's $data doesn't exist in headless mode)
     game.cloneState = function() {
-        const state = {
+        return {
             players: this.players.map((p: any) => ({
-                id: p.id,
-                color: p.color,
-                dice: p.dice.map((d: any) => ({
-                    id: d.id,
-                    originalIndex: d.originalIndex,
-                    playerId: d.playerId,
-                    value: d.value,
-                    name: d.name,
-                    attack: d.attack,
-                    armor: d.armor,
-                    range: d.range,
-                    distance: d.distance,
-                    movement: d.movement,
-                    currentArmor: d.currentArmor,
-                    armorReduction: d.armorReduction,
-                    isDeployed: d.isDeployed,
-                    hexId: d.hexId,
-                    hasMovedOrAttackedThisTurn: d.hasMovedOrAttackedThisTurn,
-                    isGuarding: d.isGuarding,
-                    isDeath: d.isDeath,
-                    actionsTakenThisTurn: d.actionsTakenThisTurn,
-                })),
-                initialRollDone: p.initialRollDone,
-                baseHexId: p.baseHexId,
-                rerollsUsed: p.rerollsUsed,
-                isAI: p.isAI,
+                id: p.id, color: p.color, dice: p.dice.map((d: any) => ({ ...d })),
+                initialRollDone: p.initialRollDone, baseHexId: p.baseHexId, rerollsUsed: p.rerollsUsed, isAI: p.isAI,
             })),
-            hexes: this.hexes.map((h: any) => ({
-                id: h.id,
-                q: h.q,
-                r: h.r,
-                s: h.s,
-                unitId: h.unitId,
-                unit: h.unit,
-                isP1Base: h.isP1Base,
-                isP2Base: h.isP2Base,
-                visualX: h.visualX,
-                visualY: h.visualY,
-                left: h.left,
-                top: h.top,
-                width: h.width,
-                height: h.height,
-            })),
-            hexesQR: this.hexesQR,
-            phase: this.phase,
-            currentPlayerIndex: this.currentPlayerIndex,
-            selectedUnitHexId: this.selectedUnitHexId,
-            selectedDieToDeploy: this.selectedDieToDeploy,
-            actionMode: this.actionMode,
-            validMoves: this.validMoves,
-            validTargets: this.validTargets,
-            validMerges: this.validMerges,
-            trail: { ...this.trail },
-            trailAttack: { ...this.trailAttack },
-            hovering: { ...this.hovering },
-            rules: { ...this.rules },
-            hexGrid: { ...this.hexGrid },
-            debug: { ...this.debug },
+            hexes: this.hexes.map((h: any) => ({ ...h })),
+            hexesQR: this.hexesQR, phase: this.phase, currentPlayerIndex: this.currentPlayerIndex,
+            selectedUnitHexId: this.selectedUnitHexId, actionMode: this.actionMode,
+            validMoves: this.validMoves, validTargets: this.validTargets, validMerges: this.validMerges,
+            trail: { ...this.trail }, rules: { ...this.rules }, hexGrid: { ...this.hexGrid },
         };
-        return state;
     };
     
     const moves: MoveRecord[] = [];
@@ -505,32 +459,26 @@ async function runSimulation() {
     const outputDir = (args.output as string) || "simulations";
     const minimaxDepth = parseInt(args.depth) || 3;
     const verbose = !!args.verbose;
+    const playerCount = parseInt(args.players) || 2;
     
     // Parse AI types
-    const [p1Type, p2Type] = typeArg.split(",").map((t: string) => t.trim().toLowerCase());
-    const aiTypes: [string, string] = [
-        AI_TYPES[p1Type] ? p1Type : "random",
-        AI_TYPES[p2Type] ? p2Type : "heuristic",
-    ];
+    const types = typeArg.split(",").map((t: string) => t.trim().toLowerCase());
+    const aiTypes: string[] = [];
+    for (let i = 0; i < playerCount; i++) {
+        const t = types[i] || types[types.length - 1] || "random";
+        aiTypes.push(AI_TYPES[t] ? t : "random");
+    }
     
     console.log("╔════════════════════════════════════════╗");
     console.log("║     Hex Dice CLI Simulation            ║");
     console.log("╚════════════════════════════════════════╝");
-    console.log(`Games: ${numGames} | P1: ${aiTypes[0]} vs P2: ${aiTypes[1]} | Depth: ${minimaxDepth}`);
+    console.log(`Games: ${numGames} | Players: ${playerCount} | AI: ${aiTypes.join(", ")}`);
     console.log("");
     
     // Load game engine
     console.log("Loading game engine...");
-    const engine = await loadGameEngine();
+    const engine = await loadGameEngine(playerCount);
     console.log("Engine loaded.");
-    console.log(`  createGame: ${typeof engine.createGame}`);
-    console.log(`  performAIByRandom: ${typeof engine.performAIByRandom}`);
-    console.log(`  performAIByHeuristic: ${typeof engine.performAIByHeuristic}`);
-    console.log(`  performAIByMinimax: ${typeof engine.performAIByMinimax}`);
-    console.log(`  performAIByPriority: ${typeof engine.performAIByPriority}`);
-    console.log(`  generateAllPossibleMoves: ${typeof engine.generateAllPossibleMoves}`);
-    console.log(`  applyMove: ${typeof engine.applyMove}`);
-    console.log(`  boardEvaluation: ${typeof engine.boardEvaluation}`);
     console.log("");
     
     // Ensure output directory exists
@@ -544,11 +492,11 @@ async function runSimulation() {
             aiTypes,
             minimaxDepth,
             version: "1.0",
+            playerCount
         },
         games: [],
         summary: {
-            p1Wins: 0,
-            p2Wins: 0,
+            wins: new Array(playerCount).fill(0),
             draws: 0,
             totalTurns: 0,
             avgTurnsPerGame: 0,
@@ -564,9 +512,11 @@ async function runSimulation() {
             replayData.games.push(gameResult);
             
             // Update summary
-            if (gameResult.winner === 0) replayData.summary.p1Wins++;
-            else if (gameResult.winner === 1) replayData.summary.p2Wins++;
-            else replayData.summary.draws++;
+            if (gameResult.winner >= 0 && gameResult.winner < playerCount) {
+                replayData.summary.wins[gameResult.winner]++;
+            } else {
+                replayData.summary.draws++;
+            }
             
             replayData.summary.totalTurns += gameResult.totalTurns;
         } catch (error) {
@@ -589,8 +539,9 @@ async function runSimulation() {
     console.log("╔════════════════════════════════════════╗");
     console.log("║           Simulation Summary           ║");
     console.log("╚════════════════════════════════════════╝");
-    console.log(`P1 (${aiTypes[0]}): ${replayData.summary.p1Wins} wins`);
-    console.log(`P2 (${aiTypes[1]}): ${replayData.summary.p2Wins} wins`);
+    for (let i = 0; i < playerCount; i++) {
+        console.log(`P${i + 1} (${aiTypes[i]}): ${replayData.summary.wins[i]} wins`);
+    }
     console.log(`Draws: ${replayData.summary.draws}`);
     console.log(`Avg turns/game: ${replayData.summary.avgTurnsPerGame.toFixed(1)}`);
     

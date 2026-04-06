@@ -138,8 +138,9 @@
 			</div>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Random Start</button>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Roll All Players Dice</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="playerCount === 2 && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true});rollInitialDice(1)" >Play Against AI</button>
-			<div class="mt-4">
+			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Play Against AI</button>
+			</div>
+
 				<a href="/rules.md" target="_blank" class="text-sm underline hover:text-blue-700">Read Game Rules</a>
 			</div>
 		</div>

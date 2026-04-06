@@ -142,10 +142,14 @@ function alpineHexDiceTacticGame() { return {
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
-		const url = new URL(location);
-		url.searchParams.set('options', this.options);
-		url.searchParams.set('players', this.playerCount);
-		if (window?.history?.replaceState) window.history.replaceState(null, '', url);
+		try {
+			const url = new URL(location.href || location.toString());
+			url.searchParams.set('options', this.options);
+			url.searchParams.set('players', this.playerCount);
+			if (window?.history?.replaceState) window.history.replaceState(null, '', url);
+		} catch(e) {
+			// Silent fail for non-browser environments
+		}
 
 		this.addLog("Game started. Welcome to Hex Dice!");
 		this.resetGame({
