@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "deno run --node-modules-dir --unstable-kv --allow-net --allow-read --allow-env server.ts",
+    "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts",
     "simulate": "deno run --allow-all simulate.ts",
     "tournament": "deno run --allow-all tournament.ts",
     "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",

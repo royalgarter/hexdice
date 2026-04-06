@@ -1,7 +1,7 @@
 import {serve} from "https://deno.land/std/http/server.ts";
 import {exists} from "https://deno.land/std/fs/mod.ts";
 import {extname} from "https://deno.land/std/path/mod.ts";
-import { CSS, render } from "jsr:@deno/gfm";
+import { marked } from 'https://esm.sh/marked@12.0.0';
 
 const head_json = {
 	"Content-Type": "application/json; charset=utf-8"
@@ -36,8 +36,8 @@ async function handleRequest(req: Request) {
 		const targetPath = pathname === "/rules" ? "./rules.md" : localpath;
 		if (await exists(targetPath)) {
 			const markdown = await Deno.readTextFile(targetPath);
-			const body = render(markdown);
-			const html = `<!DOCTYPE html>
+			const html = marked.parse(markdown);
+			/*const html = `<!DOCTYPE html>
 				<html lang="en">
 				  <head>
 					<meta charset="UTF-8">
@@ -62,7 +62,7 @@ async function handleRequest(req: Request) {
 					  ${body}
 					</main>
 				  </body>
-				</html>`;
+				</html>`;*/
 			return response(html, {
 				headers: {
 					"Content-Type": "text/html; charset=utf-8",
