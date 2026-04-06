@@ -131,7 +131,7 @@ function alpineHexDiceTacticGame() { return {
 	/* --- INITIALIZATION --- */
 	init() {
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
-		
+
 		// Map size modifier: 2, 3 players -> R=5; 4, 6 players -> R=6
 		const radius = (this.playerCount <= 3) ? 5 : 6;
 		this.generateHexGrid(radius);
@@ -770,7 +770,7 @@ function alpineHexDiceTacticGame() { return {
 
 		switch(actionType) {
 			case 'MOVE': return true;
-			case 'REROLL': return options.includes('r');
+			case 'REROLL': return options.includes('r') && !unit.isRerolled && !unit.isGuarding;
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
@@ -914,7 +914,7 @@ function alpineHexDiceTacticGame() { return {
 		unit.value = newRoll;
 		Object.assign(unit, UNIT_STATS[newRoll]); // Update stats
 		unit.currentArmor = UNIT_STATS[newRoll].armor;
-		unit.armorReduction = 0; // Reset armor reduction
+		// unit.armorReduction = 0; // Reset armor reduction
 		unit.isGuarding = false; // Rerolling removes guard
 		unit.isRerolled = true; // Penalty: 0 effective armor until next turn starts
 
