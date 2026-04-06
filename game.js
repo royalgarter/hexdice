@@ -97,7 +97,7 @@ function alpineHexDiceTacticGame() { return {
 	rules: {
 		dicePerPlayer: 12,
 	},
-	options: '', //'rm', // Default: Reroll and Merge enabled
+	options: 'r', //'rm',
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
@@ -132,8 +132,18 @@ function alpineHexDiceTacticGame() { return {
 	init() {
 		this.generateHexGrid(R);
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+
+		// Adjust dice per player based on player count (Total 24 dice)
+		this.rules.dicePerPlayer = Math.floor(24 / this.playerCount);
+
 		this.determineBaseLocations();
-		this.options = new URLSearchParams(location.search).get('options') ||  ''; //'rm';
+		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
+
+		const url = new URL(location);
+		url.searchParams.set('options', this.options);
+		url.searchParams.set('players', this.playerCount);
+		if (window?.history?.replaceState) window.history.replaceState(null, '', url);
+
 		this.addLog("Game started. Welcome to Hex Dice!");
 		this.resetGame({
 			isCampaign: new URLSearchParams(location.search).get('mode') == 'campaign',
@@ -228,7 +238,7 @@ function alpineHexDiceTacticGame() { return {
 		for (let i = 0; i < this.players.length; i++) {
 			const primary = PLAYER_PRIMARY_AXIS[this.players.length][i];
 			if (!primary) continue;
-			
+
 			const baseHex = this.getHexByQR(primary.q * radius, primary.r * radius);
 			if (baseHex) {
 				baseHex.basePlayerId = i;
@@ -459,7 +469,7 @@ function alpineHexDiceTacticGame() { return {
 	nextPlayerSetupRerollOrDeploy() {
 		// Find next player who hasn't finished reroll phase
 		const nextRerollPlayer = this.players.find(p => p.rerollsUsed === 0);
-		
+
 		if (nextRerollPlayer) {
 			this.currentPlayerIndex = nextRerollPlayer.id;
 			this.diceToReroll = [];
@@ -518,7 +528,7 @@ function alpineHexDiceTacticGame() { return {
 		if (player.dice.every(d => d.isDeployed)) {
 			// Find next player who hasn't deployed all dice
 			const nextDeployPlayer = this.players.find(p => p.dice.some(d => !d.isDeployed));
-			
+
 			if (nextDeployPlayer) {
 				this.currentPlayerIndex = nextDeployPlayer.id;
 				this.selectedDieToDeploy = this.players[this.currentPlayerIndex].dice.findIndex(d => !d.isDeployed);
@@ -897,10 +907,11 @@ function alpineHexDiceTacticGame() { return {
 		unit.currentArmor = UNIT_STATS[newRoll].armor;
 		unit.armorReduction = 0; // Reset armor reduction
 		unit.isGuarding = false; // Rerolling removes guard
+		unit.isRerolled = true; // Penalty: 0 effective armor until next turn starts
 
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
-		this.addLog(`P${unit.playerId + 1} D${oldVal} rerolled D${newRoll} (${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${unit.playerId + 1} D${oldVal} rerolled D${newRoll} (${targetHex.q},${targetHex.r}). Penalty: 0 Effective Armor until next turn.`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
 	},
@@ -1404,6 +1415,7 @@ function alpineHexDiceTacticGame() { return {
 	calcDefenderEffectiveArmor(defenderHexId, state) {
 		const defenderUnit = this.getUnitOnHex(defenderHexId, state);
 		if (!defenderUnit) return 0;
+		if (defenderUnit.isRerolled) return 0; // Penalty for rerolling
 
 		let effectiveArmor = defenderUnit.currentArmor;
 		if (defenderUnit.isGuarding) effectiveArmor++;
@@ -1656,7 +1668,7 @@ function alpineHexDiceTacticGame() { return {
 		while (state.players[nextPlayerIndex].isEliminated && nextPlayerIndex !== state.currentPlayerIndex) {
 			nextPlayerIndex = (nextPlayerIndex + 1) % state.players.length;
 		}
-		
+
 		state.currentPlayerIndex = nextPlayerIndex;
 		state.turnCount++;
 		this.resetTurnActionsForPlayer(state.currentPlayerIndex, state);
@@ -1680,6 +1692,7 @@ function alpineHexDiceTacticGame() { return {
 			if(die.isDeployed) {
 				die.hasMovedOrAttackedThisTurn = false;
 				die.actionsTakenThisTurn = 0;
+				die.isRerolled = false; // Penalty expires when turn starts
 				// Guard status persists until the unit moves or rerolls.
 			}
 		});

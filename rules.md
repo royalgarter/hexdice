@@ -29,12 +29,10 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 
 - 1 Hexagonal Map (R=6 size)  
 - Standard 6-sided dice: Multiple sets of distinct colors are required, one color per player.  
-  - For 2 Players: 2 distinct colors (Red/Blue) set of dice. Players can select from the following scenario setups to begin the game.  
-    - 2 sets of 6 dice each (faster game play).  
-    - 2 sets of 8 dice each (more tactical depth game play).  
-  - For 3 Players: 3 sets of 6 dice each (3 distinct colors).  
-  - For 4 Players: 4 sets of 4 or 5 dice each (4 distinct colors).  
-  - For 6 Players: 6 sets of 3 or 4 dice each (6 distinct colors).
+  - For 2 Players: 2 distinct colors (Red/Blue), 12 dice each (Total 24).
+  - For 3 Players: 3 distinct colors, 8 dice each (Total 24).
+  - For 4 Players: 4 distinct colors, 6 dice each (Total 24).
+  - For 6 Players: 6 distinct colors, 4 dice each (Total 24).
 
 ### **3\. Setup**
 
@@ -45,9 +43,9 @@ Hex Dice is a tactical board game where players command armies of dice, using th
    - The face values of these dice determine the types of units available to that player for the entire game.   
    - The dice are placed showing the rolled value face up.   
    - A hex can hold a maximum of one unit at all times.   
-   - Each player is able to choose ⅓ of maximum dice amount (round down) to reroll after their initial roll once (e.g., 2 players \-\> 6 dices each \-\> 2 maximum reroll, 6 players \-\> 4 dices each \-\> 1 maximum reroll)  
+   - Each player is able to choose ⅓ of maximum dice amount (round down) to reroll after their initial roll once (e.g., 2 players \-\> 12 dices each \-\> 4 maximum reroll, 3 players \-\> 8 dices each \-\> 2 maximum reroll)  
 4. **Base Locations & Deployment:**  
-   - **2 Players:** The two dark-colored cells on the map are the Base cells for each team. Each player's Base cell is their starting deployment zone. Players deploy their 6 rolled dice units onto *any* empty hexes within their own Base cell or its immediate adjacent hexes. Each hex can initially hold only one unit.  
+   - **2 Players:** The two dark-colored cells on the map are the Base cells for each team. Each player's Base cell is their starting deployment zone. Players deploy their rolled dice units onto *any* empty hexes within their own Base cell or its immediate adjacent hexes. Each hex can initially hold only one unit.  
    - **3, 4, or 6 Players:** The 6 hexes furthest from the center ("corner" hexes) are the potential Base locations. Players occupy these corners:  
      - **3 Players:** Players choose 3 corners spaced evenly around the map (e.g., skipping one corner between each player).  
      - **4 Players:** Players choose 4 corners, ideally spaced for balance.  
@@ -324,7 +322,8 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 
   * Choose one of your units.  
   * The unit stays in its current hex.  
-  * Roll the dice . The new face value determines the unit's type and stats for the rest of the game (or until rerolled).  
+  * Roll the dice. The new face value determines the unit's type and stats for the rest of the game (or until rerolled).  
+  * **Penalty**: The rerolled unit has **0 Effective Armor** until its owner's next turn starts. This makes them extremely vulnerable to any attack.
   * Action complete. This unit cannot Move or Attack this turn.
 
 * ##### **Guard**
