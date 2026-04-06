@@ -41,6 +41,12 @@
 		.bg-hexblue {
 			background-color: #3867d6;
 		}
+		.bg-hexgreen {
+			background-color: #26de81;
+		}
+		.bg-hexpurple {
+			background-color: #a55eea;
+		}
 	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
@@ -54,6 +60,8 @@
 			--color-hexdeploy: var(--color-yellow-500);
 			--color-hexred: var(--color-red-700);
 			--color-hexblue: var(--color-blue-700);
+			--color-hexgreen: var(--color-emerald-600);
+			--color-hexpurple: var(--color-purple-700);
 		}
 	</style>
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
@@ -89,10 +97,7 @@
 
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
-							:class="{
-								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 0,
-								'text-red-900': getUnitOnHex(hex.id)?.playerId === 1,
-							}"
+							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
 							x-show="getUnitOnHex(hex.id)"
 							x-text="getUnitOnHex(hex.id)?.value"
 						>
@@ -122,10 +127,15 @@
 	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 border border-black text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="phase === 'SETUP_ROLL'">
+			<div class="mb-4">
+				<span class="mr-2 font-bold text-sm">Players:</span>
+				<a href="?players=2" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 2 ? 'bg-black text-white' : ''">2</a>
+				<a href="?players=3" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 ? 'bg-black text-white' : ''">3</a>
+				<a href="?players=4" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 ? 'bg-black text-white' : ''">4</a>
+			</div>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Random Start</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="resetGame({isP2AI: true});rollInitialDice(1)" >Play Against AI</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0].initialRollDone" @click="rollInitialDice(0)" >Roll Player 1 Dice</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="rollInitialDice(1)" >Roll Player 2 Dice</button>
+			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Roll All Players Dice</button>
+			<!-- <button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="resetGame({isCampaign: true});rollInitialDice(1)" >Play Against AI</button> -->
 		</div>
 		<div x-show="phase === 'SETUP_REROLL'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
@@ -256,8 +266,10 @@
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="[
 				(log.id == messageLog[0].id) ? 'font-bold text-sm' : '',
-				log.message.includes('Player 1') || log.message.includes('P1') ? 'text-blue-500' : '',
-				log.message.includes('Player 2') || log.message.includes('P2') ? 'text-red-500' : '',
+				(log.message.includes('Player 1') || log.message.includes('P1')) ? PLAYER_CONFIG[0].logColor : '',
+				(log.message.includes('Player 2') || log.message.includes('P2')) ? PLAYER_CONFIG[1].logColor : '',
+				(log.message.includes('Player 3') || log.message.includes('P3')) ? PLAYER_CONFIG[2].logColor : '',
+				(log.message.includes('Player 4') || log.message.includes('P4')) ? PLAYER_CONFIG[3].logColor : '',
 			].join(' ')"></p>
 		</template>
 	</div>

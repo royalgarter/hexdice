@@ -82,6 +82,12 @@ const PLAYER_PRIMARY_AXIS = {
 	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
+const PLAYER_CONFIG = [
+	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-500' },
+	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-500' },
+	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-500' },
+	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-500' },
+];
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
 const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
@@ -95,10 +101,9 @@ function alpineHexDiceTacticGame() { return {
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
-	players: [
-		{ id: 0, color: 'Blue', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
-		{ id: 1, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 }
-	],
+	players: [],
+	playerCount: 2,
+	turnCount: 0,
 	phase: 'SETUP_ROLL', // SETUP_ROLL, SETUP_REROLL, SETUP_DEPLOY, PLAYER_TURN, GAME_OVER
 	currentPlayerIndex: 0,
 	selectedUnitHexId: null,
@@ -126,21 +131,32 @@ function alpineHexDiceTacticGame() { return {
 	/* --- INITIALIZATION --- */
 	init() {
 		this.generateHexGrid(R);
+		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
 		this.determineBaseLocations();
 		this.options = new URLSearchParams(location.search).get('options') ||  ''; //'rm';
 		this.addLog("Game started. Welcome to Hex Dice!");
 		this.resetGame({
-			isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign',
+			isCampaign: new URLSearchParams(location.search).get('mode') == 'campaign',
 		});
 	},
 	resetGame(opts) {
-		this.players = [
-			{ id: 0, color: 'Blue', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0 },
-			{ id: 1, color: 'Red', dice: [], initialRollDone: false, baseHexId: null, rerollsUsed: 0, isAI: opts?.isP2AI }
-		];
+		this.players = [];
+		for (let i = 0; i < this.playerCount; i++) {
+			this.players.push({
+				...PLAYER_CONFIG[i],
+				dice: [],
+				initialRollDone: false,
+				baseHexId: null,
+				rerollsUsed: 0,
+				isEliminated: false,
+				isAI: (i > 0 && opts?.isCampaign)
+			});
+		}
+
 		this.hexes.forEach(h => h.unitId = null); // Clear units from hexes
 		this.determineBaseLocations(); // Redetermine bases on reset
 		this.phase = 'SETUP_ROLL';
+		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
 		this.selectedUnitHexId = null;
 		this.selectedDieToDeploy = null;
@@ -156,7 +172,7 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`Autoplay game started`);
 		}
 
-		this.addLog(`New game started. Player 1 (Red) rolls first. isP2AI=${!!opts?.isP2AI}`);
+		this.addLog(`New game started with ${this.playerCount} players.`);
 	},
 
 	/* --- HEX GRID --- */
@@ -204,18 +220,20 @@ function alpineHexDiceTacticGame() { return {
 	determineBaseLocations() {
 		let radius = -(R-1);
 
-		const primary1 = PLAYER_PRIMARY_AXIS[this.players.length][0];
-		const base1Hex = this.getHexByQR(primary1.q * radius, primary1.r * radius);
-		if (base1Hex) {
-			base1Hex.isP1Base = true;
-			this.players[0].baseHexId = base1Hex.id;
-		}
+		// Clear existing base assignments
+		this.hexes.forEach(h => {
+			h.basePlayerId = null;
+		});
 
-		const primary2 = PLAYER_PRIMARY_AXIS[this.players.length][1];
-		const base2Hex = this.getHexByQR(primary2.q * radius, primary2.r * radius);
-		if (base2Hex) {
-			base2Hex.isP2Base = true;
-			this.players[1].baseHexId = base2Hex.id;
+		for (let i = 0; i < this.players.length; i++) {
+			const primary = PLAYER_PRIMARY_AXIS[this.players.length][i];
+			if (!primary) continue;
+			
+			const baseHex = this.getHexByQR(primary.q * radius, primary.r * radius);
+			if (baseHex) {
+				baseHex.basePlayerId = i;
+				this.players[i].baseHexId = baseHex.id;
+			}
 		}
 	},
 	axialDistance(q1, r1, q2, r2) {
@@ -269,8 +287,9 @@ function alpineHexDiceTacticGame() { return {
 
 		let cls = 'bg-hexdefault';
 
-		if (hex.isP1Base) cls = 'bg-hexblue';
-		if (hex.isP2Base) cls = 'bg-hexred';
+		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined) {
+			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
+		}
 
 		state = state || this;
 
@@ -315,8 +334,9 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(hex.id);
 		if (unit) {
 			const {value, playerId} = unit;
+			const spriteColor = PLAYER_CONFIG[playerId].sprite;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/fe_awakening_sum6/d${value}${playerId == 0 ? 'blue' : 'red' }.gif");`);
+			style.push(`background-image: url("/assets/sprites/fe_fates_6_players/d${value}_${spriteColor}.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
@@ -437,10 +457,14 @@ function alpineHexDiceTacticGame() { return {
 		this.nextPlayerSetupRerollOrDeploy();
 	},
 	nextPlayerSetupRerollOrDeploy() {
-		if (this.currentPlayerIndex === 0 && this.players[1].rerollsUsed === 0) {
-			this.currentPlayerIndex = 1; // Move to Player 2's reroll
+		// Find next player who hasn't finished reroll phase
+		const nextRerollPlayer = this.players.find(p => p.rerollsUsed === 0);
+		
+		if (nextRerollPlayer) {
+			this.currentPlayerIndex = nextRerollPlayer.id;
+			this.diceToReroll = [];
 		} else {
-			// Both players finished reroll phase
+			// All players finished reroll phase
 			this.phase = 'SETUP_DEPLOY';
 			this.currentPlayerIndex = 0; // Player 1 starts deployment
 			this.selectedDieToDeploy = 0;
@@ -492,14 +516,13 @@ function alpineHexDiceTacticGame() { return {
 
 		// Check if current player has deployed all dice
 		if (player.dice.every(d => d.isDeployed)) {
-			if (this.currentPlayerIndex === 0) {
-				this.currentPlayerIndex = 1; // Move to Player 2's deployment
-				this.selectedDieToDeploy = 0;
-				this.addLog("Player 2 turn to deploy");
-
-				if (this.players[1].dice.every(d => d.isDeployed)) {
-					this.startGamePlay();
-				}
+			// Find next player who hasn't deployed all dice
+			const nextDeployPlayer = this.players.find(p => p.dice.some(d => !d.isDeployed));
+			
+			if (nextDeployPlayer) {
+				this.currentPlayerIndex = nextDeployPlayer.id;
+				this.selectedDieToDeploy = this.players[this.currentPlayerIndex].dice.findIndex(d => !d.isDeployed);
+				this.addLog(`Player ${this.currentPlayerIndex + 1} turn to deploy`);
 			} else {
 				this.startGamePlay();
 			}
@@ -522,11 +545,10 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	randomStart() {
-		// Roll initial dice for both players
-		this.rollInitialDice(0);
-		this.rollInitialDice(1);
+		// Roll initial dice for all players
+		this.players.forEach((p, i) => this.rollInitialDice(i));
 		
-		// Deploy all dice randomly for both players
+		// Deploy all dice randomly for all players
 		this.players.forEach((player, playerIdx) => {
 			player.dice.forEach((dice, diceIdx) => {
 				const validHexes = this.calcValidDeploymentHexes(playerIdx);
@@ -537,7 +559,7 @@ function alpineHexDiceTacticGame() { return {
 			});
 		});
 		
-		this.addLog("Random start completed! Player 1's turn.");
+		this.addLog(`Random start completed! Player 1's turn.`);
 	},
 	autoPlay() {
 		setTimeout(() => this.performAITurn(), 1e3);
@@ -1629,7 +1651,14 @@ function alpineHexDiceTacticGame() { return {
 		this.deselectUnit(state); // Clear selection
 		state.actionMode = null; // Clear action mode
 
-		state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+		// Move to next non-eliminated player
+		let nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+		while (state.players[nextPlayerIndex].isEliminated && nextPlayerIndex !== state.currentPlayerIndex) {
+			nextPlayerIndex = (nextPlayerIndex + 1) % state.players.length;
+		}
+		
+		state.currentPlayerIndex = nextPlayerIndex;
+		state.turnCount++;
 		this.resetTurnActionsForPlayer(state.currentPlayerIndex, state);
 
 		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
@@ -1658,37 +1687,27 @@ function alpineHexDiceTacticGame() { return {
 	checkWinConditions(state) {
 		if (this.phase === 'GAME_OVER') return;
 
-		const p1 = (state || this).players[0];
-		const p2 = (state || this).players[1];
+		const activePlayers = (state || this).players.filter(p => !p.isEliminated);
 
-		const p1ActiveDice = p1.dice.filter(d => d.isDeployed && !d.isDeath).length;
-		const p2ActiveDice = p2.dice.filter(d => d.isDeployed && !d.isDeath).length;
+		activePlayers.forEach(p => {
+			const activeDice = p.dice.filter(d => d.isDeployed && !d.isDeath).length;
+			const baseHex = this.getHex(p.baseHexId, state);
+			const baseCaptured = baseHex && this.getUnitOnHex(baseHex.id, state)?.playerId !== p.id && this.getUnitOnHex(baseHex.id, state) !== null;
 
-		// Annihilation
-		if (p1ActiveDice === 0 && p2ActiveDice > 0) {
-			this.gameOver(1, "Player 1 annihilated!");
-			return;
-		}
-		if (p2ActiveDice === 0 && p1ActiveDice > 0) {
-			this.gameOver(0, "Player 2 annihilated!");
-			return;
-		}
-		 if (p1ActiveDice === 0 && p2ActiveDice === 0) {
-			this.gameOver(-1, "Mutual Annihilation! It's a draw!"); // Or last player to make move loses
-			return;
-		}
+			if (activeDice === 0 || baseCaptured) {
+				p.isEliminated = true;
+				const reason = activeDice === 0 ? "annihilated" : "base captured";
+				this.addLog(`Player ${p.id + 1} (${p.color}) has been ${reason}!`, state);
+			}
+		});
 
-		// Base Capture
-		const p1BaseHex = this.getHex(p1.baseHexId, state);
-		const p2BaseHex = this.getHex(p2.baseHexId, state);
+		const remainingPlayers = (state || this).players.filter(p => !p.isEliminated);
 
-		if (p1BaseHex && this.getUnitOnHex(p1BaseHex.id, state)?.playerId === 1) {
-			this.gameOver(1, "Player 2 captured Player 1's base!");
-			return;
-		}
-		if (p2BaseHex && this.getUnitOnHex(p2BaseHex.id, state)?.playerId === 0) {
-			this.gameOver(0, "Player 1 captured Player 2's base!");
-			return;
+		if (remainingPlayers.length === 1) {
+			const winner = remainingPlayers[0];
+			this.gameOver(winner.id, `Player ${winner.id + 1} is the last one standing!`);
+		} else if (remainingPlayers.length === 0) {
+			this.gameOver(-1, "All players eliminated! It's a draw!");
 		}
 	},
 	gameOver(winnerPlayerIndex, message) {
