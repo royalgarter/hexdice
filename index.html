@@ -4,11 +4,16 @@
 	<title>Hex Dice Prototype</title>
 
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="color-scheme" content="light dark">
-	<meta name="description" :content="description" content="Hex Dice">
+	<meta name="description" content="Hex Dice">
 	<meta name="keywords" content="boardgame,hexagon,dice">
+	<meta name="theme-color" content="#ffffff">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="default">
+	<meta name="apple-mobile-web-app-title" content="Hex Dice">
+	<link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
 
 	<link rel="canonical" :href="host">
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
@@ -72,13 +77,26 @@
 	</script> -->
 	<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
-	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" onerror="handleCDNError('alpinejs')"></script>
 	<script src="game.js"></script>
 	<script src="/ai/ai.js"></script>
 	<script src="/ai/ai-minimax.js"></script>
 	<script src="/ai/ai-priority.js"></script>
 	<script src="/ai/ai-random.js"></script>
 	<script src="/ai/ai-heuristic.js"></script>
+	<script>
+		// Handle CDN loading failures for offline scenarios
+		function handleCDNError(lib) {
+			console.warn('Failed to load ' + lib + ' from CDN. Game may not work offline.');
+		}
+		
+		// Check if Alpine loaded successfully
+		window.addEventListener('load', function() {
+			if (typeof Alpine === 'undefined') {
+				document.body.innerHTML = '<div style="padding:20px;text-align:center;font-family:monospace;"><h2>Hex Dice</h2><p>Failed to load required resources. Please check your internet connection or reinstall the app.</p><button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;">Reload</button></div>';
+			}
+		});
+	</script>
 </head>
 
 <body class="text-black p-2 flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
@@ -292,11 +310,23 @@
 		// Register the service worker
 		if ('serviceWorker' in navigator) {
 			window.addEventListener('load', () => {
-				navigator.serviceWorker.register('/service-worker.js').then(registration => {
-					console.log('ServiceWorker registration successful with scope: ', registration.scope);
-				}).catch(error => {
-					console.log('ServiceWorker registration failed: ', error);
-				});
+				navigator.serviceWorker.register('/service-worker.js')
+					.then(registration => {
+						console.log('ServiceWorker registration successful with scope: ', registration.scope);
+						
+						// Check for updates
+						registration.addEventListener('updatefound', () => {
+							const newWorker = registration.installing;
+							newWorker.addEventListener('statechange', () => {
+								if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+									console.log('New version available. Reload to update.');
+								}
+							});
+						});
+					})
+					.catch(error => {
+						console.log('ServiceWorker registration failed: ', error);
+					});
 			});
 		}
 	</script>
