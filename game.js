@@ -1570,6 +1570,8 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
+		attackerUnit.isGuarding = false;
+
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
 
@@ -1599,11 +1601,7 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
 			}
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
-			attackerUnit.hasMovedOrAttackedThisTurn = true;
-			attackerUnit.actionsTakenThisTurn++;
-
 			this.trailAttack = {};
-
 		} else { // Attacker fails
 			this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
 			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
@@ -1615,10 +1613,12 @@ function alpineHexDiceTacticGame() { return {
 				this.applyDamage(attackerHexId, 1, state);
 				this.applyDamage(defenderHexId, 1, state);
 			}
-
-			attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
-			attackerUnit.actionsTakenThisTurn++;
 		}
+
+		attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
+		attackerUnit.actionsTakenThisTurn++;
+
+		defenderUnit.isGuarding = false;
 		// Deselect after combat resolution
 		this.deselectUnit();
 	},
@@ -1649,7 +1649,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit) return;
 		unit.armorReduction += damage;
 		const effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
-		if (effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
+		if (effectiveArmor < 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
 	},
 
 	/* --- TURN --- */
