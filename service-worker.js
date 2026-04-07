@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hexdice-cache-v2';
+const CACHE_NAME = 'hexdice-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const urlsToCache = [
   // Core JS files
   '/game.js',
   '/markdown-renderer.js',
+  '/alpine.min.js',
   // Rules markdown files
   '/rules.md',
   '/rules/v1.0.md',

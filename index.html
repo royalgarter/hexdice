@@ -77,26 +77,13 @@
 	</script> -->
 	<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
-	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" onerror="handleCDNError('alpinejs')"></script>
+	<script defer src="/alpine.min.js"></script>
 	<script src="game.js"></script>
 	<script src="/ai/ai.js"></script>
 	<script src="/ai/ai-minimax.js"></script>
 	<script src="/ai/ai-priority.js"></script>
 	<script src="/ai/ai-random.js"></script>
 	<script src="/ai/ai-heuristic.js"></script>
-	<script>
-		// Handle CDN loading failures for offline scenarios
-		function handleCDNError(lib) {
-			console.warn('Failed to load ' + lib + ' from CDN. Game may not work offline.');
-		}
-		
-		// Check if Alpine loaded successfully
-		window.addEventListener('load', function() {
-			if (typeof Alpine === 'undefined') {
-				document.body.innerHTML = '<div style="padding:20px;text-align:center;font-family:monospace;"><h2>Hex Dice</h2><p>Failed to load required resources. Please check your internet connection or reinstall the app.</p><button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;">Reload</button></div>';
-			}
-		});
-	</script>
 </head>
 
 <body class="text-black p-2 flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
