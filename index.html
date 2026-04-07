@@ -64,6 +64,12 @@
 			--color-hexpurple: var(--color-purple-700);
 		}
 	</style>
+	<!-- <script type="text/javascript">
+		function googleTranslateElementInit() {
+			new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+		}
+	</script> -->
+	<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
 	<script async defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	<script src="game.js"></script>
@@ -141,7 +147,8 @@
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Play Against AI</button>
 			</div>
 
-				<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
+			<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
+			<!-- <div id="google_translate_element"></div> -->
 			</div>
 		</div>
 		<div x-show="phase === 'SETUP_REROLL'">
@@ -266,7 +273,6 @@
 			/>
 		</g>
 	</svg>
-
 
 	<!-- Message Log -->
 	<div class="fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
