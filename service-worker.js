@@ -2,10 +2,18 @@ const CACHE_NAME = 'hexdice-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/rules.html',
   // Add core JS files
   '/game.js',
   '/markdown-renderer.js',
-
+  // Add rules
+  '/rules.md',
+  '/rules/v1.0.md',
+  '/rules/v1.0.1.md',
+  '/rules/v1.1.md',
+  '/rules/v1.2.md',
+  '/rules/v1.3.md',
+  '/rules/v1.4.md',
   // AI files
   '/ai/ai.js',
   '/ai/ai-heuristic.js',
@@ -13,10 +21,6 @@ const urlsToCache = [
   '/ai/ai-priority.js',
   '/ai/ai-random.js',
   '/ai/heuristic-profiles.js',
-
-  // Add other JS files that might be needed for core functionality
-  // '/simulate_balance.js', // Potentially not core for minimal PWA
-
   // Add assets
   '/assets/board.png',
   '/assets/hex.png',
