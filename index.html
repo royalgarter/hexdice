@@ -141,7 +141,7 @@
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Play Against AI</button>
 			</div>
 
-				<a href="/rules" target="_blank" class="text-sm underline hover:text-blue-700">Read Game Rules</a>
+				<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
 			</div>
 		</div>
 		<div x-show="phase === 'SETUP_REROLL'">

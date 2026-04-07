@@ -139,3 +139,4 @@ dist
 /heuristic-results
 /.qwen
 /tournaments
+/deno.lock
