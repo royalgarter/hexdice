@@ -3,26 +3,13 @@
 import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.208.0/fs/ensure_dir.ts";
 
-// Available heuristic profiles
-const PROFILE_NAMES = [
-    'baseline',
-    'berserker',
-    'turtle',
-    'tactician',
-    'swarmer',
-    'assassin'
-];
-
 // Results tracking interfaces
 interface MatchupResult {
-    profile1: string;
-    profile2: string;
-    p1Wins: number;
-    p2Wins: number;
+    profiles: string[];
+    wins: number[]; // wins[i] is number of wins for profiles[i]
     draws: number;
     totalGames: number;
-    p1WinRate: number;
-    p2WinRate: number;
+    winRates: number[];
     avgTurns: number;
 }
 
@@ -34,16 +21,16 @@ interface ProfileStats {
     totalGames: number;
     winRate: number;
     avgTurnsInGames: number;
-    winsAsP1: number;
-    winsAsP2: number;
+    winsByPosition: number[]; // Index maps to player seat
 }
 
 interface TournamentResults {
     metadata: {
         date: string;
         gamesPerMatchup: number;
-        profiles: string[];
+        profiles: any[];
         version: string;
+        playerCount: number;
     };
     matchups: MatchupResult[];
     standings: ProfileStats[];
@@ -69,10 +56,20 @@ function updateGlobalProgress(quiet: boolean, verbose: boolean) {
 }
 
 // Stub browser APIs
-function stubBrowserAPIs() {
+function stubBrowserAPIs(playerCount: number = 2) {
     if (typeof (globalThis as any).$nextTick === 'undefined') {
         (globalThis as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { /* ignore */ } };
     }
+    // Stub location
+    (globalThis as any).location = {
+        search: `?mode=headless&players=${playerCount}`,
+        href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
+        toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
+    };
+    // Stub document
+    (globalThis as any).document = {
+        getElementById: () => null,
+    };
 }
 
 // Logger for simulation
@@ -95,8 +92,8 @@ class SimulationLogger {
 }
 
 // Load game engine with heuristic profiles
-async function loadGameEngine(engineCodes?: Record<string, string>): Promise<any> {
-    stubBrowserAPIs();
+async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<string, string>): Promise<any> {
+    stubBrowserAPIs(playerCount);
 
     let gameCode: string, aiCoreCode: string, aiRandomCode: string, aiHeuristicCode: string, aiPriorityCode: string, aiMinimaxCode: string, heuristicProfilesCode: string;
 
@@ -151,12 +148,14 @@ async function loadGameEngine(engineCodes?: Record<string, string>): Promise<any
                 generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
                 applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
                 boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
+                heuristicProfiles: typeof heuristicProfiles !== 'undefined' ? heuristicProfiles : {},
+                mutateProfile: typeof mutateProfile !== 'undefined' ? mutateProfile : null,
             };
         })(location, document);
     `;
 
     const createModule = new Function('location', 'document', fullCode);
-    return createModule({ search: '?mode=headless' }, { getElementById: () => null });
+    return createModule((globalThis as any).location, (globalThis as any).document);
 }
 
 // Create game instance
@@ -166,11 +165,10 @@ function createSimulationGame(logger: SimulationLogger, engine: any) {
     return game;
 }
 
-// Run a single game between two profiles
+// Run a single game between N profiles
 function runHeuristicGame(
     gameNumber: number,
-    profile1: string,
-    profile2: string,
+    profiles: string[],
     verbose: boolean,
     quiet: boolean,
     engine: any,
@@ -182,23 +180,25 @@ function runHeuristicGame(
         engine.setRandomSeed(seed);
     }
 
-    const game = createSimulationGame(logger, engine);
-    (game as any).heuristicProfiles = { p1: profile1, p2: profile2 };
+    const game = engine.createGame();
+    game.playerCount = profiles.length;
+
+    (game as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { /* ignore */ } };
+    (game as any).heuristicProfilesArr = profiles;
+
+    game.debug.quiet = quiet;
 
     const originalEndTurn = game.endTurn.bind(game);
     game.endTurn = function(state?: any) {
-        const ai0 = this.players[0].isAI;
-        const ai1 = this.players[1].isAI;
-        this.players[0].isAI = false;
-        this.players[1].isAI = false;
+        const originalAIStates = this.players.map((p: any) => p.isAI);
+        this.players.forEach((p: any) => p.isAI = false);
         originalEndTurn(state);
-        this.players[0].isAI = ai0;
-        this.players[1].isAI = ai1;
+        this.players.forEach((p: any, idx: number) => p.isAI = originalAIStates[idx]);
     };
 
     game.performAITurn = function() {
         const currentPlayerIdx = this.currentPlayerIndex;
-        const profileName = currentPlayerIdx === 0 ? profile1 : profile2;
+        const profileName = profiles[currentPlayerIdx];
         if (verbose) logger.log(`P${currentPlayerIdx + 1} (${profileName}) thinking...`, "ai");
         try {
             if (engine.performAIByHeuristic) {
@@ -213,14 +213,14 @@ function runHeuristicGame(
 
     game.handleSetupPhase = function() {
         if (this.phase === "SETUP_ROLL") {
-            for (let i = 0; i < 2; i++) {
+            for (let i = 0; i < this.playerCount; i++) {
                 if (!this.players[i].initialRollDone) {
                     this.rollInitialDice(i);
                 }
             }
         }
         if (this.phase === "SETUP_REROLL") {
-            for (let i = 0; i < 2; i++) {
+            for (let i = 0; i < this.playerCount; i++) {
                 if (this.players[i].rerollsUsed === 0) {
                     this.currentPlayerIndex = i;
                     this.skipReroll();
@@ -228,7 +228,7 @@ function runHeuristicGame(
             }
         }
         if (this.phase === "SETUP_DEPLOY") {
-            for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
+            for (let playerIdx = 0; playerIdx < this.playerCount; playerIdx++) {
                 const player = this.players[playerIdx];
                 this.currentPlayerIndex = playerIdx;
                 while (player.dice.some((d: any) => !d.isDeployed)) {
@@ -253,8 +253,7 @@ function runHeuristicGame(
     game.init();
     game.handleSetupPhase();
 
-    game.players[0].isAI = true;
-    game.players[1].isAI = true;
+    game.players.forEach((p: any) => p.isAI = true);
 
     game.cloneState = function() {
         return {
@@ -292,27 +291,30 @@ function runHeuristicGame(
     return { winner, winnerReason, totalTurns: turnCount };
 }
 
-// Run a matchup between two profiles (multiple games)
+// Run a matchup between N profiles (multiple games)
 async function runMatchup(
-    profile1: string, profile2: string, numGames: number,
+    profiles: string[], numGames: number,
     verbose: boolean, quiet: boolean, engine: any, pool?: GameWorkerPool
 ): Promise<MatchupResult> {
-    if (!quiet && !pool) console.log(`\n━━━ ${profile1} vs ${profile2} ━━━`);
-    let p1Wins = 0, p2Wins = 0, draws = 0, totalTurns = 0;
+    if (!quiet && !pool) console.log(`\n━━━ ${profiles.join(' vs ')} ━━━`);
+    let wins = new Array(profiles.length).fill(0);
+    let draws = 0, totalTurns = 0;
     const gamePromises: Promise<any>[] = [];
 
     for (let i = 1; i <= numGames; i++) {
         const seed = Date.now() + Math.floor(Math.random() * 1000000) + (i * 1000);
         let p: Promise<any>;
         if (pool) {
-            p = pool.run({ gameNumber: i, profile1, profile2, verbose, quiet, seed });
+            p = pool.run({ gameNumber: i, profiles, verbose, quiet, seed });
         } else {
-            p = Promise.resolve(runHeuristicGame(i, profile1, profile2, verbose, quiet, engine, seed));
+            p = Promise.resolve(runHeuristicGame(i, profiles, verbose, quiet, engine, seed));
         }
         p.then((result) => {
-            if (result.winner === 0) p1Wins++;
-            else if (result.winner === 1) p2Wins++;
-            else draws++;
+            if (result.winner >= 0 && result.winner < profiles.length) {
+                wins[result.winner]++;
+            } else {
+                draws++;
+            }
             totalTurns += result.totalTurns;
             totalGamesCompleted++;
             updateGlobalProgress(quiet, verbose);
@@ -320,20 +322,41 @@ async function runMatchup(
         gamePromises.push(p);
     }
     await Promise.all(gamePromises);
-    return { profile1, profile2, p1Wins, p2Wins, draws, totalGames: numGames, p1WinRate: p1Wins / numGames, p2WinRate: p2Wins / numGames, avgTurns: totalTurns / numGames };
+    return { 
+        profiles, 
+        wins, 
+        draws, 
+        totalGames: numGames, 
+        winRates: wins.map(w => w / numGames), 
+        avgTurns: totalTurns / numGames 
+    };
 }
 
 // Calculate profile standings
-function calculateStandings(matchups: MatchupResult[], profiles: string[]): ProfileStats[] {
+function calculateStandings(matchups: MatchupResult[], profiles: string[], playerCount: number): ProfileStats[] {
     const stats: Record<string, ProfileStats> = {};
     profiles.forEach(name => {
-        stats[name] = { name, totalWins: 0, totalLosses: 0, totalDraws: 0, totalGames: 0, winRate: 0, avgTurnsInGames: 0, winsAsP1: 0, winsAsP2: 0 };
+        stats[name] = { 
+            name, totalWins: 0, totalLosses: 0, totalDraws: 0, totalGames: 0, 
+            winRate: 0, avgTurnsInGames: 0, 
+            winsByPosition: new Array(playerCount).fill(0)
+        };
     });
+
     matchups.forEach(matchup => {
-        const p1 = stats[matchup.profile1], p2 = stats[matchup.profile2];
-        p1.totalWins += matchup.p1Wins; p1.totalLosses += matchup.p2Wins; p1.totalDraws += matchup.draws; p1.totalGames += matchup.totalGames; p1.winsAsP1 += matchup.p1Wins;
-        p2.totalWins += matchup.p2Wins; p2.totalLosses += matchup.p1Wins; p2.totalDraws += matchup.draws; p2.totalGames += matchup.totalGames; p2.winsAsP2 += matchup.p2Wins;
+        matchup.profiles.forEach((profileName, index) => {
+            const pStats = stats[profileName];
+            const pWins = matchup.wins[index];
+            const otherWins = matchup.wins.reduce((a, b) => a + b, 0) - pWins;
+
+            pStats.totalWins += pWins;
+            pStats.totalLosses += (otherWins);
+            pStats.totalDraws += matchup.draws;
+            pStats.totalGames += matchup.totalGames;
+            pStats.winsByPosition[index] += pWins;
+        });
     });
+
     profiles.forEach(name => { stats[name].winRate = stats[name].totalGames > 0 ? stats[name].totalWins / stats[name].totalGames : 0; });
     return profiles.map(name => stats[name]).sort((a, b) => b.winRate - a.winRate);
 }
@@ -345,18 +368,7 @@ async function runTournament(args: any) {
     const verbose = !!args.verbose;
     const quiet = !!args.quiet;
     const parallel = parseInt(args.parallel) || 1;
-
-    let profilesToTest = PROFILE_NAMES;
-    if (args.profiles) {
-        const requested = args.profiles.split(',').map((p: any) => p.trim().toLowerCase());
-        profilesToTest = PROFILE_NAMES.filter(p => requested.includes(p));
-    }
-
-    console.log("╔════════════════════════════════════════╗");
-    console.log("║   Heuristic Profile Tournament         ║");
-    console.log("╚════════════════════════════════════════╝");
-    console.log(`Games per matchup: ${numGames} | Profiles: ${profilesToTest.join(', ')} | Parallel: ${parallel}`);
-    console.log("");
+    const playerCount = parseInt(args.players) || 2;
 
     const engineCodes = {
         gameCode: await Deno.readTextFile("./game.js"),
@@ -368,35 +380,114 @@ async function runTournament(args: any) {
         heuristicProfilesCode: await Deno.readTextFile("./ai/heuristic-profiles.js"),
     };
 
-    const engine = await loadGameEngine(engineCodes);
-    await ensureDir(outputDir);
-    const pool = parallel > 1 ? new GameWorkerPool(parallel, engineCodes) : undefined;
+    const engine = await loadGameEngine(playerCount, engineCodes);
+    const availableProfiles = Object.keys(engine.heuristicProfiles);
 
-    const numMatchups = (profilesToTest.length * (profilesToTest.length - 1)) / 2;
+    let profilesToTest = availableProfiles;
+    if (args.profiles) {
+        const requested = args.profiles.split(',').map((p: any) => p.trim());
+        profilesToTest = availableProfiles.filter(p => requested.includes(p));
+    }
+
+    // Generate mutated versions if requested
+    const extraMutatedProfiles: Record<string, any> = {};
+    if (args.mutate) {
+        const rate = parseFloat(args['mutation-rate']) || 0.1;
+        const mutatedNames: string[] = [];
+        profilesToTest.forEach(baseName => {
+            if (engine.mutateProfile) {
+                const mutated = engine.mutateProfile(baseName, rate);
+                const mutatedName = `${baseName}_m`;
+                engine.heuristicProfiles[mutatedName] = mutated;
+                extraMutatedProfiles[mutatedName] = mutated;
+                mutatedNames.push(mutatedName);
+            }
+        });
+        profilesToTest = [...profilesToTest, ...mutatedNames];
+    }
+
+    console.log("╔════════════════════════════════════════╗");
+    console.log("║   Heuristic Profile Tournament         ║");
+    console.log("╚════════════════════════════════════════╝");
+    console.log(`Games per matchup: ${numGames} | Players: ${playerCount} | Profiles: ${profilesToTest.join(', ')} | Parallel: ${parallel}`);
+    console.log("");
+
+    await ensureDir(outputDir);
+    const pool = parallel > 1 ? new GameWorkerPool(parallel, engineCodes, playerCount, extraMutatedProfiles) : undefined;
+
+    // Helper to get combinations
+    const getCombinations = (array: string[], k: number) => {
+        const results: string[][] = [];
+        const f = (start: number, current: string[]) => {
+            if (current.length === k) {
+                results.push([...current]);
+                return;
+            }
+            for (let i = start; i < array.length; i++) {
+                current.push(array[i]);
+                f(i + 1, current);
+                current.pop();
+            }
+        };
+        f(0, []);
+        return results;
+    };
+
+    const profileCombinations = getCombinations(profilesToTest, playerCount);
+    const numMatchups = profileCombinations.length;
     totalGamesScheduled = numMatchups * numGames;
     totalGamesCompleted = 0;
 
     const matchupPromises: Promise<MatchupResult>[] = [];
-    for (let i = 0; i < profilesToTest.length; i++) {
-        for (let j = i + 1; j < profilesToTest.length; j++) {
-            matchupPromises.push(runMatchup(profilesToTest[i], profilesToTest[j], numGames, verbose, quiet, engine, pool));
-        }
+    for (const combo of profileCombinations) {
+        matchupPromises.push(runMatchup(combo, numGames, verbose, quiet, engine, pool));
     }
+
     if (pool && !quiet) updateGlobalProgress(quiet, verbose);
     const matchups = await Promise.all(matchupPromises);
     if (pool) pool.terminate();
     if (!quiet) console.log("\n\nAll games completed.");
 
-    const standings = calculateStandings(matchups, profilesToTest);
+    const standings = calculateStandings(matchups, profilesToTest, playerCount);
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const results = { metadata: { date: timestamp, gamesPerMatchup: numGames, profiles: profilesToTest, version: "1.0" }, matchups, standings, summary: { totalGames: totalGamesScheduled, totalTurns: matchups.reduce((a, b) => a + b.avgTurns * b.totalGames, 0), avgTurnsPerGame: 0 } };
+
+    // Get full profile details for the results
+    const fullProfiles = profilesToTest.map(name => {
+        const profile = engine.heuristicProfiles[name] || {};
+        return { name, ...profile };
+    });
+
+    const results: TournamentResults = {
+        metadata: {
+            date: timestamp,
+            gamesPerMatchup: numGames,
+            profiles: fullProfiles,
+            version: "1.0",
+            playerCount: playerCount
+        },
+        matchups,
+        standings,
+        summary: {
+            totalGames: totalGamesScheduled,
+            totalTurns: matchups.reduce((a, b) => a + b.avgTurns * b.totalGames, 0),
+            avgTurnsPerGame: 0
+        }
+    };
     results.summary.avgTurnsPerGame = results.summary.totalTurns / results.summary.totalGames;
 
-    console.log("\nProfile         | W    | L    | D    | Win%  | W(P1)| W(P2)");
-    console.log("────────────────|──────|──────|──────|───────|──────|──────");
+    let header = "Profile         | W    | L    | D    | Win%  ";
+    for (let i = 0; i < playerCount; i++) {
+        header += `| P${i+1}   `;
+    }
+    console.log("\n" + header);
+    console.log("─".repeat(header.length));
     standings.forEach(s => {
         const winPct = (s.winRate * 100).toFixed(1);
-        console.log(`${s.name.padEnd(15)} | ${s.totalWins.toString().padStart(4)} | ${s.totalLosses.toString().padStart(4)} | ${s.totalDraws.toString().padStart(4)} | ${winPct.padStart(5)}% | ${s.winsAsP1.toString().padStart(4)} | ${s.winsAsP2.toString().padStart(4)}`);
+        let row = `${s.name.padEnd(15)} | ${s.totalWins.toString().padStart(4)} | ${s.totalLosses.toString().padStart(4)} | ${s.totalDraws.toString().padStart(4)} | ${winPct.padStart(5)}% `;
+        for (let i = 0; i < playerCount; i++) {
+            row += `| ${s.winsByPosition[i].toString().padStart(4)} `;
+        }
+        console.log(row);
     });
 
     const resultsFile = `${outputDir}/tournament_${timestamp}.json`;
@@ -414,17 +505,22 @@ class GameWorkerPool {
     private engineCodes: Record<string, string>;
     private scriptUrl: string;
     private size: number;
+    private playerCount: number;
 
-    constructor(size: number, engineCodes: Record<string, string>) {
+    private mutatedProfiles: Record<string, any>;
+
+    constructor(size: number, engineCodes: Record<string, string>, playerCount: number, mutatedProfiles?: Record<string, any>) {
         this.size = size;
         this.engineCodes = engineCodes;
+        this.playerCount = playerCount;
+        this.mutatedProfiles = mutatedProfiles || {};
         this.scriptUrl = new URL(import.meta.url).href;
         for (let i = 0; i < size; i++) {
-            this.createWorker();
+            this.createWorker(this.mutatedProfiles);
         }
     }
 
-    private createWorker() {
+    private createWorker(mutatedProfiles?: Record<string, any>) {
         const worker = new Worker(this.scriptUrl, { type: "module" });
         worker.onmessage = (e) => {
             const msg = e.data;
@@ -438,7 +534,7 @@ class GameWorkerPool {
         worker.onerror = (e) => {
             this.handleError(worker, e);
         };
-        worker.postMessage({ type: 'init', engineCodes: this.engineCodes });
+        worker.postMessage({ type: 'init', engineCodes: this.engineCodes, playerCount: this.playerCount, mutatedProfiles });
         this.workers.add(worker);
     }
 
@@ -496,14 +592,21 @@ const isWorker = typeof (globalThis as any).WorkerGlobalScope !== "undefined";
 
 if (import.meta.main && !isWorker) {
     const args = parse(Deno.args, {
-        string: ["games", "output", "profiles", "parallel"],
-        boolean: ["verbose", "quiet", "help"],
-        alias: { g: "games", o: "output", v: "verbose", q: "quiet", p: "parallel", h: "help" },
-        default: { games: 1, output: "tournaments", verbose: false, quiet: false, parallel: 1 },
+        string: ["games", "output", "profiles", "parallel", "mutation-rate", "players"],
+        boolean: ["verbose", "quiet", "help", "mutate"],
+        alias: { g: "games", o: "output", v: "verbose", q: "quiet", p: "parallel", h: "help", m: "mutate", r: "mutation-rate", pl: "players" },
+        default: { games: 1, output: "tournaments", verbose: false, quiet: false, parallel: 1, mutate: false, "mutation-rate": 0.1, players: 2 },
     });
 
     if (args.help) {
         console.log(`Hex Dice Heuristic Profile Tournament\nUsage: deno run --allow-all tournament.ts [options]`);
+        console.log(`Options:
+  -g, --games <n>       Games per matchup (default: 1)
+  -pl, --players <n>    Number of players per game (2, 3, 4, 6)
+  -p, --parallel <n>    Number of parallel workers
+  -profiles <list>      Comma-separated list of profiles
+  -m, --mutate          Generate mutated versions of profiles
+  -v, --verbose         Verbose output`);
         Deno.exit(0);
     }
 
@@ -512,12 +615,15 @@ if (import.meta.main && !isWorker) {
     // Worker runner logic
     let engine: any = null;
     (self as any).onmessage = async (e: any) => {
-        const { type, engineCodes, task } = e.data;
+        const { type, engineCodes, playerCount, mutatedProfiles, task } = e.data;
         if (type === 'init') {
-            engine = await loadGameEngine(engineCodes);
+            engine = await loadGameEngine(playerCount, engineCodes);
+            if (mutatedProfiles) {
+                Object.assign(engine.heuristicProfiles, mutatedProfiles);
+            }
             (self as any).postMessage({ type: 'ready' });
         } else if (type === 'task') {
-            const result = runHeuristicGame(task.gameNumber, task.profile1, task.profile2, task.verbose, task.quiet, engine, task.seed);
+            const result = runHeuristicGame(task.gameNumber, task.profiles, task.verbose, task.quiet, engine, task.seed);
             (self as any).postMessage({ type: 'result', result });
         }
     };

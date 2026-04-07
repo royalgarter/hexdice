@@ -18,7 +18,7 @@
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
 		}
 		.bg-hexdefault {
-			background-color: #20bf6b;
+			background-color: #ba8c63;
 		}
 		.bg-hexselect {
 			background-color: #26de81;
@@ -41,6 +41,12 @@
 		.bg-hexblue {
 			background-color: #3867d6;
 		}
+		.bg-hexgreen {
+			background-color: #19ad62;
+		}
+		.bg-hexpurple {
+			background-color: #a55eea;
+		}
 	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
@@ -54,6 +60,8 @@
 			--color-hexdeploy: var(--color-yellow-500);
 			--color-hexred: var(--color-red-700);
 			--color-hexblue: var(--color-blue-700);
+			--color-hexgreen: var(--color-emerald-600);
+			--color-hexpurple: var(--color-purple-700);
 		}
 	</style>
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
@@ -85,25 +93,25 @@
 					<div class="hex-content text-xs text-center relative"
 						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
 					>
-						<span style="top:-8px;right:-6px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+						<span style="top:-8px;right:-8px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
 
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
-							:class="{
-								'text-blue-900': getUnitOnHex(hex.id)?.playerId === 0,
-								'text-red-900': getUnitOnHex(hex.id)?.playerId === 1,
-							}"
+							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
 							x-show="getUnitOnHex(hex.id)"
 							x-text="getUnitOnHex(hex.id)?.value"
 						>
 						</span>
 
-						<span style="top:4px;right:-24px;" class="absolute text-yellow-700"
-							x-show="getUnitOnHex(hex.id)?.isGuarding">🛡️
+						<span style="top:4px;right:-22px;" class="absolute text-blue-700"
+							x-show="getUnitOnHex(hex.id)?.isGuarding">⛨
 						</span>
 						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
-							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'text-sm font-bold' : ''"
+							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
 							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
+						</span>
+						<span style="top:-14px;right:-4px;" class="absolute text-blue-700"
+							x-show="getUnitOnHex(hex.id)?.isRerolled">♡
 						</span>
 						<span style="top:-14px;right:12px;" class="absolute text-red-700"
 							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
@@ -122,10 +130,19 @@
 	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 border border-black text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="phase === 'SETUP_ROLL'">
+			<div class="mb-4">
+				<span class="mr-2 font-bold text-sm">Players:</span>
+				<a href="?players=2" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 2 ? 'bg-black text-white' : ''">2</a>
+				<a href="?players=3" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 ? 'bg-black text-white' : ''">3</a>
+				<a href="?players=4" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 ? 'bg-black text-white' : ''">4</a>
+			</div>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Random Start</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="resetGame({isP2AI: true});rollInitialDice(1)" >Play Against AI</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0].initialRollDone" @click="rollInitialDice(0)" >Roll Player 1 Dice</button>
-			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[1].initialRollDone" @click="rollInitialDice(1)" >Roll Player 2 Dice</button>
+			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Roll All Players Dice</button>
+			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Play Against AI</button>
+			</div>
+
+				<a href="/rules.md" target="_blank" class="text-sm underline hover:text-blue-700">Read Game Rules</a>
+			</div>
 		</div>
 		<div x-show="phase === 'SETUP_REROLL'">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
@@ -166,7 +183,7 @@
 		<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 		<p x-text="winnerMessage"></p>
 		<button class="mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
-			@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})" 
+			@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})"
 		>New Game</button>
 	</div>
 
@@ -179,39 +196,39 @@
 	<!-- Game Info -->
 	<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="mb-2 py-2 px-4 border border-black text-center">
 		<div class="my-2 space-x-2">
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')" 
-				@click="initiateAction('MOVE')" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
+				@click="initiateAction('MOVE')"
 			>MOVE</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 				@click="performAction('REROLL', selectedUnitHexId)"
 			>REROLL</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 				@click="performAction('GUARD', selectedUnitHexId)"
 			>GUARD</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 				@click="initiateAction('RANGED_ATTACK')"
 			>RNG ATK</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 				@click="initiateAction('SPECIAL_ATTACK')"
 			>SPL ATK</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white" 
-				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white"
+				x-show="options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 				@click="initiateAction('MERGE')"
 			>MERGE</button>
 			<button class="border border-black p-1 hover:bg-black hover:text-white font-bold"
 				x-show="actionMode !== null"
-				@click="cancelAction()" 
+				@click="cancelAction()"
 			>CANCEL</button>
-			<button class="border border-black p-1 hover:bg-black hover:text-white font-bold" 
+			<button class="border border-black p-1 hover:bg-black hover:text-white font-bold"
 				@click="endTurn()"
 			>END TURN</button>
 		</div>
-		
+
 		<p class="text-sm font-bold">
 			Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
 		</p>
@@ -255,9 +272,11 @@
 	<div class="fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="[
-				(log.id == messageLog[0].id) ? 'font-bold text-sm' : '',
-				log.message.includes('Player 1') || log.message.includes('P1') ? 'text-blue-500' : '',
-				log.message.includes('Player 2') || log.message.includes('P2') ? 'text-red-500' : '',
+				(log.id == messageLog[0].id) ? 'font-bold' : '',
+				(log.message.includes('Player 1') || log.message.includes('P1')) ? PLAYER_CONFIG[0].logColor : '',
+				(log.message.includes('Player 2') || log.message.includes('P2')) ? PLAYER_CONFIG[1].logColor : '',
+				(log.message.includes('Player 3') || log.message.includes('P3')) ? PLAYER_CONFIG[2].logColor : '',
+				(log.message.includes('Player 4') || log.message.includes('P4')) ? PLAYER_CONFIG[3].logColor : '',
 			].join(' ')"></p>
 		</template>
 	</div>

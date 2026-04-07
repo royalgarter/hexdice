@@ -27,13 +27,95 @@ const DEFAULT_PROFILE = {
         friendlySixBonus: 100,
         advanceBonus: 50,
         guardPenalty: -500,
-        mergeOver6Penalty: -500
+        mergeOver6Penalty: -500,
+        backAndForthPenalty: -300,
+        teamPositionWeight: 0.5,
+        pressureWeight: 0.3
     },
     riskTolerance: 0.5,
     targetSelection: 'highestValue',
     positioningStyle: 'balanced',
     unitSelection: 'leastMoved'
 };
+
+/**
+ * Adjust AI weights based on the current game phase
+ */
+function calculatePhaseWeights(GAME, state, profile) {
+    const dynamicProfile = JSON.parse(JSON.stringify(profile));
+    const w = dynamicProfile.weights;
+    
+    const currentPlayer = state.players[state.currentPlayerIndex];
+    const deployedUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath).length;
+    const totalPossibleUnits = currentPlayer.dice.length;
+    
+    // Estimate game phase
+    let phase = 'mid';
+    if (deployedUnits < totalPossibleUnits * 0.4) {
+        phase = 'early';
+    } else if (deployedUnits < totalPossibleUnits * 0.2 || state.turnCount > 100) {
+        // Very few units left or very long game
+        phase = 'late';
+    }
+
+    // Weight adjustments per phase
+    if (phase === 'early') {
+        w.advanceBonus *= 2.0;       // Aggressive expansion
+        w.killBonus *= 0.5;          // Position over blood
+        w.teamPositionWeight *= 0.8; // Formations less critical than speed
+    } else if (phase === 'late') {
+        w.captureBonus *= 5.0;       // Focus on the win
+        w.killBonus *= 1.5;          // Finish them off
+        dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.3); // More reckless
+    }
+
+    return dynamicProfile;
+}
+
+/**
+ * Calculate the Pressure Map for the entire board.
+ * Positive values = Friendly influence/safety.
+ * Negative values = Enemy influence/danger.
+ */
+function calculatePressureMap(GAME, state, myPlayerIndex) {
+    const pressureMap = {};
+    
+    // Initialize map
+    for (const hex of state.hexes) {
+        pressureMap[hex.id] = 0;
+    }
+
+    // Each unit exerts pressure around its location
+    for (const player of state.players) {
+        const isFriendly = player.id === myPlayerIndex;
+        const multiplier = isFriendly ? 1 : -1;
+
+        for (const unit of player.dice) {
+            if (!unit.isDeployed || unit.isDeath) continue;
+
+            const unitHex = GAME.getHex(unit.hexId, state);
+            if (!unitHex) continue;
+
+            // Pressure radius: Base radius + Range
+            // Dice 2 (Archer) has Range 2, Dice 6 (Legate) has Range 1
+            const baseRadius = 2; // Immediate area of influence
+            const totalRadius = baseRadius + (unit.range || 0);
+
+            // Iterate through hexes in radius to apply pressure
+            for (const hex of state.hexes) {
+                const dist = GAME.axialDistance(unitHex.q, unitHex.r, hex.q, hex.r);
+                if (dist <= totalRadius) {
+                    // Pressure decreases with distance
+                    // Strongest at dist 0 (unit location)
+                    const pressureValue = (totalRadius - dist + 1) * unit.value * 10;
+                    pressureMap[hex.id] += pressureValue * multiplier;
+                }
+            }
+        }
+    }
+
+    return pressureMap;
+}
 
 function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) {
@@ -52,22 +134,37 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     if (verbose) {
         console.log(`AI (Heuristic: ${profile.name}) thinking...`);
     }
+
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
-    const opponentIndex = (state.currentPlayerIndex + 1) % state.players.length;
+    
+    // Identify all active opponents
+    const opponentIndices = state.players
+        .filter(p => p.id !== state.currentPlayerIndex && !p.isEliminated)
+        .map(p => p.id);
+
+    // Adjust weights based on game phase
+    const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
+    profile = dynamicProfile;
+
+    // Calculate Pressure Map for this turn (already handles all players)
+    const pressureMap = calculatePressureMap(GAME, state, state.currentPlayerIndex);
 
     // Identify AI Units that can act
     const availableUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
 
     if (availableUnits.length === 0) {
-        console.log("AI has no units to act. Ending turn.");
+        GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No units to act. Ending turn.`);
         applyMove(GAME, { actionType: 'END_TURN' });
         return;
     }
 
-    // Get opponent base for capture/positioning
-    const opponentBaseHexId = state.players[opponentIndex].baseHexId;
-    const opponentBaseHex = GAME.getHex(opponentBaseHexId, state);
+    // Get all opponent bases
+    const opponentBases = opponentIndices.map(idx => ({
+        id: idx,
+        baseHexId: state.players[idx].baseHexId,
+        baseHex: GAME.getHex(state.players[idx].baseHexId, state)
+    })).filter(b => b.baseHex);
 
     // Generate all possible moves for all units
     const allMoves = generateAllPossibleMoves(GAME, state);
@@ -79,7 +176,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         const unit = currentPlayer.dice.find(d => d.hexId === move.unitHexId);
         if (!unit) continue;
 
-        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, opponentBaseHexId, profile);
+        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap);
         scoredMoves.push({
             move,
             unit,
@@ -89,24 +186,24 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 
     // Execute moves by priority order from profile
     for (const priority of profile.priorityOrder) {
-        const result = executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId, verbose);
+        const result = executePriority(GAME, scoredMoves, priority, profile, state, opponentBases, verbose);
         if (result) return;
     }
 
     // Fallback: End turn
-    console.log("AI Heuristic: No good moves. Ending turn.");
+    GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No good moves. Ending turn.`);
     applyMove(GAME, { actionType: 'END_TURN' });
 }
 
 /**
  * Execute moves for a given priority category
  */
-function executePriority(GAME, scoredMoves, priority, profile, state, opponentIndex, opponentBaseHex, opponentBaseHexId, verbose = true) {
+function executePriority(GAME, scoredMoves, priority, profile, state, opponentBases, verbose = true) {
     const w = profile.weights;
 
     switch (priority) {
         case 'capture': {
-            // Find moves that capture enemy base (win condition)
+            // Find moves that capture any enemy base (win condition)
             const captureMoves = scoredMoves.filter(m => m.canCapture);
             if (captureMoves.length > 0) {
                 captureMoves.sort((a, b) => b.captureScore - a.captureScore);
@@ -200,13 +297,20 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
                     if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
                     if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
 
-                    if (m.move.actionType === 'MOVE' && opponentBaseHex) {
+                    if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
                         const targetHex = GAME.getHex(m.move.targetHexId, state);
-                        const dist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
-                        positionScore += (w.advanceBonus * (5 - Math.min(dist, 5)));
+                        
+                        // Distance to nearest opponent base
+                        let minBaseDist = Infinity;
+                        opponentBases.forEach(base => {
+                            const dist = GAME.axialDistance(targetHex.q, targetHex.r, base.baseHex.q, base.baseHex.r);
+                            if (dist < minBaseDist) minBaseDist = dist;
+                        });
+                        
+                        positionScore += (w.advanceBonus * (5 - Math.min(minBaseDist, 5)));
                     }
 
-                    if (m.move.targetHexId === opponentBaseHexId) {
+                    if (opponentBases.some(b => b.baseHexId === m.move.targetHexId)) {
                         positionScore += w.captureBonus;
                     }
 
@@ -242,7 +346,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentIn
 /**
  * Analyze a single move for tactical value
  */
-function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, opponentBaseHexId, profile = DEFAULT_PROFILE) {
+function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile = DEFAULT_PROFILE, pressureMap = {}) {
     const w = profile.weights;
     const analysis = {
         canKillEnemy: false,
@@ -270,8 +374,24 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
         return analysis;
     }
 
-    // Check for capture (moving to enemy base)
-    if (move.targetHexId === opponentBaseHexId) {
+    // Zone of Control (Pressure Map) bonus/penalty
+    const targetPressure = pressureMap[move.targetHexId] || 0;
+    analysis.score += targetPressure * (w.pressureWeight || 0.3);
+
+    // Team Position Score calculation
+    if (typeof calculateTeamScore === 'function') {
+        const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases);
+        const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBases);
+        analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
+    }
+
+    // Penalty for back-and-forth movement (avoiding repetitive patterns)
+    if (unit.lastHexId && move.targetHexId === unit.lastHexId && move.actionType === 'MOVE') {
+        analysis.score += (w.backAndForthPenalty || -300);
+    }
+
+    // Check for capture (moving to any enemy base)
+    if (opponentBases.some(b => b.baseHexId === move.targetHexId)) {
         analysis.canCapture = true;
         analysis.captureScore = w.captureBonus;
     }
@@ -296,13 +416,11 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
         }
     }
 
-    // Check threat level at destination
+    // Check threat level at destination (from ALL opponents)
     let threatCount = 0;
     let canBeKilledByAny = false;
 
-    for (let pIdx = 0; pIdx < nextState.players.length; pIdx++) {
-        if (pIdx === state.currentPlayerIndex) continue;
-
+    for (const pIdx of opponentIndices) {
         const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
         for (const opp of opponents) {
             if (GAME.canUnitAttackTarget(opp, aiUnitNext, nextState)) {
@@ -327,6 +445,43 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
         analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
     } else if (analysis.isThreatened) {
         analysis.score += w.threatPenalty * threatCount;
+    }
+
+    // --- ROLE-SPECIFIC HEURISTICS ---
+    // Archer (Dice 2) Kiting logic
+    if (unit.value === 2) {
+        // Find nearest enemy from any opponent
+        let nearestEnemyDist = Infinity;
+        const allEnemies = nextState.players.flatMap((p, idx) => 
+            (idx === state.currentPlayerIndex || p.isEliminated) ? [] : p.dice.filter(d => d.isDeployed && !d.isDeath)
+        );
+        
+        const myHex = GAME.getHex(aiUnitNext.hexId, nextState);
+        allEnemies.forEach(opp => {
+            const oppHex = GAME.getHex(opp.hexId, nextState);
+            const dist = GAME.axialDistance(myHex.q, myHex.r, oppHex.q, oppHex.r);
+            if (dist < nearestEnemyDist) nearestEnemyDist = dist;
+        });
+
+        if (nearestEnemyDist === 2) {
+            analysis.score += 200; // Optimal kiting range
+        } else if (nearestEnemyDist === 1) {
+            analysis.score -= 500; // Too close!
+        }
+    }
+
+    // Tanker (Dice 5) & Legate (Dice 6) Bodyguard logic
+    if (unit.value === 5 || unit.value === 6) {
+        const myHex = GAME.getHex(aiUnitNext.hexId, nextState);
+        const neighbors = GAME.getNeighbors(myHex, nextState);
+        neighbors.forEach(n => {
+            const neighborUnit = GAME.getUnitOnHex(n.id, nextState);
+            if (neighborUnit && neighborUnit.playerId === state.currentPlayerIndex && neighborUnit.id !== unit.id) {
+                if (neighborUnit.value <= 3) { // Protecting "squishy" units (Archer, Knight, Infantry)
+                    analysis.score += 150;
+                }
+            }
+        });
     }
 
     // Check if position is protected by friendly units
@@ -358,4 +513,39 @@ function heuristicMove(GAME, state, move, unit, opponentIndex, opponentBaseHex, 
     }
 
     return analysis;
+}
+
+/**
+ * Calculate the overall strategic score for a player's team position.
+ * This encourages units to move towards the nearest enemy base while remaining grouped.
+ */
+function calculateTeamScore(GAME, state, playerIndex, opponentBases) {
+    const player = state.players[playerIndex];
+    let score = 0;
+    for (const unit of player.dice) {
+        if (!unit.isDeployed || unit.isDeath) continue;
+        const hex = GAME.getHex(unit.hexId, state);
+        if (!hex) continue;
+
+        // 1. Advancement: Bonus for being closer to the nearest opponent base
+        if (opponentBases.length > 0) {
+            let minBaseDist = Infinity;
+            opponentBases.forEach(base => {
+                const dist = GAME.axialDistance(hex.q, hex.r, base.baseHex.q, base.baseHex.r);
+                if (dist < minBaseDist) minBaseDist = dist;
+            });
+            score += (10 - Math.min(minBaseDist, 10)) * 10;
+        }
+
+        // 2. Grouping/Support: Bonus for being near teammates
+        const neighbors = GAME.getNeighbors(hex, state);
+        for (const neighbor of neighbors) {
+            const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+            if (neighborUnit && neighborUnit.playerId === playerIndex && neighborUnit.id !== unit.id) {
+                score += 5; // Basic grouping/cohesion bonus
+                if (neighborUnit.value === 6) score += 15; // Extra bonus for proximity to protective "6"
+            }
+        }
+    }
+    return score;
 }

@@ -28,7 +28,10 @@ const heuristicProfiles = {
             friendlySixBonus: 100,    // Adjacent to friendly Dice 6
             advanceBonus: 50,         // Moving toward enemy base
             guardPenalty: -500,       // Discourage guard actions
-            mergeOver6Penalty: -500   // Merging into sum > 6
+            mergeOver6Penalty: -500,  // Merging into sum > 6
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.5,           // Balanced risk assessment
         targetSelection: 'highestValue',  // Target highest value enemies
@@ -53,7 +56,10 @@ const heuristicProfiles = {
             friendlySixBonus: 50,
             advanceBonus: 100,        // Aggressive advancement
             guardPenalty: -1000,      // Never guards
-            mergeOver6Penalty: -200
+            mergeOver6Penalty: -200,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.2,
+            pressureWeight: 0.1
         },
         riskTolerance: 0.9,           // Very high risk tolerance
         targetSelection: 'highestValue',  // Hunt big targets
@@ -78,7 +84,10 @@ const heuristicProfiles = {
             friendlySixBonus: 300,    // Clusters around Dice 6
             advanceBonus: 10,         // Slow advancement
             guardPenalty: -100,       // Willing to guard
-            mergeOver6Penalty: -50
+            mergeOver6Penalty: -50,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.1,           // Very low risk tolerance
         targetSelection: 'threatRemoval', // Remove threats first
@@ -103,7 +112,10 @@ const heuristicProfiles = {
             friendlySixBonus: 200,
             advanceBonus: 75,         // Calculated advancement
             guardPenalty: -300,       // Guards when tactical
-            mergeOver6Penalty: -400
+            mergeOver6Penalty: -400,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.4,           // Moderate-low risk
         targetSelection: 'lowArmor',      // Pick easy fights
@@ -128,7 +140,10 @@ const heuristicProfiles = {
             friendlySixBonus: 150,
             advanceBonus: 30,         // Slow, methodical advance
             guardPenalty: -200,
-            mergeOver6Penalty: 200    // Bonus for merging over 6!
+            mergeOver6Penalty: 200,   // Bonus for merging over 6!
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.3,           // Cautious with valuable units
         targetSelection: 'highestValue',
@@ -153,12 +168,127 @@ const heuristicProfiles = {
             friendlySixBonus: 100,
             advanceBonus: 60,
             guardPenalty: -400,
-            mergeOver6Penalty: -450
+            mergeOver6Penalty: -450,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.5,
+            pressureWeight: 0.3
         },
         riskTolerance: 0.6,           // Moderate-high risk for good targets
         targetSelection: 'lowArmor',      // Pick easiest kills
         positioningStyle: 'flank',        // Find weak spots
         unitSelection: 'highestValue'     // Use best units for kills
+    },
+
+    // =========================================================================
+    // VANGUARD - Front-line map control specialist
+    // =========================================================================
+    vanguard: {
+        name: "Vanguard",
+        description: "Front-line pusher: Aggressively pushes for ground, values map control",
+        priorityOrder: ['capture', 'position', 'kill', 'attack', 'dodge'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 1200,
+            attackBonus: 200,
+            safeBonus: 400,
+            threatPenalty: -200,
+            protectedRangeBonus: 100,
+            friendlySixBonus: 150,
+            advanceBonus: 150,        // High advancement bonus
+            guardPenalty: -400,
+            mergeOver6Penalty: -300,
+            backAndForthPenalty: -400, // Extra penalty for retreating
+            teamPositionWeight: 0.6,    // Strong focus on collective advancement
+            pressureWeight: 0.3
+        },
+        riskTolerance: 0.7,
+        targetSelection: 'highestValue',
+        positioningStyle: 'rush',
+        unitSelection: 'leastMoved'
+    },
+
+    // =========================================================================
+    // SNIPER - Cautious long-range specialist
+    // =========================================================================
+    sniper: {
+        name: "Sniper",
+        description: "Cautious assassin: Stays safe, takes shots from distance, hates being touched",
+        priorityOrder: ['capture', 'dodge', 'attack', 'kill', 'position'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 1500,
+            attackBonus: 1000,       // Values ranged harass even if not lethal
+            safeBonus: 2000,         // Extremely values safety
+            threatPenalty: -800,     // Hates being threatened
+            protectedRangeBonus: 150,
+            friendlySixBonus: 200,
+            advanceBonus: 20,
+            guardPenalty: -200,
+            mergeOver6Penalty: -500,
+            backAndForthPenalty: -200,
+            teamPositionWeight: 0.4,
+            pressureWeight: 0.3
+        },
+        riskTolerance: 0.1,          // Very low risk
+        targetSelection: 'lowArmor',
+        positioningStyle: 'flank',
+        unitSelection: 'mostThreatened'
+    },
+
+    // =========================================================================
+    // JUGGERNAUT - Heavy formation specialist
+    // =========================================================================
+    juggernaut: {
+        name: "Juggernaut",
+        description: "Moving fortress: Slow, methodical, indestructible formation",
+        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 1200,
+            attackBonus: 150,
+            safeBonus: 800,
+            threatPenalty: -150,     // Not very bothered by threats due to armor
+            protectedRangeBonus: 400, // Extremely values being grouped
+            friendlySixBonus: 500,    // Extremely values Legate protection
+            advanceBonus: 30,         // Slow advancement
+            guardPenalty: -100,       // Willing to guard
+            mergeOver6Penalty: -100,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.8,    // Maximum focus on team formation
+            pressureWeight: 0.3
+        },
+        riskTolerance: 0.3,
+        targetSelection: 'threatRemoval',
+        positioningStyle: 'turtle',
+        unitSelection: 'highestValue'
+    },
+
+    // =========================================================================
+    // STALKER - Precision flanking specialist
+    // =========================================================================
+    stalker: {
+        name: "Stalker",
+        description: "Precision hunter: Flanks and eliminates threats one by one",
+        priorityOrder: ['capture', 'kill', 'dodge', 'attack', 'position'],
+        weights: {
+            captureBonus: 10000,
+            killBonus: 2500,         // Extremely high value on kills
+            attackBonus: 400,
+            safeBonus: 600,
+            threatPenalty: -400,
+            protectedRangeBonus: 50,
+            friendlySixBonus: 100,
+            advanceBonus: 80,
+            guardPenalty: -600,
+            mergeOver6Penalty: -400,
+            backAndForthPenalty: -500, // Prefers to keep moving
+            teamPositionWeight: 0.3,
+            pressureWeight: 0.3
+        },
+        riskTolerance: 0.8,          // High risk for high reward kills
+        targetSelection: 'highestValue',
+        positioningStyle: 'flank',
+        unitSelection: 'highestValue'
     }
 };
 
@@ -233,7 +363,10 @@ function generateRandomProfile() {
             friendlySixBonus: Math.floor(Math.random() * 250) + 50,
             advanceBonus: Math.floor(Math.random() * 90) + 10,
             guardPenalty: Math.floor(Math.random() * -900) - 100,
-            mergeOver6Penalty: Math.floor(Math.random() * 600) - 500
+            mergeOver6Penalty: Math.floor(Math.random() * 600) - 500,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.1,
+            pressureWeight: 0.2
         },
         riskTolerance: Math.random(),
         targetSelection: ['highestValue', 'lowArmor', 'threatRemoval'][Math.floor(Math.random() * 3)],
