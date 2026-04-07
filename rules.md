@@ -310,7 +310,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 The gameplay will proceed with an **Alternating Activations** turn structure (players activating one unit each turn) to enhance player engagement, tactical responsiveness, and balance.
 
-Players take turns in set order. On a player's turn, they activate one of their units currently on the board. Once a unit is activated, it performs one action: **Move, Reroll, Guard, Ranged Attack, Command & Conquer, or Merging**. After the unit completes its action, the turn passes to the next player in order, who then activates one of their units.
+Players take turns in set order. On a player's turn, they activate one of their units currently on the board. Once a unit is activated, it performs one action: **Move, Reroll, Guard, Ranged Attack or Command & Conquer**. After the unit completes its action, the turn passes to the next player in order, who then activates one of their units.
 
 Units cannot move through hexes occupied by other units (friendly or enemy) unless the Movement explicitly allows it (e.g., Dice 3 jump).
 
@@ -352,15 +352,6 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * Choose one of your Dice 6 units.  
   * Target any single enemy unit located **exactly 1 hex away**.
   * Combat occurs. If the attack is successful, the Dice 6 **moves into the target hex**. If unsuccessful, it remains in its original hex.
-  * Action complete.
-
-* ##### **Merging**
-
-  * Choose one of your units and move it onto a hex occupied by another friendly unit.
-  * **Result**: The two dice are removed and replaced by a single new unit.
-    - **Sum ≤ 6**: The new unit's value is the sum of the two dice.
-    - **Sum > 6**: The player chooses a new value from 1 to 6.
-  - **Bonus**: If the target unit had not yet acted this turn, the new merged unit may immediately perform one action.
   * Action complete.
 
 ### **6\. Combat**
@@ -409,11 +400,11 @@ Movement is measured in steps between adjacent hexes. Specific hexes are marked 
 
 ### **10\. Expansions**
 
-* [v1.0](/rules/v1.0.md)
-* [v1.0.1](/rules/v1.0.1.md)
-* [v1.1](/rules/v1.1.md)
-* [v1.2](/rules/v1.2.md)
-* [v1.3](/rules/v1.3.md)
-* [v1.4](/rules/v1.4.md)
+* [v1.0](/rules?path=rules/v1.0.md)
+* [v1.0.1](/rules?path=rules/v1.0.1.md)
+* [v1.1](/rules?path=rules/v1.1.md)
+* [v1.2](/rules?path=rules/v1.2.md)
+* [v1.3](/rules?path=rules/v1.3.md)
+* [v1.4](/rules?path=rules/v1.4.md)
 
 ---

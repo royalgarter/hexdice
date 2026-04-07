@@ -1,7 +1,6 @@
 import {serve} from "https://deno.land/std/http/server.ts";
 import {exists} from "https://deno.land/std/fs/mod.ts";
 import {extname} from "https://deno.land/std/path/mod.ts";
-import { marked } from 'https://esm.sh/marked@12.0.0';
 
 const head_json = {
 	"Content-Type": "application/json; charset=utf-8"
@@ -32,43 +31,14 @@ async function handleRequest(req: Request) {
 		});
 	}
 
-	if (pathname === "/rules" || pathname === "/rules.md" || (pathname.startsWith("/rules/") && pathname.endsWith(".md"))) {
-		const targetPath = pathname === "/rules" ? "./rules.md" : localpath;
-		if (await exists(targetPath)) {
-			const markdown = await Deno.readTextFile(targetPath);
-			const html = marked.parse(markdown);
-			/*const html = `<!DOCTYPE html>
-				<html lang="en">
-				  <head>
-					<meta charset="UTF-8">
-					<meta name="viewport" content="width=device-width, initial-scale=1.0">
-					<style>
-						main {
-							max-width: 800px;
-							margin: 0 auto;
-							padding: 2rem 1rem;
-						}
-						main pre code {
-							letter-spacing: 0.3rem;
-						}
-						main img {
-							padding-left: 100px;
-						}
-					  ${CSS}
-					</style>
-				  </head>
-				  <body data-color-mode="auto" data-light-theme="light" data-dark-theme="dark" class="markdown-body">
-					<main>
-					  ${body}
-					</main>
-				  </body>
-				</html>`;*/
-			return response(html, {
-				headers: {
-					"Content-Type": "text/html; charset=utf-8",
-				}
-			});
-		}
+	// Serve rules HTML page for /rules
+	if (pathname === "/rules") {
+		return response(await Deno.readTextFile("./rules.html"), {
+			headers: {
+				"Content-Type": "text/html; charset=utf-8",
+				"Cache-Control": "public, max-age=604800",
+			}
+		});
 	}
 
 	if (await exists(localpath)) {

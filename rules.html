@@ -1,1 +1,273 @@
-<iframe width="100%" height="100%" frameborder="0" webkitallowfullscreen="" mozallowfullscreen="" allowfullscreen="" align="center" style="width:100%; border:none;" src="https://docs.google.com/document/d/e/2PACX-1vQp6JzRwx_ukygCOG2t1ccwxJhA7pnBBx6o7D4WbpTTEALGEMtYcYuQ2TlrmYFtAbLBgBUz6Hgo2_zj/pub?embedded=true&rm=full&chrome=false&width=1024"></iframe>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Hex Dice Rules</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+			line-height: 1.6;
+			color: #333;
+			background: #f5f5f5;
+			padding: 2rem 1rem;
+		}
+		
+		.container {
+			max-width: 900px;
+			margin: 0 auto;
+			background: white;
+			padding: 2rem;
+			border-radius: 8px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+		}
+		
+		#markdown-viewer {
+			line-height: 1.8;
+		}
+		
+		#markdown-viewer h1,
+		#markdown-viewer h2,
+		#markdown-viewer h3,
+		#markdown-viewer h4 {
+			margin-top: 1.5rem;
+			margin-bottom: 0.75rem;
+			font-weight: 600;
+		}
+		
+		#markdown-viewer h1 {
+			font-size: 2rem;
+			border-bottom: 2px solid #333;
+			padding-bottom: 0.5rem;
+		}
+		
+		#markdown-viewer h2 {
+			font-size: 1.5rem;
+			border-bottom: 1px solid #ddd;
+			padding-bottom: 0.3rem;
+		}
+		
+		#markdown-viewer h3 {
+			font-size: 1.25rem;
+		}
+		
+		#markdown-viewer p {
+			margin-bottom: 1rem;
+		}
+		
+		#markdown-viewer ul,
+		#markdown-viewer ol {
+			margin-left: 2rem;
+			margin-bottom: 1rem;
+		}
+		
+		#markdown-viewer li {
+			margin-bottom: 0.5rem;
+		}
+		
+		#markdown-viewer table {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 1rem 0;
+			overflow-x: auto;
+			display: block;
+		}
+		
+		#markdown-viewer th,
+		#markdown-viewer td {
+			border: 1px solid #ddd;
+			padding: 0.5rem;
+			text-align: left;
+		}
+		
+		#markdown-viewer th {
+			background: #f0f0f0;
+			font-weight: 600;
+		}
+		
+		#markdown-viewer code {
+			background: #f5f5f5;
+			padding: 0.2rem 0.4rem;
+			border-radius: 3px;
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 0.9em;
+		}
+		
+		#markdown-viewer pre {
+			background: #f5f5f5;
+			padding: 1rem;
+			border-radius: 4px;
+			overflow-x: auto;
+			margin: 1rem 0;
+		}
+		
+		#markdown-viewer pre code {
+			background: none;
+			padding: 0;
+			letter-spacing: 0.3rem;
+		}
+		
+		#markdown-viewer img {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			margin: 1rem auto;
+		}
+		
+		#markdown-viewer blockquote {
+			border-left: 4px solid #ddd;
+			padding-left: 1rem;
+			margin: 1rem 0;
+			color: #666;
+		}
+		
+		#markdown-viewer a {
+			color: #0366d6;
+			text-decoration: none;
+		}
+		
+		#markdown-viewer a:hover {
+			text-decoration: underline;
+		}
+		
+		.loading {
+			text-align: center;
+			padding: 2rem;
+			color: #666;
+		}
+		
+		.error {
+			color: #d32f2f;
+			background: #ffebee;
+			padding: 1rem;
+			border-radius: 4px;
+			margin: 1rem 0;
+		}
+		
+		.back-link {
+			display: inline-block;
+			margin-bottom: 1rem;
+			color: #0366d6;
+			text-decoration: none;
+		}
+		
+		.back-link:hover {
+			text-decoration: underline;
+		}
+		
+		@media (max-width: 768px) {
+			body {
+				padding: 1rem 0.5rem;
+			}
+			
+			.container {
+				padding: 1rem;
+			}
+			
+			#markdown-viewer h1 {
+				font-size: 1.5rem;
+			}
+			
+			#markdown-viewer h2 {
+				font-size: 1.25rem;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<a href="/" class="back-link">← Back to Game</a>
+		<div id="markdown-viewer">
+			<div class="loading">Loading rules...</div>
+		</div>
+	</div>
+	
+	<!-- Hidden element to store raw markdown -->
+	<div id="markdown-content" style="display: none;"></div>
+	
+	<!-- Load marked library -->
+	<script src="https://unpkg.com/marked@12.0.0/marked.min.js"></script>
+	<script>
+		// Fetch markdown file and render
+		async function loadAndRenderMarkdown(mdFile) {
+			const markdownViewer = document.getElementById('markdown-viewer');
+			const markdownContent = document.getElementById('markdown-content');
+			
+			console.log('Loading markdown:', mdFile);
+			
+			try {
+				const response = await fetch(mdFile);
+				
+				if (!response.ok) {
+					throw new Error(`Failed to load rules: ${response.statusText}`);
+				}
+				
+				const markdownText = await response.text();
+				console.log('Markdown loaded, length:', markdownText.length);
+				
+				// Check if we got HTML page instead of markdown
+				if (markdownText.startsWith('<!DOCTYPE html>')) {
+					throw new Error('Server returned HTML instead of markdown.');
+				}
+				
+				markdownContent.textContent = markdownText;
+				
+				// Render the markdown
+				const htmlContent = marked.parse(markdownText);
+				markdownViewer.innerHTML = htmlContent;
+				
+				// Intercept internal markdown links
+				markdownViewer.querySelectorAll('a').forEach(link => {
+					const href = link.getAttribute('href');
+					if (href && href.startsWith('/rules?path=')) {
+						const params = new URLSearchParams(href.split('?')[1]);
+						const mdPath = params.get('path');
+						link.addEventListener('click', (e) => {
+							e.preventDefault();
+							window.history.pushState({path: mdPath}, '', `?path=${mdPath}`);
+							loadAndRenderMarkdown(`/${mdPath}`);
+						});
+					} else if (href && href.startsWith('/')) {
+						link.target = '_self';
+					} else {
+						link.target = '_blank';
+					}
+				});
+			} catch (error) {
+				console.error('Error loading markdown:', error);
+				markdownViewer.innerHTML = `
+					<div class="error">
+						<strong>Error loading rules:</strong> ${error.message}<br>
+						<a href="/">Return to game</a>
+					</div>
+				`;
+			}
+		}
+		
+		// Handle browser back/forward buttons
+		window.addEventListener('popstate', (e) => {
+			const mdPath = e.state?.path || 'rules.md';
+			loadAndRenderMarkdown(`/${mdPath}`);
+		});
+		
+		// Load markdown when page is ready
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', () => {
+				const params = new URLSearchParams(window.location.search);
+				const mdPath = params.get('path') || 'rules.md';
+				loadAndRenderMarkdown(`/${mdPath}`);
+			});
+		} else {
+			const params = new URLSearchParams(window.location.search);
+			const mdPath = params.get('path') || 'rules.md';
+			loadAndRenderMarkdown(`/${mdPath}`);
+		}
+	</script>
+</body>
+</html>
