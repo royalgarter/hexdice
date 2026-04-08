@@ -1254,7 +1254,7 @@ function alpineHexDiceTacticGame() { return {
 		// Effect: Remove the Dice 1 unit
 		this.removeUnit(attackerHexId, state);
 		// Effect: Reduce target enemy unit's armor by 6
-		this.applyDamage(targetHexId, 6, state); // Apply 6 damage, handle unit removal if armor <= 0
+		this.applyDamage(targetHexId, 6, state, true); // Apply 6 damage, handle unit removal if armor <= 0
 
 		this.endTurn(state); // End the player's turn after the charge
 	},
@@ -1793,10 +1793,10 @@ function alpineHexDiceTacticGame() { return {
 
 			// Ranged attacks don't receive counter-damage (attacker is at safe distance)
 			if (combatType === 'RANGED_ATTACK') {
-				this.applyDamage(defenderHexId, 1, state);
+				this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
 			} else {
-				this.applyDamage(attackerHexId, 1, state);
-				this.applyDamage(defenderHexId, 1, state);
+				this.applyDamage(attackerHexId, 1, state, false);
+				this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
 			}
 		}
 
@@ -1829,12 +1829,17 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {number} damage - Amount of armor reduction to apply (default: 1)
 	 * @param {object} state - Optional game state for simulation
 	 */
-	applyDamage(hexId, damage=1, state) {
+	applyDamage(hexId, damage=1, state, isKillOnZero) {
 		const unit = this.getUnitOnHex(hexId, state);
 		if (!unit) return;
 		unit.armorReduction += damage;
 		const effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
-		if (effectiveArmor < 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
+
+		if (isKillOnZero) {
+			if (effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
+		} else {
+			if (effectiveArmor < 0) this.removeUnit(hexId, state); // Remove if armor drops less than 0
+		}
 	},
 
 	/* --- TURN --- */
