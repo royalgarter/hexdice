@@ -132,7 +132,12 @@ function applyMove(GAME, move, state) {
 			} else {
 				GAME.endTurn();
 			}
-			break;
+			return applyState; // Already handled endTurn
+	}
+
+	// For all other actions (MOVE, ATTACK, etc.), if we are executing on real GAME, end the turn
+	if (!state) {
+		GAME.endTurn();
 	}
 
 	if (applyState) {

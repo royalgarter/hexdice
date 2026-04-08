@@ -285,29 +285,23 @@ class ReplayViewer {
             try {
                 const state = JSON.parse(atob(move.stateHash));
 
-                // Parse P1 dice (playerId = 0, Blue)
-                if (state.p1Dice) {
-                    state.p1Dice.split('|').forEach((entry: string) => {
-                        if (entry) {
-                            const [value, hexId, isDeath] = entry.split('-');
-                            this.gameState.set(parseInt(hexId, 10), {
-                                value: parseInt(value, 10),
-                                playerId: 0,
-                                isDeath: isDeath === 'true',
-                            });
-                        }
-                    });
-                }
-
-                // Parse P2 dice (playerId = 1, Red)
-                if (state.p2Dice) {
-                    state.p2Dice.split('|').forEach((entry: string) => {
-                        if (entry) {
-                            const [value, hexId, isDeath] = entry.split('-');
-                            this.gameState.set(parseInt(hexId, 10), {
-                                value: parseInt(value, 10),
-                                playerId: 1,
-                                isDeath: isDeath === 'true',
+                // Parse playersDice (format: p0Dice:val-hex-death|...;p1Dice:val-hex-death|...)
+                if (state.playersDice) {
+                    const players = state.playersDice.split(';');
+                    players.forEach((playerStr: string) => {
+                        const [pLabel, diceStr] = playerStr.split(':');
+                        const playerId = parseInt(pLabel.replace('p', '').replace('Dice', ''), 10);
+                        
+                        if (diceStr) {
+                            diceStr.split('|').forEach((entry: string) => {
+                                if (entry) {
+                                    const [value, hexId, isDeath] = entry.split('-');
+                                    this.gameState.set(parseInt(hexId, 10), {
+                                        value: parseInt(value, 10),
+                                        playerId: playerId,
+                                        isDeath: isDeath === 'true',
+                                    });
+                                }
                             });
                         }
                     });
@@ -518,7 +512,7 @@ class ReplayViewer {
         console.log("╚════════════════════════════════════════╝");
         console.log(`Loaded: ${this.data.metadata.games} games`);
         console.log(`P1 (${this.data.metadata.aiTypes[0]}) vs P2 (${this.data.metadata.aiTypes[1]})`);
-        console.log("\nType 'help' for commands\n");
+        console.log("\nType 'help' for commands (keys: n, p, b, s, q, ...)\n");
 
         // Go to specified game/turn if provided
         if (args.game) {
@@ -536,24 +530,42 @@ class ReplayViewer {
 
         this.showCurrentState();
 
-        // Use streams for robust line-by-line input processing
-        const lineStream = Deno.stdin.readable
-            .pipeThrough(new TextDecoderStream())
-            .pipeThrough(new TextLineStream());
-
         const encoder = new TextEncoder();
-        await Deno.stdout.write(encoder.encode("\n> "));
+        const decoder = new TextDecoder();
+        
+        while (true) {
+            await Deno.stdout.write(encoder.encode("\n> "));
+            
+            Deno.stdin.setRaw(true);
+            const buffer = new Uint8Array(1024);
+            const nread = await Deno.stdin.read(buffer);
+            Deno.stdin.setRaw(false);
 
-        for await (const line of lineStream) {
-            const input = line.trim().toLowerCase();
-            if (!input) {
-                await Deno.stdout.write(encoder.encode("> "));
-                continue;
+            if (nread === null) break;
+            
+            const input = decoder.decode(buffer.subarray(0, nread)).trim();
+            if (!input) continue;
+
+            // Handle Ctrl+C (ETX)
+            if (buffer[0] === 3) {
+                console.log("\nGoodbye!");
+                return;
             }
 
             const parts = input.split(/\s+/);
-            const cmd = parts[0];
-            const arg = parts[1];
+            let cmd = parts[0];
+            let arg = parts[1];
+
+            // If it's a single character command that might need an argument but didn't get one
+            // or if we want to allow multi-character commands to work via raw mode (they won't unless pasted)
+            // Most users will type 'n', 'p', 'b', 's', 'q'
+            
+            // Special handling for commands that need more input (g, t)
+            if ((cmd === "g" || cmd === "t" || cmd === "game" || cmd === "turn") && !arg) {
+                await Deno.stdout.write(encoder.encode(cmd + " "));
+                const line = await this.readLine();
+                if (line) arg = line.trim();
+            }
 
             switch (cmd) {
                 case "n":
@@ -561,7 +573,7 @@ class ReplayViewer {
                     if (this.nextMove()) {
                         this.showCurrentState();
                     } else {
-                        console.log("Already at end of game");
+                        console.log("\nAlready at end of game");
                     }
                     break;
 
@@ -571,7 +583,7 @@ class ReplayViewer {
                     if (this.prevMove()) {
                         this.showCurrentState();
                     } else {
-                        console.log("Already at start");
+                        console.log("\nAlready at start");
                     }
                     break;
 
@@ -580,13 +592,13 @@ class ReplayViewer {
                     if (arg) {
                         const gameNum = parseInt(arg);
                         if (this.goToGame(gameNum)) {
-                            console.log(`Jumped to Game ${gameNum}`);
+                            console.log(`\nJumped to Game ${gameNum}`);
                             this.showCurrentState();
                         } else {
-                            console.log(`Game ${gameNum} not found`);
+                            console.log(`\nGame ${gameNum} not found`);
                         }
                     } else {
-                        console.log(`Current: Game ${this.currentGame.gameNumber}`);
+                        console.log(`\nCurrent: Game ${this.currentGame.gameNumber}`);
                     }
                     break;
 
@@ -595,13 +607,13 @@ class ReplayViewer {
                     if (arg) {
                         const turnNum = parseInt(arg);
                         if (this.goToTurn(turnNum)) {
-                            console.log(`Jumped to Turn ${turnNum}`);
+                            console.log(`\nJumped to Turn ${turnNum}`);
                             this.showCurrentState();
                         } else {
-                            console.log(`Turn ${turnNum} out of range (0-${this.currentGame.moves.length - 1})`);
+                            console.log(`\nTurn ${turnNum} out of range (0-${this.currentGame.moves.length - 1})`);
                         }
                     } else {
-                        console.log(`Current: Turn ${this.currentTurnIdx}`);
+                        console.log(`\nCurrent: Turn ${this.currentTurnIdx}`);
                     }
                     break;
 
@@ -623,7 +635,7 @@ class ReplayViewer {
                 case "b":
                 case "board":
                     this.showBoard = !this.showBoard;
-                    console.log(`Board display: ${this.showBoard ? 'ON' : 'OFF'}`);
+                    console.log(`\nBoard display: ${this.showBoard ? 'ON' : 'OFF'}`);
                     this.showCurrentState();
                     break;
 
@@ -652,16 +664,20 @@ class ReplayViewer {
                 case "q":
                 case "quit":
                 case "exit":
-                    console.log("Goodbye!");
+                    console.log("\nGoodbye!");
                     return;
 
                 default:
-                    console.log(`Unknown command: ${cmd}. Type 'help' for commands.`);
+                    console.log(`\nUnknown command: ${cmd}. Type 'help' for commands.`);
             }
-
-            // Prompt for next input
-            await Deno.stdout.write(encoder.encode("\n> "));
         }
+    }
+
+    private async readLine(): Promise<string | null> {
+        const buffer = new Uint8Array(1024);
+        const n = await Deno.stdin.read(buffer);
+        if (n === null) return null;
+        return new TextDecoder().decode(buffer.subarray(0, n));
     }
 }
 
