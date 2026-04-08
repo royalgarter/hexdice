@@ -58,12 +58,13 @@ function generateAllPossibleMoves(GAME, state) {
 				// Generate moves for each spell type
 				const targetUnit = GAME.getUnitOnHex(targetHexId, state);
 				if (targetUnit && targetUnit.playerId === unit.playerId) {
+
 					// Shield: Use if target is threatened or in combat
-					moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
-					
+					// moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
+
 					// Swap: Use if Oracle is threatened or to reposition key unit
 					moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
-					
+
 					// Mend: Use if target has armor reduction
 					if (targetUnit.armorReduction > 0) {
 						moves.push({ actionType: 'SPELLCAST_MEND', unitHexId, targetHexId });

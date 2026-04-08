@@ -532,7 +532,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 if (isThreatened && targetUnit.value >= 3) {
                     // Shield only if target is valuable and threatened - barely better than positioning
-                    analysis.score += 20 + (targetUnit.value * 2);
+                    analysis.score += 10 + (targetUnit.value * 2);
                     analysis.isSupportAction = true;
                 } else if (!isThreatened) {
                     // Very low priority: Preemptive shielding
