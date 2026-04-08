@@ -59,9 +59,10 @@ const BOARD_NUM = [
 	`                        069`,
 ].join('\n');
 
+// BIND-EDIT rules.md: ### **4. Dice Soldiers (Unit Types)**
 const UNIT_STATS = {
 	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
-	2: { name: "Archer", attack: 2, armor: 0, range: 2, distance: 2, movement: '*' },
+	2: { name: "Archer", attack: 2, armor: 1, range: 2, distance: 1, movement: '*' },
 	3: { name: "Hussar", attack: 3, armor: 0, range: 0, distance: 3, movement: 'L' },
 	4: { name: "Knight", attack: 2, armor: 1, range: 0, distance: 3, movement: 'X' },
 	5: { name: "Tanker", attack: 1, armor: 4, range: 0, distance: 1, movement: '*' },
@@ -357,7 +358,7 @@ function alpineHexDiceTacticGame() { return {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/fe_fates_6_players/d${value}_${spriteColor}.gif");`);
+			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite

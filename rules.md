@@ -63,7 +63,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
-| 2 | **Archer** | 0 | 2 | 2 | 2 | \* | Ranged Specialist (LoS required) |
+| 2 | **Archer** | 1 | 2 | 2 | 1 | \* | Ranged Specialist (LoS required) |
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
