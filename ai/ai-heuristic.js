@@ -297,16 +297,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'position': {
-            // Oracle spells: Prioritize support actions
-            const supportMoves = scoredMoves.filter(m => m.isSupportAction);
-            if (supportMoves.length > 0) {
-                supportMoves.sort((a, b) => b.score - a.score);
-                if (verbose) console.log(`AI Heuristic (${profile.name}): Oracle spell support!`, supportMoves[0].move);
-                applyMove(GAME, supportMoves[0].move);
-                return true;
-            }
-            
-            const strategicMoves = scoredMoves.filter(m => !m.isThreatened);
+            const strategicMoves = scoredMoves.filter(m => !m.isThreatened || m.isSupportAction);
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
                     let positionScore = m.score;
@@ -550,11 +541,11 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 if (isThreatened && targetUnit.value >= 3) {
                     // Shield only if target is valuable and threatened
-                    analysis.score += w.safeBonus * 0.5 + (targetUnit.value * 30);
+                    analysis.score += w.safeBonus * 0.2 + (targetUnit.value * 10);
                     analysis.isSupportAction = true;
                 } else if (!isThreatened) {
                     // Low priority: Preemptive shielding (weak bonus)
-                    analysis.score += 10;
+                    analysis.score += 5;
                     analysis.isSupportAction = true;
                 }
             }
@@ -582,8 +573,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                 }
 
                 if (oracleThreatened) {
-                    // Emergency escape - score just below killBonus
-                    analysis.score += w.killBonus * 0.8;
+                    // Emergency escape - score below attackBonus
+                    analysis.score += w.attackBonus * 0.5;
                     analysis.isEscapeAction = true;
                     analysis.isSupportAction = true;
                 }
@@ -597,7 +588,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                         const newDist = GAME.axialDistance(oracleHex.q, oracleHex.r, opponentBase.q, opponentBase.r);
 
                         if (newDist < currentDist) {
-                            analysis.score += w.advanceBonus * 0.5;
+                            analysis.score += w.advanceBonus * 0.2;
                             analysis.isSupportAction = true;
                         }
                     }
@@ -613,7 +604,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 if (armorReductionRatio >= 0.5 && targetUnit.value >= 4) {
                     // Medium priority: Save valuable damaged unit
-                    analysis.score += w.attackBonus * 0.8 + (targetUnit.value * 20);
+                    analysis.score += w.attackBonus * 0.4 + (targetUnit.value * 5);
                     analysis.isSupportAction = true;
 
                     // Extra bonus if unit is in immediate combat
@@ -622,13 +613,13 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     for (const neighbor of neighbors) {
                         const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
                         if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
-                            analysis.score += 50;
+                            analysis.score += 20;
                             break;
                         }
                     }
                 } else {
                     // Low priority: Minor repair on low-value units
-                    analysis.score += 5;
+                    analysis.score += 2;
                     analysis.isSupportAction = true;
                 }
             }

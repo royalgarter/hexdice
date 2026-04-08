@@ -31,10 +31,10 @@
 			background-color: #896648;
 		}
 		.bg-hexselect {
-			background-color: #26de81;
+			background-color: #997852;
 		}
 		.bg-hexmove {
-			background-color: #0fb9b1;
+			background-color: #BD9B6B;
 		}
 		.bg-hexmerge {
 			background-color: #2bcbba;
@@ -258,9 +258,9 @@
 					<a href="?players=4" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 ? 'bg-black text-white' : ''">4</a>
 					<a href="?players=6" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 ? 'bg-black text-white' : ''">6</a>
 				</div>
-				<button class="border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Random Start</button>
-				<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Roll All Players Dice</button>
-				<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Play Against AI</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Random Start</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Roll All Players Dice</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Play Against AI</button>
 				</div>
 
 				<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
@@ -306,7 +306,7 @@
 		<div x-cloak x-show="phase === 'GAME_OVER'" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
 			<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 			<p x-text="winnerMessage"></p>
-			<button class="mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
+			<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
 				@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})"
 			>New Game</button>
 		</div>
@@ -320,35 +320,43 @@
 		<!-- Game Info -->
 		<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
 			<div class="my-2 space-x-2">
-				<button class="border border-black p-1 hover:bg-black hover:text-white"
-					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
 					@click="initiateAction('MOVE')"
 				>MOVE</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white"
-					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 					@click="performAction('REROLL', selectedUnitHexId)"
 				>REROLL</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white"
-					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 					@click="performAction('GUARD', selectedUnitHexId)"
 				>GUARD</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white"
-					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 					@click="initiateAction('RANGED_ATTACK')"
 				>RANGE</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white"
-					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 					@click="initiateAction('SPECIAL_ATTACK')"
-				>SPELLS</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white"
-					x-show="options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
+					x-text="getUnitOnHex(selectedUnitHexId)?.value === 6 ? 'SPELLS' : 'SPL ATK'"
+				></button>
+
+				<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">
+					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SHIELD')">Shield</button>
+					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SWAP')">Swap</button>
+					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('MEND')">Mend</button>
+				</div>
+
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 					@click="initiateAction('MERGE')"
 				>MERGE</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white font-bold"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white font-bold"
 					x-show="actionMode !== null"
 					@click="cancelAction()"
 				>CANCEL</button>
-				<button class="border border-black p-1 hover:bg-black hover:text-white font-bold"
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white font-bold"
 					@click="endTurn()"
 				>END TURN</button>
 			</div>

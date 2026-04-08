@@ -85,12 +85,12 @@ const PLAYER_PRIMARY_AXIS = {
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 const PLAYER_CONFIG = [
-	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-500' },
-	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-500' },
-	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-500' },
-	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-500' },
-	{ id: 4, color: 'Yellow', sprite: 'yellow', bg: 'bg-hexyellow', logColor: 'text-yellow-500' },
-	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-gray-500' },
+	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-600' },
+	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-600' },
+	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-600' },
+	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-600' },
+	{ id: 4, color: 'Yellow', sprite: 'yellow', bg: 'bg-hexyellow', logColor: 'text-yellow-600' },
+	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-600' },
 ];
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
@@ -653,24 +653,13 @@ function alpineHexDiceTacticGame() { return {
 	 * Asks player to choose between Shield, Swap, Mend spells, or cancel.
 	 */
 	initiateOracleSpellSelection() {
-		const spellChoice = prompt("Oracle Spell - Choose a spell:\n1. Shield (Target gains Guard Mode)\n2. Swap (Swap positions with target)\n3. Mend (Remove 1 armor reduction)\n\nEnter 1, 2, or 3 (or cancel):", "1");
-
-		if (spellChoice === '1') {
-			this.oracleSelectedSpell = 'SHIELD';
-			this.actionMode = 'SPELLCAST';
-			this.addLog("Oracle will cast Shield. Select a friendly unit within Range 2.");
-		} else if (spellChoice === '2') {
-			this.oracleSelectedSpell = 'SWAP';
-			this.actionMode = 'SPELLCAST';
-			this.addLog("Oracle will cast Swap. Select a friendly unit within Range 2.");
-		} else if (spellChoice === '3') {
-			this.oracleSelectedSpell = 'MEND';
-			this.actionMode = 'SPELLCAST';
-			this.addLog("Oracle will cast Mend. Select a friendly unit within Range 2.");
-		} else {
-			this.oracleSelectedSpell = null;
-			this.addLog("Oracle spell selection cancelled. Unit can still move.");
-		}
+		this.actionMode = 'ORACLE_SPELL_SELECT';
+		this.addLog("Oracle Spell - Choose a spell from the control panel.");
+	},
+	selectOracleSpell(spell) {
+		this.oracleSelectedSpell = spell;
+		this.actionMode = 'SPELLCAST';
+		this.addLog(`Oracle will cast ${spell}. Select a friendly unit within Range 2.`);
 	},
 	deselectUnit(state) {
 		state = state || this;
