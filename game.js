@@ -88,6 +88,8 @@ const PLAYER_CONFIG = [
 	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-500' },
 	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-500' },
 	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-500' },
+	{ id: 4, color: 'Yellow', sprite: 'yellow', bg: 'bg-hexyellow', logColor: 'text-yellow-500' },
+	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-gray-500' },
 ];
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
