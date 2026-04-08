@@ -51,11 +51,24 @@ function generateAllPossibleMoves(GAME, state) {
 			});
 		}
 
-		// 3. Command Conquer (Dice 6)
+		// 3. Spellcast (Dice 6 Oracle)
 		if (unitValue === 6) {
-			const validSpecialTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
-			validSpecialTargets.forEach(targetHexId => {
-				moves.push({ actionType: 'COMMAND_CONQUER', unitHexId, targetHexId });
+			const validSpellTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
+			validSpellTargets.forEach(targetHexId => {
+				// Generate moves for each spell type
+				const targetUnit = GAME.getUnitOnHex(targetHexId, state);
+				if (targetUnit && targetUnit.playerId === unit.playerId) {
+					// Shield: Use if target is threatened or in combat
+					moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
+					
+					// Swap: Use if Oracle is threatened or to reposition key unit
+					moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
+					
+					// Mend: Use if target has armor reduction
+					if (targetUnit.armorReduction > 0) {
+						moves.push({ actionType: 'SPELLCAST_MEND', unitHexId, targetHexId });
+					}
+				}
 			});
 		}
 		
@@ -86,6 +99,15 @@ function applyMove(GAME, move, state) {
 			break;
 		case 'COMMAND_CONQUER':
 			GAME.performComandConquer(move.unitHexId, move.targetHexId, applyState);
+			break;
+		case 'SPELLCAST_SHIELD':
+			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'SHIELD', applyState);
+			break;
+		case 'SPELLCAST_SWAP':
+			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'SWAP', applyState);
+			break;
+		case 'SPELLCAST_MEND':
+			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'MEND', applyState);
 			break;
 		case 'MERGE':
 			GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState);

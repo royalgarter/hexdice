@@ -231,21 +231,32 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 	state = state || GAME;
 
 	if (state.phase === 'GAME_OVER') {
-		const aiPlayerIndex = (state.players[0].isAI) ? 0 : 1; // AI is P1 if P1 is AI, else P2
-		const opponentPlayerIndex = (aiPlayerIndex === 0) ? 1 : 0;
-
+		const aiPlayerIndex = state.currentPlayerIndex;
+		
 		if (state.winnerPlayerIndex === aiPlayerIndex) return Infinity;
-		if (state.winnerPlayerIndex === opponentPlayerIndex) return -Infinity;
+		if (state.winnerPlayerIndex !== null && state.winnerPlayerIndex !== undefined && state.winnerPlayerIndex !== aiPlayerIndex) return -Infinity;
 		return 0; // Draw
 	}
 
 	const aiPlayerIndex = state.currentPlayerIndex;
-	const opponentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
 	const aiPlayer = state.players[aiPlayerIndex];
-	const opponentPlayer = state.players[opponentPlayerIndex];
+	
+	// Collect all opponent players
+	const opponentIndices = [];
+	for (let i = 0; i < state.players.length; i++) {
+		if (i !== aiPlayerIndex && !state.players[i].isEliminated) {
+			opponentIndices.push(i);
+		}
+	}
 
 	const aiUnits = aiPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-	const opponentUnits = opponentPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+	
+	// Collect all opponent units from all opponents
+	let opponentUnits = [];
+	for (const oppIdx of opponentIndices) {
+		const oppUnits = state.players[oppIdx].dice.filter(d => d.isDeployed && !d.isDeath);
+		opponentUnits = opponentUnits.concat(oppUnits);
+	}
 
 	let score = 0;
 
@@ -278,19 +289,24 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 	}
 
 	// 2. Positional Scoring - Formation Advancement
-	const opponentBaseHex = GAME.getHex(opponentPlayer.baseHexId, state);
-	const aiBaseHex = GAME.getHex(aiPlayer.baseHexId, state);
-
+	// Calculate advancement towards all opponent bases
 	let aiTotalAdvanceScore = 0;
-	if (opponentBaseHex) {
-		for (let i = 0; i < aiUnitCount; i++) {
-			const unit = aiUnits[i];
-			const unitHex = GAME.getHex(unit.hexId, state);
-			if (unitHex) {
-				const distanceToOpponentBase = GAME.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
-				aiTotalAdvanceScore += (R * 2 - distanceToOpponentBase); // Reward for being closer
+	for (const oppIdx of opponentIndices) {
+		const opponentBaseHex = GAME.getHex(state.players[oppIdx].baseHexId, state);
+		if (opponentBaseHex) {
+			for (let i = 0; i < aiUnitCount; i++) {
+				const unit = aiUnits[i];
+				const unitHex = GAME.getHex(unit.hexId, state);
+				if (unitHex) {
+					const distanceToOpponentBase = GAME.axialDistance(unitHex.q, unitHex.r, opponentBaseHex.q, opponentBaseHex.r);
+					aiTotalAdvanceScore += (R * 2 - distanceToOpponentBase); // Reward for being closer
+				}
 			}
 		}
+	}
+	// Average across number of opponents to avoid double-counting
+	if (opponentIndices.length > 0) {
+		aiTotalAdvanceScore = aiTotalAdvanceScore / opponentIndices.length;
 	}
 	score += (aiTotalAdvanceScore * WEIGHT.ADVANCE);
 
@@ -315,14 +331,14 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 	// 3. Threat and Vulnerability (Existing)
 	let totalThreatScore = 0;
 	let totalVulnerabilityScore = 0;
-	let aiUnitsThreatened = new Set(); // AI units that are currently threatened by opponent
+	let aiUnitsThreatened = new Set(); // AI units that are currently threatened by opponents
 	let opponentUnitsThreatened = new Set(); // Opponent units that are currently threatened by AI
 
-	// Calculate threats to AI units (from opponent perspective)
+	// Calculate threats to AI units (from all opponent perspectives)
 	for (let i = 0; i < aiUnitCount; i++) {
 		const aiUnit = aiUnits[i];
 		let aiUnitThreat = 0;
-		for (let j = 0; j < opponentUnitCount; j++) {
+		for (let j = 0; j < opponentUnits.length; j++) {
 			const opponentUnit = opponentUnits[j];
 			// Can opponentUnit attack aiUnit?
 			if (GAME.canUnitAttackTarget(opponentUnit, aiUnit, state)) {
@@ -375,6 +391,7 @@ function boardEvaluation(GAME, state, WEIGHT=EVALUATION_WEIGHT) {
 	score += (cohesionScore * WEIGHT.MUTUAL_SUPPORT);
 
 	// 5. Base Protection (Explicit)
+	const aiBaseHex = GAME.getHex(aiPlayer.baseHexId, state);
 	if (aiBaseHex) {
 		let unitsNearAIBase = 0;
 		const baseProtectionHexes = [aiBaseHex.id, ...GAME.getNeighbors(aiBaseHex, state).map(h => h.id)].filter(Boolean);

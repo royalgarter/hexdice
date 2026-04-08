@@ -4,7 +4,8 @@
 	<title>Hex Dice Prototype</title>
 
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<!-- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="color-scheme" content="light dark">
 	<meta name="description" content="Hex Dice">
@@ -18,10 +19,13 @@
 	<link rel="canonical" :href="host">
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
 	<link rel="manifest" href="/manifest.json">
-	<link rel="stylesheet" href="https://cdn.tailwind-lite.com/2.0.1.css" />
+	<link rel="stylesheet" type="text/css" href="/litewind.css" />
 	<style>
 		.hexagon {
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+		}
+		.bg-wood {
+			background-color: #dfab5b2b;
 		}
 		.bg-hexdefault {
 			background-color: #ba8c63;
@@ -53,6 +57,50 @@
 		.bg-hexpurple {
 			background-color: #a55eea;
 		}
+		.bg-hexyellow {
+			background-color: #c8a00a;
+		}
+		.bg-hexwhite {
+			background-color: #f8f8f8;
+		}
+
+		/* Responsive Grid Scaling */
+		.hex-grid-container {
+			transform-origin: top center;
+			max-width: 100%;
+			/*transition: zoom 0.3s ease;*/
+		}
+
+		@media (max-width: 768px) {
+			.hex-grid-container {
+				zoom: 0.95;
+			}
+		}
+		@media (max-width: 640px) {
+			.hex-grid-container {
+				zoom: 0.90;
+			}
+		}
+		@media (max-width: 540px) {
+			.hex-grid-container {
+				zoom: 0.85;
+			}
+		}
+		@media (max-width: 480px) {
+			.hex-grid-container {
+				zoom: 0.80;
+			}
+		}
+		@media (max-width: 400px) {
+			.hex-grid-container {
+				zoom: 0.75;
+			}
+		}
+		@media (max-width: 360px) {
+			.hex-grid-container {
+				zoom: 0.7;
+			}
+		}
 	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
@@ -70,27 +118,41 @@
 			--color-hexpurple: var(--color-purple-700);
 		}
 	</style>
+	<style>
+		body::before {
+			content: '';
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: url('/assets/infographics/hexdice_intro.jpg') center/cover no-repeat;
+			opacity: 0.5;
+			z-index: -1;
+			filter: brightness(0.2) sepia(1) contrast(0.6);
+		}
+	</style>
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
 			new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
 		}
 	</script> -->
-	<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
-	<script defer src="/alpine.min.js"></script>
-	<script src="game.js"></script>
-	<script src="/ai/ai.js"></script>
-	<script src="/ai/ai-minimax.js"></script>
-	<script src="/ai/ai-priority.js"></script>
-	<script src="/ai/ai-random.js"></script>
-	<script src="/ai/ai-heuristic.js"></script>
+	<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" defer async></script>
+	<script type="text/javascript" src="/alpine.min.js" defer></script>
+	<script type="text/javascript" src="/game.js"></script>
+	<script type="text/javascript" src="/ai/ai.js"></script>
+	<script type="text/javascript" src="/ai/ai-minimax.js"></script>
+	<script type="text/javascript" src="/ai/ai-priority.js"></script>
+	<script type="text/javascript" src="/ai/ai-random.js"></script>
+	<script type="text/javascript" src="/ai/ai-heuristic.js"></script>
 </head>
 
-<body class="text-black p-2 flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
+<body class="text-black flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
 	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Hex Grid -->
-	<div class="hex-grid-container relative m-2 mb-8" :style="hexGrid.style">
+	<div class="hex-grid-container relative mt-2 mb-8" :style="hexGrid.style">
 		<template x-for="hex in hexes" :key="hex.id">
 			<div>
 				<div class="hexagon absolute flex items-center justify-center cursor-pointer hover:opacity-80"
@@ -105,7 +167,7 @@
 					<div class="hex-content text-xs text-center relative"
 						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
 					>
-						<span style="top:-8px;right:-8px;color:#20ee80" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+						<span style="top:-8px;right:-8px;color:#20ee8099" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
 
 						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
@@ -135,11 +197,45 @@
 				</div>
 			</div>
 		</template>
+
+		<!-- Trail Arrow -->
+		<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="absolute inset-0 pointer-events-none z-10" x-show="!phase.startsWith('SETUP')">
+			<!-- Movement -->
+			<g x-show="trail && trail.fromHex && trail.toHex">
+				<circle
+					:cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0"
+					r="3" style="fill: black;"
+				/>
+				<line
+					:x1="trail.fromHex?.trailX || 0"
+					:y1="trail.fromHex?.trailY || 0"
+					:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+					:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+					style="stroke-width: 2;stroke: black;"
+				/>
+			</g>
+
+			<!-- Attack -->
+			<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
+				<circle
+					:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
+					r="3" style="fill: gray;"
+				/>
+				<line
+					:x1="trailAttack.fromHex?.trailX || 0"
+					:y1="trailAttack.fromHex?.trailY || 0"
+					:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
+					:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
+					style="stroke-width: 2;stroke: gray;stroke-dasharray: 4;"
+				/>
+			</g>
+		</svg>
+
 		<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div>
 	</div>
 
 	<!-- Game Setup -->
-	<div x-cloak x-show="phase.startsWith('SETUP')" class="mb-2 p-4 border border-black text-center">
+	<div x-cloak x-show="phase.startsWith('SETUP')" class="bg-wood mb-2 p-4 border border-black text-center">
 		<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 		<div x-show="phase === 'SETUP_ROLL'">
 			<div class="mb-4">
@@ -147,6 +243,7 @@
 				<a href="?players=2" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 2 ? 'bg-black text-white' : ''">2</a>
 				<a href="?players=3" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 ? 'bg-black text-white' : ''">3</a>
 				<a href="?players=4" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 ? 'bg-black text-white' : ''">4</a>
+				<a href="?players=6" class="border border-black px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 ? 'bg-black text-white' : ''">6</a>
 			</div>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Random Start</button>
 			<button class="border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Roll All Players Dice</button>
@@ -157,7 +254,7 @@
 			<!-- <div id="google_translate_element"></div> -->
 			</div>
 		</div>
-		<div x-show="phase === 'SETUP_REROLL'">
+		<div x-show="phase === 'SETUP_REROLL'" class="bg-wood">
 			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
 			<div class="flex justify-center space-x-2 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
@@ -192,7 +289,7 @@
 	</div>
 
 	<!-- Game Over -->
-	<div x-cloak x-show="phase === 'GAME_OVER'" class="mb-2 py-2 px-4 border border-black text-center">
+	<div x-cloak x-show="phase === 'GAME_OVER'" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
 		<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 		<p x-text="winnerMessage"></p>
 		<button class="mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
@@ -201,13 +298,13 @@
 	</div>
 
 	<!-- Action Mode Info -->
-	<div x-cloak x-show="false && (actionMode !== null)" class="mb-2 py-2 px-4 border border-black text-center">
+	<div x-cloak x-show="false && (actionMode !== null)" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
 		<p x-text="actionModeMessage()"></p>
 		<button @click="cancelAction()" class="mt-2 border border-black px-3 py-1 text-sm hover:bg-black hover:text-white">Cancel Action</button>
 	</div>
 
 	<!-- Game Info -->
-	<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="mb-2 py-2 px-4 border border-black text-center">
+	<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
 		<div class="my-2 space-x-2">
 			<button class="border border-black p-1 hover:bg-black hover:text-white"
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
@@ -247,41 +344,8 @@
 		</p>
 	</div>
 
-	<!-- Trail Arrow -->
-	<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="my-2 absolute pointer-events-none">
-		<!-- Movement -->
-		<g x-show="trail && trail.fromHex && trail.toHex">
-			<circle
-				:cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0"
-				r="3" style="fill: black;"
-			/>
-			<line
-				:x1="trail.fromHex?.trailX || 0"
-				:y1="trail.fromHex?.trailY || 0"
-				:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-				:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
-				style="stroke-width: 2;stroke: black;"
-			/>
-		</g>
-
-		<!-- Attack -->
-		<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
-			<circle
-				:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
-				r="3" style="fill: gray;"
-			/>
-			<line
-				:x1="trailAttack.fromHex?.trailX || 0"
-				:y1="trailAttack.fromHex?.trailY || 0"
-				:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
-				:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
-				style="stroke-width: 2;stroke: gray;stroke-dasharray: 4;"
-			/>
-		</g>
-	</svg>
-
 	<!-- Message Log -->
-	<div class="fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
+	<div class="bg-wood fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="[
 				(log.id == messageLog[0].id) ? 'font-bold' : '',
@@ -289,6 +353,8 @@
 				(log.message.includes('Player 2') || log.message.includes('P2')) ? PLAYER_CONFIG[1].logColor : '',
 				(log.message.includes('Player 3') || log.message.includes('P3')) ? PLAYER_CONFIG[2].logColor : '',
 				(log.message.includes('Player 4') || log.message.includes('P4')) ? PLAYER_CONFIG[3].logColor : '',
+				(log.message.includes('Player 5') || log.message.includes('P5')) ? PLAYER_CONFIG[4].logColor : '',
+				(log.message.includes('Player 6') || log.message.includes('P6')) ? PLAYER_CONFIG[5].logColor : '',
 			].join(' ')"></p>
 		</template>
 	</div>

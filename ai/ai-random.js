@@ -39,19 +39,26 @@ function performAIByRandom(GAME) {
     }
 
     // 3. Score moves to find the "greediest"
-    const opponentIndex = (state.currentPlayerIndex + 1) % state.players.length;
-    const opponentBaseHexId = state.players[opponentIndex].baseHexId;
-    const opponentBaseHex = GAME.getHex(opponentBaseHexId, state);
+    // Calculate distances to all opponent bases
+    const opponentBaseHexes = [];
+    for (let pIdx = 0; pIdx < state.players.length; pIdx++) {
+        if (pIdx !== state.currentPlayerIndex && !state.players[pIdx].isEliminated) {
+            const baseHex = GAME.getHex(state.players[pIdx].baseHexId, state);
+            if (baseHex) {
+                opponentBaseHexes.push(baseHex);
+            }
+        }
+    }
 
     unitMoves.forEach(move => {
         let score = 0;
-        
+
         // Attack that kills
         const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
         if (targetUnit && targetUnit.playerId !== state.currentPlayerIndex) {
             const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
             let attackValue = unit.attack;
-            
+
             if (move.actionType === 'RANGED_ATTACK') attackValue = 2; // Fixed for Dice 2
             if (move.actionType === 'COMMAND_CONQUER') attackValue = 6; // Fixed for Dice 6
 
@@ -62,11 +69,15 @@ function performAIByRandom(GAME) {
             }
         }
 
-        // Advancement towards enemy base
-        if (move.actionType === 'MOVE' && !targetUnit && opponentBaseHex) {
+        // Advancement towards enemy bases (closest one)
+        if (move.actionType === 'MOVE' && !targetUnit && opponentBaseHexes.length > 0) {
             const targetHex = GAME.getHex(move.targetHexId, state);
-            const dist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBaseHex.q, opponentBaseHex.r);
-            score += (50 - dist); // Higher score for being closer
+            let minDist = Infinity;
+            for (const baseHex of opponentBaseHexes) {
+                const dist = GAME.axialDistance(targetHex.q, targetHex.r, baseHex.q, baseHex.r);
+                if (dist < minDist) minDist = dist;
+            }
+            score += (50 - minDist); // Higher score for being closer
         }
 
         // Merge bonus

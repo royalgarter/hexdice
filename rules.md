@@ -63,11 +63,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
-| 2 | **Archer** | 0 | 2 | 2 | 2 | \* | Ranged Specialist (LoS required) |
+| 2 | **Archer** | 1 | 2 | 2 | 1 | \* | Ranged Specialist (LoS required) |
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
-| 6 | **Legate** | 5 | 1 | 1 | 0 | 0 | Aura Buff (+1 Armor to neighbors) |
+| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Mend (BFS 1-step) |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -252,10 +252,14 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                     .
 ```
 
-#### Dice 6 (Legate)
-* Cannot move except via Command & Conquer.
-* **Aura Buff**: All friendly units adjacent to a Legate receive **+1 Effective Armor**.
-* **Command & Conquer**: Can attack adjacent enemies (Range 1) and move to their hex if successful.
+#### Dice 6 (Oracle)
+* Can move to any adjacent hex (1 step BFS).
+* **Spellcast Action**: When activated, the Oracle can cast one of three spells on a **target friendly unit** within **Range 2** (requires Line of Sight):
+  * **Shield**: Target unit immediately enters **Guard Mode** (+1 Effective Armor).
+  * **Swap**: The Oracle and the target unit **exchange positions** on the board.
+  * **Mend**: Remove **1 Armor Reduction** from the target unit.
+* **Glass Support**: With 0 Attack and 1 Armor, the Oracle cannot defeat units alone and is extremely vulnerable. It relies on friendly units for protection and its Swap spell for escape.
+* **Engaged Casting**: The Oracle **can cast spells while an enemy is adjacent**, preventing enemies from shutting it down simply by standing next to it.
 
 ```
                     .
@@ -266,11 +270,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
      .     .     .     .     .     .
         .     .     .     .     .
      .     .     .     .     .     .
-        .     .     *     .     .
-     .     .     *     *     .     .
-        .     .     6     .     .
-     .     .     *     *     .     .
-        .     .     *     .     .
+        .     .     +     .     .
+     .     .     +     +     .     .
+        .     +     6     +     .
+     .     .     +     +     .     .
+        .     .     +     .     .
      .     .     .     .     .     .
         .     .     .     .     .
      .     .     .     .     .     .
@@ -280,6 +284,13 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                  .     .
                     .
 ```
+
+**The "0-1-1-2-3" Mnemonic**:
+* **0** - Attack
+* **1** - Armor
+* **1** - Distance (Movement)
+* **2** - Range (For Spells)
+* **3** - Spells in the Kit (Shield, Swap, Mend)
 
 #### Two-Players Bases
 * Player can deploy each single new unit in base or its adjacent hex
@@ -341,17 +352,21 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 
 * ##### **Ranged Attack (Dice 2\)**
 
-  * Choose one of your Dice 2 Archer units.  
+  * Choose one of your Dice 2 Archer units.
   * **Restrictions**: Cannot attack if an enemy is adjacent. Requires clear Line of Sight.
   * Target any single enemy unit located **exactly 2 hexes away**.
   * Combat occurs. Regardless of the outcome, the attacking Dice 2 unit **remains in its current hex** and does not suffer counter-damage on failure.
   * Action complete.
 
-* ##### **Command & Conquer (Dice 6\)**
+* ##### **Spellcast (Dice 6\)**
 
-  * Choose one of your Dice 6 units.  
-  * Target any single enemy unit located **exactly 1 hex away**.
-  * Combat occurs. If the attack is successful, the Dice 6 **moves into the target hex**. If unsuccessful, it remains in its original hex.
+  * Choose one of your Dice 6 Oracle units.
+  * **Select a Spell**: Choose one of three spells - Shield, Swap, or Mend.
+  * **Target**: Choose any single **friendly** unit within **Range 2** (requires Line of Sight).
+  * **Shield**: Target unit enters **Guard Mode** (+1 Effective Armor).
+  * **Swap**: Oracle and target unit **exchange positions**.
+  * **Mend**: Remove **1 Armor Reduction** from target unit.
+  * **Note**: The Oracle can cast spells even when an enemy is adjacent.
   * Action complete.
 
 ### **6\. Combat**
@@ -359,7 +374,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 Combat is deterministic and occurs when a unit enters an enemy hex or uses a special/ranged attack.
 
 **Effective Armor calculation:**
-`Base Armor + Guard Bonus (+1) + Legate Buff (+1 per adjacent Legate) - Armor Reduction`.
+`Base Armor + Guard Bonus (+1) - Armor Reduction`.
 
 * **Attacker Wins** if:
   1. **Attack ≥ Defender's Effective Armor**, OR

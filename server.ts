@@ -44,7 +44,7 @@ async function handleRequest(req: Request) {
 	if (await exists(localpath)) {
 		return response(await Deno.readFile(localpath), {
 			headers: {
-				"Content-Type": `${extname(localpath) ?? "text/plain"}; charset=utf-8`,
+				"Content-Type": `${ extname(localpath) ? ('text/' + extname(localpath).replace('.', '')) : "text/plain"}; charset=utf-8`,
 				"Cache-Control": "public, max-age=604800",
 			}
 		})
