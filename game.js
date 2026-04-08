@@ -81,6 +81,7 @@ const PLAYER_PRIMARY_AXIS = {
 	2: [ AXES[5], AXES[2] ],
 	3: [ AXES[4], AXES[2], AXES[0] ],
 	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
+	5: [ AXES[5], AXES[3], AXES[0], AXES[2], AXES[4] ],
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 const PLAYER_CONFIG = [
@@ -210,7 +211,7 @@ function alpineHexDiceTacticGame() { return {
 					const x = HEX_WIDTH * 3/4 * q;
 					const y = HEX_HEIGHT * (r + q / 2);
 
-					this.hexes.push({ id, q, r, s: -q-r, unitId: null, isP1Base: false, isP2Base: false, visualX: x, visualY: y });
+					this.hexes.push({ id, q, r, s: -q-r, unitId: null, visualX: x, visualY: y });
 					this.hexesQR[(q * 1e3) + r] = id;
 
 					id++;

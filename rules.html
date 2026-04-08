@@ -227,7 +227,12 @@
 				markdownContent.textContent = markdownText;
 				
 				// Render the markdown
-				const htmlContent = marked.parse(markdownText);
+				const htmlContent = markdownText;
+
+				try {
+					htmlContent = marked.parse(markdownText);
+				} catch (ex) {console.error('Caught:', ex)}
+
 				markdownViewer.innerHTML = htmlContent;
 				
 				// Intercept internal markdown links

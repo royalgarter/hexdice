@@ -141,32 +141,49 @@ function performAIByPriority(GAME) {
     // Only proceed to lower priorities if no Priority 1 move was found
     if (!bestMove) {
         // --- Priority 2: Objective Advance ---
-        // Move towards Enemy Base (if known) or Center.
+        // Move towards Enemy Bases (if known) or Center.
         // We select the "Best" unit to advance (e.g. strongest available).
-        
+
         let bestUnitToAdvance = null;
         let bestAdvanceScore = -Infinity;
         let bestAdvanceTarget = null;
 
-        const opponentIndex = (aiPlayerIndex + 1) % state.players.length;
-        const opponentBaseId = state.players[opponentIndex].baseHexId;
-        // If we know opponent base location (it's always fixed in v1.0/v1.3 usually, or revealed), target it.
-        // In FoW, strictly we might not know it, but for "Casual" AI, let's assume it knows the *direction* or the corner.
-        // Let's assume it targets the Center (0,0) if it doesn't have a better idea.
+        // Target all opponent bases
+        const opponentBaseIds = [];
+        for (let pIdx = 0; pIdx < state.players.length; pIdx++) {
+            if (pIdx !== aiPlayerIndex && !state.players[pIdx].isEliminated) {
+                opponentBaseIds.push(state.players[pIdx].baseHexId);
+            }
+        }
+        
+        // If we know opponent base locations, target the closest one.
+        // Otherwise, target the Center (0,0).
         const centerHex = GAME.getHexByQR(0,0, state);
-        const targetObjHex = opponentBaseId ? GAME.getHex(opponentBaseId, state) : centerHex; 
-
+        
         for (const unit of availableUnits) {
              const validMoves = GAME.calcValidMoves(unit.hexId, false, state);
              // Filter moves that go into empty hexes (not attacks, since attacks failed above)
              const moveCandidates = validMoves.filter(hid => !GAME.getUnitOnHex(hid, state));
-             
+
              for (const moveHexId of moveCandidates) {
                  const moveHex = GAME.getHex(moveHexId, state);
-                 const currentDist = GAME.axialDistance(moveHex.q, moveHex.r, targetObjHex.q, targetObjHex.r);
                  
+                 // Find distance to closest opponent base
+                 let minDist = Infinity;
+                 if (opponentBaseIds.length > 0) {
+                     for (const baseId of opponentBaseIds) {
+                         const baseHex = GAME.getHex(baseId, state);
+                         if (baseHex) {
+                             const dist = GAME.axialDistance(moveHex.q, moveHex.r, baseHex.q, baseHex.r);
+                             if (dist < minDist) minDist = dist;
+                         }
+                     }
+                 } else {
+                     minDist = GAME.axialDistance(moveHex.q, moveHex.r, centerHex.q, centerHex.r);
+                 }
+
                  // Score: Closer is better. Stronger unit is better.
-                 const score = (100 - currentDist) + unit.value; 
+                 const score = (100 - minDist) + unit.value;
                  if (score > bestAdvanceScore) {
                      bestAdvanceScore = score;
                      bestUnitToAdvance = unit;
