@@ -153,22 +153,24 @@ interface MoveRecord {
 
 // Stub browser APIs for headless execution
 function stubBrowserAPIs(playerCount: number = 2) {
-    // Stub location
-    (globalThis as any).location = {
-        search: `?mode=headless&players=${playerCount}`,
-        href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
-        toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
-    };
-    
-    // Stub document
-    (globalThis as any).document = {
-        getElementById: () => null,
-    };
-    
-    // Stub $nextTick (Vue.js) - use synchronous execution for simulation
-    (globalThis as any).$nextTick = (fn: any) => { 
-        try { fn(); } catch(e) { /* ignore */ }
-    };
+	// Stub location
+	const locationStub = {
+		search: `?mode=headless&players=${playerCount}`,
+		href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
+		toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
+	};
+	
+	// Stub document
+	const documentStub = {
+		getElementById: () => null,
+	};
+	
+	// Stub $nextTick (Vue.js) - use synchronous execution for simulation
+	(globalThis as any).$nextTick = (fn: any) => { 
+		try { fn(); } catch(e) { /* ignore */ }
+	};
+
+	return { location: locationStub, document: documentStub };
 }
 
 // Create a game instance with logging
@@ -185,9 +187,9 @@ function createSimulationGame(logger: SimulationLogger, aiType: string, engine: 
 
 // Load all game and AI code
 async function loadGameEngine(playerCount: number = 2): Promise<any> {
-    stubBrowserAPIs(playerCount);
-    
-    let gameCode = await Deno.readTextFile("./game.js");
+	const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
+	
+	let gameCode = await Deno.readTextFile("./game.js");
     const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
     const aiRandomCode = await Deno.readTextFile("./ai/ai-random.js");
     const aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
@@ -229,10 +231,10 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
         };
     `;
     
-    // Evaluate and get exports using Function constructor
-    const createModule = new Function(fullCode);
-    
-    return createModule();
+	// Evaluate and get exports using Function constructor
+	const createModule = new Function('location', 'document', fullCode);
+	
+	return createModule(locationStub, documentStub);
 }
 
 // Calculate state hash for replay
