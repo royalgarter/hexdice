@@ -28,7 +28,7 @@
 			background-color: #C3A4712b;
 		}
 		.bg-hexdefault {
-			background-color: #ba8c63;
+			background-color: #896648;
 		}
 		.bg-hexselect {
 			background-color: #26de81;
@@ -152,7 +152,7 @@
 	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Hex Grid -->
-	<div class="hex-grid-container relative mt-2 mb-8" :style="hexGrid.style">
+	<div class="hex-grid-container relative my-4" :style="hexGrid.style">
 		<template x-for="hex in hexes" :key="hex.id">
 			<div>
 				<div class="hexagon absolute flex items-center justify-center cursor-pointer hover:opacity-80"
@@ -251,6 +251,7 @@
 			</div>
 
 			<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
+			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
 			<!-- <div id="google_translate_element"></div> -->
 			</div>
 		</div>
@@ -345,7 +346,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div class="bg-wood fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
+	<div x-show="showLog" class="bg-wood fixed bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="[
 				(log.id == messageLog[0].id) ? 'font-bold' : '',

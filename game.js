@@ -125,6 +125,7 @@ function alpineHexDiceTacticGame() { return {
 	winnerMessage: "",
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'MEND'
+	showLog: false,
 	debug: {
 		quiet: false,
 		coordinate: new URLSearchParams(location.search).get('mode')?.includes('coordinate'),
@@ -653,7 +654,7 @@ function alpineHexDiceTacticGame() { return {
 	 */
 	initiateOracleSpellSelection() {
 		const spellChoice = prompt("Oracle Spell - Choose a spell:\n1. Shield (Target gains Guard Mode)\n2. Swap (Swap positions with target)\n3. Mend (Remove 1 armor reduction)\n\nEnter 1, 2, or 3 (or cancel):", "1");
-		
+
 		if (spellChoice === '1') {
 			this.oracleSelectedSpell = 'SHIELD';
 			this.actionMode = 'SPELLCAST';
@@ -785,7 +786,7 @@ function alpineHexDiceTacticGame() { return {
 				return;
 			}
 		}
-		
+
 		if (this.validMoves.includes(targetHexId)) {
 			if (unit.playerId == target?.playerId) {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
@@ -1417,7 +1418,7 @@ function alpineHexDiceTacticGame() { return {
 				if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
 
 				const targetUnit = this.getUnitOnHex(potentialTargetHex.id, state);
-				
+
 				// Oracle targets friendly units (for spells)
 				if (targetUnit && targetUnit.playerId === attackerUnit.playerId) {
 					targets.push(potentialTargetHex.id);
