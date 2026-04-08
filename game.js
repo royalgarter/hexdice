@@ -1953,7 +1953,7 @@ function alpineHexDiceTacticGame() { return {
 
 		message = [
 			`${new Date().toLocaleTimeString()}: ${message}`,
-			this.phase == 'PLAYER_TURN' ? `[${boardEvaluation(this)}]` : '',
+			// this.phase == 'PLAYER_TURN' ? `[${boardEvaluation(this)}]` : '',
 		].join(' ').trim();
 
 		this.messageLog.unshift({ id: this.logCounter++, message });
