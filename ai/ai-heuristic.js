@@ -246,6 +246,15 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'dodge': {
+            // Oracle escape actions via Swap spell
+            const oracleEscapeMoves = scoredMoves.filter(m => m.isEscapeAction && m.isSafe);
+            if (oracleEscapeMoves.length > 0) {
+                oracleEscapeMoves.sort((a, b) => b.score - a.score);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Oracle escaping via Swap!`, oracleEscapeMoves[0].move);
+                applyMove(GAME, oracleEscapeMoves[0].move);
+                return true;
+            }
+            
             const threatenedMoves = scoredMoves.filter(m => m.isThreatened || m.canBeKilled);
             if (threatenedMoves.length > 0) {
                 const unitEscapeMoves = new Map();
@@ -288,6 +297,15 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'position': {
+            // Oracle spells: Prioritize support actions
+            const supportMoves = scoredMoves.filter(m => m.isSupportAction);
+            if (supportMoves.length > 0) {
+                supportMoves.sort((a, b) => b.score - a.score);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Oracle spell support!`, supportMoves[0].move);
+                applyMove(GAME, supportMoves[0].move);
+                return true;
+            }
+            
             const strategicMoves = scoredMoves.filter(m => !m.isThreatened);
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -359,7 +377,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         nearFriendlySix: false,
         targetValue: 0,
         captureScore: 0,
-        score: 0
+        score: 0,
+        isSupportAction: false,
+        isEscapeAction: false
     };
 
     // Simulate the move
@@ -504,6 +524,131 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     break;
                 }
             }
+        }
+    }
+
+    // --- ORACLE (Dice 6) SPELL HEURISTICS ---
+    // Oracle is a support unit - evaluate spell casting opportunities
+    if (unit.value === 6) {
+        const spellType = move.actionType;
+
+        if (spellType === 'SPELLCAST_SHIELD') {
+            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+            if (targetUnit) {
+                // High priority: Shield threatened high-value units
+                const targetHex = GAME.getHex(move.targetHexId, nextState);
+                const neighbors = GAME.getNeighbors(targetHex, nextState);
+                let isThreatened = false;
+
+                for (const neighbor of neighbors) {
+                    const neighborUnit = GAME.getUnitOnHex(neighbor.id, nextState);
+                    if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
+                        isThreatened = true;
+                        break;
+                    }
+                }
+
+                if (isThreatened && targetUnit.value >= 3) {
+                    // Shield only if target is valuable and threatened
+                    analysis.score += w.safeBonus * 0.5 + (targetUnit.value * 30);
+                    analysis.isSupportAction = true;
+                } else if (!isThreatened) {
+                    // Low priority: Preemptive shielding (weak bonus)
+                    analysis.score += 10;
+                    analysis.isSupportAction = true;
+                }
+            }
+        }
+
+        if (spellType === 'SPELLCAST_SWAP') {
+            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+            const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
+
+            if (targetUnit && oracleUnit) {
+                // High priority: Save Oracle from death (only when truly threatened)
+                const oracleHex = GAME.getHex(move.unitHexId, state);
+                const oracleNeighbors = GAME.getNeighbors(oracleHex, state);
+                let oracleThreatened = false;
+
+                for (const neighbor of oracleNeighbors) {
+                    const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                    if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
+                        const defenderArmor = GAME.calcDefenderEffectiveArmor(move.unitHexId, state);
+                        if (neighborUnit.attack >= defenderArmor) {
+                            oracleThreatened = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (oracleThreatened) {
+                    // Emergency escape - score just below killBonus
+                    analysis.score += w.killBonus * 0.8;
+                    analysis.isEscapeAction = true;
+                    analysis.isSupportAction = true;
+                }
+
+                // Low priority: Reposition high-value units closer to base
+                if (targetUnit.value >= 4 && !oracleThreatened) {
+                    const targetHex = GAME.getHex(move.targetHexId, state);
+                    const opponentBase = opponentBases[0]?.baseHex;
+                    if (opponentBase) {
+                        const currentDist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBase.q, opponentBase.r);
+                        const newDist = GAME.axialDistance(oracleHex.q, oracleHex.r, opponentBase.q, opponentBase.r);
+
+                        if (newDist < currentDist) {
+                            analysis.score += w.advanceBonus * 0.5;
+                            analysis.isSupportAction = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (spellType === 'SPELLCAST_MEND') {
+            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+            if (targetUnit && targetUnit.armorReduction > 0) {
+                // Only valuable if target is heavily damaged AND high-value
+                const armorReductionRatio = targetUnit.armorReduction / targetUnit.currentArmor;
+
+                if (armorReductionRatio >= 0.5 && targetUnit.value >= 4) {
+                    // Medium priority: Save valuable damaged unit
+                    analysis.score += w.attackBonus * 0.8 + (targetUnit.value * 20);
+                    analysis.isSupportAction = true;
+
+                    // Extra bonus if unit is in immediate combat
+                    const targetHex = GAME.getHex(move.targetHexId, state);
+                    const neighbors = GAME.getNeighbors(targetHex, state);
+                    for (const neighbor of neighbors) {
+                        const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                        if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
+                            analysis.score += 50;
+                            break;
+                        }
+                    }
+                } else {
+                    // Low priority: Minor repair on low-value units
+                    analysis.score += 5;
+                    analysis.isSupportAction = true;
+                }
+            }
+        }
+
+        // Penalty: Oracle should avoid being alone
+        const oracleHex = GAME.getHex(aiUnitNext.hexId, nextState);
+        const oracleNeighbors = GAME.getNeighbors(oracleHex, nextState);
+        let hasFriendlyNeighbor = false;
+
+        for (const neighbor of oracleNeighbors) {
+            const neighborUnit = GAME.getUnitOnHex(neighbor.id, nextState);
+            if (neighborUnit && neighborUnit.playerId === state.currentPlayerIndex) {
+                hasFriendlyNeighbor = true;
+                break;
+            }
+        }
+
+        if (!hasFriendlyNeighbor) {
+            analysis.score -= 100; // Reduced penalty for isolation
         }
     }
 

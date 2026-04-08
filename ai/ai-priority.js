@@ -72,20 +72,66 @@ function performAIByPriority(GAME) {
 			}
 		}
 
-        // Check for Special Attacks (Dice 6)
+        // Check for Oracle Spells (Dice 6)
         if (unit.value === 6) {
-             const validSpecial = GAME.calcValidSpecialAttackTargets(unit.hexId, state);
-             for (const targetHexId of validSpecial) {
+             const validSpellTargets = GAME.calcValidSpecialAttackTargets(unit.hexId, state);
+             for (const targetHexId of validSpellTargets) {
                 if (visibleHexes.has(targetHexId)) {
                     const targetUnit = GAME.getUnitOnHex(targetHexId, state);
-                    const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, state);
-                    // Dice 6 attack is 6.
-                    if (6 >= defenderArmor) {
-                         const priorityScore = 1 - (targetUnit.value / 100);
-                         if (priorityScore < bestPriority) {
-                            bestPriority = priorityScore;
-                            bestMove = { actionType: 'COMMAND_CONQUER', unitHexId: unit.hexId, targetHexId: targetHexId };
-                         }
+                    
+                    // Oracle only targets friendly units
+                    if (targetUnit && targetUnit.playerId === aiPlayerIndex) {
+                        // Priority 1.5: Emergency Swap - Save Oracle from death
+                        const oracleHex = GAME.getHex(unit.hexId, state);
+                        const oracleNeighbors = GAME.getNeighbors(oracleHex, state);
+                        let oracleInImmediateDanger = false;
+                        
+                        for (const neighbor of oracleNeighbors) {
+                            const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                            if (neighborUnit && neighborUnit.playerId !== aiPlayerIndex) {
+                                const defenderArmor = GAME.calcDefenderEffectiveArmor(unit.hexId, state);
+                                if (neighborUnit.attack >= defenderArmor) {
+                                    oracleInImmediateDanger = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (oracleInImmediateDanger && targetHexId !== unit.hexId) {
+                            // Swap to save Oracle (highest priority after kills)
+                            bestMove = { actionType: 'SPELLCAST_SWAP', unitHexId: unit.hexId, targetHexId: targetHexId };
+                            bestPriority = 0.5; // Very high priority
+                            continue;
+                        }
+                        
+                        // Priority 2.5: Shield - Save high-value threatened unit
+                        if (targetUnit.value >= 4 && !bestMove) {
+                            const targetHex = GAME.getHex(targetHexId, state);
+                            const targetNeighbors = GAME.getNeighbors(targetHex, state);
+                            let targetThreatened = false;
+                            
+                            for (const neighbor of targetNeighbors) {
+                                const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                                if (neighborUnit && neighborUnit.playerId !== aiPlayerIndex) {
+                                    targetThreatened = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (targetThreatened) {
+                                bestMove = { actionType: 'SPELLCAST_SHIELD', unitHexId: unit.hexId, targetHexId: targetHexId };
+                                bestPriority = 2.5;
+                            }
+                        }
+                        
+                        // Priority 3.5: Mend - Repair heavily damaged unit
+                        if (targetUnit.armorReduction > 0 && !bestMove) {
+                            const armorRatio = targetUnit.armorReduction / targetUnit.currentArmor;
+                            if (armorRatio >= 0.5 && targetUnit.value >= 3) {
+                                bestMove = { actionType: 'SPELLCAST_MEND', unitHexId: unit.hexId, targetHexId: targetHexId };
+                                bestPriority = 3.5;
+                            }
+                        }
                     }
                 }
              }
