@@ -16,27 +16,27 @@ const heuristicProfiles = {
     // =========================================================================
     baseline: {
         name: "Baseline",
-        description: "Original balanced heuristic: Kill → Attack → Dodge → Position",
-        priorityOrder: ['capture', 'kill', 'attack', 'dodge', 'position'],
+        description: "Balanced: Kill → Position → Attack → Dodge",
+        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
         weights: {
-            captureBonus: 10000,      // Moving to enemy base (win condition)
-            killBonus: 1000,          // Killing an enemy unit
-            attackBonus: 100,         // Damaging but not killing
-            safeBonus: 500,           // Being in safe position
-            threatPenalty: -250,      // Per threatening enemy
-            protectedRangeBonus: 50,  // Adjacent to friendly unit
-            friendlySixBonus: 100,    // Adjacent to friendly Dice 6
-            advanceBonus: 50,         // Moving toward enemy base
-            guardPenalty: -500,       // Discourage guard actions
-            mergeOver6Penalty: -500,  // Merging into sum > 6
+            captureBonus: 10000,
+            killBonus: 1200,
+            attackBonus: 100,
+            safeBonus: 500,
+            threatPenalty: -250,
+            protectedRangeBonus: 100,
+            friendlySixBonus: 150,
+            advanceBonus: 80,
+            guardPenalty: -500,
+            mergeOver6Penalty: -500,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5,
+            teamPositionWeight: 0.7,
             pressureWeight: 0.3
         },
-        riskTolerance: 0.5,           // Balanced risk assessment
-        targetSelection: 'highestValue',  // Target highest value enemies
-        positioningStyle: 'balanced',     // Mix of advance and safety
-        unitSelection: 'leastMoved'       // Use units that haven't acted
+        riskTolerance: 0.5,
+        targetSelection: 'highestValue',
+        positioningStyle: 'balanced',
+        unitSelection: 'leastMoved'
     },
 
     // =========================================================================
@@ -45,26 +45,26 @@ const heuristicProfiles = {
     berserker: {
         name: "Berserker",
         description: "Aggressive: Prioritizes kills over safety, rushes enemy",
-        priorityOrder: ['capture', 'kill', 'attack', 'position', 'dodge'],
+        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
         weights: {
             captureBonus: 10000,
-            killBonus: 2000,          // Highly values kills
-            attackBonus: 500,         // Values any attack
-            safeBonus: 200,           // Low value on safety
-            threatPenalty: -100,      // Ignores most threats
+            killBonus: 2000,
+            attackBonus: 500,
+            safeBonus: 200,
+            threatPenalty: -100,
             protectedRangeBonus: 25,
             friendlySixBonus: 50,
-            advanceBonus: 100,        // Aggressive advancement
-            guardPenalty: -1000,      // Never guards
+            advanceBonus: 150,
+            guardPenalty: -1000,
             mergeOver6Penalty: -200,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.2,
+            teamPositionWeight: 0.3,
             pressureWeight: 0.1
         },
-        riskTolerance: 0.9,           // Very high risk tolerance
-        targetSelection: 'highestValue',  // Hunt big targets
-        positioningStyle: 'rush',         // Straight line to enemy base
-        unitSelection: 'highestValue'     // Lead with strongest units
+        riskTolerance: 0.9,
+        targetSelection: 'highestValue',
+        positioningStyle: 'rush',
+        unitSelection: 'highestValue'
     },
 
     // =========================================================================
@@ -73,26 +73,26 @@ const heuristicProfiles = {
     turtle: {
         name: "Turtle",
         description: "Defensive: Safety first, only attacks when safe",
-        priorityOrder: ['capture', 'dodge', 'kill', 'attack', 'position'],
+        priorityOrder: ['capture', 'dodge', 'position', 'kill', 'attack'],
         weights: {
             captureBonus: 10000,
-            killBonus: 500,           // Low priority on killing
-            attackBonus: 50,          // Rarely attacks
-            safeBonus: 2000,          // Extremely values safety
-            threatPenalty: -500,      // Heavily penalizes threats
-            protectedRangeBonus: 200, // Stays close to friendlies
-            friendlySixBonus: 300,    // Clusters around Dice 6
-            advanceBonus: 10,         // Slow advancement
-            guardPenalty: -100,       // Willing to guard
+            killBonus: 500,
+            attackBonus: 50,
+            safeBonus: 2000,
+            threatPenalty: -500,
+            protectedRangeBonus: 200,
+            friendlySixBonus: 300,
+            advanceBonus: 20,
+            guardPenalty: -100,
             mergeOver6Penalty: -50,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5,
+            teamPositionWeight: 0.6,
             pressureWeight: 0.3
         },
-        riskTolerance: 0.1,           // Very low risk tolerance
-        targetSelection: 'threatRemoval', // Remove threats first
-        positioningStyle: 'turtle',       // Stay near base, cluster
-        unitSelection: 'mostThreatened'   // Save endangered units first
+        riskTolerance: 0.1,
+        targetSelection: 'threatRemoval',
+        positioningStyle: 'turtle',
+        unitSelection: 'mostThreatened'
     },
 
     // =========================================================================
@@ -104,17 +104,17 @@ const heuristicProfiles = {
         priorityOrder: ['capture', 'position', 'kill', 'attack', 'dodge'],
         weights: {
             captureBonus: 10000,
-            killBonus: 1500,          // Values kills when setup is good
+            killBonus: 1500,
             attackBonus: 200,
             safeBonus: 500,
             threatPenalty: -300,
-            protectedRangeBonus: 300, // Values formation
-            friendlySixBonus: 200,
-            advanceBonus: 75,         // Calculated advancement
-            guardPenalty: -300,       // Guards when tactical
+            protectedRangeBonus: 400,
+            friendlySixBonus: 300,
+            advanceBonus: 120,
+            guardPenalty: -300,
             mergeOver6Penalty: -400,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5,
+            teamPositionWeight: 0.8,
             pressureWeight: 0.3
         },
         riskTolerance: 0.4,           // Moderate-low risk
