@@ -335,11 +335,11 @@
 				<button class="border border-black p-1 hover:bg-black hover:text-white"
 					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 					@click="initiateAction('RANGED_ATTACK')"
-				>RNG ATK</button>
+				>RANGE</button>
 				<button class="border border-black p-1 hover:bg-black hover:text-white"
 					x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 					@click="initiateAction('SPECIAL_ATTACK')"
-				>SPL ATK</button>
+				>SPELLS</button>
 				<button class="border border-black p-1 hover:bg-black hover:text-white"
 					x-show="options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 					@click="initiateAction('MERGE')"
