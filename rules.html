@@ -30,6 +30,7 @@
 		
 		#markdown-viewer {
 			line-height: 1.8;
+			font-family: monospace;
 		}
 		
 		#markdown-viewer h1,
@@ -95,23 +96,28 @@
 			background: #f5f5f5d4;
 			padding: 0.2rem 0.4rem;
 			border-radius: 3px;
-			font-family: 'Courier New', Courier, monospace;
+			font-family: monospace;
 			font-size: 0.9em;
+			font-weight: bolder;
 		}
-		
+		@media (max-width: 480px) {
+			#markdown-viewer code {
+				zoom: 0.80;
+			}
+		}
 		#markdown-viewer pre {
 			background: #e9dcc8d4;
 			padding: 1rem;
 			border-radius: 4px;
 			overflow-x: auto;
 			margin: 1rem 0;
-			padding-left: 100px;
+			place-self: center;
 		}
 		
 		#markdown-viewer pre code {
 			background: none;
 			padding: 0;
-			letter-spacing: 0.3rem;
+			letter-spacing: 0.5rem;
 		}
 		
 		#markdown-viewer img {

@@ -2,7 +2,7 @@
 
 ## *Tactical hexagon board game where players command armies of dice, using their values to determine their abilities.*
 
-## ***Foreword***
+### ***Foreword***
 
 *In the gaming world, as in life, adaptation is key. This philosophy, coupled with a deep admiration for the strategic depth of titles like Final Fantasy Tactics, the emergent battles of GBA Advanced Wars and Polytopia, sparked an idea of the authors. We yearned for a tactical game where every session felt truly unique, a vibrant tapestry woven from simple, familiar threads.*
 
@@ -10,9 +10,9 @@
 
 *Hex Dice was born from a desire to meld the simplicity of everyday components with deep strategic possibility, creating a casual yet fiercely tactical experience where your dice are the very essence of your command, and life is adaptation on an ever-changing battlefield.*
 
-## ***Development**: [Source](https://github.com/royalgarter/hexdice) / [Prototype](https://hexdice.phamthanh.me/)*
+***Development**: [Source](https://github.com/royalgarter/hexdice) / [Prototype](https://hexdice.phamthanh.me/)*
 
-## *Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)*
+**Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)**
 
 
 ---
@@ -87,27 +87,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * Moveable hex will be marked by + in diagrams below
 
 ```
-                    ^
-                 .     .
-              .     |     .
-           .     .     .     .
-        .     .     |     .     .
-     .     .     .     .     .     .
-        .     .     |     .     .
-     .     .     .     .     .     .
-        .     .     |     .     .
-     .     .     .     .     .     .
-        .     .     |     .     .
-     .     .     .     .     .     .
-        .     .     |     .     .
-     .     .     .     .     .     .
-        .     .     |     .     .
-     .     .     .     .     .     .
-        .     .     |     .     .
-           .     .     .     .
-              .     B     .
-                 .     .
-                    |
+                ^
+             .     .
+          .     |     .
+       .     .     .     .
+    .     .     |     .     .
+ .     .     .     .     .     .
+    .     .     |     .     .
+ .     .     .     .     .     .
+    .     .     |     .     .
+ .     .     .     .     .     .
+    .     .     |     .     .
+ .     .     .     .     .     .
+    .     .     |     .     .
+ .     .     .     .     .     .
+    .     .     |     .     .
+ .     .     .     .     .     .
+    .     .     |     .     .
+       .     .     .     .
+          .     B     .
+             .     .
+                |
 ```
 
 #### Dice 1 (Fencer)
@@ -115,27 +115,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * Can move up to 2 steps in any direction (BFS pattern).
 
 ```
-                    .
-                 .     .
-              .     .     .
-           .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     +     .     .
-     .     .     +     +     .     .
-        .     +     +     +     .
-     .     +     +     +     +     .
-        +     +     1     +     +
-     .     +     +     +     +     .
-        .     +     +     +     .
-     .     .     +     +     .     .
-        .     .     +     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-           .     .     .     .
-              .     .     .
-                 .     .
-                    .
+                .
+             .     .
+          .     .     .
+       .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     +     .     .
+ .     .     +     +     .     .
+    .     +     +     +     .
+ .     +     +     +     +     .
+    +     +     1     +     +
+ .     +     +     +     +     .
+    .     +     +     +     .
+ .     .     +     +     .     .
+    .     .     +     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+       .     .     .     .
+          .     .     .
+             .     .
+                .
 ```
 
 #### Dice 2 (Archer)
@@ -146,27 +146,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Engaged Restriction**: Cannot perform ranged attacks if an enemy unit is in an adjacent hex.
 
 ```
-                    .
-                 .     .
-              .     .     .
-           .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     x     .     .
-     .     .     x     x     .     .
-        .     x     +     x     .
-     .     x     +     +     x     .
-        x     +     2     +     x
-     .     x     +     +     x     .
-        .     x     +     x     .
-     .     .     x     x     .     .
-        .     .     x     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-           .     .     .     .
-              .     .     .
-                 .     .
-                    .
+                .
+             .     .
+          .     .     .
+       .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     x     .     .
+ .     .     x     x     .     .
+    .     x     +     x     .
+ .     x     +     +     x     .
+    x     +     2     +     x
+ .     x     +     +     x     .
+    .     x     +     x     .
+ .     .     x     x     .     .
+    .     .     x     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+       .     .     .     .
+          .     .     .
+             .     .
+                .
 ```
 
 #### Dice 3 (Hussar)
@@ -174,27 +174,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * Can jump over units.
 
 ```
-                    .
-                 .     .
-              .     .     .
-           .     .     .     .
-        .     .     .     .     .
-     .     .     +     +     .     .
-        .     +     ▪     +     .
-     .     .     .     .     .     .
-        .     ▪     ▪     ▪     .
-     .     +     ▪     ▪     +     .
-        .     .     3     .     .
-     .     +     ▪     ▪     +     .
-        .     ▪     ▪     ▪     .
-     .     .     .     .     .     .
-        .     +     ▪     +     .
-     .     .     +     +     .     .
-        .     .     .     .     .
-           .     .     .     .
-              .     .     .
-                 .     .
-                    .
+                .
+             .     .
+          .     .     .
+       .     .     .     .
+    .     .     .     .     .
+ .     .     +     +     .     .
+    .     +     ▪     +     .
+ .     .     .     .     .     .
+    .     ▪     ▪     ▪     .
+ .     +     ▪     ▪     +     .
+    .     .     3     .     .
+ .     +     ▪     ▪     +     .
+    .     ▪     ▪     ▪     .
+ .     .     .     .     .     .
+    .     +     ▪     +     .
+ .     .     +     +     .     .
+    .     .     .     .     .
+       .     .     .     .
+          .     .     .
+             .     .
+                .
 ```
 
 #### Dice 4 (Knight)
@@ -202,54 +202,54 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * Can move up to 3 steps along the four diagonal axes (forming an 'X' pattern).
 
 ```
-                    .
-                 .     .
-              .     .     .
-           .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     +     .     .     +     .
-        .     +     .     +     .
-     .     .     +     +     .     .
-        .     .     4     .     .
-     .     .     +     +     .     .
-        .     +     .     +     .
-     .     +     .     .     +     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-           .     .     .     .
-              .     .     .
-                 .     .
-                    .
+                .
+             .     .
+          .     .     .
+       .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     +     .     .     +     .
+    .     +     .     +     .
+ .     .     +     +     .     .
+    .     .     4     .     .
+ .     .     +     +     .     .
+    .     +     .     +     .
+ .     +     .     .     +     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+       .     .     .     .
+          .     .     .
+             .     .
+                .
 ```
 
 #### Dice 5 (Tanker)
 * Can move to any adjacent hex (1 step BFS).
 
 ```
-                    .
-                 .     .
-              .     .     .
-           .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     +     .     .
-     .     .     +     +     .     .
-        .     +     5     +     .
-     .     .     +     +     .     .
-        .     .     +     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-           .     .     .     .
-              .     .     .
-                 .     .
-                    .
+                .
+             .     .
+          .     .     .
+       .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     +     .     .
+ .     .     +     +     .     .
+    .     +     5     +     .
+ .     .     +     +     .     .
+    .     .     +     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+       .     .     .     .
+          .     .     .
+             .     .
+                .
 ```
 
 #### Dice 6 (Oracle)
@@ -262,27 +262,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Engaged Casting**: The Oracle **can cast spells while an enemy is adjacent**, preventing enemies from shutting it down simply by standing next to it.
 
 ```
-                    .
-                 .     .
-              .     .     .
-           .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     +     .     .
-     .     .     +     +     .     .
-        .     +     6     +     .
-     .     .     +     +     .     .
-        .     .     +     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-           .     .     .     .
-              .     .     .
-                 .     .
-                    .
+                .
+             .     .
+          .     .     .
+       .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     +     .     .
+ .     .     +     +     .     .
+    .     +     6     +     .
+ .     .     +     +     .     .
+    .     .     +     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+       .     .     .     .
+          .     .     .
+             .     .
+                .
 ```
 
 **The "0-1-1-2-3" Mnemonic**:
@@ -296,25 +296,25 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * Player can deploy each single new unit in base or its adjacent hex
 
 ```
-                    R
-                 R     R
-              R     R     R
-           .     R     R     .
-        .     .     R     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     .     .     .
-     .     .     .     .     .     .
-        .     .     B     .     .
-           .     B     B     .
-              B     B     B
-                 B     B
-                    B
+                R
+             R     R
+          R     R     R
+       .     R     R     .
+    .     .     R     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     .     .     .
+ .     .     .     .     .     .
+    .     .     B     .     .
+       .     B     B     .
+          B     B     B
+             B     B
+                B
 ```
 
 ### **5\. Gameplay**
