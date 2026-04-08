@@ -1059,7 +1059,9 @@ function alpineHexDiceTacticGame() { return {
 
 		// Update hexes
 		mergingHex.unitId = null;
+		mergingHex.unit = null;
 		targetHex.unitId = newUnit.id;
+		targetHex.unit = newUnit;
 
 		this.addLog(`Merged into a new Dice ${newUnit.value}. ${newUnitCanAct ? "It may act this turn." : "It cannot act further this turn."}`, state);
 
@@ -1191,9 +1193,24 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !oracleHex || !targetHex) return;
 
-		// Swap positions
-		this.move(oracleUnit, oracleHex, targetHex, state);
-		this.move(targetUnit, targetHex, oracleHex, state);
+		// Manually swap positions to avoid the "move clears previous unit" bug
+		oracleHex.unit = targetUnit;
+		oracleHex.unitId = targetUnit.id;
+		targetHex.unit = oracleUnit;
+		targetHex.unitId = oracleUnit.id;
+
+		oracleUnit.lastHexId = oracleHexId;
+		oracleUnit.hexId = targetHexId;
+		targetUnit.lastHexId = targetHexId;
+		targetUnit.hexId = oracleHexId;
+
+		if (!state) {
+			this.trail.fromHex = oracleHex;
+			this.trail.toHex = targetHex;
+			this.trail.unit = oracleUnit;
+			this.trail.path = [];
+			this.trail.dist = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
+		}
 
 		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} (${oracleHex.q},${oracleHex.r})<->(${targetHex.q},${targetHex.r}).`, state);
 	},
