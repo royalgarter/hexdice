@@ -1917,7 +1917,7 @@ function alpineHexDiceTacticGame() { return {
 
 		// Attacker wins if armor is depleted OR attack beats effective armor
 		const isArmorDepleted = defenderUnit.armorReduction >= defenderBaseArmor;
-		const attackWins = attackerUnit.attack > defenderEffectiveArmor;
+		const attackWins = defenderUnit.isGuarding ? (attackerUnit.attack > defenderEffectiveArmor) : (attackerUnit.attack >= defenderEffectiveArmor);
 		const attackerWins = isArmorDepleted || attackWins;
 
 		// Set combat trail for visual feedback (all combats)
@@ -2072,6 +2072,20 @@ function alpineHexDiceTacticGame() { return {
 				p.isEliminated = true;
 				const reason = activeDice === 0 ? "annihilated" : "base captured";
 				this.addLog(`P${p.id + 1} (${p.color}) has been ${reason}!`, state);
+			}
+
+			if (baseCaptured) {
+				// Remove all units of eliminated player from the board
+				p.dice.forEach(d => {
+					if (d.isDeployed && !d.isDeath && d.hexId !== null) {
+						const hex = this.getHex(d.hexId, state);
+						if (hex) {
+							hex.unit = null;
+							hex.unitId = null;
+							d.isDeath = true;
+						}
+					}
+				});
 			}
 		});
 

@@ -258,7 +258,6 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
   * **Mend**: Remove **1 Armor Reduction** from the target unit.
-* **Glass Support**: With 0 Attack and 1 Armor, the Oracle cannot defeat units alone and is extremely vulnerable. It relies on friendly units for protection and its Swap spell for escape.
 * **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
 * **Oracle Sacrifice (Anti-Stalemate)**: When the Oracle is the **last remaining unit** for its player, it can perform a **Sacrifice** action to eliminate an **adjacent enemy Oracle**. Both Oracles are removed from the game. This mechanic prevents unwinnable stalemates when both players are down to only Oracles.
 
@@ -286,12 +285,12 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                 .
 ```
 
-**The "0-1-1-2-3" Mnemonic**:
+**The "0-0-1-2-3" Mnemonic**:
 * **0** - Attack
-* **1** - Armor
+* **0** - Armor
 * **1** - Distance (Movement)
 * **2** - Range (For Spells)
-* **3** - Spells in the Kit (Shield, Swap, Mend)
+* **3** - Spells (Shield, Swap, Mend)
 
 #### Two-Players Bases
 * Player can deploy each single new unit in base or its adjacent hex
@@ -391,8 +390,9 @@ Combat is deterministic and occurs when a unit enters an enemy hex or uses a spe
 * Guard charges decay by 1 after each combat the unit participates in.
 
 * **Attacker Wins** if:
-  1. **Attack ≥ Defender's Effective Armor**, OR
-  2. **Defender's Armor Reduction ≥ Defender's Base Armor** (Armor Depleted).
+  1. **Attack > Defender's Effective Armor** if Defender is guarding, OR
+  2. **Attack ≥ Defender's Effective Armor** if Defender is not guarding, OR
+  3. **Defender's Armor Reduction ≥ Defender's Base Armor** (Armor Depleted).
 * **On Success**: The defending unit is removed. The attacker moves into the hex (except for Ranged Attacks).
 * **On Failure**: Both units suffer **1 Armor Reduction**.
   - **Exception**: Ranged attackers do not suffer armor reduction on failure.
