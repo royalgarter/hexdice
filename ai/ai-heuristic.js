@@ -16,11 +16,11 @@
 // Default profile if none specified
 const DEFAULT_PROFILE = {
     name: "Baseline",
-    priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
+    priorityOrder: ['capture', 'kill', 'attack', 'dodge', 'position'],
     weights: {
         captureBonus: 10000,
         killBonus: 1000,
-        attackBonus: 100,
+        attackBonus: 300,
         safeBonus: 500,
         threatPenalty: -250,
         protectedRangeBonus: 100,
@@ -30,7 +30,15 @@ const DEFAULT_PROFILE = {
         mergeOver6Penalty: -500,
         backAndForthPenalty: -300,
         teamPositionWeight: 0.7,
-        pressureWeight: 0.3
+        pressureWeight: 0.5,
+        // Oracle spell weights (calibrated to not override unit actions)
+        criticalShieldBonus: 150,      // Save unit from death (dodge level)
+        predictiveShieldBonus: 60,     // Shield before attack (positioning level)
+        rescueSwapBonus: 80,           // Pull unit from danger (dodge level)
+        tacticalSwapBonus: 15,         // Reposition per hex (positioning level)
+        captureEnableBonus: 150,       // Swap enables capture next turn
+        criticalMendBonus: 120,        // Save from immediate death (dodge level)
+        predictiveMendBonus: 80        // Prevent death next turn (positioning level)
     },
     riskTolerance: 0.5,
     targetSelection: 'highestValue',
@@ -454,10 +462,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     if (unit.value === 2) {
         // Find nearest enemy from any opponent
         let nearestEnemyDist = Infinity;
-        const allEnemies = nextState.players.flatMap((p, idx) => 
+        const allEnemies = nextState.players.flatMap((p, idx) =>
             (idx === state.currentPlayerIndex || p.isEliminated) ? [] : p.dice.filter(d => d.isDeployed && !d.isDeath)
         );
-        
+
         const myHex = GAME.getHex(aiUnitNext.hexId, nextState);
         allEnemies.forEach(opp => {
             const oppHex = GAME.getHex(opp.hexId, nextState);
@@ -472,8 +480,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
     }
 
-    // Tanker (Dice 5) & Legate (Dice 6) Bodyguard logic
-    if (unit.value === 5 || unit.value === 6) {
+    // Tanker (Dice 5) frontline logic
+    if (unit.value === 5) {
         const myHex = GAME.getHex(aiUnitNext.hexId, nextState);
         const neighbors = GAME.getNeighbors(myHex, nextState);
         neighbors.forEach(n => {
@@ -498,45 +506,116 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                 // Friendly unit adjacent - provides some protection
                 analysis.isInProtectedRange = true;
                 analysis.score += w.protectedRangeBonus;
-
-                // Check if it's a Dice 6 (provides armor buff)
-                if (neighborUnit.value === 6) {
-                    analysis.nearFriendlySix = true;
-                    analysis.score += w.friendlySixBonus;
-                    break;
-                }
+                break;
             }
         }
     }
 
     // --- ORACLE (Dice 6) SPELL HEURISTICS ---
-    // Oracle is a support unit - evaluate spell casting opportunities
+    // Oracle is a support unit - evaluate spell casting opportunities with tactical prediction
     if (unit.value === 6) {
         const spellType = move.actionType;
+
+        // --- TACTICAL PREDICTION SYSTEM ---
+        // Predict which enemy units can attack next turn and calculate likely targets
+        const predictEnemyAttacks = (predictionState) => {
+            const threats = [];
+            const allEnemies = nextState.players.flatMap((p, idx) =>
+                (idx === state.currentPlayerIndex || p.isEliminated) ? [] : p.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn)
+            );
+
+            for (const enemy of allEnemies) {
+                const enemyHex = GAME.getHex(enemy.hexId, predictionState);
+                if (!enemyHex) continue;
+
+                // Calculate units this enemy can attack
+                const neighbors = GAME.getNeighbors(enemyHex, predictionState);
+                for (const neighbor of neighbors) {
+                    const targetUnit = GAME.getUnitOnHex(neighbor.id, predictionState);
+                    if (targetUnit && targetUnit.playerId === state.currentPlayerIndex) {
+                        const defenderArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, predictionState);
+                        const canKill = enemy.attack >= defenderArmor;
+                        threats.push({
+                            attacker: enemy,
+                            target: targetUnit,
+                            targetHexId: neighbor.id,
+                            canKill,
+                            attackValue: enemy.attack,
+                            defenderArmor: defenderArmor
+                        });
+                    }
+                }
+
+                // Ranged threats (Dice 2)
+                if (enemy.value === 2) {
+                    const validRanged = GAME.calcValidRangedTargets(enemy.hexId, predictionState);
+                    for (const targetHexId of validRanged) {
+                        const targetUnit = GAME.getUnitOnHex(targetHexId, predictionState);
+                        if (targetUnit && targetUnit.playerId === state.currentPlayerIndex) {
+                            const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, predictionState);
+                            threats.push({
+                                attacker: enemy,
+                                target: targetUnit,
+                                targetHexId,
+                                canKill: enemy.attack >= defenderArmor,
+                                attackValue: enemy.attack,
+                                defenderArmor,
+                                isRanged: true
+                            });
+                        }
+                    }
+                }
+            }
+            return threats;
+        };
+
+        // Get predicted threats for Shield evaluation
+        const predictedThreats = predictEnemyAttacks(nextState);
 
         if (spellType === 'SPELLCAST_SHIELD') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             if (targetUnit) {
-                // High priority: Shield threatened high-value units
                 const targetHex = GAME.getHex(move.targetHexId, nextState);
                 const neighbors = GAME.getNeighbors(targetHex, nextState);
-                let isThreatened = false;
+                let isCurrentlyThreatened = false;
 
+                // Check immediate threats
                 for (const neighbor of neighbors) {
                     const neighborUnit = GAME.getUnitOnHex(neighbor.id, nextState);
                     if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
-                        isThreatened = true;
+                        isCurrentlyThreatened = true;
                         break;
                     }
                 }
 
-                if (isThreatened && targetUnit.value >= 3) {
-                    // Shield only if target is valuable and threatened - barely better than positioning
-                    analysis.score += 10 + (targetUnit.value * 2);
+                // PREDICTIVE SHIELDING: Check if unit will be attacked next turn
+                const futureThreats = predictedThreats.filter(t => t.target.id === targetUnit.id);
+                const willBeKilled = futureThreats.some(t => t.canKill);
+                const willBeAttacked = futureThreats.length > 0;
+
+                // Score shielding based on urgency and unit value
+                // Calibrated to be lower than attack moves (attackBonus: 300)
+                if (willBeKilled) {
+                    // CRITICAL: Save high-value unit from death - comparable to dodge priority
+                    const urgencyScore = 150 + (targetUnit.value * 15);
+                    analysis.score += urgencyScore;
                     analysis.isSupportAction = true;
-                } else if (!isThreatened) {
-                    // Very low priority: Preemptive shielding
-                    analysis.score += 1;
+                } else if (willBeAttacked) {
+                    // PREDICTIVE: Shield before attack lands - positioning level
+                    const predictiveScore = 60 + (targetUnit.value * 8);
+                    analysis.score += predictiveScore;
+                    analysis.isSupportAction = true;
+                } else if (isCurrentlyThreatened && targetUnit.value >= 3) {
+                    // REACTIVE: Unit currently threatened - positioning level
+                    analysis.score += 50 + (targetUnit.value * 6);
+                    analysis.isSupportAction = true;
+                } else if (targetUnit.value >= 5) {
+                    // PROACTIVE: Shield high-value unit even without immediate threat
+                    analysis.score += 30 + (targetUnit.value * 3);
+                    analysis.isSupportAction = true;
+                } else {
+                    // LOW PRIORITY: Preemptive shielding of low-value units
+                    analysis.score += 5;
                     analysis.isSupportAction = true;
                 }
             }
@@ -547,11 +626,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
 
             if (targetUnit && oracleUnit) {
-                // Emergency escape - check oracle threat
                 const oracleHex = GAME.getHex(move.unitHexId, state);
+                const targetHex = GAME.getHex(move.targetHexId, state);
                 const oracleNeighbors = GAME.getNeighbors(oracleHex, state);
                 let oracleThreatened = false;
 
+                // Check if Oracle is in immediate danger
                 for (const neighbor of oracleNeighbors) {
                     const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
                     if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
@@ -563,23 +643,95 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     }
                 }
 
-                if (oracleThreatened) {
-                    // Score roughly equal to a good move forward, but not a priority
-                    analysis.score += w.advanceBonus * 1.5;
+                // PREDICTIVE: Check if Oracle will be threatened next turn
+                const oracleFutureThreats = predictedThreats.filter(t => t.target.id === oracleUnit.id);
+                const oracleWillBeKilled = oracleFutureThreats.some(t => t.canKill);
+
+                // EMERGENCY ESCAPE: Save Oracle from death
+                // Scored comparable to dodge moves (dodge is priority 4)
+                if (oracleThreatened || oracleWillBeKilled) {
+                    const escapeScore = oracleWillBeKilled ? 200 : 120;
+                    analysis.score += escapeScore;
                     analysis.isEscapeAction = true;
                     analysis.isSupportAction = true;
                 }
 
-                // Very low priority: Repositioning
-                if (targetUnit.value >= 4 && !oracleThreatened) {
-                    const targetHex = GAME.getHex(move.targetHexId, state);
-                    const opponentBase = opponentBases[0]?.baseHex;
-                    if (opponentBase) {
-                        const currentDist = GAME.axialDistance(targetHex.q, targetHex.r, opponentBase.q, opponentBase.r);
-                        const newDist = GAME.axialDistance(oracleHex.q, oracleHex.r, opponentBase.q, opponentBase.r);
+                // TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
+                // Scored at positioning level (lower than attacks)
+                if (!oracleThreatened && !oracleWillBeKilled) {
+                    const opponentBasesList = opponentBases.length > 0 ? opponentBases : 
+                        state.players.filter((p, idx) => idx !== state.currentPlayerIndex && !p.isEliminated)
+                            .map(p => ({ baseHex: GAME.getHex(p.baseHexId, state) })).filter(b => b.baseHex);
 
-                        if (newDist < currentDist) {
-                            analysis.score += w.advanceBonus * 0.1;
+                    // Check if target position is safer (defensive swap)
+                    const targetNeighbors = GAME.getNeighbors(targetHex, state);
+                    let targetThreatCount = 0;
+                    for (const neighbor of targetNeighbors) {
+                        const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                        if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
+                            targetThreatCount++;
+                        }
+                    }
+
+                    const oracleThreatCount = oracleNeighbors.filter(n => {
+                        const nu = GAME.getUnitOnHex(n.id, state);
+                        return nu && nu.playerId !== state.currentPlayerIndex;
+                    }).length;
+
+                    if (targetUnit.value >= 4) {
+                        // Score based on tactical value of repositioning
+                        let repositionScore = 0;
+
+                        // Check if target position is closer to enemy base (aggressive swap)
+                        if (opponentBasesList.length > 0) {
+                            const currentDist = GAME.axialDistance(targetHex.q, targetHex.r, 
+                                opponentBasesList[0].baseHex.q, opponentBasesList[0].baseHex.r);
+                            const newDist = GAME.axialDistance(oracleHex.q, oracleHex.r, 
+                                opponentBasesList[0].baseHex.q, opponentBasesList[0].baseHex.r);
+
+                            if (newDist < currentDist) {
+                                // Advancing valuable unit toward enemy base
+                                const advancementBonus = (currentDist - newDist) * 15;
+                                repositionScore += advancementBonus;
+                            }
+                        }
+
+                        if (targetThreatCount < oracleThreatCount) {
+                            // Moving to safer position
+                            const safetyBonus = (oracleThreatCount - targetThreatCount) * 30;
+                            repositionScore += safetyBonus;
+                        }
+
+                        // Check if swap enables capture next turn
+                        const targetAdjacentToBase = opponentBasesList.some(base => {
+                            const baseNeighbors = GAME.getNeighbors(base.baseHex, state);
+                            return baseNeighbors.some(n => n.id === oracleHex.id);
+                        });
+
+                        if (targetAdjacentToBase && targetUnit.value >= 2) {
+                            // Swap puts unit in position to capture next turn
+                            // High but not higher than actual capture
+                            repositionScore += 150;
+                        }
+
+                        if (repositionScore > 0) {
+                            analysis.score += repositionScore;
+                            analysis.isSupportAction = true;
+                        }
+                    }
+
+                    // Rescue operation: Pull wounded unit out of danger
+                    if (targetUnit.armorReduction > 0 || targetUnit.currentArmor <= 2) {
+                        const targetInDanger = targetNeighbors.some(n => {
+                            const nu = GAME.getUnitOnHex(n.id, state);
+                            return nu && nu.playerId !== state.currentPlayerIndex && 
+                                   nu.attack >= GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
+                        });
+
+                        if (targetInDanger) {
+                            // Rescue scored at dodge level
+                            const rescueScore = 80 + (targetUnit.value * 15);
+                            analysis.score += rescueScore;
                             analysis.isSupportAction = true;
                         }
                     }
@@ -590,33 +742,67 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         if (spellType === 'SPELLCAST_MEND') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             if (targetUnit && targetUnit.armorReduction > 0) {
-                // Only valuable if target is heavily damaged AND high-value
-                const armorReductionRatio = targetUnit.armorReduction / targetUnit.currentArmor;
-
-                if (armorReductionRatio >= 0.5 && targetUnit.value >= 4) {
-                    // Medium-low priority: Save valuable damaged unit
-                    analysis.score += w.attackBonus * 0.2 + (targetUnit.value * 2);
-                    analysis.isSupportAction = true;
-
-                    // Small bonus if unit is in immediate combat
-                    const targetHex = GAME.getHex(move.targetHexId, state);
-                    const neighbors = GAME.getNeighbors(targetHex, state);
-                    for (const neighbor of neighbors) {
-                        const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
-                        if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
-                            analysis.score += 10;
-                            break;
+                const targetHex = GAME.getHex(move.targetHexId, state);
+                const neighbors = GAME.getNeighbors(targetHex, state);
+                
+                // Check if unit is currently threatened
+                let isCurrentlyThreatened = false;
+                let canBeKilledByAdjacent = false;
+                for (const neighbor of neighbors) {
+                    const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                    if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
+                        isCurrentlyThreatened = true;
+                        const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
+                        if (neighborUnit.attack >= defenderArmor) {
+                            canBeKilledByAdjacent = true;
                         }
                     }
-                } else {
-                    // Very low priority: Minor repair
-                    analysis.score += 1;
+                }
+
+                // Check future threats
+                const futureThreats = predictedThreats.filter(t => t.target.id === targetUnit.id);
+                const willBeKilledNextTurn = futureThreats.some(t => t.canKill);
+
+                const armorReductionRatio = targetUnit.armorReduction / targetUnit.currentArmor;
+
+                // CRITICAL MEND: Save unit from immediate death
+                // Scored at dodge level (priority 4)
+                if (canBeKilledByAdjacent && targetUnit.value >= 3) {
+                    const mendPreventsDeath = (targetUnit.currentArmor - targetUnit.armorReduction + 1) >= targetUnit.currentArmor;
+                    if (mendPreventsDeath) {
+                        analysis.score += 120 + (targetUnit.value * 20);
+                        analysis.isSupportAction = true;
+                    }
+                }
+                // PREDICTIVE MEND: Prevent death next turn
+                // Scored at positioning level
+                else if (willBeKilledNextTurn && targetUnit.value >= 4) {
+                    const mendPreventsDeath = (targetUnit.currentArmor - targetUnit.armorReduction + 1) >= targetUnit.currentArmor;
+                    if (mendPreventsDeath) {
+                        analysis.score += 80 + (targetUnit.value * 12);
+                        analysis.isSupportAction = true;
+                    }
+                }
+                // TACTICAL MEND: Keep valuable unit combat-effective
+                // Low positioning score
+                else if (armorReductionRatio >= 0.5 && targetUnit.value >= 4) {
+                    analysis.score += 40 + (targetUnit.value * 5);
+                    analysis.isSupportAction = true;
+
+                    // Bonus if unit is in active combat
+                    if (isCurrentlyThreatened) {
+                        analysis.score += 15;
+                    }
+                }
+                // MINOR MEND: Low priority cleanup
+                else {
+                    analysis.score += 5;
                     analysis.isSupportAction = true;
                 }
             }
         }
 
-        // Penalty: Oracle should avoid being alone
+        // Oracle self-preservation: Penalize being alone (reduced from -100 to -50)
         const oracleHex = GAME.getHex(aiUnitNext.hexId, nextState);
         const oracleNeighbors = GAME.getNeighbors(oracleHex, nextState);
         let hasFriendlyNeighbor = false;
@@ -630,7 +816,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
 
         if (!hasFriendlyNeighbor) {
-            analysis.score -= 100; // Reduced penalty for isolation
+            analysis.score -= 50; // Reduced penalty - Oracle can operate independently when needed
         }
     }
 
