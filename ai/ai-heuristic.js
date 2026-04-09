@@ -16,7 +16,7 @@
 // Default profile if none specified
 const DEFAULT_PROFILE = {
     name: "Baseline",
-    priorityOrder: ['capture', 'kill', 'attack', 'dodge', 'position'],
+    priorityOrder: ['capture', 'kill', 'attack', 'dodge', 'position', 'spell'],
     weights: {
         captureBonus: 10000,
         killBonus: 1000,
@@ -36,9 +36,9 @@ const DEFAULT_PROFILE = {
 
         captureEnableBonus: 1000,       // Swap enables capture next turn
         spells: {
-            'SPELLCAST_SHIELD': 0.7,
-            'SPELLCAST_SWAP': 0.7,
-            'SPELLCAST_MEND': 0.9,
+            SPELLCAST_SHIELD: 0.7,
+            SPELLCAST_SWAP: 0.7,
+            SPELLCAST_MEND: 0.9,
         }
     },
     riskTolerance: 0.5,

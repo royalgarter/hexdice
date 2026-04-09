@@ -76,7 +76,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Movement:** The pattern the unit follows:
     - **`*`**: BFS movement (any direction, can move through empty hexes).
     - **`L`**: L-shaped jump (2 steps straight, then 1 step offset).
-    - **`X`**: Diagonal movement (only along the four diagonal axes).
+    - **`X`**: Diagonal movement (only along the six diagonal axes).
     - **`0`**: Stationary (cannot move except when attacking).
 
 **Dice Visualization Diagram**
@@ -206,19 +206,19 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
              .     .
           .     .     .
        .     .     .     .
-    .     .     .     .     .
+    .     .     +     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+    .     .     +     .     .
  .     +     .     .     +     .
-    .     +     .     +     .
+    .     +     +     +     .
  .     .     +     +     .     .
     .     .     4     .     .
  .     .     +     +     .     .
-    .     +     .     +     .
+    .     +     +     +     .
  .     +     .     .     +     .
-    .     .     .     .     .
+    .     .     +     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+    .     .     +     .     .
        .     .     .     .
           .     .     .
              .     .

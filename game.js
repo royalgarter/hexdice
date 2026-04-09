@@ -344,26 +344,34 @@ function alpineHexDiceTacticGame() { return {
 		// const allY = this.hexes.map(h => h.visualY);
 		// const minX = Math.min(...allX);
 		// const minY = Math.min(...allY);
-
-		hex.left = hex.visualX - this.hexGrid.minX + padding;
-		hex.top = hex.visualY - this.hexGrid.minY + padding;
-		hex.width = HEX_WIDTH - (padding << 1);
-		hex.height = HEX_HEIGHT - (padding << 1);
-
-		let style = [
-			`left: ${hex.left}px;`,
-			`top: ${hex.top}px;`,
-			`width: ${hex.width}px;`,
-			`height: ${hex.height}px;`,
-		];
-
 		const unit = this.getUnitOnHex(hex.id);
+
+		let style = hex.style;
+
+		if (!style) {
+			hex.left = hex.visualX - this.hexGrid.minX + padding;
+			hex.top = hex.visualY - this.hexGrid.minY + padding;
+			hex.width = HEX_WIDTH - (padding << 1);
+			hex.height = HEX_HEIGHT - (padding << 1);
+
+			style = [
+				`left: ${hex.left}px;`,
+				`top: ${hex.top}px;`,
+				`width: ${hex.width}px;`,
+				`height: ${hex.height}px;`,
+			];
+
+			hex.style = style;
+		}
+
+
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
 			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif");`);
 		}
+
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
 
@@ -1194,8 +1202,8 @@ function alpineHexDiceTacticGame() { return {
 
 		// Check if this Oracle is the last unit for its player
 		const player = (state || this).players[oracleUnit.playerId];
-		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
-		if (activeUnits.length !== 1) return false;
+		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath && d.value != 6);
+		if (activeUnits.length) return false;
 
 		// Check if there's an adjacent enemy Oracle
 		return this.getNeighbors(oracleHex, state).some(neighborHex => {
@@ -1533,8 +1541,8 @@ function alpineHexDiceTacticGame() { return {
 				const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
 				if (dist > range) return;
 
-				// Check Line of Sight
-				if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
+				// Skip Check Line of Sight for spell
+				// if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
 
 				const targetUnit = this.getUnitOnHex(potentialTargetHex.id, state);
 
@@ -1610,7 +1618,7 @@ function alpineHexDiceTacticGame() { return {
 		const primary = PLAYER_PRIMARY_AXIS[this.players.length][unit.playerId];
 		const mod3 = primary.i % 3;
 		const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3));
-		const axes_x = AXES.filter(({i}) => (i % 3) != mod3);
+		const axes_x = AXES || AXES.filter(({i}) => (i % 3) != mod3);
 
 		switch (unitStats.movement) {
 			case '|': // Dice 1 (Fencer) - primary axis forward, 1 step backward
