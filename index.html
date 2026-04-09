@@ -25,13 +25,13 @@
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
 		}
 		.bg-wood {
-			background-color: #C3A4712b;
+			background-color: #c3a47166;
 		}
 		.bg-hexdefault {
 			background-color: #896648;
 		}
 		.bg-hexselect {
-			background-color: #997852;
+			background-color: #F4ECD8;
 		}
 		.bg-hexmove {
 			background-color: #BD9B6B;
@@ -240,13 +240,13 @@
 				</g>
 			</svg>
 
-			<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-400 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div>
+			<div class="hex-unitstat fixed left-2 bottom-32 text-xs text-gray-600 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div>
 		</div>
 	</div>
 
 	<div id="game-controller" class="w-full flex flex-col items-center">
 		<!-- Game Setup -->
-		<div x-cloak x-show="phase.startsWith('SETUP')" class="bg-wood mb-2 p-4 border border-black text-center">
+		<div x-cloak x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-4 border border-black text-center">
 			<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 			<div x-show="phase === 'SETUP_ROLL'">
 				<div class="mb-4">
@@ -301,7 +301,7 @@
 		</div>
 
 		<!-- Game Over -->
-		<div x-cloak x-show="phase === 'GAME_OVER'" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
+		<div x-cloak x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 py-2 px-4 border border-black text-center">
 			<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 			<p x-text="winnerMessage"></p>
 			<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
@@ -310,13 +310,13 @@
 		</div>
 
 		<!-- Action Mode Info -->
-		<div x-cloak x-show="false && (actionMode !== null)" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
+		<div x-cloak x-show="false && (actionMode !== null)" class="bg-wood mb-1 py-2 px-4 border border-black text-center">
 			<p x-text="actionModeMessage()"></p>
 			<button @click="cancelAction()" class="mt-2 border border-black px-3 py-1 text-sm hover:bg-black hover:text-white">Cancel Action</button>
 		</div>
 
 		<!-- Game Info -->
-		<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-2 py-2 px-4 border border-black text-center">
+		<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 py-2 px-4 border border-black text-center">
 			<div class="my-2 space-x-2">
 				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
@@ -367,7 +367,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div x-show="showLog" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-24 overflow-y-auto border-t border-black" id="messageLogContainer">
+	<div x-show="showLog" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-36 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="[
 				(log.id == messageLog[0].id) ? 'font-bold' : '',

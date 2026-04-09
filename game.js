@@ -403,8 +403,8 @@ function alpineHexDiceTacticGame() { return {
 	/* --- SETUP --- */
 	setupStatusMessage() {
 		if (this.phase === 'SETUP_ROLL') return "Roll initial dice for both players.";
-		if (this.phase === 'SETUP_REROLL') return `Player ${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Reroll Phase.`;
-		if (this.phase === 'SETUP_DEPLOY') return `Player ${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Deployment Phase.`;
+		if (this.phase === 'SETUP_REROLL') return `P${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Reroll Phase.`;
+		if (this.phase === 'SETUP_DEPLOY') return `P${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Deployment Phase.`;
 		return "Setup";
 	},
 	rollInitialDice(playerId) {
@@ -430,7 +430,7 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 		player.initialRollDone = true;
-		this.addLog(`Player ${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
+		this.addLog(`P${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
 
 		if (this.players.every(p => p.initialRollDone)) {
 			this.phase = 'SETUP_REROLL';
@@ -471,13 +471,13 @@ function alpineHexDiceTacticGame() { return {
 			player.dice[diceIndex].armorReduction = 0; // Reset this on reroll
 			rerolledValues.push(newRoll);
 		});
-		this.addLog(`Player ${player.id + 1} rerolled ${this.diceToReroll.length} dice. New values: ${rerolledValues.join(', ')}`);
+		this.addLog(`P${player.id + 1} rerolled ${this.diceToReroll.length} dice. New values: ${rerolledValues.join(', ')}`);
 		player.rerollsUsed++;
 		this.diceToReroll = [];
 		this.nextPlayerSetupRerollOrDeploy();
 	},
 	skipReroll() {
-		this.addLog(`Player ${this.currentPlayerIndex + 1} skipped reroll.`);
+		this.addLog(`P${this.currentPlayerIndex + 1} skipped reroll.`);
 		this.players[this.currentPlayerIndex].rerollsUsed++; // Mark as reroll phase completed
 		this.diceToReroll = [];
 		this.nextPlayerSetupRerollOrDeploy();
@@ -537,7 +537,7 @@ function alpineHexDiceTacticGame() { return {
 		// targetHex.unit = dieToDeploy;
 		// targetHex.unitId = dieToDeploy.id;
 
-		this.addLog(`Player ${player.id + 1} deployed Dice #${dieToDeploy.value} to hex ${hexId} [${targetHex.q}, ${targetHex.r}]`);
+		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}](${targetHex.q}, ${targetHex.r})`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 
 		// Check if current player has deployed all dice
@@ -548,7 +548,7 @@ function alpineHexDiceTacticGame() { return {
 			if (nextDeployPlayer) {
 				this.currentPlayerIndex = nextDeployPlayer.id;
 				this.selectedDieToDeploy = this.players[this.currentPlayerIndex].dice.findIndex(d => !d.isDeployed);
-				this.addLog(`Player ${this.currentPlayerIndex + 1} turn to deploy`);
+				this.addLog(`P${this.currentPlayerIndex + 1} turn to deploy`);
 			} else {
 				this.startGamePlay();
 			}
@@ -917,7 +917,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		// this.addLog(`Player ${attackerUnit.playerId + 1} attempts to move Dice ${attackerUnit.value} from (${attackerHex.q},${attackerHex.r}) to (${defenderHex.q},${defenderHex.r}).`, state);
+		// this.addLog(`P${attackerUnit.playerId + 1} attempts to move Dice ${attackerUnit.value} from (${attackerHex.q},${attackerHex.r}) to (${defenderHex.q},${defenderHex.r}).`, state);
 		attackerUnit.isGuarding = false;
 
 		if (defenderUnit) { // Moving into an enemy occupied hex
@@ -1280,12 +1280,15 @@ function alpineHexDiceTacticGame() { return {
 		// this.addLog(`AI persona: ${choice}`);
 		// this['performAI_' + choice]();
 
-		console.time('performAITurn')
+		// console.time('performAITurn')
 		performAIByWeight(this);
 
 		this.deselectUnit();
-		this.endTurn();
-		console.timeEnd('performAITurn')
+
+		// this.addLog('currentPlayerIndex' + this.currentPlayerIndex);
+
+		// this.endTurn();
+		// console.timeEnd('performAITurn')
 	},
 
 	/* --- CALCULATE --- */
@@ -1873,7 +1876,7 @@ function alpineHexDiceTacticGame() { return {
 		if (state.phase !== 'PLAYER_TURN') return;
 
 		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
-		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
+		this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
 		// this.addLog(`---`, isState ? state : undefined);
 
 		this.deselectUnit(state); // Clear selection
@@ -1926,7 +1929,7 @@ function alpineHexDiceTacticGame() { return {
 			if (activeDice === 0 || baseCaptured) {
 				p.isEliminated = true;
 				const reason = activeDice === 0 ? "annihilated" : "base captured";
-				this.addLog(`Player ${p.id + 1} (${p.color}) has been ${reason}!`, state);
+				this.addLog(`P${p.id + 1} (${p.color}) has been ${reason}!`, state);
 			}
 		});
 
@@ -1934,7 +1937,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (remainingPlayers.length === 1) {
 			const winner = remainingPlayers[0];
-			this.gameOver(winner.id, `Player ${winner.id + 1} is the last one standing!`);
+			this.gameOver(winner.id, `P${winner.id + 1} is the last one standing!`);
 		} else if (remainingPlayers.length === 0) {
 			this.gameOver(-1, "All players eliminated! It's a draw!");
 		}
@@ -1944,7 +1947,7 @@ function alpineHexDiceTacticGame() { return {
 		if (winnerPlayerIndex === -1) { // Draw
 			 this.winnerMessage = message;
 		} else {
-			this.winnerMessage = `Player ${winnerPlayerIndex + 1} (${this.players[winnerPlayerIndex].color}) wins! ${message}`;
+			this.winnerMessage = `P${winnerPlayerIndex + 1} (${this.players[winnerPlayerIndex].color}) wins! ${message}`;
 		}
 		this.addLog(`Game Over: ${this.winnerMessage}`);
 	},
