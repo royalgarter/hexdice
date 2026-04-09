@@ -21,24 +21,30 @@ const DEFAULT_PROFILE = {
         captureBonus: 10000,
         killBonus: 1000,
         attackBonus: 300,
-        safeBonus: 500,
-        threatPenalty: -250,
-        protectedRangeBonus: 100,
+        safeBonus: 200,
         friendlySixBonus: 150,
-        advanceBonus: 80,
+        advanceBonus: 100,
+        protectedRangeBonus: 100,
+
+        threatPenalty: -250,
         guardPenalty: -500,
         mergeOver6Penalty: -500,
-        backAndForthPenalty: -300,
-        teamPositionWeight: 0.7,
-        pressureWeight: 0.5,
+        backAndForthPenalty: -1000,
+        
+        teamPositionWeight: 0.8,
+        pressureWeight: 0.8,
+
         // Oracle spell weights (calibrated to not override unit actions)
-        criticalShieldBonus: 150,      // Save unit from death (dodge level)
-        predictiveShieldBonus: 60,     // Shield before attack (positioning level)
+        criticalShieldBonus: 60,      // Save unit from death (dodge level)
+        predictiveShieldBonus: 10,     // Shield before attack (positioning level)
+        
         rescueSwapBonus: 80,           // Pull unit from danger (dodge level)
         tacticalSwapBonus: 15,         // Reposition per hex (positioning level)
-        captureEnableBonus: 150,       // Swap enables capture next turn
-        criticalMendBonus: 120,        // Save from immediate death (dodge level)
-        predictiveMendBonus: 80        // Prevent death next turn (positioning level)
+        
+        criticalMendBonus: 100,        // Save from immediate death (dodge level)
+        predictiveMendBonus: 50,        // Prevent death next turn (positioning level)
+
+        captureEnableBonus: 1000,       // Swap enables capture next turn
     },
     riskTolerance: 0.5,
     targetSelection: 'highestValue',
