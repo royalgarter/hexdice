@@ -11,7 +11,7 @@
 	<meta name="description" content="Hex Dice">
 	<meta name="keywords" content="boardgame,hexagon,dice">
 	<meta name="theme-color" content="#ffffff">
-	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
 	<meta name="apple-mobile-web-app-title" content="Hex Dice">
 	<link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
@@ -82,32 +82,32 @@
 		}
 		@media (max-width: 768px) {
 			.hex-grid-container {
-				zoom: 0.95;
+				zoom: 1.05;
 			}
 		}
 		@media (max-width: 640px) {
 			.hex-grid-container {
-				zoom: 0.90;
+				zoom: 1;
 			}
 		}
 		@media (max-width: 540px) {
 			.hex-grid-container {
-				zoom: 0.85;
+				zoom: 0.95;
 			}
 		}
 		@media (max-width: 480px) {
 			.hex-grid-container {
-				zoom: 0.80;
+				zoom: 0.85;
 			}
 		}
 		@media (max-width: 400px) {
 			.hex-grid-container {
-				zoom: 0.75;
+				zoom: 0.80;
 			}
 		}
 		@media (max-width: 360px) {
 			.hex-grid-container {
-				zoom: 0.7;
+				zoom: 0.75;
 			}
 		}
 	</style>
@@ -165,7 +165,7 @@
 		<!-- Hex Grid -->
 		<div class="hex-grid-container relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
-				<div class="hexagon shadow-md absolute flex items-center justify-center cursor-pointer hover:opacity-80"
+				<div class="hexagon shadow-md absolute flex items-center justify-center cursor-pointer __hover:opacity-80"
 					:class="hexColor(hex)"
 					:style="hexStyle(hex, 1)"
 					:data-id="hex.id"
@@ -179,7 +179,6 @@
 					>
 						<span style="top:-8px;right:-8px;color:#20ee8099" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
 
-						<!-- @mouseenter="hex.unitstat=true" @mouseleave="hex.unitstat=false" -->
 						<span class="text-lg invisible"
 							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
 							x-show="getUnitOnHex(hex.id)"
@@ -187,8 +186,8 @@
 						>
 						</span>
 
-						<span style="top:4px;right:-22px;" class="absolute text-blue-700"
-							x-show="getUnitOnHex(hex.id)?.isGuarding">⛨
+						<span style="top:4px;right:18px;" class="absolute text-blue-900 font-bold"
+							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'"> 
 						</span>
 						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
 							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"

@@ -255,7 +255,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 #### Dice 6 (Oracle)
 * Can move to any adjacent hex (1 step BFS).
 * **Spellcast Action**: When activated, the Oracle can cast one of three spells on a **target friendly unit** within **Range 2** (requires Line of Sight):
-  * **Shield**: Target unit enters **Guard Mode** (+1 Effective Armor).
+  * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
   * **Mend**: Remove **1 Armor Reduction** from the target unit.
 * **Glass Support**: With 0 Attack and 1 Armor, the Oracle cannot defeat units alone and is extremely vulnerable. It relies on friendly units for protection and its Swap spell for escape.
@@ -346,9 +346,10 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 
 * ##### **Guard**
 
-  * Choose one of your units.  
-  * Declare “Activate Guard Mode” to add **+1 Effective Armor**.
-  * The unit stays in its current hex. Guard Mode is automatically deactivated if the unit moves next turn.
+  * Choose one of your units that is **not currently guarding**.
+  * Activate **Guard Mode** to gain **1 Shield Charge** (+1 Effective Armor).
+  * The unit stays in its current hex. The charge absorbs **one attack** without taking Armor Reduction, then expires.
+  * **Note**: A unit cannot stack Guard charges manually. Use the Oracle's **Shield** spell to grant **2 charges**.
   * Action complete. This unit cannot Move or Attack this turn.
 
 * ##### **Ranged Attack (Dice 2\)**
@@ -364,7 +365,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * Choose one of your Dice 6 Oracle units.
   * **Select a Spell**: Choose one of three spells - Shield, Swap, or Mend.
   * **Target**: Choose any single **friendly** unit within **Range 2** (requires Line of Sight).
-  * **Shield**: Target unit enters **Guard Mode** (+1 Effective Armor).
+  * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks).
   * **Swap**: Oracle and target unit **exchange positions**.
   * **Mend**: Remove **1 Armor Reduction** from target unit.
   * **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).
@@ -384,7 +385,10 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 Combat is deterministic and occurs when a unit enters an enemy hex or uses a special/ranged attack.
 
 **Effective Armor calculation:**
-`Base Armor + Guard Bonus (+1) - Armor Reduction`.
+`Base Armor + Guard Charges (0-2) - Armor Reduction`.
+
+* Each **Guard Charge** provides +1 Effective Armor and **absorbs one attack** without applying Armor Reduction to the defender.
+* Guard charges decay by 1 after each combat the unit participates in.
 
 * **Attacker Wins** if:
   1. **Attack ≥ Defender's Effective Armor**, OR

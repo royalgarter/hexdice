@@ -35,11 +35,11 @@ const DEFAULT_PROFILE = {
         pressureWeight: 0.8,
 
         // Oracle spell weights (calibrated to not override unit actions)
-        criticalShieldBonus: 60,      // Save unit from death (dodge level)
-        predictiveShieldBonus: 10,     // Shield before attack (positioning level)
+        criticalShieldBonus: 5,      // Save unit from death (dodge level)
+        predictiveShieldBonus: 1,     // Shield before attack (positioning level)
         
-        rescueSwapBonus: 80,           // Pull unit from danger (dodge level)
-        tacticalSwapBonus: 15,         // Reposition per hex (positioning level)
+        rescueSwapBonus: 5,           // Pull unit from danger (dodge level)
+        tacticalSwapBonus: 1,         // Reposition per hex (positioning level)
         
         criticalMendBonus: 100,        // Save from immediate death (dodge level)
         predictiveMendBonus: 50,        // Prevent death next turn (positioning level)
@@ -146,7 +146,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     }
 
     if (verbose) {
-        console.log(`AI (Heuristic: ${profile.name}) thinking...`);
+        // console.log(`AI (Heuristic: ${profile.name}) thinking...`);
     }
 
     const state = GAME.cloneState();

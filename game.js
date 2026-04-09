@@ -89,7 +89,7 @@ const PLAYER_CONFIG = [
 	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-600' },
 	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-600' },
 	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-600' },
-	{ id: 4, color: 'Yellow', sprite: 'yellow', bg: 'bg-hexyellow', logColor: 'text-yellow-600' },
+	{ id: 4, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-600' },
 	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-600' },
 ];
 
@@ -424,7 +424,7 @@ function alpineHexDiceTacticGame() { return {
 				isDeployed: false,
 				hexId: null,
 				hasMovedOrAttackedThisTurn: false,
-				isGuarding: false,
+				isGuarding: 0,
 				isDeath: false,
 				actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
 			});
@@ -537,7 +537,7 @@ function alpineHexDiceTacticGame() { return {
 		// targetHex.unit = dieToDeploy;
 		// targetHex.unitId = dieToDeploy.id;
 
-		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}](${targetHex.q}, ${targetHex.r})`);
+		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}](${targetHex.q},${targetHex.r},${targetHex.s})`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 
 		// Check if current player has deployed all dice
@@ -936,7 +936,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		// this.addLog(`P${attackerUnit.playerId + 1} attempts to move Dice ${attackerUnit.value} from (${attackerHex.q},${attackerHex.r}) to (${defenderHex.q},${defenderHex.r}).`, state);
-		attackerUnit.isGuarding = false;
+		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
 
 		if (defenderUnit) { // Moving into an enemy occupied hex
 			if (defenderUnit.playerId === attackerUnit.playerId) {
@@ -977,7 +977,7 @@ function alpineHexDiceTacticGame() { return {
 		Object.assign(unit, UNIT_STATS[newRoll]); // Update stats
 		unit.currentArmor = UNIT_STATS[newRoll].armor;
 		// unit.armorReduction = 0; // Reset armor reduction
-		unit.isGuarding = false; // Rerolling removes guard
+		unit.isGuarding = 0; // Rerolling removes guard
 		unit.isRerolled = true; // Penalty: 0 effective armor until next turn starts
 
 		unit.hasMovedOrAttackedThisTurn = true;
@@ -991,11 +991,12 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(unitHexId, state);
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return;
 
-		unit.isGuarding = true;
+		if (unit.isGuarding < 1) unit.isGuarding = 1;
+
 		// Actual armor buff is applied during combat calculation
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
-		this.addLog(`P${unit.playerId + 1} D${unit.value} guarded (${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${unit.playerId + 1} D${unit.value} guarded [${unitHexId}](${targetHex.q},${targetHex.r},${targetHex.s}).`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state); // Though guard alone won't win
 	},
@@ -1070,7 +1071,7 @@ function alpineHexDiceTacticGame() { return {
 			isDeath: false,
 			hexId: targetHex.id,
 			hasMovedOrAttackedThisTurn: !newUnitCanAct, // If can act, it hasn't "completed" its action for the turn yet
-			isGuarding: false,
+			isGuarding: 0,
 			actionsTakenThisTurn: newUnitCanAct ? 0 : 1, // If cannot act, it counts as action taken
 		};
 		p.dice.push(newUnit);
@@ -1261,7 +1262,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
-		targetUnit.isGuarding = true;
+		targetUnit.isGuarding = 2;
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
 	},
 	/**
@@ -1774,7 +1775,7 @@ function alpineHexDiceTacticGame() { return {
 		if (defenderUnit.isRerolled) return 0; // Penalty for rerolling
 
 		let effectiveArmor = defenderUnit.currentArmor;
-		if (defenderUnit.isGuarding) effectiveArmor++;
+		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
 		effectiveArmor -= defenderUnit.armorReduction;
 
 		return Math.max(0, effectiveArmor);
@@ -1909,14 +1910,14 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		attackerUnit.isGuarding = false;
+		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
 
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
 
 		// Attacker wins if armor is depleted OR attack beats effective armor
 		const isArmorDepleted = defenderUnit.armorReduction >= defenderBaseArmor;
-		const attackWins = attackerUnit.attack >= defenderEffectiveArmor;
+		const attackWins = attackerUnit.attack > defenderEffectiveArmor;
 		const attackerWins = isArmorDepleted || attackWins;
 
 		// Set combat trail for visual feedback (all combats)
@@ -1947,17 +1948,24 @@ function alpineHexDiceTacticGame() { return {
 
 			// Ranged attacks don't receive counter-damage (attacker is at safe distance)
 			if (combatType === 'RANGED_ATTACK') {
-				this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+				if (defenderUnit.isGuarding <= 1) {
+					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+				}
 			} else {
-				this.applyDamage(attackerHexId, 1, state, false);
-				this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+				if (attackerUnit.isGuarding <= 1) {
+					this.applyDamage(attackerHexId, 1, state, false);
+				}
+
+				if (defenderUnit.isGuarding <= 1) {
+					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+				}
 			}
 		}
 
 		attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
 		attackerUnit.actionsTakenThisTurn++;
 
-		defenderUnit.isGuarding = false;
+		defenderUnit.isGuarding = 0;
 		// Deselect after combat resolution
 		this.deselectUnit();
 	},
@@ -2009,8 +2017,8 @@ function alpineHexDiceTacticGame() { return {
 
 		if (state.phase !== 'PLAYER_TURN') return;
 
-		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
-		this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
+		// state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
+		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
 		// this.addLog(`---`, isState ? state : undefined);
 
 		this.deselectUnit(state); // Clear selection
@@ -2026,7 +2034,7 @@ function alpineHexDiceTacticGame() { return {
 		state.turnCount++;
 		this.resetTurnActionsForPlayer(state.currentPlayerIndex, state);
 
-		state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
+		// state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
 		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1} turn started (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
 
 		this.checkWinConditions(state); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
