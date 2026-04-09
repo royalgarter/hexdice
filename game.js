@@ -344,34 +344,26 @@ function alpineHexDiceTacticGame() { return {
 		// const allY = this.hexes.map(h => h.visualY);
 		// const minX = Math.min(...allX);
 		// const minY = Math.min(...allY);
+
+		hex.left = hex.visualX - this.hexGrid.minX + padding;
+		hex.top = hex.visualY - this.hexGrid.minY + padding;
+		hex.width = HEX_WIDTH - (padding << 1);
+		hex.height = HEX_HEIGHT - (padding << 1);
+
+		let style = [
+			`left: ${hex.left}px;`,
+			`top: ${hex.top}px;`,
+			`width: ${hex.width}px;`,
+			`height: ${hex.height}px;`,
+		];
+
 		const unit = this.getUnitOnHex(hex.id);
-
-		let style = hex.style;
-
-		if (!style) {
-			hex.left = hex.visualX - this.hexGrid.minX + padding;
-			hex.top = hex.visualY - this.hexGrid.minY + padding;
-			hex.width = HEX_WIDTH - (padding << 1);
-			hex.height = HEX_HEIGHT - (padding << 1);
-
-			style = [
-				`left: ${hex.left}px;`,
-				`top: ${hex.top}px;`,
-				`width: ${hex.width}px;`,
-				`height: ${hex.height}px;`,
-			];
-
-			hex.style = style;
-		}
-
-
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
 			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif");`);
 		}
-
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
 
