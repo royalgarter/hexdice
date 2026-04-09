@@ -284,9 +284,14 @@ function runHeuristicGame(
     let winner: number | -1 = -1;
     let winnerReason = "Max turns reached";
     if (game.phase === "GAME_OVER") {
-        if (game.winnerMessage.includes("Player 1")) { winner = 0; winnerReason = game.winnerMessage; }
-        else if (game.winnerMessage.includes("Player 2")) { winner = 1; winnerReason = game.winnerMessage; }
-        else { winner = -1; winnerReason = game.winnerMessage; }
+        const winnerMatch = game.winnerMessage.match(/P(\d+)\s*\(.*?\)\s*wins!/);
+        if (winnerMatch) {
+            winner = parseInt(winnerMatch[1]) - 1;
+            winnerReason = game.winnerMessage;
+        } else if (game.winnerMessage.toLowerCase().includes("draw") || game.winnerMessage.includes("Mutual")) {
+            winner = -1;
+            winnerReason = game.winnerMessage;
+        }
     }
     logger.log(`Game ${gameNumber} ended: ${winnerReason}`, "result");
     return { winner, winnerReason, totalTurns: turnCount };

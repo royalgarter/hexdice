@@ -429,15 +429,14 @@ function runGame(
     // Determine winner
     let winner: number | -1 = -1;
     let winnerReason = "Max turns reached";
-    
+
     if (game.phase === "GAME_OVER") {
-        if (game.winnerMessage.includes("Player 1")) {
-            winner = 0;
+        // Match "P1", "P2", etc. from winner message
+        const winnerMatch = game.winnerMessage.match(/P(\d+)\s*\(.*?\)\s*wins!/);
+        if (winnerMatch) {
+            winner = parseInt(winnerMatch[1]) - 1; // Convert P1->0, P2->1, etc.
             winnerReason = game.winnerMessage;
-        } else if (game.winnerMessage.includes("Player 2")) {
-            winner = 1;
-            winnerReason = game.winnerMessage;
-        } else if (game.winnerMessage.includes("draw") || game.winnerMessage.includes("Mutual")) {
+        } else if (game.winnerMessage.toLowerCase().includes("draw") || game.winnerMessage.includes("Mutual")) {
             winner = -1;
             winnerReason = game.winnerMessage;
         }
