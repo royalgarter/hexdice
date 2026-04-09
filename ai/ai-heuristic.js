@@ -34,17 +34,12 @@ const DEFAULT_PROFILE = {
         teamPositionWeight: 0.8,
         pressureWeight: 0.8,
 
-        // Oracle spell weights (calibrated to not override unit actions)
-        criticalShieldBonus: 5,      // Save unit from death (dodge level)
-        predictiveShieldBonus: 1,     // Shield before attack (positioning level)
-        
-        rescueSwapBonus: 5,           // Pull unit from danger (dodge level)
-        tacticalSwapBonus: 1,         // Reposition per hex (positioning level)
-        
-        criticalMendBonus: 100,        // Save from immediate death (dodge level)
-        predictiveMendBonus: 50,        // Prevent death next turn (positioning level)
-
         captureEnableBonus: 1000,       // Swap enables capture next turn
+        spells: {
+            'SPELLCAST_SHIELD': 0.7,
+            'SPELLCAST_SWAP': 0.7,
+            'SPELLCAST_MEND': 0.9,
+        }
     },
     riskTolerance: 0.5,
     targetSelection: 'highestValue',
@@ -342,11 +337,19 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                         positionScore += w.guardPenalty;
                     }
 
-                    m.positionScore = positionScore;
+                    if (m.move.actionType.includes('SPELLCAST_')) {
+                        positionScore = positionScore * (w.spells[m.move.actionType] || 1)
+                    }
+
+                    m.positionScore = Math.floor(positionScore);
                 });
 
                 strategicMoves.sort((a, b) => b.positionScore - a.positionScore);
-                if (verbose) console.log(`AI Heuristic (${profile.name}): Strategic positioning`, strategicMoves[0].move);
+                if (verbose) 
+                    console.log(`AI Heuristic (${profile.name}): Strategic positioning`
+                        , strategicMoves[0].move, strategicMoves[0].positionScore
+                        , strategicMoves.map(x => x.move.actionType + x.positionScore)
+                    );
                 applyMove(GAME, strategicMoves[0].move);
                 return true;
             }
