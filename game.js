@@ -59,13 +59,14 @@ const BOARD_NUM = [
 	`                        069`,
 ].join('\n');
 
+// BIND-EDIT rules.md: ### **4. Dice Soldiers (Unit Types)**
 const UNIT_STATS = {
 	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
-	2: { name: "Archer", attack: 2, armor: 0, range: 2, distance: 2, movement: '*' },
+	2: { name: "Archer", attack: 2, armor: 1, range: 2, distance: 1, movement: '*' },
 	3: { name: "Hussar", attack: 3, armor: 0, range: 0, distance: 3, movement: 'L' },
 	4: { name: "Knight", attack: 2, armor: 1, range: 0, distance: 3, movement: 'X' },
 	5: { name: "Tanker", attack: 1, armor: 4, range: 0, distance: 1, movement: '*' },
-	6: { name: "Legate", attack: 1, armor: 5, range: 1, distance: 0, movement: '0' },
+	6: { name: "Oracle", attack: 0, armor: 0, range: 2, distance: 1, movement: '*' },
 };
 const AXES = [
 	{i: 0, q: +1, r: -1, name: '2h'},
@@ -80,13 +81,16 @@ const PLAYER_PRIMARY_AXIS = {
 	2: [ AXES[5], AXES[2] ],
 	3: [ AXES[4], AXES[2], AXES[0] ],
 	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
+	5: [ AXES[5], AXES[3], AXES[0], AXES[2], AXES[4] ],
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 const PLAYER_CONFIG = [
-	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-500' },
-	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-500' },
-	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-500' },
-	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-500' },
+	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-600' },
+	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-600' },
+	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-600' },
+	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-600' },
+	{ id: 4, color: 'Yellow', sprite: 'yellow', bg: 'bg-hexyellow', logColor: 'text-yellow-600' },
+	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-600' },
 ];
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
@@ -119,7 +123,9 @@ function alpineHexDiceTacticGame() { return {
 	messageLog: [],
 	logCounter: 0,
 	winnerMessage: "",
-	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET'
+	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
+	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'MEND'
+	showLog: true,
 	debug: {
 		quiet: false,
 		coordinate: new URLSearchParams(location.search).get('mode')?.includes('coordinate'),
@@ -180,6 +186,7 @@ function alpineHexDiceTacticGame() { return {
 		this.selectedUnitHexId = null;
 		this.selectedDieToDeploy = null;
 		this.actionMode = null;
+		this.oracleSelectedSpell = null;
 		this.validMoves = [];
 		this.validMerges = [];
 		this.validTargets = [];
@@ -205,7 +212,7 @@ function alpineHexDiceTacticGame() { return {
 					const x = HEX_WIDTH * 3/4 * q;
 					const y = HEX_HEIGHT * (r + q / 2);
 
-					this.hexes.push({ id, q, r, s: -q-r, unitId: null, isP1Base: false, isP2Base: false, visualX: x, visualY: y });
+					this.hexes.push({ id, q, r, s: -q-r, unitId: null, visualX: x, visualY: y });
 					this.hexesQR[(q * 1e3) + r] = id;
 
 					id++;
@@ -355,7 +362,7 @@ function alpineHexDiceTacticGame() { return {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
 			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/fe_fates_6_players/d${value}_${spriteColor}.gif");`);
+			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
@@ -641,6 +648,19 @@ function alpineHexDiceTacticGame() { return {
 
 		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 	},
+	/**
+	 * Initiate Oracle spell selection UI prompt.
+	 * Asks player to choose between Shield, Swap, Mend spells, or cancel.
+	 */
+	initiateOracleSpellSelection() {
+		this.actionMode = 'ORACLE_SPELL_SELECT';
+		this.addLog("Oracle Spell - Choose a spell from the control panel.");
+	},
+	selectOracleSpell(spell) {
+		this.oracleSelectedSpell = spell;
+		this.actionMode = 'SPELLCAST';
+		this.addLog(`Oracle will cast ${spell}. Select a friendly unit within Range 2.`);
+	},
 	deselectUnit(state) {
 		state = state || this;
 
@@ -681,6 +701,12 @@ function alpineHexDiceTacticGame() { return {
 			 if (this.validTargets.length === 0) {
 				this.addLog("No valid targets for Special Attack.");
 				// this.cancelAction();
+			} else {
+				// Oracle: Prompt for spell selection when SPECIAL_ATTACK action is initiated
+				const unit = this.getUnitOnHex(this.selectedUnitHexId);
+				if (unit && unit.value === 6) {
+					this.initiateOracleSpellSelection();
+				}
 			}
 		} else if (actionType === 'BRAVE_CHARGE') {
 			this.validMoves = this.calcValidBraveChargeMoves(this.selectedUnitHexId);
@@ -695,6 +721,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'RANGED_ATTACK') return "Select an ranged enemy unit to target.";
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
+		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
 		return "";
 	},
 	cancelAction() {
@@ -724,15 +751,32 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
+		// Oracle spell casting
+		if (action === 'SPELLCAST' && unit.value === 6 && this.validTargets.includes(targetHexId)) {
+			if (this.oracleSelectedSpell && target && target.playerId === unit.playerId) {
+				this.performSpellCast(this.selectedUnitHexId, targetHexId, this.oracleSelectedSpell);
+				this.oracleSelectedSpell = null;
+				this.endTurn();
+				return;
+			}
+		}
+
 		if (unit.value == 2 && this.validTargets.includes(targetHexId)) {
 			this.performRangedAttack(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
 		} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
-			this.performComandConquer(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
-			return;
-		} else if (this.validMoves.includes(targetHexId)) {
+			// Legacy: only if no spell was selected (Oracle can still move if spell cancelled)
+			if (!this.oracleSelectedSpell) {
+				// Oracle movement is handled by validMoves below
+			} else {
+				this.addLog("Invalid spell target.");
+				this.oracleSelectedSpell = null;
+				return;
+			}
+		}
+
+		if (this.validMoves.includes(targetHexId)) {
 			if (unit.playerId == target?.playerId) {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
 				// New merge unit could take action if sum > 6
@@ -1015,7 +1059,9 @@ function alpineHexDiceTacticGame() { return {
 
 		// Update hexes
 		mergingHex.unitId = null;
+		mergingHex.unit = null;
 		targetHex.unitId = newUnit.id;
+		targetHex.unit = newUnit;
 
 		this.addLog(`Merged into a new Dice ${newUnit.value}. ${newUnitCanAct ? "It may act this turn." : "It cannot act further this turn."}`, state);
 
@@ -1054,6 +1100,140 @@ function alpineHexDiceTacticGame() { return {
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
 	},
+	/**
+	 * Perform Oracle spell casting action.
+	 * Routes to specific spell functions based on the spellType parameter.
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {number} targetHexId - Hex ID of the target friendly unit
+	 * @param {string} spellType - 'SHIELD', 'SWAP', or 'MEND'
+	 * @param {object} state - Optional game state for simulation
+	 */
+	performSpellCast(oracleHexId, targetHexId, spellType, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const targetUnit = this.getUnitOnHex(targetHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+
+		if (!oracleUnit || oracleUnit.value !== 6) {
+			this.addLog("Spell cast failed: Invalid Oracle unit.", state);
+			this.deselectUnit(state);
+			return;
+		}
+
+		if (!targetUnit || targetUnit.playerId !== oracleUnit.playerId) {
+			this.addLog("Spell cast failed: Must target a friendly unit.", state);
+			this.deselectUnit(state);
+			return;
+		}
+
+		// Check range (Range 2 for Oracle spells)
+		const distance = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
+		if (distance > oracleUnit.range) {
+			this.addLog("Spell cast failed: Target out of range.", state);
+			this.deselectUnit(state);
+			return;
+		}
+
+		// Check line of sight
+		if (!this.hasLineOfSight(oracleHex, targetHex, oracleHexId, state)) {
+			this.addLog("Spell cast failed: Line of sight blocked.", state);
+			this.deselectUnit(state);
+			return;
+		}
+
+		switch (spellType) {
+			case 'SHIELD':
+				this.performShieldSpell(oracleHexId, targetHexId, state);
+				break;
+			case 'SWAP':
+				this.performSwapSpell(oracleHexId, targetHexId, state);
+				break;
+			case 'MEND':
+				this.performMendSpell(oracleHexId, targetHexId, state);
+				break;
+			default:
+				this.addLog("Spell cast failed: Invalid spell type.", state);
+				this.deselectUnit(state);
+				return;
+		}
+
+		oracleUnit.hasMovedOrAttackedThisTurn = true;
+		oracleUnit.actionsTakenThisTurn++;
+		this.deselectUnit(state);
+		this.checkWinConditions(state);
+	},
+	/**
+	 * Shield Spell: Target unit enters Guard Mode (+1 Effective Armor).
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {number} targetHexId - Hex ID of the target friendly unit
+	 * @param {object} state - Optional game state for simulation
+	 */
+	performShieldSpell(oracleHexId, targetHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const targetUnit = this.getUnitOnHex(targetHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+
+		if (!targetUnit || !targetHex || !oracleHex) return;
+
+		targetUnit.isGuarding = true;
+		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
+	},
+	/**
+	 * Swap Spell: Oracle and target friendly unit exchange positions.
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {number} targetHexId - Hex ID of the target friendly unit
+	 * @param {object} state - Optional game state for simulation
+	 */
+	performSwapSpell(oracleHexId, targetHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const targetUnit = this.getUnitOnHex(targetHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+
+		if (!oracleUnit || !targetUnit || !oracleHex || !targetHex) return;
+
+		// Manually swap positions to avoid the "move clears previous unit" bug
+		oracleHex.unit = targetUnit;
+		oracleHex.unitId = targetUnit.id;
+		targetHex.unit = oracleUnit;
+		targetHex.unitId = oracleUnit.id;
+
+		oracleUnit.lastHexId = oracleHexId;
+		oracleUnit.hexId = targetHexId;
+		targetUnit.lastHexId = targetHexId;
+		targetUnit.hexId = oracleHexId;
+
+		if (!state) {
+			this.trail.fromHex = oracleHex;
+			this.trail.toHex = targetHex;
+			this.trail.unit = oracleUnit;
+			this.trail.path = [];
+			this.trail.dist = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
+		}
+
+		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} (${oracleHex.q},${oracleHex.r})<->(${targetHex.q},${targetHex.r}).`, state);
+	},
+	/**
+	 * Mend Spell: Remove 1 Armor Reduction from target friendly unit.
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {number} targetHexId - Hex ID of the target friendly unit
+	 * @param {object} state - Optional game state for simulation
+	 */
+	performMendSpell(oracleHexId, targetHexId, state) {
+		const targetUnit = this.getUnitOnHex(targetHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+
+		if (!targetUnit || !targetHex || !oracleHex) return;
+
+		if (targetUnit.armorReduction > 0) {
+			targetUnit.armorReduction = Math.max(0, targetUnit.armorReduction - 1);
+			this.addLog(`P${oracleUnit.playerId+1} Oracle cast Mend on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Armor reduction: ${targetUnit.armorReduction}.`, state);
+		} else {
+			this.addLog(`P${oracleUnit.playerId+1} Oracle cast Mend on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). No armor reduction to remove.`, state);
+		}
+	},
 	performBraveCharge(attackerHexId, targetHexId, state) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const defenderUnit = this.getUnitOnHex(targetHexId, state);
@@ -1091,7 +1271,7 @@ function alpineHexDiceTacticGame() { return {
 		// Effect: Remove the Dice 1 unit
 		this.removeUnit(attackerHexId, state);
 		// Effect: Reduce target enemy unit's armor by 6
-		this.applyDamage(targetHexId, 6, state); // Apply 6 damage, handle unit removal if armor <= 0
+		this.applyDamage(targetHexId, 6, state, true); // Apply 6 damage, handle unit removal if armor <= 0
 
 		this.endTurn(state); // End the player's turn after the charge
 	},
@@ -1216,9 +1396,10 @@ function alpineHexDiceTacticGame() { return {
 	/**
 	 * Calculate valid targets for special attack (Dice 6 Legate Command & Conquer).
 	 * Only adjacent enemy units are valid targets.
+	 * For Oracle (Dice 6): targets friendly units within Range 2 for spell casting.
 	 * @param {number} attackerHexId - Hex ID of the attacking unit
 	 * @param {object} state - Optional game state for simulation
-	 * @param {boolean} isHovering - If true, show all adjacent hexes (for UI preview)
+	 * @param {boolean} isHovering - If true, show all valid targets (for UI preview)
 	 * @returns {number[]} Array of valid target hex IDs
 	 */
 	calcValidSpecialAttackTargets(attackerHexId, state, isHovering) {
@@ -1228,6 +1409,35 @@ function alpineHexDiceTacticGame() { return {
 		if (!attackerUnit || ![6].includes(attackerUnit.value) || !attackerHex) return [];
 		// DEPRECATED: if (!attackerUnit || ![1, 6].includes(attackerUnit.value) || !attackerHex) return [];
 
+		// Oracle (Dice 6): Spell targeting - target friendly units within Range 2
+		if (attackerUnit.value === 6) {
+			let targets = [];
+			const range = attackerUnit.range; // Range 2 for Oracle
+
+			(state || this).hexes.forEach(potentialTargetHex => {
+				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
+
+				const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
+				if (dist > range) return;
+
+				// Check Line of Sight
+				if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
+
+				const targetUnit = this.getUnitOnHex(potentialTargetHex.id, state);
+
+				// Oracle targets friendly units (for spells)
+				if (targetUnit && targetUnit.playerId === attackerUnit.playerId) {
+					targets.push(potentialTargetHex.id);
+				} else if (isHovering && dist <= range) {
+					// For hover preview, show all hexes in range
+					targets.push(potentialTargetHex.id);
+				}
+			});
+
+			return targets;
+		}
+
+		// Legacy behavior for other Dice 6 units (if any)
 		let targets = [];
 		this.getNeighbors(attackerHex, state).forEach(neighborHex => {
 			if (neighborHex) {
@@ -1428,14 +1638,6 @@ function alpineHexDiceTacticGame() { return {
 
 		let effectiveArmor = defenderUnit.currentArmor;
 		if (defenderUnit.isGuarding) effectiveArmor++;
-
-		// Dice 6 (Legate) adjacent buff - check neighbors of defender
-		this.getNeighbors(this.getHex(defenderHexId, state), state).forEach(neighbor => {
-			const neighborUnit = this.getUnitOnHex(neighbor.id, state);
-			if (neighborUnit && neighborUnit.playerId === defenderUnit.playerId && neighborUnit.value === 6) {
-				effectiveArmor++;
-			}
-		});
 		effectiveArmor -= defenderUnit.armorReduction;
 
 		return Math.max(0, effectiveArmor);
@@ -1570,6 +1772,8 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
+		attackerUnit.isGuarding = false;
+
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
 
@@ -1599,26 +1803,24 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
 			}
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
-			attackerUnit.hasMovedOrAttackedThisTurn = true;
-			attackerUnit.actionsTakenThisTurn++;
-
 			this.trailAttack = {};
-
 		} else { // Attacker fails
 			this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
 			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
 
 			// Ranged attacks don't receive counter-damage (attacker is at safe distance)
 			if (combatType === 'RANGED_ATTACK') {
-				this.applyDamage(defenderHexId, 1, state);
+				this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
 			} else {
-				this.applyDamage(attackerHexId, 1, state);
-				this.applyDamage(defenderHexId, 1, state);
+				this.applyDamage(attackerHexId, 1, state, false);
+				this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
 			}
-
-			attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
-			attackerUnit.actionsTakenThisTurn++;
 		}
+
+		attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
+		attackerUnit.actionsTakenThisTurn++;
+
+		defenderUnit.isGuarding = false;
 		// Deselect after combat resolution
 		this.deselectUnit();
 	},
@@ -1644,12 +1846,17 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {number} damage - Amount of armor reduction to apply (default: 1)
 	 * @param {object} state - Optional game state for simulation
 	 */
-	applyDamage(hexId, damage=1, state) {
+	applyDamage(hexId, damage=1, state, isKillOnZero) {
 		const unit = this.getUnitOnHex(hexId, state);
 		if (!unit) return;
 		unit.armorReduction += damage;
 		const effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
-		if (effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
+
+		if (isKillOnZero) {
+			if (effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
+		} else {
+			if (effectiveArmor < 0) this.removeUnit(hexId, state); // Remove if armor drops less than 0
+		}
 	},
 
 	/* --- TURN --- */
@@ -1758,7 +1965,7 @@ function alpineHexDiceTacticGame() { return {
 
 		message = [
 			`${new Date().toLocaleTimeString()}: ${message}`,
-			this.phase == 'PLAYER_TURN' ? `[${boardEvaluation(this)}]` : '',
+			// this.phase == 'PLAYER_TURN' ? `[${boardEvaluation(this)}]` : '',
 		].join(' ').trim();
 
 		this.messageLog.unshift({ id: this.logCounter++, message });

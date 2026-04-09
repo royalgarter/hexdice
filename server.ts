@@ -42,9 +42,15 @@ async function handleRequest(req: Request) {
 	}
 
 	if (await exists(localpath)) {
+		let mime = extname(localpath);
+		
+		if (mime?.includes('htm')) mime = 'html';
+		else if (mime?.includes('css')) mime = 'css';
+		else if (mime?.includes('js')) mime = 'javascript';
+
 		return response(await Deno.readFile(localpath), {
 			headers: {
-				"Content-Type": `${extname(localpath) ?? "text/plain"}; charset=utf-8`,
+				"Content-Type": `${mime ? ('text/' + mime) : "text/plain"}; charset=utf-8`,
 				"Cache-Control": "public, max-age=604800",
 			}
 		})

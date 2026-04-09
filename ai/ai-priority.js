@@ -72,20 +72,66 @@ function performAIByPriority(GAME) {
 			}
 		}
 
-        // Check for Special Attacks (Dice 6)
+        // Check for Oracle Spells (Dice 6)
         if (unit.value === 6) {
-             const validSpecial = GAME.calcValidSpecialAttackTargets(unit.hexId, state);
-             for (const targetHexId of validSpecial) {
+             const validSpellTargets = GAME.calcValidSpecialAttackTargets(unit.hexId, state);
+             for (const targetHexId of validSpellTargets) {
                 if (visibleHexes.has(targetHexId)) {
                     const targetUnit = GAME.getUnitOnHex(targetHexId, state);
-                    const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, state);
-                    // Dice 6 attack is 6.
-                    if (6 >= defenderArmor) {
-                         const priorityScore = 1 - (targetUnit.value / 100);
-                         if (priorityScore < bestPriority) {
-                            bestPriority = priorityScore;
-                            bestMove = { actionType: 'COMMAND_CONQUER', unitHexId: unit.hexId, targetHexId: targetHexId };
-                         }
+                    
+                    // Oracle only targets friendly units
+                    if (targetUnit && targetUnit.playerId === aiPlayerIndex) {
+                        // Priority 1.5: Emergency Swap - Save Oracle from death
+                        const oracleHex = GAME.getHex(unit.hexId, state);
+                        const oracleNeighbors = GAME.getNeighbors(oracleHex, state);
+                        let oracleInImmediateDanger = false;
+                        
+                        for (const neighbor of oracleNeighbors) {
+                            const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                            if (neighborUnit && neighborUnit.playerId !== aiPlayerIndex) {
+                                const defenderArmor = GAME.calcDefenderEffectiveArmor(unit.hexId, state);
+                                if (neighborUnit.attack >= defenderArmor) {
+                                    oracleInImmediateDanger = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (oracleInImmediateDanger && targetHexId !== unit.hexId) {
+                            // Swap to save Oracle (highest priority after kills)
+                            bestMove = { actionType: 'SPELLCAST_SWAP', unitHexId: unit.hexId, targetHexId: targetHexId };
+                            bestPriority = 0.5; // Very high priority
+                            continue;
+                        }
+                        
+                        // Priority 2.5: Shield - Save high-value threatened unit
+                        if (targetUnit.value >= 4 && !bestMove) {
+                            const targetHex = GAME.getHex(targetHexId, state);
+                            const targetNeighbors = GAME.getNeighbors(targetHex, state);
+                            let targetThreatened = false;
+                            
+                            for (const neighbor of targetNeighbors) {
+                                const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                                if (neighborUnit && neighborUnit.playerId !== aiPlayerIndex) {
+                                    targetThreatened = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (targetThreatened) {
+                                bestMove = { actionType: 'SPELLCAST_SHIELD', unitHexId: unit.hexId, targetHexId: targetHexId };
+                                bestPriority = 2.5;
+                            }
+                        }
+                        
+                        // Priority 3.5: Mend - Repair heavily damaged unit
+                        if (targetUnit.armorReduction > 0 && !bestMove) {
+                            const armorRatio = targetUnit.armorReduction / targetUnit.currentArmor;
+                            if (armorRatio >= 0.5 && targetUnit.value >= 3) {
+                                bestMove = { actionType: 'SPELLCAST_MEND', unitHexId: unit.hexId, targetHexId: targetHexId };
+                                bestPriority = 3.5;
+                            }
+                        }
                     }
                 }
              }
@@ -95,32 +141,49 @@ function performAIByPriority(GAME) {
     // Only proceed to lower priorities if no Priority 1 move was found
     if (!bestMove) {
         // --- Priority 2: Objective Advance ---
-        // Move towards Enemy Base (if known) or Center.
+        // Move towards Enemy Bases (if known) or Center.
         // We select the "Best" unit to advance (e.g. strongest available).
-        
+
         let bestUnitToAdvance = null;
         let bestAdvanceScore = -Infinity;
         let bestAdvanceTarget = null;
 
-        const opponentIndex = (aiPlayerIndex + 1) % state.players.length;
-        const opponentBaseId = state.players[opponentIndex].baseHexId;
-        // If we know opponent base location (it's always fixed in v1.0/v1.3 usually, or revealed), target it.
-        // In FoW, strictly we might not know it, but for "Casual" AI, let's assume it knows the *direction* or the corner.
-        // Let's assume it targets the Center (0,0) if it doesn't have a better idea.
+        // Target all opponent bases
+        const opponentBaseIds = [];
+        for (let pIdx = 0; pIdx < state.players.length; pIdx++) {
+            if (pIdx !== aiPlayerIndex && !state.players[pIdx].isEliminated) {
+                opponentBaseIds.push(state.players[pIdx].baseHexId);
+            }
+        }
+        
+        // If we know opponent base locations, target the closest one.
+        // Otherwise, target the Center (0,0).
         const centerHex = GAME.getHexByQR(0,0, state);
-        const targetObjHex = opponentBaseId ? GAME.getHex(opponentBaseId, state) : centerHex; 
-
+        
         for (const unit of availableUnits) {
              const validMoves = GAME.calcValidMoves(unit.hexId, false, state);
              // Filter moves that go into empty hexes (not attacks, since attacks failed above)
              const moveCandidates = validMoves.filter(hid => !GAME.getUnitOnHex(hid, state));
-             
+
              for (const moveHexId of moveCandidates) {
                  const moveHex = GAME.getHex(moveHexId, state);
-                 const currentDist = GAME.axialDistance(moveHex.q, moveHex.r, targetObjHex.q, targetObjHex.r);
                  
+                 // Find distance to closest opponent base
+                 let minDist = Infinity;
+                 if (opponentBaseIds.length > 0) {
+                     for (const baseId of opponentBaseIds) {
+                         const baseHex = GAME.getHex(baseId, state);
+                         if (baseHex) {
+                             const dist = GAME.axialDistance(moveHex.q, moveHex.r, baseHex.q, baseHex.r);
+                             if (dist < minDist) minDist = dist;
+                         }
+                     }
+                 } else {
+                     minDist = GAME.axialDistance(moveHex.q, moveHex.r, centerHex.q, centerHex.r);
+                 }
+
                  // Score: Closer is better. Stronger unit is better.
-                 const score = (100 - currentDist) + unit.value; 
+                 const score = (100 - minDist) + unit.value;
                  if (score > bestAdvanceScore) {
                      bestAdvanceScore = score;
                      bestUnitToAdvance = unit;

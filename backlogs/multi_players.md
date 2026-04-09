@@ -1,3 +1,7 @@
+
+https://fireemblem.fandom.com/wiki/List_of_classes_in_Fire_Emblem_Fates
+https://fireemblemwiki.org/wiki/Category:Fates_map_animations
+
 # Multi players plan
 
 ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮

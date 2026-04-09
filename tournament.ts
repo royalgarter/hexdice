@@ -61,15 +61,16 @@ function stubBrowserAPIs(playerCount: number = 2) {
         (globalThis as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { /* ignore */ } };
     }
     // Stub location
-    (globalThis as any).location = {
+    const locationStub = {
         search: `?mode=headless&players=${playerCount}`,
         href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
         toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
     };
     // Stub document
-    (globalThis as any).document = {
+    const documentStub = {
         getElementById: () => null,
     };
+    return { location: locationStub, document: documentStub };
 }
 
 // Logger for simulation
@@ -93,7 +94,7 @@ class SimulationLogger {
 
 // Load game engine with heuristic profiles
 async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<string, string>): Promise<any> {
-    stubBrowserAPIs(playerCount);
+    const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
 
     let gameCode: string, aiCoreCode: string, aiRandomCode: string, aiHeuristicCode: string, aiPriorityCode: string, aiMinimaxCode: string, heuristicProfilesCode: string;
 
@@ -155,7 +156,7 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
     `;
 
     const createModule = new Function('location', 'document', fullCode);
-    return createModule((globalThis as any).location, (globalThis as any).document);
+    return createModule(locationStub, documentStub);
 }
 
 // Create game instance
