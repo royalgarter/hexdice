@@ -17,7 +17,7 @@ const heuristicProfiles = {
     baseline: {
         name: "Baseline",
         description: "Balanced: Kill → Position → Attack → Dodge",
-        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
+        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
         weights: {
             captureBonus: 10000,
             killBonus: 1200,
@@ -45,7 +45,7 @@ const heuristicProfiles = {
     berserker: {
         name: "Berserker",
         description: "Aggressive: Prioritizes kills over safety, rushes enemy",
-        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
+        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
         weights: {
             captureBonus: 10000,
             killBonus: 2000,
@@ -73,7 +73,7 @@ const heuristicProfiles = {
     turtle: {
         name: "Turtle",
         description: "Defensive: Safety first, only attacks when safe",
-        priorityOrder: ['capture', 'dodge', 'position', 'kill', 'attack'],
+        priorityOrder: ['capture', 'spell', 'dodge', 'position', 'kill', 'attack'],
         weights: {
             captureBonus: 10000,
             killBonus: 500,
@@ -101,7 +101,7 @@ const heuristicProfiles = {
     tactician: {
         name: "Tactician",
         description: "Strategic: Sets up advantageous positions before engaging",
-        priorityOrder: ['capture', 'position', 'kill', 'attack', 'dodge'],
+        priorityOrder: ['capture', 'spell', 'position', 'kill', 'attack', 'dodge'],
         weights: {
             captureBonus: 10000,
             killBonus: 1500,
@@ -129,7 +129,7 @@ const heuristicProfiles = {
     swarmer: {
         name: "Swarmer",
         description: "Merge-focused: Creates high-value units through merging",
-        priorityOrder: ['capture', 'kill', 'position', 'attack', 'dodge'],
+        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
         weights: {
             captureBonus: 10000,
             killBonus: 1200,
@@ -157,7 +157,7 @@ const heuristicProfiles = {
     assassin: {
         name: "Assassin",
         description: "Precision: Targets weak points and high-value enemies",
-        priorityOrder: ['capture', 'kill', 'attack', 'dodge', 'position'],
+        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
         weights: {
             captureBonus: 10000,
             killBonus: 1800,
@@ -178,6 +178,7 @@ const heuristicProfiles = {
         positioningStyle: 'flank',        // Find weak spots
         unitSelection: 'highestValue'     // Use best units for kills
     },
+
 
     // // =========================================================================
     // // VANGUARD - Front-line map control specialist

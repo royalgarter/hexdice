@@ -85,12 +85,12 @@ const PLAYER_PRIMARY_AXIS = {
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 const PLAYER_CONFIG = [
-	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-600' },
-	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-600' },
-	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-600' },
-	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-600' },
-	{ id: 4, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-600' },
-	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-600' },
+	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-700' },
+	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-700' },
+	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-700' },
+	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-700' },
+	{ id: 4, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-700' },
+	{ id: 5, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
 ];
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
@@ -143,7 +143,7 @@ function alpineHexDiceTacticGame() { return {
 		this.generateHexGrid(radius);
 
 		// Adjust dice per player based on player count (Total 24 dice)
-		this.rules.dicePerPlayer = Math.floor(24 / this.playerCount);
+		this.rules.dicePerPlayer = Math.floor((this.playerCount <= 3 ? 24 : 36) / this.playerCount);
 
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
@@ -1153,8 +1153,8 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		// Check line of sight
-		if (!this.hasLineOfSight(oracleHex, targetHex, oracleHexId, state)) {
+		// Skip Check line of sight
+		if (false && !this.hasLineOfSight(oracleHex, targetHex, oracleHexId, state)) {
 			this.addLog("Spell cast failed: Line of sight blocked.", state);
 			this.deselectUnit(state);
 			return;
