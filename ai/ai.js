@@ -131,7 +131,11 @@ function applyMove(GAME, move, state) {
 			// When analyzing (state provided), just advance turn in cloned state
 			// When executing (no state), actually end the turn
 			if (applyState) {
-				const nextPlayerIndex = (applyState.currentPlayerIndex + 1) % applyState.players.length;
+				let nextPlayerIndex = (applyState.currentPlayerIndex + 1) % applyState.players.length;
+				// Skip eliminated players (same as real endTurn logic)
+				while (applyState.players[nextPlayerIndex].isEliminated && nextPlayerIndex !== applyState.currentPlayerIndex) {
+					nextPlayerIndex = (nextPlayerIndex + 1) % applyState.players.length;
+				}
 				applyState.currentPlayerIndex = nextPlayerIndex;
 				// Reset turn actions for the next player in cloned state
 				applyState.players[nextPlayerIndex].dice.forEach(die => {
