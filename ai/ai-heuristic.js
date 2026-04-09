@@ -802,6 +802,41 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             }
         }
 
+        // ORACLE SACRIFICE: Last resort to break stalemate
+        // High priority when this is the last unit and enemy Oracle is adjacent
+        if (move.actionType === 'ORACLE_SACRIFICE') {
+            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+            const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
+            
+            if (targetUnit && targetUnit.value === 6 && oracleUnit) {
+                // Check if this is truly the last unit
+                const player = state.players[state.currentPlayerIndex];
+                const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
+                
+                if (activeUnits.length === 1) {
+                    // CRITICAL: This eliminates the enemy Oracle too
+                    // If enemy has other units, this is a loss, but better than stalemate
+                    const enemyPlayer = state.players[targetUnit.playerId];
+                    const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+                    
+                    // Base score: eliminate the stalemate
+                    analysis.score += 100;
+                    
+                    // If enemy has more units, this is sacrificial (lower score)
+                    if (enemyActiveUnits.length > 1) {
+                        analysis.score += 50; // At least we remove one enemy
+                    }
+                    
+                    // If enemy also has only Oracle, this wins the game!
+                    if (enemyActiveUnits.length === 1) {
+                        analysis.score += 500; // GAME WINNING MOVE
+                    }
+                    
+                    analysis.isSupportAction = true;
+                }
+            }
+        }
+
         // Oracle self-preservation: Penalize being alone (reduced from -100 to -50)
         const oracleHex = GAME.getHex(aiUnitNext.hexId, nextState);
         const oracleNeighbors = GAME.getNeighbors(oracleHex, nextState);

@@ -136,6 +136,32 @@ function performAIByPriority(GAME) {
                 }
              }
         }
+
+        // Check for Oracle Sacrifice opportunity (breaks stalemates)
+        if (unit.value === 6 && GAME.canPerformAction(unit.hexId, 'ORACLE_SACRIFICE', state)) {
+            const validSacrificeTargets = GAME.calcValidSacrificeTargets(unit.hexId, state);
+            for (const targetHexId of validSacrificeTargets) {
+                const targetUnit = GAME.getUnitOnHex(targetHexId, state);
+                if (targetUnit && targetUnit.value === 6) {
+                    // This is a game-winning move if both players only have Oracles
+                    const player = state.players[aiPlayerIndex];
+                    const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
+                    const enemyPlayer = state.players[targetUnit.playerId];
+                    const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
+                    
+                    // Priority 0.1: GAME WINNER - both down to last Oracle
+                    if (activeUnits.length === 1 && enemyActiveUnits.length === 1) {
+                        bestMove = { actionType: 'ORACLE_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                        bestPriority = 0.1; // Highest priority - wins the game
+                    }
+                    // Priority 4.5: Sacrificial removal (less ideal but breaks stalemate)
+                    else if (!bestMove) {
+                        bestMove = { actionType: 'ORACLE_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                        bestPriority = 4.5;
+                    }
+                }
+            }
+        }
     }
 
     // Only proceed to lower priorities if no Priority 1 move was found

@@ -67,7 +67,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
-| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Mend (BFS 1-step) |
+| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Mend; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -255,11 +255,12 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 #### Dice 6 (Oracle)
 * Can move to any adjacent hex (1 step BFS).
 * **Spellcast Action**: When activated, the Oracle can cast one of three spells on a **target friendly unit** within **Range 2** (requires Line of Sight):
-  * **Shield**: Target unit immediately enters **Guard Mode** (+1 Effective Armor).
+  * **Shield**: Target unit enters **Guard Mode** (+1 Effective Armor).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
   * **Mend**: Remove **1 Armor Reduction** from the target unit.
 * **Glass Support**: With 0 Attack and 1 Armor, the Oracle cannot defeat units alone and is extremely vulnerable. It relies on friendly units for protection and its Swap spell for escape.
-* **Engaged Casting**: The Oracle **can cast spells while an enemy is adjacent**, preventing enemies from shutting it down simply by standing next to it.
+* **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
+* **Oracle Sacrifice (Anti-Stalemate)**: When the Oracle is the **last remaining unit** for its player, it can perform a **Sacrifice** action to eliminate an **adjacent enemy Oracle**. Both Oracles are removed from the game. This mechanic prevents unwinnable stalemates when both players are down to only Oracles.
 
 ```
                 .
@@ -366,7 +367,16 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Shield**: Target unit enters **Guard Mode** (+1 Effective Armor).
   * **Swap**: Oracle and target unit **exchange positions**.
   * **Mend**: Remove **1 Armor Reduction** from target unit.
-  * **Note**: The Oracle can cast spells even when an enemy is adjacent.
+  * **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).
+  * Action complete.
+
+* ##### **Oracle Sacrifice (Dice 6\)**
+
+  * **Condition**: Only available when the Oracle is the **last remaining unit** for its player.
+  * Choose one of your Dice 6 Oracle units.
+  * **Target**: Choose any single **enemy Oracle** in an **adjacent hex**.
+  * **Effect**: Both the sacrificing Oracle and the target enemy Oracle are **removed from the game**.
+  * **Purpose**: This action prevents unwinnable stalemates when both players are down to only Oracles.
   * Action complete.
 
 ### **6\. Combat**

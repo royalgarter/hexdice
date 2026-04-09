@@ -714,6 +714,12 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog("No valid targets for Brave Charge.");
 				// this.cancelAction();
 			}
+		} else if (actionType === 'ORACLE_SACRIFICE') {
+			// Show adjacent enemy Oracles as valid targets
+			this.validTargets = this.calcValidSacrificeTargets(this.selectedUnitHexId);
+			if (this.validTargets.length === 0) {
+				this.addLog("No valid targets for Oracle Sacrifice.");
+			}
 		}
 	},
 	actionModeMessage() {
@@ -722,6 +728,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
+		if (this.actionMode === 'ORACLE_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
 		return "";
 	},
 	cancelAction() {
@@ -742,6 +749,13 @@ function alpineHexDiceTacticGame() { return {
 
 		if (action == 'BRAVE_CHARGE_TARGET') {
 			this.performBraveCharge(this.selectedUnitHexId, targetHexId);
+			this.endTurn();
+			return;
+		}
+
+		// Oracle Sacrifice
+		if (action === 'ORACLE_SACRIFICE' && this.validTargets.includes(targetHexId)) {
+			this.performOracleSacrifice(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
 		}
@@ -820,6 +834,10 @@ function alpineHexDiceTacticGame() { return {
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
 			case 'MERGE': return options.includes('m');
+			case 'ORACLE_SACRIFICE':
+				// Oracle can sacrifice if it's the last unit for its player and has adjacent enemy Oracles
+				if (unit.value !== 6) return false;
+				return this.isOracleLastUnitAndCanSacrifice(unitHexId, state);
 			default: return false;
 		}
 	},
@@ -1163,6 +1181,73 @@ function alpineHexDiceTacticGame() { return {
 		this.checkWinConditions(state);
 	},
 	/**
+	 * Check if an Oracle is the last unit for its player and can sacrifice to eliminate an adjacent enemy Oracle.
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {boolean} True if Oracle is last unit and has adjacent enemy Oracle
+	 */
+	isOracleLastUnitAndCanSacrifice(oracleHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+		if (!oracleUnit || oracleUnit.value !== 6 || !oracleHex) return false;
+
+		// Check if this Oracle is the last unit for its player
+		const player = (state || this).players[oracleUnit.playerId];
+		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
+		if (activeUnits.length !== 1) return false;
+
+		// Check if there's an adjacent enemy Oracle
+		return this.getNeighbors(oracleHex, state).some(neighborHex => {
+			if (!neighborHex) return false;
+			const neighborUnit = this.getUnitOnHex(neighborHex.id, state);
+			return neighborUnit && neighborUnit.playerId !== oracleUnit.playerId && neighborUnit.value === 6;
+		});
+	},
+	/**
+	 * Perform Oracle Sacrifice action - Oracle sacrifices itself to remove an adjacent enemy Oracle.
+	 * This prevents stalemate when both players only have Oracles remaining.
+	 * @param {number} oracleHexId - Hex ID of the sacrificing Oracle
+	 * @param {number} targetHexId - Hex ID of the enemy Oracle to remove
+	 * @param {object} state - Optional game state for simulation
+	 */
+	performOracleSacrifice(oracleHexId, targetHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const targetUnit = this.getUnitOnHex(targetHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+
+		if (!oracleUnit || oracleUnit.value !== 6 || !targetUnit || targetUnit.value !== 6) {
+			this.addLog("Sacrifice failed: Invalid units.", state);
+			return;
+		}
+
+		if (oracleUnit.playerId === targetUnit.playerId) {
+			this.addLog("Sacrifice failed: Cannot target friendly unit.", state);
+			return;
+		}
+
+		const distance = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
+		if (distance > 1) {
+			this.addLog("Sacrifice failed: Target must be adjacent.", state);
+			return;
+		}
+
+		// Both Oracles are removed
+		oracleUnit.isDeath = true;
+		targetUnit.isDeath = true;
+		oracleHex.unit = null;
+		oracleHex.unitId = null;
+		targetHex.unit = null;
+		targetHex.unitId = null;
+
+		this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to eliminate P${targetUnit.playerId+1} Oracle! Both Oracles removed.`, state);
+
+		oracleUnit.hasMovedOrAttackedThisTurn = true;
+		oracleUnit.actionsTakenThisTurn++;
+		this.deselectUnit(state);
+		this.checkWinConditions(state);
+	},
+	/**
 	 * Shield Spell: Target unit enters Guard Mode (+1 Effective Armor).
 	 * @param {number} oracleHexId - Hex ID of the Oracle unit
 	 * @param {number} targetHexId - Hex ID of the target friendly unit
@@ -1174,7 +1259,7 @@ function alpineHexDiceTacticGame() { return {
 		const targetHex = this.getHex(targetHexId, state);
 		const oracleHex = this.getHex(oracleHexId, state);
 
-		if (!targetUnit || !targetHex || !oracleHex) return;
+		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
 		targetUnit.isGuarding = true;
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
@@ -1221,11 +1306,12 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {object} state - Optional game state for simulation
 	 */
 	performMendSpell(oracleHexId, targetHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
 		const targetUnit = this.getUnitOnHex(targetHexId, state);
 		const targetHex = this.getHex(targetHexId, state);
 		const oracleHex = this.getHex(oracleHexId, state);
 
-		if (!targetUnit || !targetHex || !oracleHex) return;
+		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
 		if (targetUnit.armorReduction > 0) {
 			targetUnit.armorReduction = Math.max(0, targetUnit.armorReduction - 1);
@@ -1397,6 +1483,23 @@ function alpineHexDiceTacticGame() { return {
 		return true; // Path is clear
 	},
 	/**
+	 * Check if a unit has any enemy units adjacent to it.
+	 * @param {number} unitHexId - Hex ID of the unit to check
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {boolean} True if enemy is adjacent
+	 */
+	isUnitEngaged(unitHexId, state) {
+		const unit = this.getUnitOnHex(unitHexId, state);
+		const unitHex = this.getHex(unitHexId, state);
+		if (!unit || !unitHex) return false;
+
+		return this.getNeighbors(unitHex, state).some(neighborHex => {
+			if (!neighborHex) return false;
+			const neighborUnit = this.getUnitOnHex(neighborHex.id, state);
+			return neighborUnit && neighborUnit.playerId !== unit.playerId;
+		});
+	},
+	/**
 	 * Calculate valid targets for special attack (Dice 6 Legate Command & Conquer).
 	 * Only adjacent enemy units are valid targets.
 	 * For Oracle (Dice 6): targets friendly units within Range 2 for spell casting.
@@ -1416,6 +1519,12 @@ function alpineHexDiceTacticGame() { return {
 		if (attackerUnit.value === 6) {
 			let targets = [];
 			const range = attackerUnit.range; // Range 2 for Oracle
+
+			// Engaged Spell Disablement: Oracle cannot cast spells when enemy is adjacent
+			const isEngaged = this.isUnitEngaged(attackerHexId, state);
+			if (isEngaged && !isHovering) {
+				return []; // Cannot cast spells while engaged
+			}
 
 			(state || this).hexes.forEach(potentialTargetHex => {
 				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
@@ -1455,6 +1564,31 @@ function alpineHexDiceTacticGame() { return {
 				}
 			}
 		});
+		return targets;
+	},
+	/**
+	 * Calculate valid targets for Oracle Sacrifice action.
+	 * Shows adjacent enemy Oracles that can be eliminated by sacrifice.
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {number[]} Array of valid target hex IDs
+	 */
+	calcValidSacrificeTargets(oracleHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+
+		if (!oracleUnit || oracleUnit.value !== 6 || !oracleHex) return [];
+
+		let targets = [];
+		this.getNeighbors(oracleHex, state).forEach(neighborHex => {
+			if (!neighborHex) return;
+
+			const targetUnit = this.getUnitOnHex(neighborHex.id, state);
+			if (targetUnit && targetUnit.playerId !== oracleUnit.playerId && targetUnit.value === 6) {
+				targets.push(neighborHex.id);
+			}
+		});
+
 		return targets;
 	},
 	/**

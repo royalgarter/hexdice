@@ -350,6 +350,10 @@
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 					@click="initiateAction('MERGE')"
 				>MERGE</button>
+				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white font-bold bg-red-100"
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'ORACLE_SACRIFICE')"
+					@click="initiateAction('ORACLE_SACRIFICE')"
+				>SACRIFICE</button>
 				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white font-bold"
 					x-show="actionMode !== null"
 					@click="cancelAction()"

@@ -71,6 +71,14 @@ function generateAllPossibleMoves(GAME, state) {
 					}
 				}
 			});
+
+			// Oracle Sacrifice: Check if this is the last unit and can sacrifice
+			if (GAME.canPerformAction(unitHexId, 'ORACLE_SACRIFICE', state)) {
+				const validSacrificeTargets = GAME.calcValidSacrificeTargets(unitHexId, state);
+				validSacrificeTargets.forEach(targetHexId => {
+					moves.push({ actionType: 'ORACLE_SACRIFICE', unitHexId, targetHexId });
+				});
+			}
 		}
 		
 		// // 5. Merges
@@ -109,6 +117,9 @@ function applyMove(GAME, move, state) {
 			break;
 		case 'SPELLCAST_MEND':
 			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'MEND', applyState);
+			break;
+		case 'ORACLE_SACRIFICE':
+			GAME.performOracleSacrifice(move.unitHexId, move.targetHexId, applyState);
 			break;
 		case 'MERGE':
 			GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState);
