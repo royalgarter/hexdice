@@ -1937,7 +1937,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (remainingPlayers.length === 1) {
 			const winner = remainingPlayers[0];
-			this.gameOver(winner.id, `P${winner.id + 1} claims the victory!`);
+			this.gameOver(winner.id, `P${winner.id + 1} claims final victory!`);
 		} else if (remainingPlayers.length === 0) {
 			this.gameOver(-1, "All players eliminated! It's a draw!");
 		}
