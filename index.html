@@ -304,7 +304,8 @@
 				</div>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Start Random</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Start Normal: Roll The Dice</button>
-				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Against AI</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="setupTerrain(true)" >Terrain</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Single</button>
 				<button class="cursor-pointer px-4 py-2 hover:bg-yellow-600 hover:text-white mb-2 font-bold bg-yellow-100" @click="startRomanceMode()" >RotDK</button>
 				</div>
 
@@ -411,7 +412,7 @@
 			</div>
 
 			<p class="text-sm font-bold">
-				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">👑 Romance Mode - </span>
+				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
 				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>

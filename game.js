@@ -143,14 +143,14 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	// --- SETUP TERRAIN METHODS ---
-	setupTerrain() {
+	setupTerrain(force) {
 		const urlParams = new URLSearchParams(location.search);
 		const v12Active = urlParams.get('v') === '1.2';
 		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
 
-		if (!v12Active) return; // Only setup terrain for v1.2
+		if (!v12Active && !force) return; // Only setup terrain for v1.2
 
-		this.addLog("Setting up terrain for v1.2 rules.");
+		this.addLog("Setting up terrain");
 
 		// Implement Roulette (sum-of-6-dice and clockwise placement)
 		// User chose "Auto-Placement (Simple)" for roulette
@@ -164,6 +164,7 @@ function alpineHexDiceTacticGame() { return {
 
 	generateRouletteTerrain() {
 		this.addLog("Generating Roulette Terrain...");
+		this.hexes.forEach(x => x.terrainType = 'PLAIN');
 
 		const terrainDiceRolls = Array.from({ length: 6 }, () => Math.floor(random() * 6) + 1);
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
@@ -201,6 +202,7 @@ function alpineHexDiceTacticGame() { return {
 
 	generateR8Terrain() {
 		this.addLog("Generating R=8 Terrain...");
+		this.hexes.forEach(x => x.terrainType = 'PLAIN');
 
 		const terrainDiceRolls = Array.from({ length: 6 }, () => Math.floor(random() * 6) + 1);
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
