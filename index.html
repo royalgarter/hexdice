@@ -66,45 +66,67 @@
 		.bg-hexdanger {
 			background-color: #705030;
 		}
+		/* Terrain Colors */
+		.bg-hexplain {
+			background-color: #896648;
+		}
+		.bg-hexforest {
+			background-color: #388e3c;
+		}
+		.bg-hexlake {
+			background-color: #2196f3;
+		}
+		.bg-hextower {
+			background-color: #757575;
+		}
+		.bg-hexmountain {
+			background-color: #4c2c2f;
+		}
 
 		/* Responsive Grid Scaling */
 		.hex-grid-container {
 			transform-origin: center center;
 			max-width: 100%;
+			/*transition: zoom 0.3s ease;*/
 		}
 		@media (max-width: 1280px) {
-			.hex-grid-container {
-				zoom: 1.25;
-			}
-		}
-		@media (max-width: 1024px) {
 			.hex-grid-container {
 				zoom: 1.2;
 			}
 		}
-		@media (max-width: 768px) {
-			.hex-grid-container {
-				zoom: 1.15;
-			}
-		}
-		@media (max-width: 640px) {
+		@media (max-width: 1024px) {
 			.hex-grid-container {
 				zoom: 1.1;
 			}
 		}
+		@media (max-width: 768px) {
+			.hex-grid-container {
+				zoom: 1.05;
+			}
+		}
+		@media (max-width: 640px) {
+			.hex-grid-container {
+				zoom: 1;
+			}
+		}
 		@media (max-width: 540px) {
 			.hex-grid-container {
-				zoom: 0.85;
+				zoom: 0.95;
 			}
 		}
 		@media (max-width: 480px) {
 			.hex-grid-container {
-				zoom: 0.7;
+				zoom: 0.85;
+			}
+		}
+		@media (max-width: 400px) {
+			.hex-grid-container {
+				zoom: 0.80;
 			}
 		}
 		@media (max-width: 360px) {
 			.hex-grid-container {
-				zoom: 0.65;
+				zoom: 0.75;
 			}
 		}
 	</style>
@@ -189,7 +211,7 @@
 						</span>
 
 						<span style="top:4px;right:18px;" class="absolute text-blue-900 font-bold"
-							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'"> 
+							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'">
 						</span>
 						<span style="top:-2px;right:16px;" class="absolute text-red-900 font-bold"
 							x-show="getUnitOnHex(hex.id)?.skirmishBuff">⚔
