@@ -392,19 +392,29 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                     if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
                         const targetHex = GAME.getHex(m.move.targetHexId, state);
-                        
+
                         // Distance to nearest opponent base
                         let minBaseDist = Infinity;
                         opponentBases.forEach(base => {
                             const dist = GAME.axialDistance(targetHex.q, targetHex.r, base.baseHex.q, base.baseHex.r);
                             if (dist < minBaseDist) minBaseDist = dist;
                         });
-                        
+
                         positionScore += (w.advanceBonus * (5 - Math.min(minBaseDist, 5)));
                     }
 
-                    if (opponentBases.some(b => b.baseHexId === m.move.targetHexId)) {
-                        positionScore += w.captureBonus;
+                    // Check if unit is already on a captured base
+                    const unitCurrentHexId = m.unit.hexId;
+                    const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
+                    const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === m.move.targetHexId);
+
+                    if (isTargetOnEnemyBase) {
+                        // If unit is already on a captured base, reduce capture bonus to encourage movement
+                        if (isUnitOnCapturedBase && m.move.actionType === 'MOVE') {
+                            positionScore += w.captureBonus * 0.1; // Only 10% to encourage advancement
+                        } else {
+                            positionScore += w.captureBonus;
+                        }
                     }
 
                     if (m.move.actionType === 'MERGE') {
@@ -489,10 +499,23 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score += (w.backAndForthPenalty || -300);
     }
 
+    // Check if unit is already on an enemy base (base already captured)
+    const unitCurrentHexId = unit.hexId;
+    const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
+    const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === move.targetHexId);
+
     // Check for capture (moving to any enemy base)
-    if (opponentBases.some(b => b.baseHexId === move.targetHexId)) {
-        analysis.canCapture = true;
-        analysis.captureScore = w.captureBonus;
+    if (isTargetOnEnemyBase) {
+        // If unit is already on a captured base, don't give full capture bonus for staying/moving to enemy bases
+        // This encourages units to advance rather than camp on captured bases
+        if (isUnitOnCapturedBase && move.actionType === 'MOVE') {
+            // Small bonus for maintaining base control, but much less than capturing
+            analysis.canCapture = true;
+            analysis.captureScore = w.captureBonus * 0.1; // Only 10% of capture bonus
+        } else {
+            analysis.canCapture = true;
+            analysis.captureScore = w.captureBonus;
+        }
     }
 
     // Check if this move kills or attacks an enemy

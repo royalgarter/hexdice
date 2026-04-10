@@ -588,6 +588,34 @@ function alpineHexDiceTacticGame() { return {
 		
 		this.addLog(`Random start completed! Player 1's turn.`);
 	},
+	/**
+	 * Start "Romance of the Dice Kingdoms" mode - all players are AI and play automatically
+	 */
+	startRomanceMode() {
+		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
+		
+		// Set all players as AI
+		this.players.forEach(p => p.isAI = true);
+		
+		// Roll initial dice for all players
+		this.players.forEach((p, i) => this.rollInitialDice(i));
+		
+		// Deploy all dice randomly for all players
+		this.players.forEach((player, playerIdx) => {
+			player.dice.forEach((dice, diceIdx) => {
+				const validHexes = this.calcValidDeploymentHexes(playerIdx);
+				if (validHexes.length > 0) {
+					this.selectedDieToDeploy = diceIdx;
+					this.deployUnit(validHexes.random());
+				}
+			});
+		});
+		
+		this.addLog(`👑 All kingdoms ready for battle! Watching AI play...`);
+		
+		// Start autoplay
+		this.autoPlay();
+	},
 	autoPlay() {
 		setTimeout(() => this.performAITurn(), 1e3);
 	},
@@ -2188,7 +2216,8 @@ function alpineHexDiceTacticGame() { return {
 		activePlayers.forEach(p => {
 			const activeDice = p.dice.filter(d => d.isDeployed && !d.isDeath).length;
 			const baseHex = this.getHex(p.baseHexId, state);
-			const baseCaptured = baseHex && this.getUnitOnHex(baseHex.id, state)?.playerId !== p.id && this.getUnitOnHex(baseHex.id, state) !== null;
+			const unitOnBase = this.getUnitOnHex(baseHex?.id, state);
+			const baseCaptured = baseHex && unitOnBase && unitOnBase.playerId !== p.id;
 
 			if (activeDice === 0 || baseCaptured) {
 				p.isEliminated = true;

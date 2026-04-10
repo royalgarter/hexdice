@@ -162,6 +162,12 @@
 <body class="text-black min-h-screen flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
 	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
+	<!-- Romance Mode Banner -->
+	<div x-cloak x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'" 
+		class="w-full bg-yellow-100 border-y-2 border-yellow-600 py-2 text-center font-bold text-yellow-800 text-lg">
+		👑 Romance of the Dice Kingdoms - AI Battle in Progress 👑
+	</div>
+
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-center justify-center w-full overflow-auto">
 		<!-- Hex Grid -->
@@ -259,6 +265,7 @@
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Start Random</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Start Normal: Roll The Dice</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Against AI</button>
+				<button class="cursor-pointer border-2 border-yellow-600 px-4 py-2 hover:bg-yellow-600 hover:text-white mb-2 font-bold bg-yellow-100" @click="startRomanceMode()" >👑 Romance of the Dice Kingdoms</button>
 				</div>
 
 				<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
@@ -364,6 +371,7 @@
 			</div>
 
 			<p class="text-sm font-bold">
+				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">👑 Romance Mode - </span>
 				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
