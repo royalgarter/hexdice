@@ -85,12 +85,12 @@ const PLAYER_PRIMARY_AXIS = {
 	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
 };
 const PLAYER_CONFIG = [
-	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-600' },
-	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-600' },
-	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-600' },
-	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-600' },
-	{ id: 4, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-600' },
-	{ id: 5, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-600' },
+	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-700' },
+	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-700' },
+	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-700' },
+	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-700' },
+	{ id: 4, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-700' },
+	{ id: 5, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
 ];
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
@@ -143,7 +143,7 @@ function alpineHexDiceTacticGame() { return {
 		this.generateHexGrid(radius);
 
 		// Adjust dice per player based on player count (Total 24 dice)
-		this.rules.dicePerPlayer = Math.floor(24 / this.playerCount);
+		this.rules.dicePerPlayer = Math.floor((this.playerCount <= 3 ? 24 : 36) / this.playerCount);
 
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
@@ -1153,8 +1153,8 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		// Check line of sight
-		if (!this.hasLineOfSight(oracleHex, targetHex, oracleHexId, state)) {
+		// Skip Check line of sight
+		if (false && !this.hasLineOfSight(oracleHex, targetHex, oracleHexId, state)) {
 			this.addLog("Spell cast failed: Line of sight blocked.", state);
 			this.deselectUnit(state);
 			return;
@@ -1194,8 +1194,8 @@ function alpineHexDiceTacticGame() { return {
 
 		// Check if this Oracle is the last unit for its player
 		const player = (state || this).players[oracleUnit.playerId];
-		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
-		if (activeUnits.length !== 1) return false;
+		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath && d.value != 6);
+		if (activeUnits.length) return false;
 
 		// Check if there's an adjacent enemy Oracle
 		return this.getNeighbors(oracleHex, state).some(neighborHex => {
@@ -1533,8 +1533,8 @@ function alpineHexDiceTacticGame() { return {
 				const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
 				if (dist > range) return;
 
-				// Check Line of Sight
-				if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
+				// Skip Check Line of Sight for spell
+				// if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
 
 				const targetUnit = this.getUnitOnHex(potentialTargetHex.id, state);
 
@@ -1610,7 +1610,7 @@ function alpineHexDiceTacticGame() { return {
 		const primary = PLAYER_PRIMARY_AXIS[this.players.length][unit.playerId];
 		const mod3 = primary.i % 3;
 		const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3));
-		const axes_x = AXES.filter(({i}) => (i % 3) != mod3);
+		const axes_x = AXES || AXES.filter(({i}) => (i % 3) != mod3);
 
 		switch (unitStats.movement) {
 			case '|': // Dice 1 (Fencer) - primary axis forward, 1 step backward
