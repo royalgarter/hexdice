@@ -63,6 +63,9 @@
 		.bg-hexwhite {
 			background-color: #f8f8f8;
 		}
+		.bg-hexdanger {
+			background-color: #705030;
+		}
 
 		/* Responsive Grid Scaling */
 		.hex-grid-container {
@@ -170,7 +173,6 @@
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
 				>
-					<!-- @mouseenter="hoverHex(hex.id)" @mouseleave="hoverHex()" -->
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-xs text-center relative"
@@ -371,7 +373,7 @@
 	<!-- Message Log -->
 	<div x-show="showLog" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-36 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
-			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1]]?.logColor"></p>
+			<p x-text="log.message" :class="PLAYER_CONFIG[ (log.message?.match(/P(\d)/)?.[1] || 1) - 1 ]?.logColor"></p>
 		</template>
 	</div>
 

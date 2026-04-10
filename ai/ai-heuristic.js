@@ -271,7 +271,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
     const w = profile.weights;
 
     scoredMoves.sort((a, b) => b.score - a.score);
-    console.log('Scores:', scoredMoves.map(x => [x.move.actionType, x.score].join(':')));
+    // if (verbose) console.log('Scores:', scoredMoves.map(x => [x.move.actionType, x.score].join(':')).join(', ') );
 
     switch (priority) {
         case 'capture': {
@@ -324,9 +324,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 // Filter out spells that are currently unsafe unless they are escape actions
                 const viableSpells = spellMoves.filter(m => m.isSafe || m.isEscapeAction || profile.riskTolerance > 0.7);
 
-                const ratio = viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length; //console.log('ratio:', ratio);
+                const ratio = viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length; 
 
                 if (viableSpells.length > 0 && (random() < ratio)) {
+                    if (verbose) console.log('Spellcast Ratio:', ratio);
+                    
                     viableSpells.sort((a, b) => b.score - a.score);
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     applyMove(GAME, viableSpells[0].move);

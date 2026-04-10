@@ -319,10 +319,11 @@ function alpineHexDiceTacticGame() { return {
 
 		state = state || this;
 
-		if (state.selectedUnitHexId === hex.id) cls = 'bg-hexselect saturate-50';
-		else if (state.validMoves?.includes(hex.id)) cls = 'bg-hexmove saturate-50';
-		else if (state.validMerges?.includes(hex.id)) cls = 'bg-hexmerge saturate-50';
-		else if (state.validTargets?.includes(hex.id)) cls = 'bg-hextarget saturate-50';
+		if (state.selectedUnitHexId === hex.id) cls = 'bg-hexselect';
+		else if (state.validMoves?.includes(hex.id)) cls = 'bg-hexmove';
+		else if (state.validMerges?.includes(hex.id)) cls = 'bg-hexmerge';
+		else if (state.validTargets?.includes(hex.id)) cls = 'bg-hextarget';
+		else if (state.dangerHexes?.[hex.id]) cls = 'bg-hexdanger';
 
 		if (state.phase === 'SETUP_DEPLOY' && this.calcValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
 			cls = 'bg-hexdeploy';
@@ -636,6 +637,8 @@ function alpineHexDiceTacticGame() { return {
 		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 		this.validTargets = []; // Will be calculated if attack action is chosen
 		this.validMerges = this.options.includes('m') ? this.calcValidMoves(this.selectedUnitHexId, 'MERGE') : [];
+		this.dangerHexes = this.calcDangerHex(this.currentPlayerIndex, state);
+
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 
 		if (unit.value == 2) {
@@ -654,12 +657,12 @@ function alpineHexDiceTacticGame() { return {
 	 */
 	initiateOracleSpellSelection() {
 		this.actionMode = 'ORACLE_SPELL_SELECT';
-		this.addLog("Oracle Spell - Choose a spell from the control panel.");
+		// this.addLog("Oracle Spell - Choose a spell from the control panel.");
 	},
 	selectOracleSpell(spell) {
 		this.oracleSelectedSpell = spell;
 		this.actionMode = 'SPELLCAST';
-		this.addLog(`Oracle will cast ${spell}. Select a friendly unit within Range 2.`);
+		// this.addLog(`Oracle will cast ${spell}. Select a friendly unit within Range 2.`);
 	},
 	deselectUnit(state) {
 		state = state || this;
@@ -670,6 +673,7 @@ function alpineHexDiceTacticGame() { return {
 		state.validTargets = [];
 		state.validMerges = [];
 		state.actionMode = null;
+		state.dangerHexes = {};
 	},
 	initiateAction(actionType) {
 		if (!this.selectedUnitHexId) return;
@@ -1842,16 +1846,27 @@ function alpineHexDiceTacticGame() { return {
 	 * @returns {string} HTML-formatted unit stats
 	 */
 	calcUIDiceStat(hexId, state) {
-		const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
+		// const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
+		const FIELDS = {
+			id: 'ID',
+			name: 'Name',
+			attack: 'Attack',
+			armor: 'Armor',
+			armorReduction: 'Armor Reduction',
+			effectiveArmor: 'Effectice Armor',
+			distance: 'Movement',
+			range: 'Range',
+		};
+
 		const unit = this.getUnitOnHex(hexId, state);
 
 		if (!unit || unit.isDeath) return '';
 
-		this.calcDefenderEffectiveArmor(hexId, state);
+		unit.effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state);
 
 		return Object.entries(unit)
-			.filter(([k ,v]) => FIELDS.includes(k))
-			.map(x => x.join(': '))
+			.filter(([k ,v]) => Object.keys(FIELDS).includes(k))
+			.map(([k ,v]) => `${FIELDS[k]}: ${v}`)
 			.join('<br>');
 	},
 	/**
@@ -1887,6 +1902,113 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		return false;
+	},
+
+	/**
+	 * Calculate all hexes that are dangerous for the current player's units.
+	 * A hex is dangerous if moving a unit there would result in it being attacked or killed
+	 * by any enemy player's units (melee, ranged, or special attacks).
+	 * @param {number} playerId - Player ID to calculate danger for (defaults to currentPlayerIndex)
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {object} Object with hexId as key and danger info as value
+	 */
+	calcDangerHex(playerId, state) {
+		state = state || this;
+		playerId = (playerId !== undefined && playerId !== null) ? playerId : state.currentPlayerIndex;
+
+		const dangerMap = {};
+
+		// Get all enemy players
+		const enemyPlayers = state.players.filter(p => p.id !== playerId && !p.isEliminated);
+		if (enemyPlayers.length === 0) return dangerMap;
+
+		// For each enemy unit, collect all hexes they can attack using existing methods
+		enemyPlayers.forEach(enemyPlayer => {
+			enemyPlayer.dice.forEach(enemyUnit => {
+				// Skip units that are not deployed or dead
+				if (!enemyUnit.isDeployed || enemyUnit.isDeath) return;
+
+				const enemyHexId = enemyUnit.hexId;
+				const enemyHex = state.getHex(enemyHexId, state);
+				if (!enemyHex) return;
+
+				const enemyStats = UNIT_STATS[enemyUnit.value];
+				let attackHexes = [];
+
+				// Melee units: reuse calcValidMoves to get attackable hexes
+				if (!enemyUnit.range || enemyUnit.range === 0) {
+					// calcValidMoves returns hexes the unit can move to, including enemy attack targets
+					attackHexes = state.calcValidMoves(enemyHexId, false, state);
+				}
+
+				// Ranged units (Dice 2 - Archer): reuse calcValidRangedTargets
+				if (enemyUnit.value === 2) {
+					attackHexes = state.calcValidRangedTargets(enemyHexId, state, true);
+				}
+
+				// Oracle (Dice 6): reuse calcValidSpecialAttackTargets
+				if (enemyUnit.value === 6) {
+					attackHexes = state.calcValidSpecialAttackTargets(enemyHexId, state, true);
+				}
+
+				// Mark all attack hexes as dangerous
+				attackHexes.forEach(hexId => {
+					const targetHex = state.getHex(hexId, state);
+					if (!targetHex) return;
+
+					// Skip hexes occupied by friendly units
+					const existingUnit = state.getUnitOnHex(hexId, state);
+					if (existingUnit && existingUnit.playerId === playerId) return;
+
+					const dist = state.axialDistance(enemyHex.q, enemyHex.r, targetHex.q, targetHex.r);
+
+					let attackType = 'MELEE';
+					if (enemyUnit.value === 2) attackType = 'RANGED_ATTACK';
+					if (enemyUnit.value === 6) attackType = 'SPECIAL_ATTACK';
+
+					if (!dangerMap[hexId]) {
+						dangerMap[hexId] = {
+							hexId: hexId,
+							q: targetHex.q,
+							r: targetHex.r,
+							threats: [],
+							threatCount: 0,
+							isLethal: false,
+							minDistance: Infinity
+						};
+					}
+
+					dangerMap[hexId].threats.push({
+						enemyHexId: enemyHex.id,
+						enemyUnit: enemyUnit,
+						attackType: attackType,
+						isLethal: true,
+						distance: dist
+					});
+				});
+			});
+		});
+
+		// Update aggregated fields
+		Object.values(dangerMap).forEach(entry => {
+			entry.threatCount = entry.threats.length;
+			entry.isLethal = entry.threats.some(t => t.isLethal);
+			entry.minDistance = Math.min(...entry.threats.map(t => t.distance));
+		});
+
+		return dangerMap;
+	},
+	/**
+	 * Check if a hex is in the danger zone.
+	 * Helper method to quickly check if a specific hex is dangerous.
+	 * @param {number} hexId - Hex ID to check
+	 * @param {number} playerId - Player ID to check danger for
+	 * @param {object} state - Optional game state
+	 * @returns {object|null} Danger info or null if safe
+	 */
+	isHexDangerous(hexId, playerId, state) {
+		const dangerMap = this.calcDangerHex(playerId, state);
+		return dangerMap[hexId] || null;
 	},
 
 	/* --- COMBAT --- */
