@@ -635,7 +635,9 @@ function alpineHexDiceTacticGame() { return {
 
 		if (this.actionMode) { // If in an action mode like MOVE or ATTACK
 			this.completeAction(hexId);
-			this.deselectUnit();
+			if (this.actionMode !== 'SKIRMISH_POST_MOVE') {
+				this.deselectUnit();
+			}
 			if (unitOnClickedHex ) {
 				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
 				this.hoverHex(hexId);
@@ -794,7 +796,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		if (this.selectedUnitHexId == targetHexId) {
+		if (this.selectedUnitHexId == targetHexId && action !== 'SKIRMISH_POST_MOVE') {
 			this.deselectUnit();
 			return;
 		}
@@ -2146,16 +2148,15 @@ function alpineHexDiceTacticGame() { return {
 					this.actionMode = 'SKIRMISH_POST_MOVE';
 					this.selectedUnitHexId = attackerHexId;
 					
-					// Valid moves are adjacent to the target hex that are empty (OR the current attacker hex)
+					// Valid moves are the target hex itself PLUS adjacent hexes to the target that are empty (OR the current attacker hex)
 					const neighbors = this.getNeighbors(defenderHex);
 					this.validMoves = neighbors
 						.filter(n => !this.getUnitOnHex(n.id) || n.id === attackerHexId)
 						.map(n => n.id);
 					
-					// If for some reason no valid moves (shouldn't happen as attackerHex is at least one), stay put
-					if (this.validMoves.length === 0) {
-						this.validMoves = [attackerHexId];
-					}
+					// Add the target hex and ensure current hex is included as valid options
+					if (!this.validMoves.includes(defenderHexId)) this.validMoves.push(defenderHexId);
+					if (!this.validMoves.includes(attackerHexId)) this.validMoves.push(attackerHexId);
 					
 					return; // Wait for user to click a hex
 				}
