@@ -804,8 +804,6 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                 analysis.isSupportAction = true;
             }
         }
-            }
-        }
 
         if (move.actionType === 'ORACLE_SACRIFICE') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);

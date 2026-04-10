@@ -200,6 +200,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 #### Dice 4 (Knight)
 
 * Can move up to 3 steps along the four diagonal axes (forming an 'X' pattern).
+* **Blocked Path**: Movement is blocked by any unit on the path.
 
 ```
                 .
@@ -259,7 +260,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
   * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
     * **Effect**: During the next attack, the unit has **-1 Attack strength**.
-    * **On Success (Win)**: The target is removed, but the attacker **retreats to its original hex** instead of moving forward.
+    * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.
 * **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
@@ -372,7 +373,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Swap**: Oracle and target unit **exchange positions**.
   * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
     * **Effect**: During the next attack, the unit has **-1 Attack strength**.
-    * **On Success (Win)**: The target is removed, but the attacker **retreats to its original hex** instead of moving forward.
+    * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.
   * **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).

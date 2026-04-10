@@ -426,6 +426,7 @@ function alpineHexDiceTacticGame() { return {
 				hexId: null,
 				hasMovedOrAttackedThisTurn: false,
 				isGuarding: 0,
+				skirmishBuff: 0,
 				isDeath: false,
 				actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
 			});
@@ -761,6 +762,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
 		if (this.actionMode === 'ORACLE_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
+		if (this.actionMode === 'SKIRMISH_POST_MOVE') return "Skirmish success! Select an adjacent hex to move to (or stay put).";
 		return "";
 	},
 	cancelAction() {
@@ -834,11 +836,17 @@ function alpineHexDiceTacticGame() { return {
 					this.selectedUnitHexId = targetHexId;
 					this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 					this.addLog("Now choose a target of Dice 1 Brave Change");
+				} else if (this.actionMode === 'SKIRMISH_POST_MOVE') {
+					// Don't end turn yet! Let user pick reposition hex.
 				} else {
 					this.endTurn();
 				}
 			}
 
+			return;
+		} else if (action === 'SKIRMISH_POST_MOVE' && this.validMoves.includes(targetHexId)) {
+			this.performSkirmishPostMove(this.selectedUnitHexId, targetHexId);
+			this.endTurn();
 			return;
 		} else if (this.validMerges.includes(targetHexId)){
 			this.endTurn();
@@ -998,6 +1006,29 @@ function alpineHexDiceTacticGame() { return {
 		}
 		this.checkWinConditions(state);
 	},
+	/**
+	 * Finalize the post-skirmish move to an adjacent hex.
+	 * @param {number} unitHexId - Current hex ID of the attacker
+	 * @param {number} targetHexId - Destination hex ID
+	 */
+	performSkirmishPostMove(unitHexId, targetHexId) {
+		const unit = this.getUnitOnHex(unitHexId);
+		const fromHex = this.getHex(unitHexId);
+		const toHex = this.getHex(targetHexId);
+
+		if (!unit || !fromHex || !toHex) return;
+
+		if (unitHexId !== targetHexId) {
+			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: (${fromHex.q},${fromHex.r}) -> (${toHex.q},${toHex.r}).`);
+			this.move(unit, fromHex, toHex);
+		} else {
+			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: stayed at (${fromHex.q},${fromHex.r}).`);
+		}
+
+		unit.hasMovedOrAttackedThisTurn = true;
+		unit.actionsTakenThisTurn++;
+		this.deselectUnit();
+	},
 	performUnitReroll(unitHexId, state) {
 		const targetHex = this.getHex(unitHexId, state);
 		const unit = this.getUnitOnHex(unitHexId, state);
@@ -1011,6 +1042,7 @@ function alpineHexDiceTacticGame() { return {
 		// unit.armorReduction = 0; // Reset armor reduction
 		unit.isGuarding = 0; // Rerolling removes guard
 		unit.isRerolled = true; // Penalty: 0 effective armor until next turn starts
+		unit.skirmishBuff = 0;
 
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
@@ -1024,6 +1056,8 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return;
 
 		if (unit.isGuarding < 1) unit.isGuarding = 1;
+
+		unit.skirmishBuff = 0;
 
 		// Actual armor buff is applied during combat calculation
 		unit.hasMovedOrAttackedThisTurn = true;
@@ -1104,6 +1138,7 @@ function alpineHexDiceTacticGame() { return {
 			hexId: targetHex.id,
 			hasMovedOrAttackedThisTurn: !newUnitCanAct, // If can act, it hasn't "completed" its action for the turn yet
 			isGuarding: 0,
+			skirmishBuff: 0,
 			actionsTakenThisTurn: newUnitCanAct ? 0 : 1, // If cannot act, it counts as action taken
 		};
 		p.dice.push(newUnit);
@@ -1295,6 +1330,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
 		targetUnit.isGuarding = 2;
+		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
 	},
 	/**
@@ -1348,6 +1384,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
+		targetUnit.isGuarding = 0; // Skirmish cancels Shield
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
 	performBraveCharge(attackerHexId, targetHexId, state) {
@@ -1644,14 +1681,20 @@ function alpineHexDiceTacticGame() { return {
 		switch (unitStats.movement) {
 			case '|': // Dice 1 (Fencer) - primary axis forward, 1 step backward
 				for (let i = 1; i <= unitStats.distance; i++) {
-					possibleMoves.push(this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state)?.id);
+					const hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
+					if (!hex) break;
+					possibleMoves.push(hex.id);
+					if (this.getUnitOnHex(hex.id, state)) break; // Blocked by unit
 				}
 				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state)?.id);
 				break;
 			case 'X': // Dice 4 (Knight) - diagonal axes only
 				for (let axis of axes_x) {
 					for (let i = 1; i <= unitStats.distance; i++) {
-						possibleMoves.push(this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i, state)?.id);
+						const hex = this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i, state);
+						if (!hex) break;
+						possibleMoves.push(hex.id);
+						if (this.getUnitOnHex(hex.id, state)) break; // Blocked by unit
 					}
 				}
 				break;
@@ -1670,8 +1713,20 @@ function alpineHexDiceTacticGame() { return {
 				break;
 			case '+': // Dice 4 variant - primary + adjacent axes
 				this.getNeighbors(startHex, state).forEach(neighbor => possibleMoves.push(neighbor?.id));
-				possibleMoves.push(this.getHexByQR(startHex.q + primary.q * 2, startHex.r + primary.r * 2, state)?.id);
-				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 2, startHex.r + axes_b.r * 2, state)?.id);
+				// Straight lines should check for blocking
+				for (let i = 1; i <= 2; i++) {
+					const hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
+					if (!hex) break;
+					if (i > 1) possibleMoves.push(hex.id);
+					if (this.getUnitOnHex(hex.id, state)) break;
+				}
+				for (let i = 1; i <= 2; i++) {
+					const hex = this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i, state);
+					if (!hex) break;
+					if (i > 1) possibleMoves.push(hex.id);
+					if (this.getUnitOnHex(hex.id, state)) break;
+				}
+				// Diagonal-ish jumps in + pattern
 				if (mod3 == 2) {
 					possibleMoves.push(this.getHexByQR(startHex.q + -2, startHex.r + 1, state)?.id);
 					possibleMoves.push(this.getHexByQR(startHex.q + 2, startHex.r + -1, state)?.id);
@@ -2084,7 +2139,26 @@ function alpineHexDiceTacticGame() { return {
 			defenderHex.unitId = null;
 
 			if (isSkirmishing) {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} performed a successful Skirmish! Target removed, attacker retreated to safety.`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+				
+				if (!state) {
+					// Switch to post-skirmish move mode
+					this.actionMode = 'SKIRMISH_POST_MOVE';
+					this.selectedUnitHexId = attackerHexId;
+					
+					// Valid moves are adjacent to the target hex that are empty (OR the current attacker hex)
+					const neighbors = this.getNeighbors(defenderHex);
+					this.validMoves = neighbors
+						.filter(n => !this.getUnitOnHex(n.id) || n.id === attackerHexId)
+						.map(n => n.id);
+					
+					// If for some reason no valid moves (shouldn't happen as attackerHex is at least one), stay put
+					if (this.validMoves.length === 0) {
+						this.validMoves = [attackerHexId];
+					}
+					
+					return; // Wait for user to click a hex
+				}
 			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
@@ -2214,7 +2288,7 @@ function alpineHexDiceTacticGame() { return {
 				die.actionsTakenThisTurn = 0;
 				die.isRerolled = false; // Penalty expires when turn starts
 				// Decrement skirmish buff
-				if (die.skirmishBuff > 0) die.skirmishBuff--;
+				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
 				// Guard status persists until the unit moves or rerolls.
 			}
 		});

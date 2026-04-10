@@ -65,10 +65,7 @@ function generateAllPossibleMoves(GAME, state) {
 					// Swap: Use if Oracle is threatened or to reposition key unit
 					moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
 
-					// Skirmish: Use if target is a high-attack unit (Hussar/Assault) to enable Hit & Run
-					if (targetUnit.attack >= 3) {
-						moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
-					}
+					// moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
 				}
 			});
 

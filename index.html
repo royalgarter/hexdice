@@ -196,6 +196,9 @@
 						<span style="top:4px;right:18px;" class="absolute text-blue-900 font-bold"
 							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'"> 
 						</span>
+						<span style="top:-2px;right:16px;" class="absolute text-red-900 font-bold"
+							x-show="getUnitOnHex(hex.id)?.skirmishBuff">⚔
+						</span>
 						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
 							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
 							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
