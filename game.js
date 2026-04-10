@@ -452,7 +452,7 @@ function alpineHexDiceTacticGame() { return {
 		let cls = TERRAIN_CONFIG[hex.terrainType]?.bg || 'bg-hexdefault';
 
 		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined) {
-			cls += ' ' + PLAYER_CONFIG[hex.basePlayerId].bg;
+			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
 		}
 
 		state = state || this;
@@ -500,8 +500,11 @@ function alpineHexDiceTacticGame() { return {
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
-			style.push(`background-size: auto 70%;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif");`);
+			style.push(`background-size: auto 70%, cover;`, `background-repeat: no-repeat;`, `background-position: center;`);
+			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") ${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) ? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` : ''};`);
+		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
+			style.push(`background-size: cover;`, `background-repeat: no-repeat;`, `background-position: center;`);
+			style.push(`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
@@ -1600,12 +1603,9 @@ function alpineHexDiceTacticGame() { return {
 		// Assuming Dice 2 (Archer) is the ranged unit as per UNIT_STATS
 		if (!attackerUnit || attackerUnit.value !== 2 || !attackerHex) return [];
 
-		const isV12Active = new URLSearchParams(location.search).get('v') === '1.2';
-
 		let minRange = 1;
 		let maxRange = attackerUnit.range; // Default is 2 for Archer
 
-		if (isV12Active) {
 			switch (attackerHex.terrainType) {
 				case 'TOWER':
 					minRange = 1; // "added melee" means range 1 is now possible
@@ -1617,7 +1617,6 @@ function alpineHexDiceTacticGame() { return {
 					break;
 				// FOREST and LAKE don't change range for the attacker
 			}
-		}
 
 		let targets = [];
 
@@ -1633,7 +1632,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 		// If v12 is active and attacker is on a Tower, ignore adjacent enemy check for range 1 targets
-		if (isEnemyAdjacent && !(isV12Active && attackerHex.terrainType === 'TOWER' && minRange === 1)) return [];
+		if (isEnemyAdjacent && !(attackerHex.terrainType === 'TOWER' && minRange === 1)) return [];
 
 
 		(state || this).hexes.forEach(potentialTargetHex => {
@@ -1671,8 +1670,6 @@ function alpineHexDiceTacticGame() { return {
 		const dist = this.axialDistance(fromHex.q, fromHex.r, toHex.q, toHex.r);
 		if (dist <= 1) return true; // Adjacent hexes always have LoS
 
-		const isV12Active = new URLSearchParams(location.search).get('v') === '1.2';
-
 		// Linear interpolation for hex coordinates
 		// Check each intermediate hex (1 step away from attacker, up to dist-1)
 		for (let i = 1; i < dist; i++) {
@@ -1705,16 +1702,14 @@ function alpineHexDiceTacticGame() { return {
 			if (!intermediateHex || intermediateHex.id === attackerHexId || intermediateHex.id === toHex.id) continue;
 
 			// Block LoS by terrain (if v1.2 is active)
-			if (isV12Active) {
-				switch (intermediateHex.terrainType) {
-					case 'FOREST':
-					case 'TOWER':
-					case 'MOUNTAIN':
-						return false; // Blocked by terrain
-					case 'LAKE':
-						// LAKE remains transparent, do nothing here
-						break;
-				}
+			switch (intermediateHex.terrainType) {
+				case 'FOREST':
+				case 'TOWER':
+				case 'MOUNTAIN':
+					return false; // Blocked by terrain
+				case 'LAKE':
+					// LAKE remains transparent, do nothing here
+					break;
 			}
 
 			const intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
@@ -1945,7 +1940,6 @@ function alpineHexDiceTacticGame() { return {
 		let q = [{hex: startHex, pathCost: 0}]; // Store hex and path cost
 		let visited = new Map([[startHex.id, 0]]); // Map hexId to min cost to reach it
 
-		const isV12Active = new URLSearchParams(location.search).get('v') === '1.2';
 
 		let maxDistance = unit.distance;
 
@@ -1956,19 +1950,19 @@ function alpineHexDiceTacticGame() { return {
 				if (!n) return; // Skip invalid neighbors
 
 				let costToEnter = 1;
-				if (isV12Active && n.terrainType === 'MOUNTAIN') {
+				if (n.terrainType === 'MOUNTAIN') {
 					if (unit.value === 3) return; // Dice 3 cannot enter mountains (impassable)
 					if (unit.value !== 5) { // Dice 5 not affected by mountain cost
 						costToEnter = 2; // Mountain hex costs 2 movement steps
 					}
-				} else if (isV12Active && n.terrainType === 'LAKE') {
+				} else if (n.terrainType === 'LAKE') {
 					return; // Lake is impassable
 				}
 
 				const newCost = currentCost + costToEnter;
 
 				// Special handling for Dice 1, 2, 4 movement reduction on mountains for v1.2
-				if (isV12Active && (unit.value === 1 || unit.value === 2 || unit.value === 4)) {
+				if ((unit.value === 1 || unit.value === 2 || unit.value === 4)) {
 					// If the destination hex is a mountain, reduce max distance by 1.
 					// This logic is tricky. The "reduced max distance by 1" applies when moving INTO a mountain hex.
 					// A simpler interpretation for BFS: If newCost exceeds (unit.distance - 1) *and* the destination is a mountain, it's invalid.
@@ -1987,7 +1981,7 @@ function alpineHexDiceTacticGame() { return {
 
 					// DICE 6 MOUNTAIN MOVEMENT: "Dice 6 is still able to move on Mountain hex by winning a combat."
 					// User Clarification: "Dice 6 cannot enter Mountain"
-					if (isV12Active && n.terrainType === 'MOUNTAIN' && unit.value === 6) {
+					if (n.terrainType === 'MOUNTAIN' && unit.value === 6) {
 						return; // Dice 6 cannot enter Mountain hexes, even for combat or merges
 					}
 
@@ -2080,18 +2074,15 @@ function alpineHexDiceTacticGame() { return {
 		effectiveArmor -= defenderUnit.armorReduction;
 
 		// Apply terrain defense bonuses (only if v1.2 is active)
-		const isV12Active = new URLSearchParams(location.search).get('v') === '1.2';
-		if (isV12Active) {
-			switch (defenderHex.terrainType) {
-				case 'FOREST':
-					effectiveArmor += 1;
-					break;
-				case 'TOWER':
-				case 'MOUNTAIN':
-					effectiveArmor += 2;
-					break;
-				// LAKE is impassable, so units shouldn't be there to defend
-			}
+		switch (defenderHex.terrainType) {
+			case 'FOREST':
+			case 'MOUNTAIN':
+				effectiveArmor += 1;
+				break;
+			case 'TOWER':
+				effectiveArmor += 2;
+				break;
+			// LAKE is impassable, so units shouldn't be there to defend
 		}
 
 		return Math.max(0, effectiveArmor);
