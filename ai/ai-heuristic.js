@@ -38,7 +38,7 @@ const DEFAULT_PROFILE = {
         spells: {
             SPELLCAST_SHIELD: 0.7,
             SPELLCAST_SWAP: 0.7,
-            SPELLCAST_MEND: 0.9,
+            SPELLCAST_SKIRMISH: 1.2,
         }
     },
     riskTolerance: 0.5,
@@ -210,7 +210,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 
 /**
  * Predict which enemy units can attack next turn and calculate likely targets.
- * Used for tactical evaluation of support actions like Shielding or Mending.
+ * Used for tactical evaluation of support actions like Shielding or Skirmishing.
  */
 function predictEnemyThreats(GAME, state, myPlayerIndex) {
     const threats = [];
@@ -772,52 +772,38 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             }
         }
 
-        if (spellType === 'SPELLCAST_MEND') {
+        if (spellType === 'SPELLCAST_SKIRMISH') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            if (targetUnit && targetUnit.armorReduction > 0) {
+            if (targetUnit) {
                 const targetHex = GAME.getHex(move.targetHexId, state);
                 const neighbors = GAME.getNeighbors(targetHex, state);
                 
-                let isCurrentlyThreatened = false;
-                let canBeKilledByAdjacent = false;
+                // High bonus for high attack units (Hussar/Knight)
+                if (targetUnit.attack >= 3) {
+                    analysis.score += 150 + (targetUnit.attack * 30);
+                } else {
+                    analysis.score += 50;
+                }
+
+                // Check if target is near enemies to actually use the skirmish
+                let nearEnemy = false;
                 for (const neighbor of neighbors) {
                     const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
                     if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
-                        isCurrentlyThreatened = true;
-                        const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
-                        if (neighborUnit.attack >= defenderArmor) {
-                            canBeKilledByAdjacent = true;
+                        nearEnemy = true;
+                        // Extra bonus if it can actually kill someone with -1 attack
+                        const effectiveAtk = targetUnit.attack - 1;
+                        const defArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, state);
+                        if (effectiveAtk >= defArmor) {
+                            analysis.score += 100;
                         }
                     }
                 }
-
-                const futureThreats = predictedThreats.filter(t => t.target.id === targetUnit.id);
-                const willBeKilledNextTurn = futureThreats.some(t => t.canKill);
-                const armorReductionRatio = targetUnit.armorReduction / targetUnit.currentArmor;
-
-                if (canBeKilledByAdjacent && targetUnit.value >= 3) {
-                    const mendPreventsDeath = (targetUnit.currentArmor - targetUnit.armorReduction + 1) >= targetUnit.currentArmor;
-                    if (mendPreventsDeath) {
-                        analysis.score += 120 + (targetUnit.value * 20);
-                        analysis.isSupportAction = true;
-                    }
-                }
-                else if (willBeKilledNextTurn && targetUnit.value >= 4) {
-                    const mendPreventsDeath = (targetUnit.currentArmor - targetUnit.armorReduction + 1) >= targetUnit.currentArmor;
-                    if (mendPreventsDeath) {
-                        analysis.score += 80 + (targetUnit.value * 12);
-                        analysis.isSupportAction = true;
-                    }
-                }
-                else if (armorReductionRatio >= 0.5 && targetUnit.value >= 4) {
-                    analysis.score += 40 + (targetUnit.value * 5);
-                    analysis.isSupportAction = true;
-                    if (isCurrentlyThreatened) analysis.score += 15;
-                }
-                else {
-                    analysis.score += 5;
-                    analysis.isSupportAction = true;
-                }
+                
+                if (nearEnemy) analysis.score += 50;
+                analysis.isSupportAction = true;
+            }
+        }
             }
         }
 

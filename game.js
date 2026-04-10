@@ -124,7 +124,7 @@ function alpineHexDiceTacticGame() { return {
 	logCounter: 0,
 	winnerMessage: "",
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
-	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'MEND'
+	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
 	debug: {
 		quiet: false,
@@ -681,7 +681,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 	/**
 	 * Initiate Oracle spell selection UI prompt.
-	 * Asks player to choose between Shield, Swap, Mend spells, or cancel.
+	 * Asks player to choose between Shield, Swap, Skirmish spells, or cancel.
 	 */
 	initiateOracleSpellSelection() {
 		this.actionMode = 'ORACLE_SPELL_SELECT';
@@ -1156,7 +1156,7 @@ function alpineHexDiceTacticGame() { return {
 	 * Routes to specific spell functions based on the spellType parameter.
 	 * @param {number} oracleHexId - Hex ID of the Oracle unit
 	 * @param {number} targetHexId - Hex ID of the target friendly unit
-	 * @param {string} spellType - 'SHIELD', 'SWAP', or 'MEND'
+	 * @param {string} spellType - 'SHIELD', 'SWAP', or 'SKIRMISH'
 	 * @param {object} state - Optional game state for simulation
 	 */
 	performSpellCast(oracleHexId, targetHexId, spellType, state) {
@@ -1199,8 +1199,8 @@ function alpineHexDiceTacticGame() { return {
 			case 'SWAP':
 				this.performSwapSpell(oracleHexId, targetHexId, state);
 				break;
-			case 'MEND':
-				this.performMendSpell(oracleHexId, targetHexId, state);
+			case 'SKIRMISH':
+				this.performSkirmishSpell(oracleHexId, targetHexId, state);
 				break;
 			default:
 				this.addLog("Spell cast failed: Invalid spell type.", state);
@@ -1333,12 +1333,13 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} (${oracleHex.q},${oracleHex.r})<->(${targetHex.q},${targetHex.r}).`, state);
 	},
 	/**
-	 * Mend Spell: Remove 1 Armor Reduction from target friendly unit.
+	 * Skirmish Spell: Target unit gains Hit & Run status for its next attack.
+	 * -1 Attack penalty. On success: stays in starting hex. On failure: eliminated.
 	 * @param {number} oracleHexId - Hex ID of the Oracle unit
 	 * @param {number} targetHexId - Hex ID of the target friendly unit
 	 * @param {object} state - Optional game state for simulation
 	 */
-	performMendSpell(oracleHexId, targetHexId, state) {
+	performSkirmishSpell(oracleHexId, targetHexId, state) {
 		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
 		const targetUnit = this.getUnitOnHex(targetHexId, state);
 		const targetHex = this.getHex(targetHexId, state);
@@ -1346,12 +1347,8 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
-		if (targetUnit.armorReduction > 0) {
-			targetUnit.armorReduction = Math.max(0, targetUnit.armorReduction - 1);
-			this.addLog(`P${oracleUnit.playerId+1} Oracle cast Mend on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Armor reduction: ${targetUnit.armorReduction}.`, state);
-		} else {
-			this.addLog(`P${oracleUnit.playerId+1} Oracle cast Mend on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). No armor reduction to remove.`, state);
-		}
+		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
+		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
 	performBraveCharge(attackerHexId, targetHexId, state) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
@@ -2062,12 +2059,15 @@ function alpineHexDiceTacticGame() { return {
 
 		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
 
+		const isSkirmishing = !!attackerUnit.skirmishBuff;
+		const effectiveAttack = isSkirmishing ? Math.max(0, attackerUnit.attack - 1) : attackerUnit.attack;
+
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
 
 		// Attacker wins if armor is depleted OR attack beats effective armor
 		const isArmorDepleted = defenderUnit.armorReduction >= defenderBaseArmor;
-		const attackWins = defenderUnit.isGuarding ? (attackerUnit.attack > defenderEffectiveArmor) : (attackerUnit.attack >= defenderEffectiveArmor);
+		const attackWins = defenderUnit.isGuarding ? (effectiveAttack > defenderEffectiveArmor) : (effectiveAttack >= defenderEffectiveArmor);
 		const attackerWins = isArmorDepleted || attackWins;
 
 		// Set combat trail for visual feedback (all combats)
@@ -2083,7 +2083,9 @@ function alpineHexDiceTacticGame() { return {
 			this.removeUnit(defenderHexId, state);
 			defenderHex.unitId = null;
 
-			if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+			if (isSkirmishing) {
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} performed a successful Skirmish! Target removed, attacker retreated to safety.`, state);
+			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
 				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
@@ -2093,24 +2095,31 @@ function alpineHexDiceTacticGame() { return {
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
 			this.trailAttack = {};
 		} else { // Attacker fails
-			this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
-			this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
-
-			// Ranged attacks don't receive counter-damage (attacker is at safe distance)
-			if (combatType === 'RANGED_ATTACK') {
-				if (defenderUnit.isGuarding <= 1) {
-					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
-				}
+			if (isSkirmishing) {
+				this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} has been eliminated.`, state);
+				this.removeUnit(attackerHexId, state);
 			} else {
-				if (attackerUnit.isGuarding <= 1) {
-					this.applyDamage(attackerHexId, 1, state, false);
-				}
+				this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
 
-				if (defenderUnit.isGuarding <= 1) {
-					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+				// Ranged attacks don't receive counter-damage (attacker is at safe distance)
+				if (combatType === 'RANGED_ATTACK') {
+					if (defenderUnit.isGuarding <= 1) {
+						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+					}
+				} else {
+					if (attackerUnit.isGuarding <= 1) {
+						this.applyDamage(attackerHexId, 1, state, false);
+					}
+
+					if (defenderUnit.isGuarding <= 1) {
+						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+					}
 				}
 			}
 		}
+
+		attackerUnit.skirmishBuff = 0; // Clear buff after combat
 
 		attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
 		attackerUnit.actionsTakenThisTurn++;
@@ -2204,6 +2213,8 @@ function alpineHexDiceTacticGame() { return {
 				die.hasMovedOrAttackedThisTurn = false;
 				die.actionsTakenThisTurn = 0;
 				die.isRerolled = false; // Penalty expires when turn starts
+				// Decrement skirmish buff
+				if (die.skirmishBuff > 0) die.skirmishBuff--;
 				// Guard status persists until the unit moves or rerolls.
 			}
 		});

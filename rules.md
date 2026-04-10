@@ -67,7 +67,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
-| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Mend; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
+| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -257,7 +257,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Spellcast Action**: When activated, the Oracle can cast one of three spells on a **target friendly unit** within **Range 2** (requires Line of Sight):
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
-  * **Mend**: Remove **1 Armor Reduction** from the target unit.
+  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
+    * **Effect**: During the next attack, the unit has **-1 Attack strength**.
+    * **On Success (Win)**: The target is removed, but the attacker **retreats to its original hex** instead of moving forward.
+    * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
+    * **Duration**: Buff expires after one attack or at the end of the player's next activation.
 * **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
 * **Oracle Sacrifice (Anti-Stalemate)**: When the Oracle is the **last remaining unit** for its player, it can perform a **Sacrifice** action to eliminate an **adjacent enemy Oracle**. Both Oracles are removed from the game. This mechanic prevents unwinnable stalemates when both players are down to only Oracles.
 
@@ -290,7 +294,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **0** - Armor
 * **1** - Distance (Movement)
 * **2** - Range (For Spells)
-* **3** - Spells (Shield, Swap, Mend)
+* **3** - Spells (Shield, Swap, Skirmish)
 
 #### Two-Players Bases
 * Player can deploy each single new unit in base or its adjacent hex
@@ -362,11 +366,15 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 * ##### **Spellcast (Dice 6\)**
 
   * Choose one of your Dice 6 Oracle units.
-  * **Select a Spell**: Choose one of three spells - Shield, Swap, or Mend.
+  * **Select a Spell**: Choose one of three spells - Shield, Swap, or Skirmish.
   * **Target**: Choose any single **friendly** unit within **Range 2** (requires Line of Sight).
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks).
   * **Swap**: Oracle and target unit **exchange positions**.
-  * **Mend**: Remove **1 Armor Reduction** from target unit.
+  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
+    * **Effect**: During the next attack, the unit has **-1 Attack strength**.
+    * **On Success (Win)**: The target is removed, but the attacker **retreats to its original hex** instead of moving forward.
+    * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
+    * **Duration**: Buff expires after one attack or at the end of the player's next activation.
   * **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).
   * Action complete.
 

@@ -65,9 +65,9 @@ function generateAllPossibleMoves(GAME, state) {
 					// Swap: Use if Oracle is threatened or to reposition key unit
 					moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
 
-					// Mend: Use if target has armor reduction
-					if (targetUnit.armorReduction > 0) {
-						moves.push({ actionType: 'SPELLCAST_MEND', unitHexId, targetHexId });
+					// Skirmish: Use if target is a high-attack unit (Hussar/Assault) to enable Hit & Run
+					if (targetUnit.attack >= 3) {
+						moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
 					}
 				}
 			});
@@ -115,8 +115,8 @@ function applyMove(GAME, move, state) {
 		case 'SPELLCAST_SWAP':
 			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'SWAP', applyState);
 			break;
-		case 'SPELLCAST_MEND':
-			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'MEND', applyState);
+		case 'SPELLCAST_SKIRMISH':
+			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'SKIRMISH', applyState);
 			break;
 		case 'ORACLE_SACRIFICE':
 			GAME.performOracleSacrifice(move.unitHexId, move.targetHexId, applyState);

@@ -124,11 +124,20 @@ function performAIByPriority(GAME) {
                             }
                         }
                         
-                        // Priority 3.5: Mend - Repair heavily damaged unit
-                        if (targetUnit.armorReduction > 0 && !bestMove) {
-                            const armorRatio = targetUnit.armorReduction / targetUnit.currentArmor;
-                            if (armorRatio >= 0.5 && targetUnit.value >= 3) {
-                                bestMove = { actionType: 'SPELLCAST_MEND', unitHexId: unit.hexId, targetHexId: targetHexId };
+                        // Priority 3.5: Skirmish - Enable high attack unit for Hit & Run
+                        if (targetUnit.attack >= 3 && !bestMove) {
+                            // Check if target can attack someone nearby
+                            const neighbors = GAME.getNeighbors(targetHex, state);
+                            let hasEnemyNearby = false;
+                            for (const neighbor of neighbors) {
+                                const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
+                                if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
+                                    hasEnemyNearby = true;
+                                    break;
+                                }
+                            }
+                            if (hasEnemyNearby) {
+                                bestMove = { actionType: 'SPELLCAST_SKIRMISH', unitHexId: unit.hexId, targetHexId: targetHexId };
                                 bestPriority = 3.5;
                             }
                         }
