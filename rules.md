@@ -33,7 +33,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
   - For 2 Players: 2 distinct colors (Red/Blue), 12 dice each (Total 24).
   - For 3 Players: 3 distinct colors, 8 dice each (Total 24).
   - For 4 Players: 4 distinct colors, 6 dice each (Total 24).
-  - For 6 Players: 6 distinct colors, 4 dice each (Total 24).
+  - For 6 Players: 6 distinct colors, 6 dice each (Total 36).
 
 ### **3\. Setup**
 
@@ -65,7 +65,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
 | 2 | **Archer** | 1 | 2 | 2 | 1 | \* | Ranged Specialist (LoS required) |
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
-| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
+| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Six Axes Diagonal Maneuver (*-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
 | 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
 
@@ -76,7 +76,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Movement:** The pattern the unit follows:
     - **`*`**: BFS movement (any direction, can move through empty hexes).
     - **`L`**: L-shaped jump (2 steps straight, then 1 step offset).
-    - **`X`**: Diagonal movement (only along the six diagonal axes).
+    - **`X`**: Six Axes Diagonal movement (only along the six diagonal axes).
     - **`0`**: Stationary (cannot move except when attacking).
 
 **Dice Visualization Diagram**
@@ -140,7 +140,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 2 (Archer)
 
-* Can move up to 2 steps in any direction (BFS pattern).
+* Can move up to 1 steps in any direction (BFS pattern).
 * **Ranged Attack**: Can target an enemy exactly 2 hexes away.
 * **Line of Sight**: Attack is blocked by any unit on the path.
 * **Engaged Restriction**: Cannot perform ranged attacks if an enemy unit is in an adjacent hex.
@@ -199,7 +199,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 4 (Knight)
 
-* Can move up to 3 steps along the four diagonal axes (forming an 'X' pattern).
+* Can move up to 3 steps along the six diagonal axes (forming an '\*' pattern).
 * **Blocked Path**: Movement is blocked by any unit on the path.
 
 ```
@@ -258,7 +258,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Spellcast Action**: When activated, the Oracle can cast one of three spells on a **target friendly unit** within **Range 2** (requires Line of Sight):
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
-  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
+  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn.
     * **Effect**: During the next attack, the unit has **-1 Attack strength**.
     * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
@@ -371,7 +371,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Target**: Choose any single **friendly** unit within **Range 2** (requires Line of Sight).
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks).
   * **Swap**: Oracle and target unit **exchange positions**.
-  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
+  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn.
     * **Effect**: During the next attack, the unit has **-1 Attack strength**.
     * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
