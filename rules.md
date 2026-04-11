@@ -259,7 +259,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
   * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
-    * **Effect**: During the next attack, the unit has **-1 Attack strength**.
+    * **Effect**: During the next attack, the unit has **-1 Attack strength**, minimum attack remains **1**.
     * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.
@@ -372,7 +372,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks).
   * **Swap**: Oracle and target unit **exchange positions**.
   * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
-    * **Effect**: During the next attack, the unit has **-1 Attack strength**.
+    * **Effect**: During the next attack, the unit has **-1 Attack strength**, but minimum attack remains **1**.
     * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.

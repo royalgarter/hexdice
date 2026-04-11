@@ -2115,7 +2115,7 @@ function alpineHexDiceTacticGame() { return {
 		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
-		const effectiveAttack = isSkirmishing ? Math.max(0, attackerUnit.attack - 1) : attackerUnit.attack;
+		const effectiveAttack = isSkirmishing ? Math.max(1, attackerUnit.attack - 1) : attackerUnit.attack;
 
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
