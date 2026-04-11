@@ -34,7 +34,6 @@ const DEFAULT_PROFILE = {
         teamPositionWeight: 0.8,
         pressureWeight: 0.8,
 
-        captureEnableBonus: 1000,       // Swap enables capture next turn
         spells: {
             SPELLCAST_SHIELD: 0.7,
             SPELLCAST_SWAP: 0.7,
@@ -172,11 +171,14 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     }
 
     // Get all opponent bases
-    const opponentBases = opponentIndices.map(idx => ({
-        id: idx,
-        baseHexId: state.players[idx].baseHexId,
-        baseHex: GAME.getHex(state.players[idx].baseHexId, state)
-    })).filter(b => b.baseHex);
+    const opponentBases = opponentIndices
+        .filter(idx => !state.players[idx].isEliminated)
+        .map(idx => ({
+            id: idx,
+            baseHexId: state.players[idx].baseHexId,
+            baseHex: GAME.getHex(state.players[idx].baseHexId, state)
+        }))
+        .filter(b => b.baseHex);
 
     // Generate all possible moves for all units
     const allMoves = generateAllPossibleMoves(GAME, state);
@@ -501,21 +503,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
     // Check if unit is already on an enemy base (base already captured)
     const unitCurrentHexId = unit.hexId;
-    const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
     const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === move.targetHexId);
 
     // Check for capture (moving to any enemy base)
     if (isTargetOnEnemyBase) {
-        // If unit is already on a captured base, don't give full capture bonus for staying/moving to enemy bases
-        // This encourages units to advance rather than camp on captured bases
-        if (isUnitOnCapturedBase && move.actionType === 'MOVE') {
-            // Small bonus for maintaining base control, but much less than capturing
-            analysis.canCapture = true;
-            analysis.captureScore = w.captureBonus * 0.1; // Only 10% of capture bonus
-        } else {
-            analysis.canCapture = true;
-            analysis.captureScore = w.captureBonus;
-        }
+        analysis.canCapture = true;
+        analysis.captureScore = w.captureBonus;
     }
 
     // Check if this move kills or attacks an enemy
