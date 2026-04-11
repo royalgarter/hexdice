@@ -66,30 +66,67 @@
 		.bg-hexdanger {
 			background-color: #705030;
 		}
+		/* Terrain Colors */
+		.bg-hexplain {
+			background-color: #896648;
+			/*background-image: url('/assets/sprites/terrain/plain_01.png');
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: center;*/
+		}
+		.bg-hexforest {
+			background-color: #896648;
+			background-image: url('/assets/sprites/terrain/forest_01.png');
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+		.bg-hexlake {
+			background-color: #896648;
+			background-image: url('/assets/sprites/terrain/lake_01.png');
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+		.bg-hextower {
+			background-color: #896648;
+			background-image: url('/assets/sprites/terrain/tower_01.png');
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+		.bg-hexmountain {
+			background-color: #896648;
+			background-image: url('/assets/sprites/terrain/mountain_01.png');
+			background-size: 120%;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
 
 		/* Responsive Grid Scaling */
 		.hex-grid-container {
 			transform-origin: center center;
 			max-width: 100%;
+			/*transition: zoom 0.3s ease;*/
 		}
 		@media (max-width: 1280px) {
-			.hex-grid-container {
-				zoom: 1.25;
-			}
-		}
-		@media (max-width: 1024px) {
 			.hex-grid-container {
 				zoom: 1.2;
 			}
 		}
+		@media (max-width: 1024px) {
+			.hex-grid-container {
+				zoom: 1.1;
+			}
+		}
 		@media (max-width: 768px) {
 			.hex-grid-container {
-				zoom: 1.15;
+				zoom: 1.05;
 			}
 		}
 		@media (max-width: 640px) {
 			.hex-grid-container {
-				zoom: 1.1;
+				zoom: 1;
 			}
 		}
 		@media (max-width: 540px) {
@@ -163,9 +200,9 @@
 	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Romance Mode Banner -->
-	<div x-cloak x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'" 
+	<div x-cloak x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'"
 		class="w-full bg-yellow-100 border-y-2 border-yellow-600 py-2 text-center font-bold text-yellow-800 text-lg">
-		👑 Romance of the Dice Kingdoms - AI Battle in Progress 👑
+		👑 Romance of the Dice Kingdoms in Progress 👑
 	</div>
 
 	<!-- Hex Grid Container -->
@@ -194,7 +231,7 @@
 						</span>
 
 						<span style="top:4px;right:18px;" class="absolute text-blue-900 font-bold"
-							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'"> 
+							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'">
 						</span>
 						<span style="top:-2px;right:16px;" class="absolute text-red-900 font-bold"
 							x-show="getUnitOnHex(hex.id)?.skirmishBuff">⚔
@@ -267,8 +304,9 @@
 				</div>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Start Random</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Start Normal: Roll The Dice</button>
-				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Against AI</button>
-				<button class="cursor-pointer border-2 border-yellow-600 px-4 py-2 hover:bg-yellow-600 hover:text-white mb-2 font-bold bg-yellow-100" @click="startRomanceMode()" >👑 Romance of the Dice Kingdoms</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Single</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="setupTerrain(true)" >Terrain</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="startRomanceMode()" >RotDK</button>
 				</div>
 
 				<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
@@ -328,7 +366,7 @@
 		<!-- Game Info -->
 		<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 py-2 px-4 border border-black text-center">
 			<div class="my-2 space-x-2">
-				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+				<button class="hidden cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
 					@click="initiateAction('MOVE')"
 				>MOVE</button>
@@ -340,7 +378,7 @@
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 					@click="performAction('GUARD', selectedUnitHexId)"
 				>GUARD</button>
-				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
+				<button class="hidden cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 					@click="initiateAction('RANGED_ATTACK')"
 				>RANGE</button>
@@ -351,9 +389,9 @@
 				></button>
 
 				<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">
-					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SHIELD')">Shield</button>
-					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SWAP')">Swap</button>
-					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SKIRMISH')">Skirmish</button>
+					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SHIELD')">SHIELD</button>
+					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SWAP')">SWAP</button>
+					<button class="cursor-pointer border border-black p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SKIRMISH')">SKIRMISH</button>
 				</div>
 
 				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white"
@@ -374,7 +412,7 @@
 			</div>
 
 			<p class="text-sm font-bold">
-				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">👑 Romance Mode - </span>
+				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
 				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
