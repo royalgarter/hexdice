@@ -23,6 +23,8 @@
 	<style>
 		.hexagon {
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-wood {
 			background-color: #c3a471aa;
@@ -32,19 +34,19 @@
 		}
 		.bg-hexselect {
 			background-color: #f4ecd8;
-			background-size: 90% !important;
+			background-size: auto 70% !important;
 		}
 		.bg-hexmove {
 			background-color: #bd9b6b;
-			background-size: 90% !important;
+			background-size: auto 70% !important;
 		}
 		.bg-hexmerge {
 			background-color: #2bcbba;
-			background-size: 90% !important;
+			background-size: auto 70% !important;
 		}
 		.bg-hextarget {
 			background-color: #fed330;
-			background-size: 90% !important;
+			background-size: auto 70% !important;
 		}
 		.bg-hexdeploy {
 			background-color: #f7b731;
@@ -215,8 +217,8 @@
 		<div class="hex-grid-container relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
 				<div class="hexagon shadow-md absolute flex items-center justify-center cursor-pointer"
-					:class="hexColor(hex)"
-					:style="hexStyle(hex, 1)"
+					:class="hexColor(hex) + ' hex-' + hex.id"
+					:style="hexStyle(hex)"
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
 				>

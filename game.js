@@ -340,7 +340,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- HEX GRID --- */
-	generateHexGrid(radius, padding=0) {
+	generateHexGrid(radius, padding=1) {
 		this.hexes = [];
 		this.hexesQR = {};
 		let id = 0;
@@ -371,6 +371,7 @@ function alpineHexDiceTacticGame() { return {
 
 		this.hexGrid = {allX, allY, minX, minY, gridWidth, gridHeight, style};
 
+		let css = '';
 		for (let i=0; i<this.hexes.length; i++) {
 			this.hexes[i].left = this.hexes[i].visualX - this.hexGrid.minX + padding;
 			this.hexes[i].top = this.hexes[i].visualY - this.hexGrid.minY + padding;
@@ -379,6 +380,18 @@ function alpineHexDiceTacticGame() { return {
 
 			this.hexes[i].trailX = this.hexes[i].left + (this.hexes[i].width / 2);
 			this.hexes[i].trailY = this.hexes[i].top + (this.hexes[i].height / 2);
+
+			css += `.hex-${this.hexes[i].id} { left: ${this.hexes[i].left}px; top: ${this.hexes[i].top}px; width: ${this.hexes[i].width}px; height: ${this.hexes[i].height}px; }\n`;
+		}
+
+		if (typeof document !== 'undefined') {
+			let styleTag = document.getElementById('dynamic-hex-styles');
+			if (!styleTag) {
+				styleTag = document.createElement('style');
+				styleTag.id = 'dynamic-hex-styles';
+				document.head.appendChild(styleTag);
+			}
+			styleTag.textContent = css;
 		}
 	},
 	determineBaseLocations(radius) {
@@ -476,59 +489,26 @@ function alpineHexDiceTacticGame() { return {
 
 		return cls;
 	},
-	hexStyle(hex, padding=0) {
-		// Calculate offset for positioning
-		// Find minX and minY to offset all hexes so they start near 0,0 of the container
-		// const allX = this.hexes.map(h => h.visualX);
-		// const allY = this.hexes.map(h => h.visualY);
-		// const minX = Math.min(...allX);
-		// const minY = Math.min(...allY);
-
-		hex.left = hex.visualX - this.hexGrid.minX + padding;
-		hex.top = hex.visualY - this.hexGrid.minY + padding;
-		hex.width = HEX_WIDTH - (padding << 1);
-		hex.height = HEX_HEIGHT - (padding << 1);
-
-		let style = [
-			`left: ${hex.left}px;`,
-			`top: ${hex.top}px;`,
-			`width: ${hex.width}px;`,
-			`height: ${hex.height}px;`,
-		];
+	hexStyle(hex) {
+		let style = [];
 
 		const unit = this.getUnitOnHex(hex.id);
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
 			style.push(`background-size: auto 70%, cover;`,
-				`background-repeat: no-repeat;`,
-				`background-position: center;`,
-				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") 
-					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) 
-						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` 
+				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif")
+					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")`
 						: ''
 					};`
 			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
 			style.push(`background-size: 110%;`,
-				`background-repeat: no-repeat;`,
-				`background-position: center;`,
 				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`
 			);
 		}
-		// https://github.com/Klokinator/FE-Repo
-		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
-
-		// let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 15];
-		// if (hex.id == trail?.fromHex?.id) {
-		// 	style.push(`filter: grayscale(${step}%);`);
-		// } else if (hex.id == trail?.toHex?.id) {
-		// 	style.push(`filter: grayscale(${(trail.path.length+2) * step}%);`);
-		// } else if (trailIdx >= 0) {
-		// 	style.push(`filter: grayscale(${(trailIdx+2) * step}%);`);
-		// }
-
-		return style.join('');
+		return style.join(' ');
 	},
 	hoverHex(hexId) {
 		if (this.phase !== 'PLAYER_TURN') return;
@@ -2093,7 +2073,7 @@ function alpineHexDiceTacticGame() { return {
 		for (let i = 1; i <= unit.distance; i++) {
 			let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 			if (!hex) break;
-			
+
 			if (hex.terrainType === 'LAKE') break; // LAKE blocks movement
 
 			let costToEnter = 1;
@@ -2120,7 +2100,7 @@ function alpineHexDiceTacticGame() { return {
 			if (hex && hex.terrainType !== 'LAKE' && !this.getUnitOnHex(hex.id, state)) {
 				let costToEnter = (hex.terrainType === 'MOUNTAIN') ? 2 : 1;
 				let effectiveMaxDistance = (hex.terrainType === 'MOUNTAIN') ? unit.distance - 1 : unit.distance;
-				
+
 				if (costToEnter <= effectiveMaxDistance && this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
 					possibleMoves.push(hex.id);
 				}
@@ -2340,7 +2320,7 @@ function alpineHexDiceTacticGame() { return {
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
-		
+
 		let attackMod = 0;
 		if (isSkirmishing) attackMod -= 1;
 		// Range 3 (further than usual 2 range) the attack is reduce by 1
