@@ -190,13 +190,13 @@ function alpineHexDiceTacticGame() { return {
 		// Place terrain (e.g., Forest for simplicity for now, actual type from roll 4)
 		// For roulette, the rules specify "each player places one terrain cell in their wish on valid hex"
 		// Since user chose "Auto-Placement (Simple)", I will just randomly pick a terrain type for each.
-		const terrainTypes = ['FOREST', 'LAKE', 'TOWER', 'MOUNTAIN'];
+		const terrainTypes = Object.keys(TERRAIN_CONFIG).filter(x => x != 'PLAIN');
 
 		for (let i = 0; i < totalTerrainCells && i < validTerrainHexes.length; i++) {
 			const hex = validTerrainHexes[i];
 			const randomTerrainType = terrainTypes[Math.floor(random() * terrainTypes.length)];
 			hex.terrainType = randomTerrainType;
-			this.addLog(`Placed ${randomTerrainType} at (${hex.q}, ${hex.r}).`);
+			this.addLog(`${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
 		}
 	},
 
@@ -500,11 +500,21 @@ function alpineHexDiceTacticGame() { return {
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
-			style.push(`background-size: auto 70%, cover;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") ${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) ? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` : ''};`);
+			style.push(`background-size: auto 70%, cover;`,
+				`background-repeat: no-repeat;`,
+				`background-position: center;`,
+				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") 
+					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) 
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` 
+						: ''
+					};`
+			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
-			style.push(`background-size: cover;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`);
+			style.push(`background-size: 110%;`,
+				`background-repeat: no-repeat;`,
+				`background-position: center;`,
+				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`
+			);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
@@ -1600,23 +1610,16 @@ function alpineHexDiceTacticGame() { return {
 	calcValidRangedTargets(attackerHexId, state, isHovering) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
-		// Assuming Dice 2 (Archer) is the ranged unit as per UNIT_STATS
-		if (!attackerUnit || attackerUnit.value !== 2 || !attackerHex) return [];
+		// Assuming unit with range property > 0 is a ranged unit
+		if (!attackerUnit || attackerUnit.range < 2 || !attackerHex) return [];
 
 		let minRange = 1;
-		let maxRange = attackerUnit.range; // Default is 2 for Archer
+		let maxRange = attackerUnit.range;
 
-			switch (attackerHex.terrainType) {
-				case 'TOWER':
-					minRange = 1; // "added melee" means range 1 is now possible
-					maxRange = 3;
-					break;
-				case 'MOUNTAIN':
-					minRange = 2; // "still cannot target units 1 hex away"
-					maxRange = 3; // "extra range"
-					break;
-				// FOREST and LAKE don't change range for the attacker
-			}
+		switch (attackerHex.terrainType) {
+			case 'TOWER': minRange = 1;maxRange = 2;break;
+			case 'MOUNTAIN':minRange = 1;maxRange = 3;break;
+		}
 
 		let targets = [];
 
@@ -1631,9 +1634,8 @@ function alpineHexDiceTacticGame() { return {
 				}
 			}
 		}
-		// If v12 is active and attacker is on a Tower, ignore adjacent enemy check for range 1 targets
-		if (isEnemyAdjacent && !(attackerHex.terrainType === 'TOWER' && minRange === 1)) return [];
-
+		// Archer & Oracle will not be limited by adjacent enemy unit restriction when stand in Tower or Mountain
+		if (isEnemyAdjacent && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) return [];
 
 		(state || this).hexes.forEach(potentialTargetHex => {
 			if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
@@ -1701,7 +1703,6 @@ function alpineHexDiceTacticGame() { return {
 			const intermediateHex = this.getHexByQR(roundQ, roundR, state);
 			if (!intermediateHex || intermediateHex.id === attackerHexId || intermediateHex.id === toHex.id) continue;
 
-			// Block LoS by terrain (if v1.2 is active)
 			switch (intermediateHex.terrainType) {
 				case 'FOREST':
 				case 'TOWER':
@@ -1755,19 +1756,20 @@ function alpineHexDiceTacticGame() { return {
 		// Oracle (Dice 6): Spell targeting - target friendly units within Range 2
 		if (attackerUnit.value === 6) {
 			let targets = [];
-			const range = attackerUnit.range; // Range 2 for Oracle
+			let range = attackerUnit.range; // Range 2 for Oracle
+			let minRange = 1;
 
 			// Engaged Spell Disablement: Oracle cannot cast spells when enemy is adjacent
 			const isEngaged = this.isUnitEngaged(attackerHexId, state);
-			if (isEngaged && !isHovering) {
-				return []; // Cannot cast spells while engaged
+			if (isEngaged && !isHovering && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) {
+				return []; // Cannot cast spells while engaged unless on Tower or Mountain
 			}
 
 			(state || this).hexes.forEach(potentialTargetHex => {
 				if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
 
 				const dist = this.axialDistance(attackerHex.q, attackerHex.r, potentialTargetHex.q, potentialTargetHex.r);
-				if (dist > range) return;
+				if (dist < minRange || dist > range) return;
 
 				// Skip Check Line of Sight for spell
 				// if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
@@ -1916,6 +1918,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		possibleMoves = [...new Set(possibleMoves.filter(x => x))];
+		possibleMoves = possibleMoves.filter(id => this.getHex(id, state)?.terrainType != 'LAKE')
 
 		// Filter based on target: empty or enemy (for move), or friendly (for merge)
 		return possibleMoves.filter(hexId => {
@@ -1940,7 +1943,6 @@ function alpineHexDiceTacticGame() { return {
 		let q = [{hex: startHex, pathCost: 0}]; // Store hex and path cost
 		let visited = new Map([[startHex.id, 0]]); // Map hexId to min cost to reach it
 
-
 		let maxDistance = unit.distance;
 
 		while (q.length > 0) {
@@ -1949,41 +1951,25 @@ function alpineHexDiceTacticGame() { return {
 			this.getNeighbors(curr, state).forEach(n => {
 				if (!n) return; // Skip invalid neighbors
 
+				if (n.terrainType === 'LAKE') return; // Unit could not stand on LAKE & LAKE should block movement
+
 				let costToEnter = 1;
+				let effectiveMaxDistance = maxDistance;
+
 				if (n.terrainType === 'MOUNTAIN') {
-					if (unit.value === 3) return; // Dice 3 cannot enter mountains (impassable)
-					if (unit.value !== 5) { // Dice 5 not affected by mountain cost
-						costToEnter = 2; // Mountain hex costs 2 movement steps
+					if (maxDistance > 1) {
+						costToEnter = 2;
+						effectiveMaxDistance = maxDistance - 1;
 					}
-				} else if (n.terrainType === 'LAKE') {
-					return; // Lake is impassable
 				}
 
 				const newCost = currentCost + costToEnter;
 
-				// Special handling for Dice 1, 2, 4 movement reduction on mountains for v1.2
-				if ((unit.value === 1 || unit.value === 2 || unit.value === 4)) {
-					// If the destination hex is a mountain, reduce max distance by 1.
-					// This logic is tricky. The "reduced max distance by 1" applies when moving INTO a mountain hex.
-					// A simpler interpretation for BFS: If newCost exceeds (unit.distance - 1) *and* the destination is a mountain, it's invalid.
-					// Or, more accurately: if the unit is 1,2,4, its effective maxDistance for a mountain hex is unit.distance - 1.
-					// If the target hex is a mountain, check against unit.distance - 1
-					if (newCost > unit.distance && n.terrainType === 'MOUNTAIN') return;
-					// Otherwise, check against normal unit.distance
-					if (newCost > unit.distance && n.terrainType !== 'MOUNTAIN') return;
-				} else {
-					if (newCost > maxDistance) return;
-				}
+				if (newCost > effectiveMaxDistance) return;
 
 				// If we found a shorter path to this hex, update and re-add to queue
 				if (!visited.has(n.id) || newCost < visited.get(n.id)) {
 					const unitOnN = this.getUnitOnHex(n.id, state);
-
-					// DICE 6 MOUNTAIN MOVEMENT: "Dice 6 is still able to move on Mountain hex by winning a combat."
-					// User Clarification: "Dice 6 cannot enter Mountain"
-					if (n.terrainType === 'MOUNTAIN' && unit.value === 6) {
-						return; // Dice 6 cannot enter Mountain hexes, even for combat or merges
-					}
 
 					if (!unitOnN || unitOnN.isDeath) {
 						// Empty hex - can move here
@@ -2001,7 +1987,6 @@ function alpineHexDiceTacticGame() { return {
 						visited.set(n.id, newCost);
 						// Do NOT add to queue for further movement, units can't move *through* enemy units
 					}
-					// Other cases: blocked (enemy for ranged unit, or wrong type)
 				}
 			});
 		}
@@ -2073,14 +2058,11 @@ function alpineHexDiceTacticGame() { return {
 		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
 		effectiveArmor -= defenderUnit.armorReduction;
 
-		// Apply terrain defense bonuses (only if v1.2 is active)
 		switch (defenderHex.terrainType) {
 			case 'FOREST':
+			case 'TOWER':
 			case 'MOUNTAIN':
 				effectiveArmor += 1;
-				break;
-			case 'TOWER':
-				effectiveArmor += 2;
 				break;
 			// LAKE is impassable, so units shouldn't be there to defend
 		}
@@ -2107,9 +2089,25 @@ function alpineHexDiceTacticGame() { return {
 		const axes_b = AXES.find(({i}) => (i != primary.i) && ((i % 3) == mod3));
 
 		// Check forward movement along primary axis
+		let currentCost = 0;
 		for (let i = 1; i <= unit.distance; i++) {
 			let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
-			if (!hex || this.getUnitOnHex(hex.id, state)) continue;
+			if (!hex) break;
+			
+			if (hex.terrainType === 'LAKE') break; // LAKE blocks movement
+
+			let costToEnter = 1;
+			let effectiveMaxDistance = unit.distance;
+
+			if (hex.terrainType === 'MOUNTAIN') {
+				costToEnter = 2;
+				effectiveMaxDistance = unit.distance - 1; // Dice 1 distance reduced on mountain
+			}
+
+			currentCost += costToEnter;
+			if (currentCost > effectiveMaxDistance) break;
+
+			if (this.getUnitOnHex(hex.id, state)) break; // Blocked by unit
 
 			if (this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
 				possibleMoves.push(hex.id);
@@ -2119,8 +2117,11 @@ function alpineHexDiceTacticGame() { return {
 		// Check backward movement (1 step only, matching Fencer's standard movement)
 		if (axes_b) {
 			let hex = this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state);
-			if (hex && !this.getUnitOnHex(hex.id, state)) {
-				if (this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
+			if (hex && hex.terrainType !== 'LAKE' && !this.getUnitOnHex(hex.id, state)) {
+				let costToEnter = (hex.terrainType === 'MOUNTAIN') ? 2 : 1;
+				let effectiveMaxDistance = (hex.terrainType === 'MOUNTAIN') ? unit.distance - 1 : unit.distance;
+				
+				if (costToEnter <= effectiveMaxDistance && this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
 					possibleMoves.push(hex.id);
 				}
 			}
@@ -2338,7 +2339,14 @@ function alpineHexDiceTacticGame() { return {
 		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
-		const effectiveAttack = isSkirmishing ? Math.max(0, attackerUnit.attack - 1) : attackerUnit.attack;
+		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
+		
+		let attackMod = 0;
+		if (isSkirmishing) attackMod -= 1;
+		// Range 3 (further than usual 2 range) the attack is reduce by 1
+		if (combatType === 'RANGED_ATTACK' && distance === 3) attackMod -= 1;
+
+		const effectiveAttack = Math.max(1, attackerUnit.attack + attackMod);
 
 		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
