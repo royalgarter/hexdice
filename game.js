@@ -190,13 +190,13 @@ function alpineHexDiceTacticGame() { return {
 		// Place terrain (e.g., Forest for simplicity for now, actual type from roll 4)
 		// For roulette, the rules specify "each player places one terrain cell in their wish on valid hex"
 		// Since user chose "Auto-Placement (Simple)", I will just randomly pick a terrain type for each.
-		const terrainTypes = ['FOREST', 'LAKE', 'TOWER', 'MOUNTAIN'];
+		const terrainTypes = Object.keys(TERRAIN_CONFIG).filter(x => x != 'PLAIN');
 
 		for (let i = 0; i < totalTerrainCells && i < validTerrainHexes.length; i++) {
 			const hex = validTerrainHexes[i];
 			const randomTerrainType = terrainTypes[Math.floor(random() * terrainTypes.length)];
 			hex.terrainType = randomTerrainType;
-			this.addLog(`Placed ${randomTerrainType} at [${hex.id}](${hex.q}, ${hex.r}).`);
+			this.addLog(`${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
 		}
 	},
 
@@ -1607,12 +1607,8 @@ function alpineHexDiceTacticGame() { return {
 		let maxRange = attackerUnit.range;
 
 		switch (attackerHex.terrainType) {
-			case 'TOWER':
-			case 'MOUNTAIN':
-				minRange = 1;
-				maxRange = 3; // "attack Range 1-3"
-				break;
-			// FOREST and LAKE don't change range for the attacker
+			case 'TOWER': minRange = 1;maxRange = 2;break;
+			case 'MOUNTAIN':minRange = 1;maxRange = 3;break;
 		}
 
 		let targets = [];
@@ -1630,7 +1626,6 @@ function alpineHexDiceTacticGame() { return {
 		}
 		// Archer & Oracle will not be limited by adjacent enemy unit restriction when stand in Tower or Mountain
 		if (isEnemyAdjacent && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) return [];
-
 
 		(state || this).hexes.forEach(potentialTargetHex => {
 			if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
@@ -1698,7 +1693,6 @@ function alpineHexDiceTacticGame() { return {
 			const intermediateHex = this.getHexByQR(roundQ, roundR, state);
 			if (!intermediateHex || intermediateHex.id === attackerHexId || intermediateHex.id === toHex.id) continue;
 
-			// Block LoS by terrain (if v1.2 is active)
 			switch (intermediateHex.terrainType) {
 				case 'FOREST':
 				case 'TOWER':
@@ -1754,11 +1748,6 @@ function alpineHexDiceTacticGame() { return {
 			let targets = [];
 			let range = attackerUnit.range; // Range 2 for Oracle
 			let minRange = 1;
-
-			if (attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN') {
-				minRange = 1;
-				range = 3; // "attack Range 1-3"
-			}
 
 			// Engaged Spell Disablement: Oracle cannot cast spells when enemy is adjacent
 			const isEngaged = this.isUnitEngaged(attackerHexId, state);
@@ -1958,12 +1947,8 @@ function alpineHexDiceTacticGame() { return {
 				let effectiveMaxDistance = maxDistance;
 
 				if (n.terrainType === 'MOUNTAIN') {
-					if (unit.value !== 5) { // Dice 5 is not affected by this cost
+					if (maxDistance > 1) {
 						costToEnter = 2;
-					}
-
-					// Dice 1, Dice 2 & Dice 4 are reduced maximum movement distance by 1 on Mountain
-					if (unit.value === 1 || unit.value === 2 || unit.value === 4) {
 						effectiveMaxDistance = maxDistance - 1;
 					}
 				}
