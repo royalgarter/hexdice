@@ -500,11 +500,21 @@ function alpineHexDiceTacticGame() { return {
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
-			style.push(`background-size: auto 70%, cover;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") ${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) ? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` : ''};`);
+			style.push(`background-size: auto 70%, cover;`,
+				`background-repeat: no-repeat;`,
+				`background-position: center;`,
+				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") 
+					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) 
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` 
+						: ''
+					};`
+			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
-			style.push(`background-size: cover;`, `background-repeat: no-repeat;`, `background-position: center;`);
-			style.push(`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`);
+			style.push(`background-size: 110%;`,
+				`background-repeat: no-repeat;`,
+				`background-position: center;`,
+				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`
+			);
 		}
 		// https://github.com/Klokinator/FE-Repo
 		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
