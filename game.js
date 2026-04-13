@@ -988,6 +988,12 @@ function alpineHexDiceTacticGame() { return {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
 				// New merge unit could take action if sum > 6
 			} else {
+				// Archers (Dice 2) cannot perform melee attacks
+				if (unit.value === 2) {
+					this.addLog("Archers cannot perform melee attacks. Move to an empty hex only.");
+					return;
+				}
+				
 				this.performMove(this.selectedUnitHexId, targetHexId);
 
 				if (action == 'BRAVE_CHARGE') {
@@ -2044,7 +2050,10 @@ function alpineHexDiceTacticGame() { return {
 						// Do NOT add to queue for further movement, units can't move *through* merged units
 					} else if (!isForMerging && unitOnN.playerId !== unit.playerId) {
 						// Enemy unit, melee attacker - can attack (but can't move through)
-						possibleMoves.push(n.id);
+						// Archers (Dice 2) cannot perform melee attacks
+						if (unit.value !== 2) {
+							possibleMoves.push(n.id);
+						}
 						visited.set(n.id, newCost);
 						// Do NOT add to queue for further movement, units can't move *through* enemy units
 					}
