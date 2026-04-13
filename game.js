@@ -992,7 +992,6 @@ function alpineHexDiceTacticGame() { return {
 					this.addLog("Archers cannot perform melee attacks. Move to an empty hex only.");
 					return;
 				}
-
 				this.performMove(this.selectedUnitHexId, targetHexId);
 
 				if (action == 'BRAVE_CHARGE') {
