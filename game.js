@@ -522,7 +522,7 @@ function alpineHexDiceTacticGame() { return {
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
-			style.push(`background-size: auto 70%, cover;`,
+			style.push(`background-size: auto 66%, cover;`,
 				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif")
 					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
 						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")`
@@ -530,7 +530,7 @@ function alpineHexDiceTacticGame() { return {
 					};`
 			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
-			style.push(`background-size: 110%;`,
+			style.push(`background-size: 114%;`,
 				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`
 			);
 		}
