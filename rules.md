@@ -428,6 +428,24 @@ The map is a hexagonal grid with a dynamic radius:
 
 Movement is measured in steps between adjacent hexes. Specific hexes are marked as Base locations for 2-player games, and the corner hexes serve as Base locations for multiplayer games.
 
+#### **Terrain Types**
+
+Each hex on the map has a terrain type that affects movement and combat. By default, all hexes are `PLAIN` terrain unless modified by expansion rules (e.g., v1.2).
+
+| Terrain | Movement Cost | Defense Bonus | Line of Sight | Special Effects |
+| :--- | :---: | :---: | :---: | :--- |
+| **PLAIN** | 1 | None | Transparent | Default terrain, no effects |
+| **FOREST** | 1 | +1 Armor | **Blocked** | Defensive terrain |
+| **LAKE** | **Impassable** | N/A | Transparent | Cannot enter or move through |
+| **TOWER** | 1 | +1 Armor | **Blocked** | Extends Archer range to 1-3 |
+| **MOUNTAIN** | 2 | +2 Armor | **Blocked** | Reduces movement distance by 1 (except Tanker) |
+
+**Terrain Effects Details:**
+- **Defensive Bonus**: Units defending on FOREST, TOWER, or MOUNTAIN gain +1 Armor (MOUNTAIN gives +2). This stacks with Guard charges.
+- **Line of Sight Blocking**: FOREST, TOWER, and MOUNTAIN block ranged attacks and spell targeting. LAKE is transparent to LoS.
+- **Movement**: LAKE is completely impassable. MOUNTAIN costs 2 movement steps and reduces max distance by 1 for most units.
+- **Archer Ranged Attacks**: Units on TOWER or MOUNTAIN can perform ranged attacks even when engaged by adjacent enemies. TOWER allows range 1-2, MOUNTAIN allows range 1-3.
+
 ### **9\. Development References**
 
 * [https://hamhambone.github.io/hexgrid/](https://hamhambone.github.io/hexgrid/)  
