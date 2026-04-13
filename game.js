@@ -988,8 +988,7 @@ function alpineHexDiceTacticGame() { return {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
 				// New merge unit could take action if sum > 6
 			} else {
-				// Archers (Dice 2) cannot perform melee attacks
-				if (unit.value === 2) {
+				if (unit.value === 2 && target && target.playerId !== unit.playerId) {
 					this.addLog("Archers cannot perform melee attacks. Move to an empty hex only.");
 					return;
 				}
