@@ -992,7 +992,7 @@ function alpineHexDiceTacticGame() { return {
 					this.addLog("Archers cannot perform melee attacks. Move to an empty hex only.");
 					return;
 				}
-				
+
 				this.performMove(this.selectedUnitHexId, targetHexId);
 
 				if (action == 'BRAVE_CHARGE') {
@@ -2050,7 +2050,7 @@ function alpineHexDiceTacticGame() { return {
 					} else if (!isForMerging && unitOnN.playerId !== unit.playerId) {
 						// Enemy unit, melee attacker - can attack (but can't move through)
 						// Archers (Dice 2) cannot perform melee attacks
-						if (unit.value !== 2) {
+						if (unit.value !== 2 && unit.value !== 6) {
 							possibleMoves.push(n.id);
 						}
 						visited.set(n.id, newCost);
