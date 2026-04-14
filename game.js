@@ -1166,6 +1166,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return;
 
 		if (unit.isGuarding < 1) unit.isGuarding = 1;
+		unit.wasGuarding = false; // Reset fade timer when guarding
 
 		unit.skirmishBuff = 0;
 
@@ -1440,6 +1441,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
 		targetUnit.isGuarding = 2;
+		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
 	},
@@ -1574,8 +1576,18 @@ function alpineHexDiceTacticGame() { return {
 		let maxRange = attackerUnit.range;
 
 		switch (attackerHex.terrainType) {
-			case 'TOWER': minRange = 1;maxRange = 2;break;
-			case 'MOUNTAIN':minRange = 1;maxRange = 3;break;
+			case 'TOWER': minRange = 1; maxRange = 2; break;
+			case 'MOUNTAIN': minRange = 1; maxRange = 3; break;
+		}
+
+		// Archer (Dice 2) gets range +1 if it is currently guarding
+		if (attackerUnit.value === 2 && attackerUnit.isGuarding > 0) {
+			maxRange += 1;
+		}
+
+		// Ensure Archer max range does not exceed 3
+		if (attackerUnit.value === 2) {
+			maxRange = Math.min(maxRange, 3);
 		}
 
 		let targets = [];
@@ -2358,8 +2370,9 @@ function alpineHexDiceTacticGame() { return {
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
 		let attackMod = 0;
 		if (isSkirmishing) attackMod -= 1;
-		// Range 3 (further than usual 2 range) the attack is reduce by 1
-		if (combatType === 'RANGED_ATTACK' && distance === 3) attackMod -= 1;
+		
+		// Archer (Dice 2) damage for range 3 attack is reduced by 1
+		if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
 
 		const effectiveAttack = Math.max(1, attackerUnit.attack + attackMod);
 
@@ -2534,7 +2547,20 @@ function alpineHexDiceTacticGame() { return {
 				die.isRerolled = false; // Penalty expires when turn starts
 				// Decrement skirmish buff
 				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
-				// Guard status persists until the unit moves or rerolls.
+				
+				// Archer guard (range bonus) fades away if not refreshed by a new Guard action
+				if (die.value === 2) {
+					if (die.isGuarding > 0) {
+						if (die.wasGuarding) {
+							die.isGuarding = 0;
+							die.wasGuarding = false;
+						} else {
+							die.wasGuarding = true;
+						}
+					} else {
+						die.wasGuarding = false;
+					}
+				}
 			}
 		});
 	},
