@@ -35,19 +35,19 @@
 		}
 		.bg-hexselect {
 			background-color: #f4ecd8;
-			background-size: auto 66% !important;
+			background-size: auto 78% !important;
 		}
 		.bg-hexmove {
 			background-color: #bd9b6b;
-			background-size: auto 66% !important;
+			background-size: auto 78% !important;
 		}
 		.bg-hexmerge {
 			background-color: #2bcbba;
-			background-size: auto 66% !important;
+			background-size: auto 78% !important;
 		}
 		.bg-hextarget {
 			background-color: #fed330;
-			background-size: auto 66% !important;
+			background-size: auto 78% !important;
 		}
 		.bg-hexdeploy {
 			background-color: #f7b731;
@@ -249,9 +249,7 @@
 				>
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
-					<div class="hex-content text-xs text-center relative"
-						@click="unitstat=getUnitOnHex(hex.id) ? hex.id : null"
-					>
+					<div class="hex-content text-xs text-center relative">
 						<span style="top:-8px;right:-8px;color:#20ee8099" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
 
 						<span class="text-lg invisible"

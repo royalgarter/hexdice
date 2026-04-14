@@ -735,6 +735,8 @@ function alpineHexDiceTacticGame() { return {
 		const clickedHex = this.getHex(hexId);
 		const unitOnClickedHex = this.getUnitOnHex(hexId);
 
+		this.unitstat = unitOnClickedHex ? hexId : null
+
 		if (this.actionMode) { // If in an action mode like MOVE or ATTACK
 			this.completeAction(hexId);
 			if (this.actionMode !== 'SKIRMISH_POST_MOVE') {
@@ -1964,18 +1966,18 @@ function alpineHexDiceTacticGame() { return {
 				if (n.terrainType === 'LAKE') return; // Unit could not stand on LAKE & LAKE should block movement
 
 				let costToEnter = 1;
-				let effectiveMaxDistance = maxDistance;
+				// let effectiveMaxDistance = maxDistance;
 
 				if (n.terrainType === 'MOUNTAIN') {
 					if (maxDistance > 1) {
-						costToEnter = 2;
-						effectiveMaxDistance = maxDistance - 1;
+						costToEnter = 1.5;
+						// effectiveMaxDistance = maxDistance - 1;
 					}
 				}
 
 				const newCost = currentCost + costToEnter;
 
-				if (newCost > effectiveMaxDistance) return;
+				if (newCost > maxDistance) return;
 
 				// If we found a shorter path to this hex, update and re-add to queue
 				if (!visited.has(n.id) || newCost < visited.get(n.id)) {
@@ -2079,6 +2081,9 @@ function alpineHexDiceTacticGame() { return {
 				break;
 			// LAKE is impassable, so units shouldn't be there to defend
 		}
+
+		if ((state||this).players[defenderUnit.playerId].baseHexId == defenderHexId)
+			effectiveArmor += 2;
 
 		return Math.max(0, effectiveArmor);
 	},
