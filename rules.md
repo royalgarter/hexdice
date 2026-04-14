@@ -63,7 +63,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
-| 2 | **Archer** | 1 | 2 | 2 | 1 | \* | Ranged Specialist (LoS required) |
+| 2 | **Archer** | 1 | 2 | 2-3* | 1 | \* | Ranged (LoS req). Range 3 (requires Guard) has -1 Atk power. |
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
@@ -140,10 +140,12 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 2 (Archer)
 
-* Can move up to 2 steps in any direction (BFS pattern).
-* **Ranged Attack**: Can target an enemy exactly 2 hexes away.
+* Can move up to 1 step in any direction (BFS pattern).
+* **Ranged Attack**: Can target an enemy exactly **2 hexes away**.
+* **Guarding Bonus**: If the Archer is **Guarding**, its attack range increases from 2 to **3**.
+* **Long Range Penalty**: Attacks at range 3 have **-1 Attack power** (minimum attack remains 1).
 * **Line of Sight**: Attack is blocked by any unit on the path.
-* **Engaged Restriction**: Cannot perform ranged attacks if an enemy unit is in an adjacent hex.
+* **Engaged Restriction**: Cannot perform ranged attacks if an enemy unit is in an adjacent hex (unless on TOWER or MOUNTAIN).
 
 ```
                 .
@@ -353,14 +355,17 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * Choose one of your units that is **not currently guarding**.
   * Activate **Guard Mode** to gain **1 Shield Charge** (+1 Effective Armor).
   * The unit stays in its current hex. The charge absorbs **one attack** without taking Armor Reduction, then expires.
+  * **Archer Bonus**: Guarding Archers (Dice 2) gain **+1 Attack Range** (up to 3).
+  * **Auto-Fade (Archer)**: For Archer only, Guard status **automatically fades** at the start of the next turn cycle if not refreshed.
   * **Note**: A unit cannot stack Guard charges manually. Use the Oracle's **Shield** spell to grant **2 charges**.
   * Action complete. This unit cannot Move or Attack this turn.
 
 * ##### **Ranged Attack (Dice 2\)**
 
   * Choose one of your Dice 2 Archer units.
-  * **Restrictions**: Cannot attack if an enemy is adjacent. Requires clear Line of Sight.
-  * Target any single enemy unit located **exactly 2 hexes away**.
+  * **Restrictions**: Cannot attack if an enemy is adjacent (unless on specialized terrain). Requires clear Line of Sight.
+  * Target any single enemy unit located **2 or 3 hexes away** (range 3 requires Archer to be **Guarding**).
+  * **Long Range Penalty**: Attacks at range 3 have **-1 Attack power** (minimum attack remains 1).
   * Combat occurs. Regardless of the outcome, the attacking Dice 2 unit **remains in its current hex** and does not suffer counter-damage on failure.
   * Action complete.
 
