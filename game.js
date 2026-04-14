@@ -4,61 +4,6 @@ const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
-const BOARD_DOT = [
-	`                         .`,
-	`                     .       .`,
-	`                 .       .       .`,
-	`             .       .       .       .`,
-	`         .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	`         .       .       .       .       .`,
-	`             .       .       .       .`,
-	`                 .       .       .`,
-	`                     .       .`,
-	`                         .`,
-].join('\n');
-const BOARD_NUM = [
-	`                        057`,
-	`                    045     070`,
-	`                034     058     082`,
-	`            024     046     071     093`,
-	`        015     035     059     083     103`,
-	`    007     025     047     072     094     112`,
-	`000     016     036     060     084     104     120`,
-	`    008     026     048     073     095     113`,
-	`001     017     037     061     085     105     121`,
-	`    009     027     049     074     096     114`,
-	`002     018     038     062     086     106     122`,
-	`    010     028     050     075     097     115`,
-	`003     019     039     063     087     107     123`,
-	`    011     029     051     076     098     116`,
-	`004     020     040     064     088     108     124`,
-	`    012     030     052     077     099     117`,
-	`005     021     041     065     089     109     125`,
-	`    013     031     053     078     100     118`,
-	`006     022     042     066     090     110     126`,
-	`    014     032     054     079     101     119`,
-	`        023     043     067     091     111`,
-	`            033     055     080     102`,
-	`                044     068     092`,
-	`                    056     081`,
-	`                        069`,
-].join('\n');
-
 // BIND-EDIT rules.md: ### **4. Dice Soldiers (Unit Types)**
 const UNIT_STATS = {
 	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
@@ -170,11 +115,21 @@ function alpineHexDiceTacticGame() { return {
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
 		this.addLog(`Roulette dice rolls: ${terrainDiceRolls.join(', ')}. Total terrain cells: ${totalTerrainCells}.`);
 
+		// Collect all deployment hexes for all players to exclude
+		const deploymentHexIds = new Set();
+		this.players.forEach((_, playerId) => {
+			this.calcValidDeploymentHexes(playerId).forEach(id => deploymentHexIds.add(id));
+		});
+
 		const validTerrainHexes = this.hexes.filter(hex => {
 			// Not the R=0 center hex
 			if (hex.q === 0 && hex.r === 0) return false;
 			// Not one of the 6 Base corner hexes
 			if (hex.basePlayerId !== null && hex.basePlayerId !== undefined) return false;
+
+			// Not in any player's deployment area
+			// if (deploymentHexIds.has(hex.id)) return false;
+
 			// Does not already contain a terrain hex (though it should be plain at this stage)
 			if (hex.terrainType !== 'PLAIN') return false;
 			return true;
@@ -195,7 +150,12 @@ function alpineHexDiceTacticGame() { return {
 		for (let i = 0; i < totalTerrainCells && i < validTerrainHexes.length; i++) {
 			const hex = validTerrainHexes[i];
 			const randomTerrainType = terrainTypes[Math.floor(random() * terrainTypes.length)];
-			hex.terrainType = randomTerrainType;
+
+			if (randomTerrainType == 'LAKE' && deploymentHexIds.has(hex.id))
+				hex.terrainType = 'PLAIN';
+			else
+				hex.terrainType = randomTerrainType;
+
 			this.addLog(`${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
 		}
 	},
@@ -210,6 +170,12 @@ function alpineHexDiceTacticGame() { return {
 
 		const distanceMap = [null, 3, 4, 5, 6, 7, 8]; // Index 1-6 for rolls
 		const terrainTypeMap = [null, 'FOREST', 'FOREST', 'LAKE', 'LAKE', 'TOWER', 'MOUNTAIN']; // Index 1-6 for rolls
+
+		// Collect all deployment hexes for all players to exclude
+		const deploymentHexIds = new Set();
+		this.players.forEach((_, playerId) => {
+			this.calcValidDeploymentHexes(playerId).forEach(id => deploymentHexIds.add(id));
+		});
 
 		const centerHex = this.getHexByQR(0, 0);
 
@@ -251,6 +217,11 @@ function alpineHexDiceTacticGame() { return {
 				// Not one of the 6 Base corner hexes
 				if (potentialTerrainHex.basePlayerId !== null && potentialTerrainHex.basePlayerId !== undefined) {
 					this.addLog(`Skipped terrain #${i+1}: Location is a Base hex (${potentialTerrainHex.q}, ${potentialTerrainHex.r}).`);
+					continue;
+				}
+				// Not in any player's deployment area
+				if (deploymentHexIds.has(potentialTerrainHex.id)) {
+					this.addLog(`Skipped terrain #${i+1}: Location is a deployment hex (${potentialTerrainHex.q}, ${potentialTerrainHex.r}).`);
 					continue;
 				}
 				// Does not already contain a terrain hex
@@ -340,7 +311,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- HEX GRID --- */
-	generateHexGrid(radius, padding=0) {
+	generateHexGrid(radius, padding=1) {
 		this.hexes = [];
 		this.hexesQR = {};
 		let id = 0;
@@ -371,6 +342,7 @@ function alpineHexDiceTacticGame() { return {
 
 		this.hexGrid = {allX, allY, minX, minY, gridWidth, gridHeight, style};
 
+		let css = '';
 		for (let i=0; i<this.hexes.length; i++) {
 			this.hexes[i].left = this.hexes[i].visualX - this.hexGrid.minX + padding;
 			this.hexes[i].top = this.hexes[i].visualY - this.hexGrid.minY + padding;
@@ -379,6 +351,18 @@ function alpineHexDiceTacticGame() { return {
 
 			this.hexes[i].trailX = this.hexes[i].left + (this.hexes[i].width / 2);
 			this.hexes[i].trailY = this.hexes[i].top + (this.hexes[i].height / 2);
+
+			css += `.hex-${this.hexes[i].id} { left: ${this.hexes[i].left}px; top: ${this.hexes[i].top}px; width: ${this.hexes[i].width}px; height: ${this.hexes[i].height}px; }\n`;
+		}
+
+		if (typeof document !== 'undefined') {
+			let styleTag = document.getElementById('dynamic-hex-styles');
+			if (!styleTag) {
+				styleTag = document.createElement('style');
+				styleTag.id = 'dynamic-hex-styles';
+				document.head.appendChild(styleTag);
+			}
+			styleTag.textContent = css;
 		}
 	},
 	determineBaseLocations(radius) {
@@ -476,59 +460,26 @@ function alpineHexDiceTacticGame() { return {
 
 		return cls;
 	},
-	hexStyle(hex, padding=0) {
-		// Calculate offset for positioning
-		// Find minX and minY to offset all hexes so they start near 0,0 of the container
-		// const allX = this.hexes.map(h => h.visualX);
-		// const allY = this.hexes.map(h => h.visualY);
-		// const minX = Math.min(...allX);
-		// const minY = Math.min(...allY);
-
-		hex.left = hex.visualX - this.hexGrid.minX + padding;
-		hex.top = hex.visualY - this.hexGrid.minY + padding;
-		hex.width = HEX_WIDTH - (padding << 1);
-		hex.height = HEX_HEIGHT - (padding << 1);
-
-		let style = [
-			`left: ${hex.left}px;`,
-			`top: ${hex.top}px;`,
-			`width: ${hex.width}px;`,
-			`height: ${hex.height}px;`,
-		];
+	hexStyle(hex) {
+		let style = [];
 
 		const unit = this.getUnitOnHex(hex.id);
 		if (unit) {
 			const {value, playerId} = unit;
 			const spriteColor = PLAYER_CONFIG[playerId].sprite;
-			style.push(`background-size: auto 70%, cover;`,
-				`background-repeat: no-repeat;`,
-				`background-position: center;`,
-				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif") 
-					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) 
-						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")` 
+			style.push(`background-size: auto 66%, cover;`,
+				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif")
+					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")`
 						: ''
 					};`
 			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
-			style.push(`background-size: 110%;`,
-				`background-repeat: no-repeat;`,
-				`background-position: center;`,
+			style.push(`background-size: 114%;`,
 				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`
 			);
 		}
-		// https://github.com/Klokinator/FE-Repo
-		// https://fireemblemwiki.org/w/index.php?title=Special:Search&limit=500&offset=0&profile=images&search=map-sprite
-
-		// let [trail, trailIdx, step] = [this.trail, this.trail.path.indexOf(hex.id), 15];
-		// if (hex.id == trail?.fromHex?.id) {
-		// 	style.push(`filter: grayscale(${step}%);`);
-		// } else if (hex.id == trail?.toHex?.id) {
-		// 	style.push(`filter: grayscale(${(trail.path.length+2) * step}%);`);
-		// } else if (trailIdx >= 0) {
-		// 	style.push(`filter: grayscale(${(trailIdx+2) * step}%);`);
-		// }
-
-		return style.join('');
+		return style.join(' ');
 	},
 	hoverHex(hexId) {
 		if (this.phase !== 'PLAYER_TURN') return;
@@ -982,6 +933,10 @@ function alpineHexDiceTacticGame() { return {
 				this.performMerge(this.selectedUnitHexId, targetHexId);
 				// New merge unit could take action if sum > 6
 			} else {
+				if (unit.value === 2 && target && target.playerId !== unit.playerId) {
+					this.addLog("Archers cannot perform melee attacks. Move to an empty hex only.");
+					return;
+				}
 				this.performMove(this.selectedUnitHexId, targetHexId);
 
 				if (action == 'BRAVE_CHARGE') {
@@ -1852,19 +1807,45 @@ function alpineHexDiceTacticGame() { return {
 
 		switch (unitStats.movement) {
 			case '|': // Dice 1 (Fencer) - primary axis forward, 1 step backward
+				let fwdCost = 0;
 				for (let i = 1; i <= unitStats.distance; i++) {
 					const hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 					if (!hex) break;
+					if (hex.terrainType === 'LAKE') break;
+					let stepCost = 1;
+					let effDist = unitStats.distance;
+					if (hex.terrainType === 'MOUNTAIN') {
+						stepCost = 2;
+						effDist = unitStats.distance - 1;
+					}
+					fwdCost += stepCost;
+					if (fwdCost > effDist) break;
 					possibleMoves.push(hex.id);
 					if (this.getUnitOnHex(hex.id, state)) break; // Blocked by unit
 				}
-				possibleMoves.push(this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state)?.id);
+				// 1 step backward
+				const backHex = this.getHexByQR(startHex.q + axes_b.q * 1, startHex.r + axes_b.r * 1, state);
+				if (backHex && backHex.terrainType !== 'LAKE') {
+					const backCost = backHex.terrainType === 'MOUNTAIN' ? 2 : 1;
+					const backEffDist = backHex.terrainType === 'MOUNTAIN' ? unitStats.distance - 1 : unitStats.distance;
+					if (backCost <= backEffDist) possibleMoves.push(backHex.id);
+				}
 				break;
 			case 'X': // Dice 4 (Knight) - diagonal axes only
 				for (let axis of axes_x) {
+					let axisCost = 0;
 					for (let i = 1; i <= unitStats.distance; i++) {
 						const hex = this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i, state);
 						if (!hex) break;
+						if (hex.terrainType === 'LAKE') break;
+						let stepCost = 1;
+						let effDist = unitStats.distance;
+						if (hex.terrainType === 'MOUNTAIN') {
+							stepCost = 2;
+							effDist = unitStats.distance - 1;
+						}
+						axisCost += stepCost;
+						if (axisCost > effDist) break;
 						possibleMoves.push(hex.id);
 						if (this.getUnitOnHex(hex.id, state)) break; // Blocked by unit
 					}
@@ -1880,34 +1861,63 @@ function alpineHexDiceTacticGame() { return {
 					[2, -3], [1, -3],
 				];
 				for (let valid of dValidsLShape) {
-					possibleMoves.push(this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1], state)?.id);
+					const hex = this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1], state);
+					if (hex && hex.terrainType !== 'LAKE') possibleMoves.push(hex.id);
 				}
 				break;
 			case '+': // Dice 4 variant - primary + adjacent axes
-				this.getNeighbors(startHex, state).forEach(neighbor => possibleMoves.push(neighbor?.id));
+				this.getNeighbors(startHex, state).forEach(neighbor => {
+					if (neighbor && neighbor.terrainType !== 'LAKE') possibleMoves.push(neighbor?.id);
+				});
 				// Straight lines should check for blocking
+				let pCost = 0;
 				for (let i = 1; i <= 2; i++) {
 					const hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 					if (!hex) break;
+					if (hex.terrainType === 'LAKE') break;
+					let stepCost = 1;
+					let effDist = 2;
+					if (hex.terrainType === 'MOUNTAIN') {
+						stepCost = 2;
+						effDist = 1;
+					}
+					pCost += stepCost;
+					if (pCost > effDist) break;
 					if (i > 1) possibleMoves.push(hex.id);
 					if (this.getUnitOnHex(hex.id, state)) break;
 				}
+				let bCost = 0;
 				for (let i = 1; i <= 2; i++) {
 					const hex = this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i, state);
 					if (!hex) break;
+					if (hex.terrainType === 'LAKE') break;
+					let stepCost = 1;
+					let effDist = 2;
+					if (hex.terrainType === 'MOUNTAIN') {
+						stepCost = 2;
+						effDist = 1;
+					}
+					bCost += stepCost;
+					if (bCost > effDist) break;
 					if (i > 1) possibleMoves.push(hex.id);
 					if (this.getUnitOnHex(hex.id, state)) break;
 				}
 				// Diagonal-ish jumps in + pattern
 				if (mod3 == 2) {
-					possibleMoves.push(this.getHexByQR(startHex.q + -2, startHex.r + 1, state)?.id);
-					possibleMoves.push(this.getHexByQR(startHex.q + 2, startHex.r + -1, state)?.id);
+					const h1 = this.getHexByQR(startHex.q + -2, startHex.r + 1, state);
+					const h2 = this.getHexByQR(startHex.q + 2, startHex.r + -1, state);
+					if (h1 && h1.terrainType !== 'LAKE') possibleMoves.push(h1.id);
+					if (h2 && h2.terrainType !== 'LAKE') possibleMoves.push(h2.id);
 				} else if (mod3 == 1) {
-					possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + 2, state)?.id);
-					possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + -2, state)?.id);
+					const h1 = this.getHexByQR(startHex.q + -1, startHex.r + 2, state);
+					const h2 = this.getHexByQR(startHex.q + 1, startHex.r + -2, state);
+					if (h1 && h1.terrainType !== 'LAKE') possibleMoves.push(h1.id);
+					if (h2 && h2.terrainType !== 'LAKE') possibleMoves.push(h2.id);
 				} else if (mod3 == 0) {
-					possibleMoves.push(this.getHexByQR(startHex.q + -1, startHex.r + -1, state)?.id);
-					possibleMoves.push(this.getHexByQR(startHex.q + 1, startHex.r + 1, state)?.id);
+					const h1 = this.getHexByQR(startHex.q + -1, startHex.r + -1, state);
+					const h2 = this.getHexByQR(startHex.q + 1, startHex.r + 1, state);
+					if (h1 && h1.terrainType !== 'LAKE') possibleMoves.push(h1.id);
+					if (h2 && h2.terrainType !== 'LAKE') possibleMoves.push(h2.id);
 				}
 				break;
 			case '*': // Dice 2, 5 (Archer, Tanker) - BFS any direction
@@ -1983,7 +1993,9 @@ function alpineHexDiceTacticGame() { return {
 						// Do NOT add to queue for further movement, units can't move *through* merged units
 					} else if (!isForMerging && unitOnN.playerId !== unit.playerId) {
 						// Enemy unit, melee attacker - can attack (but can't move through)
-						possibleMoves.push(n.id);
+						if (unit.value !== 2 && unit.value !== 6) {
+							possibleMoves.push(n.id);
+						}
 						visited.set(n.id, newCost);
 						// Do NOT add to queue for further movement, units can't move *through* enemy units
 					}
@@ -2034,9 +2046,10 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 
-		// Filter out hexes that are already occupied
+		// Filter out hexes that are already occupied or are LAKE
 		return deploymentHexes
 			.filter(x => x)
+			.filter(hex => hex.terrainType !== 'LAKE')
 			.filter(hex => !this.getUnitOnHex(hex.id, state)) // Ensure hex is empty
 			.map(hex => hex.id);
 	},
@@ -2093,7 +2106,6 @@ function alpineHexDiceTacticGame() { return {
 		for (let i = 1; i <= unit.distance; i++) {
 			let hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 			if (!hex) break;
-			
 			if (hex.terrainType === 'LAKE') break; // LAKE blocks movement
 
 			let costToEnter = 1;
@@ -2120,7 +2132,6 @@ function alpineHexDiceTacticGame() { return {
 			if (hex && hex.terrainType !== 'LAKE' && !this.getUnitOnHex(hex.id, state)) {
 				let costToEnter = (hex.terrainType === 'MOUNTAIN') ? 2 : 1;
 				let effectiveMaxDistance = (hex.terrainType === 'MOUNTAIN') ? unit.distance - 1 : unit.distance;
-				
 				if (costToEnter <= effectiveMaxDistance && this.hasAdjacentHighArmorEnemy(hex, unit, state)) {
 					possibleMoves.push(hex.id);
 				}
@@ -2340,7 +2351,6 @@ function alpineHexDiceTacticGame() { return {
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
-		
 		let attackMod = 0;
 		if (isSkirmishing) attackMod -= 1;
 		// Range 3 (further than usual 2 range) the attack is reduce by 1
@@ -2603,3 +2613,58 @@ function alpineHexDiceTacticGame() { return {
 		});
 	},
 };}
+
+const BOARD_DOT = [
+	`                         .`,
+	`                     .       .`,
+	`                 .       .       .`,
+	`             .       .       .       .`,
+	`         .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	` .       .       .       .       .       .       .`,
+	`     .       .       .       .       .       .`,
+	`         .       .       .       .       .`,
+	`             .       .       .       .`,
+	`                 .       .       .`,
+	`                     .       .`,
+	`                         .`,
+].join('\n');
+const BOARD_NUM = [
+	`                        057`,
+	`                    045     070`,
+	`                034     058     082`,
+	`            024     046     071     093`,
+	`        015     035     059     083     103`,
+	`    007     025     047     072     094     112`,
+	`000     016     036     060     084     104     120`,
+	`    008     026     048     073     095     113`,
+	`001     017     037     061     085     105     121`,
+	`    009     027     049     074     096     114`,
+	`002     018     038     062     086     106     122`,
+	`    010     028     050     075     097     115`,
+	`003     019     039     063     087     107     123`,
+	`    011     029     051     076     098     116`,
+	`004     020     040     064     088     108     124`,
+	`    012     030     052     077     099     117`,
+	`005     021     041     065     089     109     125`,
+	`    013     031     053     078     100     118`,
+	`006     022     042     066     090     110     126`,
+	`    014     032     054     079     101     119`,
+	`        023     043     067     091     111`,
+	`            033     055     080     102`,
+	`                044     068     092`,
+	`                    056     081`,
+	`                        069`,
+].join('\n');

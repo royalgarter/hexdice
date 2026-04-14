@@ -23,6 +23,9 @@
 	<style>
 		.hexagon {
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
+			scale: 101% 102%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-wood {
 			background-color: #c3a471aa;
@@ -32,40 +35,64 @@
 		}
 		.bg-hexselect {
 			background-color: #f4ecd8;
-			background-size: 90% !important;
+			background-size: auto 66% !important;
 		}
 		.bg-hexmove {
 			background-color: #bd9b6b;
-			background-size: 90% !important;
+			background-size: auto 66% !important;
 		}
 		.bg-hexmerge {
 			background-color: #2bcbba;
-			background-size: 90% !important;
+			background-size: auto 66% !important;
 		}
 		.bg-hextarget {
 			background-color: #fed330;
-			background-size: 90% !important;
+			background-size: auto 66% !important;
 		}
 		.bg-hexdeploy {
 			background-color: #f7b731;
 		}
 		.bg-hexred {
 			background-color: #eb3b5a;
+			background-image: url('/assets/sprites/terrain/base.png');
+			background-size: 90%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-hexblue {
 			background-color: #3867d6;
+			background-image: url('/assets/sprites/terrain/base.png');
+			background-size: 90%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-hexgreen {
 			background-color: #19ad62;
+			background-image: url('/assets/sprites/terrain/base.png');
+			background-size: 90%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-hexpurple {
 			background-color: #a55eea;
+			background-image: url('/assets/sprites/terrain/base.png');
+			background-size: 90%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-hexyellow {
 			background-color: #c8a00a;
+			background-image: url('/assets/sprites/terrain/base.png');
+			background-size: 90%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-hexwhite {
 			background-color: #f8f8f8;
+			background-image: url('/assets/sprites/terrain/base.png');
+			background-size: 90%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-hexdanger {
 			background-color: #705030;
@@ -135,22 +162,22 @@
 		}
 		@media (max-width: 540px) {
 			.hex-grid-container {
-				zoom: 0.95;
+				zoom: 0.90;
 			}
 		}
 		@media (max-width: 480px) {
 			.hex-grid-container {
-				zoom: 0.85;
+				zoom: 0.80;
 			}
 		}
 		@media (max-width: 400px) {
 			.hex-grid-container {
-				zoom: 0.80;
+				zoom: 0.75;
 			}
 		}
 		@media (max-width: 360px) {
 			.hex-grid-container {
-				zoom: 0.75;
+				zoom: 0.70;
 			}
 		}
 	</style>
@@ -214,9 +241,9 @@
 		<!-- Hex Grid -->
 		<div class="hex-grid-container relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
-				<div class="hexagon shadow-md absolute flex items-center justify-center cursor-pointer"
-					:class="hexColor(hex)"
-					:style="hexStyle(hex, 1)"
+				<div class="hexagon absolute flex items-center justify-center cursor-pointer"
+					:class="hexColor(hex) + ' hex-' + hex.id"
+					:style="hexStyle(hex)"
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
 				>
