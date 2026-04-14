@@ -355,7 +355,7 @@ function alpineHexDiceTacticGame() { return {
 			css += `.hex-${this.hexes[i].id} { left: ${this.hexes[i].left}px; top: ${this.hexes[i].top}px; width: ${this.hexes[i].width}px; height: ${this.hexes[i].height}px; }\n`;
 		}
 
-		if (typeof document !== 'undefined') {
+		if (typeof document !== 'undefined' && document.createElement && document.getElementById) {
 			let styleTag = document.getElementById('dynamic-hex-styles');
 			if (!styleTag) {
 				styleTag = document.createElement('style');

@@ -383,7 +383,9 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'position': {
-            const strategicMoves = scoredMoves.filter(m => !m.isThreatened);
+            const strategicMoves = scoredMoves.filter(m => !m.isThreatened)
+                .filter(m => !m.move.actionType.includes('SPELLCAST_') && m.move.actionType !== 'ORACLE_SACRIFICE');
+                
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
                     let positionScore = m.score;
