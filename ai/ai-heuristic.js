@@ -19,24 +19,24 @@ const DEFAULT_PROFILE = {
     priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
     weights: {
         captureBonus: 10000,
-        killBonus: 1200,
-        attackBonus: 300,
+        killBonus: 1000,
+        attackBonus: 500,
         safeBonus: 500,
-        friendlySixBonus: 150,
+        friendlySixBonus: 50,
         advanceBonus: 100,
         protectedRangeBonus: 100,
 
-        threatPenalty: -300,
+        threatPenalty: -500,
         guardPenalty: -500,
-        mergeOver6Penalty: -600,
-        backAndForthPenalty: -500,
+        mergeOver6Penalty: -500,
+        backAndForthPenalty: -1000,
         
         teamPositionWeight: 0.8,
-        pressureWeight: 0.5,
+        pressureWeight: 0.8,
 
         spells: {
-            SPELLCAST_SHIELD: 0.7,
-            SPELLCAST_SWAP: 0.7,
+            SPELLCAST_SHIELD: 0.8,
+            SPELLCAST_SWAP: 0.8,
             SPELLCAST_SKIRMISH: 1.2,
         }
     },
