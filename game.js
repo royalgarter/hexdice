@@ -2365,7 +2365,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
+		attackerUnit.isGuarding = 0;
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
@@ -2443,6 +2443,14 @@ function alpineHexDiceTacticGame() { return {
 					if (attackerUnit.isGuarding <= 1) {
 						this.addLog(`Attack failed! Attacker's Armor reduced by 1.`, state);
 						this.applyDamage(attackerHexId, 1, state, false);
+					}
+
+					if (defenderUnit.value == 5) {
+						const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
+						if (attackerEffectiveArmor <= 0) {
+							this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
+							this.removeUnit(attackerHexId, state);
+						}
 					}
 				}
 

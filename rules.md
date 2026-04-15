@@ -34,6 +34,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
   - For 3 Players: 3 distinct colors, 8 dice each (Total 24).
   - For 4 Players: 4 distinct colors, 6 dice each (Total 24).
   - For 6 Players: 6 distinct colors, 4 dice each (Total 24).
+- **Armor Reduction Tokens**: Small markers (e.g., beads, tokens, or coins) used to track damage to a unit's armor. These help players calculate the current **Effective Armor** of each unit.
 
 ### **3\. Setup**
 
@@ -229,6 +230,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 5 (Tanker)
 * Can move to any adjacent hex (1 step BFS).
+* Melee units are eliminated if Armor Reduction from attacking this unit drops their Armor to 0.
 
 ```
                 .
@@ -259,7 +261,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Spellcast Action**: When activated, the Oracle can cast one of three spells on a **target friendly unit** within **Range 2** (requires Line of Sight):
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
-  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
+  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn.
     * **Effect**: During the next attack, the unit has **-1 Attack strength**, additionally **ranged** unit has **+1 Attack range**,  minimum attack remains **1**.
     * **On Success (Win)**: The target is removed, and the melee attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The melee attacker is **immediately eliminated** from the board.
@@ -290,13 +292,6 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
              .     .
                 .
 ```
-
-**The "0-0-1-2-3" Mnemonic**:
-* **0** - Attack
-* **0** - Armor
-* **1** - Distance (Movement)
-* **2** - Range (For Spells)
-* **3** - Spells (Shield, Swap, Skirmish)
 
 #### Two-Players Bases
 * Player can deploy each single new unit in base or its adjacent hex
@@ -354,8 +349,6 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * Choose one of your units that is **not currently guarding**.
   * Activate **Guard Mode** to gain **1 Shield Charge** (+1 Effective Armor).
   * The unit stays in its current hex. The charge absorbs **one attack** without taking Armor Reduction, then expires.
-  * **Archer Bonus**: Guarding Archers (Dice 2) gain **+1 Attack Range** (up to 3).
-  * **Auto-Fade (Archer)**: For Archer only, Guard status **automatically fades** at the start of the next turn cycle if not refreshed.
   * **Note**: A unit cannot stack Guard charges manually. Use the Oracle's **Shield** spell to grant **2 charges**.
   * Action complete. This unit cannot Move or Attack this turn.
 
@@ -363,7 +356,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 
   * Choose one of your Dice 2 Archer units.
   * **Restrictions**: Cannot attack if an enemy is adjacent (unless on specialized terrain). Requires clear Line of Sight.
-  * Target any single enemy unit located **2 or 3 hexes away** (range 3 requires Archer to be **Guarding**).
+  * Target any single enemy unit located **2 or 3 hexes away** (range 3 requires Archer to be in **Skirmish Buff** or special terrain).
   * **Long Range Penalty**: Attacks at range 3 have **-1 Attack power** (minimum attack remains 1).
   * Combat occurs. Regardless of the outcome, the attacking Dice 2 unit **remains in its current hex** and does not suffer counter-damage on failure.
   * Action complete.
@@ -375,7 +368,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Target**: Choose any single **friendly** unit within **Range 2** (requires Line of Sight).
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks).
   * **Swap**: Oracle and target unit **exchange positions**.
-  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
+  * **Skirmish**: Target unit gains **Hit & Run** status for its next turn.
     * **Effect**: During the next attack, the unit has **-1 Attack strength**, but minimum attack remains **1**.
     * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
     * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
@@ -397,19 +390,29 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 Combat is deterministic and occurs when a unit enters an enemy hex or uses a special/ranged attack.
 
 **Effective Armor calculation:**
-`Base Armor + Guard Charges (0-2) - Armor Reduction`.
+`Base Armor + Terrain Bonus + Base Defense Bonus + Guard Charges - Armor Reduction`.
 
-* Each **Guard Charge** provides +1 Effective Armor and **absorbs one attack** without applying Armor Reduction to the defender.
-* Guard charges decay by 1 after each combat the unit participates in.
+*   **Terrain Bonus**: Units on **FOREST**, **TOWER**, or **MOUNTAIN** gain **+1 Effective Armor**.
+*   **Base Defense Bonus**: A unit on its own **Base hex** gains **+2 Effective Armor**.
+*   **Guard Charges**: Temporary protection.
+    *   **1 Charge** (+1 Armor) from the **Guard** action.
+    *   **2 Charges** (+2 Armor) from the Oracle's **Shield** spell.
+*   **Armor Reduction**: Cumulative damage. Track this using tokens.
 
-* **Attacker Wins** if:
-  1. **Attack > Defender's Effective Armor** if Defender is guarding, OR
-  2. **Attack ≥ Defender's Effective Armor** if Defender is not guarding, OR
-  3. **Defender's Armor Reduction ≥ Defender's Base Armor** (Armor Depleted).
-* **On Success**: The defending unit is removed. The attacker moves into the hex (except for Ranged Attacks).
-* **On Failure**: Both units suffer **1 Armor Reduction**.
-  - **Exception**: Ranged attackers do not suffer armor reduction on failure.
-  - Armor reduction is cumulative. If Effective Armor reaches 0, the next attack automatically defeats the unit.
+**Combat Resolution:**
+
+1.  **Clearance**: The attacker's Guard Charges are immediately reset to 0.
+2.  **Attacker Wins** if one of below conditions matched:
+    *   **Armor Depleted**: Defender's `Armor Reduction >= Defender's Base Armor`.
+    *   **Attack > Defender's Effective Armor** (if Defender is currently guarding).
+    *   **Attack ≥ Defender's Effective Armor** (if Defender is NOT guarding).
+3.  **On Success (Win)**: The defending unit is removed. Melee attackers move into the hex.
+4.  **On Failure (Loss/Tie)**:
+    *   **Attacker**: Melee attackers suffer **1 Armor Reduction** if they have 1 or 0 Guard Charges *remaining after the attack*. Ranged attackers suffer no damage.
+    *   **Defender**:
+        *   **Standard Units**: Suffer **1 Armor Reduction** unless they have 2 Guard Charges. If they have 0 charges, this damage is lethal if Effective Armor hits 0.
+        *   **Tanker (Dice 5)**: Suffer **1 Armor Reduction** only if they have 0 Guard Charges. This damage is not immediately lethal unless Effective Armor drops below 0.
+5.  **Post-Combat**: All of the **Defender's** remaining Guard Charges are removed.
 
 ### **7\. Winning the Game**
 
@@ -441,11 +444,12 @@ Each hex on the map has a terrain type that affects movement and combat. By defa
 | **PLAIN** | 1 | None | Transparent | Default terrain, no effects |
 | **FOREST** | 1 | +1 Armor | **Blocked** | Defensive terrain |
 | **LAKE** | **Impassable** | N/A | Transparent | Cannot enter or move through |
-| **TOWER** | 1 | +1 Armor | **Blocked** | Extends Archer range to 1-3 |
-| **MOUNTAIN** | 2 | +2 Armor | **Blocked** | Reduces movement distance by 1 (except Tanker) |
+| **TOWER** | 1 | +1 Armor | **Blocked** | Allow Archer to attack adjacent unit |
+| **MOUNTAIN** | 2 | +1 Armor | **Blocked** | Extends Archer range to 1-3, Reduces movement distance by 1 (except Tanker) |
 
 **Terrain Effects Details:**
-- **Defensive Bonus**: Units defending on FOREST, TOWER, or MOUNTAIN gain +1 Armor (MOUNTAIN gives +2). This stacks with Guard charges.
+- **Defensive Bonus**: Units defending on FOREST, TOWER, or MOUNTAIN gain +1 Armor. This stacks with Guard charges.
+- **Base Defense**: A unit defending on its own color Base gains +2 Armor.
 - **Line of Sight Blocking**: FOREST, TOWER, and MOUNTAIN block ranged attacks and spell targeting. LAKE is transparent to LoS.
 - **Movement**: LAKE is completely impassable. MOUNTAIN costs 2 movement steps and reduces max distance by 1 for most units.
 - **Archer Ranged Attacks**: Units on TOWER or MOUNTAIN can perform ranged attacks even when engaged by adjacent enemies. TOWER allows range 1-2, MOUNTAIN allows range 1-3.
