@@ -2429,25 +2429,30 @@ function alpineHexDiceTacticGame() { return {
 			this.trailAttack = {};
 		} else { // Attacker fails
 			if (isSkirmishing) {
-				this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} has been eliminated.`, state);
-				this.removeUnit(attackerHexId, state);
+				if (combatType !== 'RANGED_ATTACK') {
+					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} has been eliminated.`, state);
+					this.removeUnit(attackerHexId, state);
+				} else {
+					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value}'s armor exhausted.`, state);
+					this.applyDamage(attackerHexId, 1, state, false);
+				}
 			} else {
-				this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
 				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
 
-				// Ranged attacks don't receive counter-damage (attacker is at safe distance)
-				if (combatType === 'RANGED_ATTACK') {
-					if (defenderUnit.isGuarding <= 1) {
-						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
-					}
-				} else {
+				if (combatType !== 'RANGED_ATTACK') {
 					if (attackerUnit.isGuarding <= 1) {
+						this.addLog(`Attack failed! Attacker's Armor reduced by 1.`, state);
 						this.applyDamage(attackerHexId, 1, state, false);
 					}
+				}
 
-					if (defenderUnit.isGuarding <= 1) {
-						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
-					}
+				this.addLog(`Attack failed! Defender's Armor damaged by 1.`, state);
+				if (defenderUnit.value != 5 && defenderUnit.isGuarding <= 1) {
+					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding > 0 ? false : true);
+				}
+
+				if (defenderUnit.value == 5 && defenderUnit.isGuarding <= 0) {
+					this.applyDamage(defenderHexId, 1, state, false);
 				}
 			}
 		}
