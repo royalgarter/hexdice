@@ -338,7 +338,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 
 * ##### **Reroll**
 
-  * Choose one of your units.  
+  * Choose one of your units that is **standing on its player's Base hex**.
   * The unit stays in its current hex.  
   * Roll the dice. The new face value determines the unit's type and stats.
   * **Penalty**: The rerolled unit has **0 Effective Armor** until its owner's next turn starts.

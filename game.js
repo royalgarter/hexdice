@@ -979,7 +979,9 @@ function alpineHexDiceTacticGame() { return {
 
 		switch(actionType) {
 			case 'MOVE': return true;
-			case 'REROLL': return options.includes('r') && !unit.isRerolled && !unit.isGuarding;
+			case 'REROLL': 
+				const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
+				return options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
@@ -1144,6 +1146,13 @@ function alpineHexDiceTacticGame() { return {
 		const targetHex = this.getHex(unitHexId, state);
 		const unit = this.getUnitOnHex(unitHexId, state);
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return;
+
+		const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
+		if (unitHexId !== playerBaseHexId) {
+			this.addLog(`P${unit.playerId + 1} D${unit.value} cannot reroll outside of its Base.`, state);
+			this.deselectUnit(state);
+			return;
+		}
 
 		const oldVal = unit.value;
 		const newRoll = Math.floor(random() * 6) + 1;
