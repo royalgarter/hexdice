@@ -34,8 +34,8 @@ const PLAYER_CONFIG = [
 	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-700' },
 	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-700' },
 	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-700' },
-	{ id: 4, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-700' },
-	{ id: 5, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
+	{ id: 4, color: 'Black', sprite: 'shadow', bg: 'bg-hexwhite', logColor: 'text-gray-700' },
+	{ id: 5, color: 'Yellow', sprite: 'sepia', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
 ];
 
 const TERRAIN_CONFIG = {
@@ -284,7 +284,7 @@ function alpineHexDiceTacticGame() { return {
 			h.terrainType = 'PLAIN'; // Reset terrain
 		});
 		this.determineBaseLocations(radius); // Redetermine bases on reset
-		this.setupTerrain(); // Trigger terrain setup for v1.2 rules
+		//this.setupTerrain(); // Trigger terrain setup for v1.2 rules
 		this.phase = 'SETUP_ROLL';
 		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
@@ -2371,7 +2371,7 @@ function alpineHexDiceTacticGame() { return {
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
 		let attackMod = 0;
 		if (isSkirmishing) attackMod -= 1;
-		
+
 		// Archer (Dice 2) damage for range 3 attack is reduced by 1
 		if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
 
