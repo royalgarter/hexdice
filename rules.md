@@ -142,7 +142,6 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 * Can move up to 1 step in any direction (BFS pattern).
 * **Ranged Attack**: Can target an enemy exactly **2 hexes away**.
-* **Guarding Bonus**: If the Archer is **Guarding**, its attack range increases from 2 to **3**.
 * **Long Range Penalty**: Attacks at range 3 have **-1 Attack power** (minimum attack remains 1).
 * **Line of Sight**: Attack is blocked by any unit on the path.
 * **Engaged Restriction**: Cannot perform ranged attacks if an enemy unit is in an adjacent hex (unless on TOWER or MOUNTAIN).
@@ -261,9 +260,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
   * **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   * **Swap**: The Oracle and the target unit **exchange positions** on the board.
   * **Skirmish**: Target unit gains **Hit & Run** status for its next turn. 
-    * **Effect**: During the next attack, the unit has **-1 Attack strength**, minimum attack remains **1**.
-    * **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
-    * **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
+    * **Effect**: During the next attack, the unit has **-1 Attack strength**, additionally **ranged** unit has **+1 Attack range**,  minimum attack remains **1**.
+    * **On Success (Win)**: The target is removed, and the melee attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
+    * **On Failure (Loss/Tie)**: The melee attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.
 * **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
 * **Oracle Sacrifice (Anti-Stalemate)**: When the Oracle is the **last remaining unit** for its player, it can perform a **Sacrifice** action to eliminate an **adjacent enemy Oracle**. Both Oracles are removed from the game. This mechanic prevents unwinnable stalemates when both players are down to only Oracles.

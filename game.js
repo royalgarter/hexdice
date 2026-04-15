@@ -1580,8 +1580,8 @@ function alpineHexDiceTacticGame() { return {
 			case 'MOUNTAIN': minRange = 1; maxRange = 3; break;
 		}
 
-		// Archer (Dice 2) gets range +1 if it is currently guarding
-		if (attackerUnit.value === 2 && attackerUnit.isGuarding > 0) {
+		// Archer (Dice 2) gets range +1 if it is currently skirmish
+		if (attackerUnit.value === 2 && attackerUnit.skirmishBuff) {
 			maxRange += 1;
 		}
 
@@ -2547,20 +2547,6 @@ function alpineHexDiceTacticGame() { return {
 				die.isRerolled = false; // Penalty expires when turn starts
 				// Decrement skirmish buff
 				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
-				
-				// Archer guard (range bonus) fades away if not refreshed by a new Guard action
-				if (die.value === 2) {
-					if (die.isGuarding > 0) {
-						if (die.wasGuarding) {
-							die.isGuarding = 0;
-							die.wasGuarding = false;
-						} else {
-							die.wasGuarding = true;
-						}
-					} else {
-						die.wasGuarding = false;
-					}
-				}
 			}
 		});
 	},
