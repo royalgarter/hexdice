@@ -89,11 +89,7 @@ function alpineHexDiceTacticGame() { return {
 
 	// --- SETUP TERRAIN METHODS ---
 	setupTerrain(force) {
-		const urlParams = new URLSearchParams(location.search);
-		const v12Active = urlParams.get('v') === '1.2';
-		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
-
-		if (!v12Active && !force) return; // Only setup terrain for v1.2
+		const radius = this.getRadius();
 
 		this.addLog("Setting up terrain");
 
@@ -156,7 +152,7 @@ function alpineHexDiceTacticGame() { return {
 			else
 				hex.terrainType = randomTerrainType;
 
-			this.addLog(`${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
+			this.addLog(`Placed ${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
 		}
 	},
 
@@ -244,7 +240,7 @@ function alpineHexDiceTacticGame() { return {
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
 
 		// Map size modifier: 2, 3 players -> R=5; 4, 6 players -> R=6
-		const radius = (this.playerCount <= 3) ? 5 : 6;
+		const radius = this.getRadius();
 		this.generateHexGrid(radius);
 
 		// Adjust dice per player based on player count (Total 24 dice)
@@ -281,7 +277,7 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 
-		const radius = (this.playerCount <= 3) ? 5 : 6;
+		const radius = this.getRadius();
 		this.generateHexGrid(radius);
 		this.hexes.forEach(h => {
 			h.unitId = null; // Clear units from hexes
@@ -311,6 +307,11 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- HEX GRID --- */
+	getRadius(link=location) {
+		const urlParams = new URLSearchParams(link?.search || 'http://localhost/');
+		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
+		return radius;
+	},
 	generateHexGrid(radius, padding=1) {
 		this.hexes = [];
 		this.hexesQR = {};
@@ -853,7 +854,7 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog("No valid targets for Brave Charge.");
 				// this.cancelAction();
 			}
-		} else if (actionType === 'ORACLE_SACRIFICE') {
+		} else if (actionType === 'SPELLCAST_SACRIFICE') {
 			// Show adjacent enemy Oracles as valid targets
 			this.validTargets = this.calcValidSacrificeTargets(this.selectedUnitHexId);
 			if (this.validTargets.length === 0) {
@@ -867,7 +868,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
-		if (this.actionMode === 'ORACLE_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
+		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
 		if (this.actionMode === 'SKIRMISH_POST_MOVE') return "Skirmish success! Select an adjacent hex to move to (or stay put).";
 		return "";
 	},
@@ -894,7 +895,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		// Oracle Sacrifice
-		if (action === 'ORACLE_SACRIFICE' && this.validTargets.includes(targetHexId)) {
+		if (action === 'SPELLCAST_SACRIFICE' && this.validTargets.includes(targetHexId)) {
 			this.performOracleSacrifice(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
@@ -984,7 +985,7 @@ function alpineHexDiceTacticGame() { return {
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
 			case 'MERGE': return options.includes('m');
-			case 'ORACLE_SACRIFICE':
+			case 'SPELLCAST_SACRIFICE':
 				// Oracle can sacrifice if it's the last unit for its player and has adjacent enemy Oracles
 				if (unit.value !== 6) return false;
 				return this.isOracleLastUnitAndCanSacrifice(unitHexId, state);

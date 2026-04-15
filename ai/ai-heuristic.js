@@ -19,20 +19,20 @@ const DEFAULT_PROFILE = {
     priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
     weights: {
         captureBonus: 10000,
-        killBonus: 1000,
+        killBonus: 1200,
         attackBonus: 300,
-        safeBonus: 200,
+        safeBonus: 500,
         friendlySixBonus: 150,
         advanceBonus: 100,
         protectedRangeBonus: 100,
 
-        threatPenalty: -250,
+        threatPenalty: -300,
         guardPenalty: -500,
-        mergeOver6Penalty: -500,
-        backAndForthPenalty: -1000,
+        mergeOver6Penalty: -600,
+        backAndForthPenalty: -500,
         
         teamPositionWeight: 0.8,
-        pressureWeight: 0.8,
+        pressureWeight: 0.5,
 
         spells: {
             SPELLCAST_SHIELD: 0.7,
@@ -321,7 +321,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
         case 'spell': {
             // Support and utility actions (mostly Oracle)
-            const spellMoves = scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_') || m.move.actionType === 'ORACLE_SACRIFICE');
+            const spellMoves = scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_'));
             if (spellMoves.length > 0) {
                 // Filter out spells that are currently unsafe unless they are escape actions
                 const viableSpells = spellMoves.filter(m => m.isSafe || m.isEscapeAction || profile.riskTolerance > 0.7);
@@ -384,7 +384,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
         case 'position': {
             const strategicMoves = scoredMoves.filter(m => !m.isThreatened)
-                .filter(m => !m.move.actionType.includes('SPELLCAST_') && m.move.actionType !== 'ORACLE_SACRIFICE');
+                                            .filter(m => !m.move.actionType.includes('SPELLCAST_'));
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -800,7 +800,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             }
         }
 
-        if (move.actionType === 'ORACLE_SACRIFICE') {
+        if (move.actionType === 'SPELLCAST_SACRIFICE') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
             

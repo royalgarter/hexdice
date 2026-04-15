@@ -147,7 +147,7 @@ function performAIByPriority(GAME) {
         }
 
         // Check for Oracle Sacrifice opportunity (breaks stalemates)
-        if (unit.value === 6 && GAME.canPerformAction(unit.hexId, 'ORACLE_SACRIFICE', state)) {
+        if (unit.value === 6 && GAME.canPerformAction(unit.hexId, 'SPELLCAST_SACRIFICE', state)) {
             const validSacrificeTargets = GAME.calcValidSacrificeTargets(unit.hexId, state);
             for (const targetHexId of validSacrificeTargets) {
                 const targetUnit = GAME.getUnitOnHex(targetHexId, state);
@@ -160,12 +160,12 @@ function performAIByPriority(GAME) {
                     
                     // Priority 0.1: GAME WINNER - both down to last Oracle
                     if (activeUnits.length === 1 && enemyActiveUnits.length === 1) {
-                        bestMove = { actionType: 'ORACLE_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                        bestMove = { actionType: 'SPELLCAST_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
                         bestPriority = 0.1; // Highest priority - wins the game
                     }
                     // Priority 4.5: Sacrificial removal (less ideal but breaks stalemate)
                     else if (!bestMove) {
-                        bestMove = { actionType: 'ORACLE_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                        bestMove = { actionType: 'SPELLCAST_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
                         bestPriority = 4.5;
                     }
                 }
