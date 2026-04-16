@@ -152,7 +152,7 @@ function alpineHexDiceTacticGame() { return {
 			else
 				hex.terrainType = randomTerrainType;
 
-			this.addLog(`Placed ${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
+			this.addLog(`Placed ${randomTerrainType} at [${hex.id}].`);
 		}
 	},
 
@@ -642,7 +642,7 @@ function alpineHexDiceTacticGame() { return {
 		// targetHex.unit = dieToDeploy;
 		// targetHex.unitId = dieToDeploy.id;
 
-		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}](${targetHex.q},${targetHex.r},${targetHex.s})`);
+		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}]`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 
 		// Check if current player has deployed all dice
@@ -1102,9 +1102,9 @@ function alpineHexDiceTacticGame() { return {
 		} else { // Moving to an empty hex
 			this.addLog([
 				`P${attackerUnit.playerId+1} D${attackerUnit.value} moved `,
-				`[${attackerHex.id}](${attackerHex.q},${attackerHex.r},${attackerHex.s})`,
+				`[${attackerHex.id}]`,
 				`->`,
-				`[${defenderHex.id}](${defenderHex.q},${defenderHex.r},${defenderHex.s}).`
+				`[${defenderHex.id}].`
 			].join(''), state);
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			// attackerHex.unit = null;
@@ -1132,10 +1132,10 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || !fromHex || !toHex) return;
 
 		if (unitHexId !== targetHexId) {
-			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: (${fromHex.q},${fromHex.r}) -> (${toHex.q},${toHex.r}).`);
+			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: [${unitHexId}]->[${targetHexId}].`);
 			this.move(unit, fromHex, toHex);
 		} else {
-			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: stayed at (${fromHex.q},${fromHex.r}).`);
+			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: stayed at [${unitHexId}].`);
 		}
 
 		unit.hasMovedOrAttackedThisTurn = true;
@@ -1166,7 +1166,7 @@ function alpineHexDiceTacticGame() { return {
 
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
-		this.addLog(`P${unit.playerId + 1} D${oldVal} rerolled D${newRoll} (${targetHex.q},${targetHex.r}). Penalty: 0 Effective Armor until next turn.`, state);
+		this.addLog(`P${unit.playerId + 1} D${oldVal} rerolled D${newRoll} [${unitHexId}]. Penalty: 0 Effective Armor until next turn.`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
 	},
@@ -1183,7 +1183,7 @@ function alpineHexDiceTacticGame() { return {
 		// Actual armor buff is applied during combat calculation
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
-		this.addLog(`P${unit.playerId + 1} D${unit.value} guarded [${unitHexId}](${targetHex.q},${targetHex.r},${targetHex.s}).`, state);
+		this.addLog(`P${unit.playerId + 1} D${unit.value} guarded [${unitHexId}].`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state); // Though guard alone won't win
 	},
@@ -1204,7 +1204,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		this.addLog(`P${mergingUnit.playerId + 1} D${mergingUnit.value} merged D${targetUnit.value} (${mergingHex.q},${mergingHex.r})->(${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${mergingUnit.playerId + 1} D${mergingUnit.value} merged D${targetUnit.value} [${mergingUnitHexId}]->[${targetUnitHexId}].`, state);
 
 		const sum = mergingUnit.value + targetUnit.value;
 		let newDieValue;
@@ -1452,7 +1452,7 @@ function alpineHexDiceTacticGame() { return {
 			reserveDie.isRerolled = true; // 0 Effective Armor until next turn
 			reserveDie.hasMovedOrAttackedThisTurn = true; // Cannot act this turn
 
-			this.addLog(`Transmutation complete! New P${oracleUnit.playerId+1} D${newRoll} (was D${oldVal}) created at (${targetHex.q},${targetHex.r}).`, state);
+			this.addLog(`Transmutation complete! New P${oracleUnit.playerId+1} D${newRoll} (was D${oldVal}) created at [${targetHexId}].`, state);
 		} else {
 			this.addLog(`Transmutation incomplete: No reserve dice available for P${oracleUnit.playerId+1}.`, state);
 		}
@@ -1479,7 +1479,7 @@ function alpineHexDiceTacticGame() { return {
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
-		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} [${targetHexId}].`, state);
 	},
 	/**
 	 * Swap Spell: Oracle and target friendly unit exchange positions.
@@ -1514,7 +1514,7 @@ function alpineHexDiceTacticGame() { return {
 			this.trail.dist = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
 		}
 
-		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} (${oracleHex.q},${oracleHex.r})<->(${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} [${oracleHexId}]<->[${targetHexId}].`, state);
 	},
 	/**
 	 * Skirmish Spell: Target unit gains Hit & Run status for its next attack.
@@ -1533,7 +1533,7 @@ function alpineHexDiceTacticGame() { return {
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
-		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} [${targetHexId}]. Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
 	performBraveCharge(attackerHexId, targetHexId, state) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
@@ -1567,7 +1567,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		this.addLog(`P${attackerUnit.playerId+1} D1 charged P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
+		this.addLog(`P${attackerUnit.playerId+1} D1 charged P${defenderUnit.playerId+1} D${defenderUnit.value} [${attackerHexId}]->[${targetHexId}].`, state);
 
 		// Effect: Remove the Dice 1 unit
 		this.removeUnit(attackerHexId, state);
@@ -2456,9 +2456,9 @@ function alpineHexDiceTacticGame() { return {
 			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} [${attackerHexId}]->[${attackerHexId}].`, state);
 			} else {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} [${attackerHexId}].`, state);
 			}
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
 			this.trailAttack = {};
@@ -2519,7 +2519,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit) return;
 		// Only log when not simulating (state is provided)
 		if (!state) {
-			this.addLog(`P${unit.playerId+1} D${unit.value} removed (${this.getHex(hexId, state).q},${this.getHex(hexId, state).r}).`);
+			this.addLog(`P${unit.playerId+1} D${unit.value} removed [${hexId}].`);
 		}
 		(state || this).players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
 		this.getHex(hexId, state).unitId = null; // Clear hex
