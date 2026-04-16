@@ -1380,6 +1380,11 @@ function alpineHexDiceTacticGame() { return {
 		const oracleHex = this.getHex(oracleHexId, state);
 		if (!oracleUnit || oracleUnit.value !== 6 || !oracleHex) return false;
 
+		// Check if this Oracle is the last unit for its player
+		const player = (state || this).players[oracleUnit.playerId];
+		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath && d.value != 6);
+		if (activeUnits.length) return false;
+
 		// Check if there's an adjacent enemy unit
 		return this.getNeighbors(oracleHex, state).some(neighborHex => {
 			if (!neighborHex) return false;

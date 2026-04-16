@@ -267,10 +267,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
     * **On Failure (Loss/Tie)**: The melee attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.
 * **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
-* **Transmute (Sacrifice)**: The Oracle can perform a forbidden art to convert an enemy, losing its own life in the chaotic process.
+* **Transmute (Sacrifice)**: The Oracle can perform a forbidden art to convert an enemy if the player only has Oracle unit(s) left, losing its own life in the chaotic process.
   * **Target**: One adjacent enemy unit.
   * **Effect**: The Oracle is removed from the board. Remove the target enemy die and replace it with one of your own unused dice from your reserve. You must immediately **Reroll** this new die to determine its new unit type.
-  * **Penalty**: Because the transmutation process is unstable, the newly created unit suffers the standard Reroll penalty (**0 Effective Armor** until the start of your next turn) and **cannot act this turn**. It is highly vulnerable to counter-attack.
+  * **Penalty**: The newly created unit suffers the standard Reroll penalty (**0 Effective Armor** until the start of your next turn) and **cannot act this turn**.
 
 ```
                 .
