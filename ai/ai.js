@@ -116,7 +116,7 @@ function applyMove(GAME, move, state) {
 			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'SKIRMISH', applyState);
 			break;
 		case 'SPELLCAST_SACRIFICE':
-			GAME.performOracleSacrifice(move.unitHexId, move.targetHexId, applyState);
+			GAME.performOracleTransmute(move.unitHexId, move.targetHexId, applyState);
 			break;
 		case 'MERGE':
 			GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState);

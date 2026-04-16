@@ -68,7 +68,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
 | 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
-| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
+| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Transmute (Sacrifice); Engaged: Cannot cast spells |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -267,7 +267,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
     * **On Failure (Loss/Tie)**: The melee attacker is **immediately eliminated** from the board.
     * **Duration**: Buff expires after one attack or at the end of the player's next activation.
 * **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
-* **Oracle Sacrifice (Anti-Stalemate)**: When the Oracle is the **last remaining unit** for its player, it can perform a **Sacrifice** action to eliminate an **adjacent enemy Oracle**. Both Oracles are removed from the game. This mechanic prevents unwinnable stalemates when both players are down to only Oracles.
+* **Transmute (Sacrifice)**: The Oracle can perform a forbidden art to convert an enemy, losing its own life in the chaotic process.
+  * **Target**: One adjacent enemy unit.
+  * **Effect**: The Oracle is removed from the board. Remove the target enemy die and replace it with one of your own unused dice from your reserve. You must immediately **Reroll** this new die to determine its new unit type.
+  * **Penalty**: Because the transmutation process is unstable, the newly created unit suffers the standard Reroll penalty (**0 Effective Armor** until the start of your next turn) and **cannot act this turn**. It is highly vulnerable to counter-attack.
 
 ```
                 .
@@ -376,13 +379,15 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).
   * Action complete.
 
-* ##### **Oracle Sacrifice (Dice 6\)**
+* ##### **Transmute (Sacrifice) (Dice 6\)**
 
-  * **Condition**: Only available when the Oracle is the **last remaining unit** for its player.
   * Choose one of your Dice 6 Oracle units.
-  * **Target**: Choose any single **enemy Oracle** in an **adjacent hex**.
-  * **Effect**: Both the sacrificing Oracle and the target enemy Oracle are **removed from the game**.
-  * **Purpose**: This action prevents unwinnable stalemates when both players are down to only Oracles.
+  * **Target**: Choose any single **enemy unit** in an **adjacent hex**.
+  * **Effect**: 
+    1. The Oracle and the target enemy unit are both **removed from the board**.
+    2. A new unit from your **reserve** (unused dice) is placed on the hex previously occupied by the enemy unit.
+    3. The new unit is immediately **rerolled** to determine its type.
+  * **Penalty**: The new unit has **0 Effective Armor** until your next turn and **cannot act** on the turn it is created.
   * Action complete.
 
 ### **6\. Combat**

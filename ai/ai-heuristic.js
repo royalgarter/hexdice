@@ -804,18 +804,24 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
             
-            if (targetUnit && targetUnit.value === 6 && oracleUnit) {
+            if (targetUnit && oracleUnit) {
                 const player = state.players[state.currentPlayerIndex];
                 const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
-                
-                if (activeUnits.length === 1) {
+                const hasReserve = player.dice.some(d => !d.isDeployed && !d.isDeath);
+
+                // Base score for removal
+                analysis.score += (targetUnit.value * 20);
+                if (hasReserve) analysis.score += 50;
+
+                // Stalemate break bonus
+                if (targetUnit.value === 6 && activeUnits.length === 1) {
                     const enemyPlayer = state.players[targetUnit.playerId];
                     const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
                     analysis.score += 100;
                     if (enemyActiveUnits.length > 1) analysis.score += 50;
                     if (enemyActiveUnits.length === 1) analysis.score += 500;
-                    analysis.isSupportAction = true;
                 }
+                analysis.isSupportAction = true;
             }
         }
 

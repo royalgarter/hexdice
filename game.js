@@ -855,10 +855,10 @@ function alpineHexDiceTacticGame() { return {
 				// this.cancelAction();
 			}
 		} else if (actionType === 'SPELLCAST_SACRIFICE') {
-			// Show adjacent enemy Oracles as valid targets
+			// Show adjacent enemy units as valid targets
 			this.validTargets = this.calcValidSacrificeTargets(this.selectedUnitHexId);
 			if (this.validTargets.length === 0) {
-				this.addLog("No valid targets for Oracle Sacrifice.");
+				this.addLog("No valid targets for Oracle Transmute.");
 			}
 		}
 	},
@@ -868,7 +868,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
-		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
+		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy unit to transmute (Oracle and enemy unit will be removed).";
 		if (this.actionMode === 'SKIRMISH_POST_MOVE') return "Skirmish success! Select an adjacent hex to move to (or stay put).";
 		return "";
 	},
@@ -894,9 +894,9 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		// Oracle Sacrifice
+		// Oracle Transmute
 		if (action === 'SPELLCAST_SACRIFICE' && this.validTargets.includes(targetHexId)) {
-			this.performOracleSacrifice(this.selectedUnitHexId, targetHexId);
+			this.performOracleTransmute(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
 		}
@@ -988,9 +988,9 @@ function alpineHexDiceTacticGame() { return {
 			case 'BRAVE_CHARGE': return unit.value === 1;
 			case 'MERGE': return options.includes('m');
 			case 'SPELLCAST_SACRIFICE':
-				// Oracle can sacrifice if it's the last unit for its player and has adjacent enemy Oracles
+				// Oracle can transmute any adjacent enemy unit
 				if (unit.value !== 6) return false;
-				return this.isOracleLastUnitAndCanSacrifice(unitHexId, state);
+				return this.canOracleTransmute(unitHexId, state);
 			default: return false;
 		}
 	},
@@ -1370,58 +1370,52 @@ function alpineHexDiceTacticGame() { return {
 		this.checkWinConditions(state);
 	},
 	/**
-	 * Check if an Oracle is the last unit for its player and can sacrifice to eliminate an adjacent enemy Oracle.
+	 * Check if an Oracle can perform Transmute on an adjacent enemy unit.
 	 * @param {number} oracleHexId - Hex ID of the Oracle unit
 	 * @param {object} state - Optional game state for simulation
-	 * @returns {boolean} True if Oracle is last unit and has adjacent enemy Oracle
+	 * @returns {boolean} True if Oracle has at least one adjacent enemy unit
 	 */
-	isOracleLastUnitAndCanSacrifice(oracleHexId, state) {
+	canOracleTransmute(oracleHexId, state) {
 		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
 		const oracleHex = this.getHex(oracleHexId, state);
 		if (!oracleUnit || oracleUnit.value !== 6 || !oracleHex) return false;
 
-		// Check if this Oracle is the last unit for its player
-		const player = (state || this).players[oracleUnit.playerId];
-		const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath && d.value != 6);
-		if (activeUnits.length) return false;
-
-		// Check if there's an adjacent enemy Oracle
+		// Check if there's an adjacent enemy unit
 		return this.getNeighbors(oracleHex, state).some(neighborHex => {
 			if (!neighborHex) return false;
 			const neighborUnit = this.getUnitOnHex(neighborHex.id, state);
-			return neighborUnit && neighborUnit.playerId !== oracleUnit.playerId && neighborUnit.value === 6;
+			return neighborUnit && neighborUnit.playerId !== oracleUnit.playerId;
 		});
 	},
 	/**
-	 * Perform Oracle Sacrifice action - Oracle sacrifices itself to remove an adjacent enemy Oracle.
-	 * This prevents stalemate when both players only have Oracles remaining.
+	 * Perform Oracle Transmute action - Oracle sacrifices itself to convert an adjacent enemy unit.
 	 * @param {number} oracleHexId - Hex ID of the sacrificing Oracle
-	 * @param {number} targetHexId - Hex ID of the enemy Oracle to remove
+	 * @param {number} targetHexId - Hex ID of the enemy unit to transmute
 	 * @param {object} state - Optional game state for simulation
 	 */
-	performOracleSacrifice(oracleHexId, targetHexId, state) {
+	performOracleTransmute(oracleHexId, targetHexId, state) {
 		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
 		const targetUnit = this.getUnitOnHex(targetHexId, state);
 		const oracleHex = this.getHex(oracleHexId, state);
 		const targetHex = this.getHex(targetHexId, state);
 
-		if (!oracleUnit || oracleUnit.value !== 6 || !targetUnit || targetUnit.value !== 6) {
-			this.addLog("Sacrifice failed: Invalid units.", state);
+		if (!oracleUnit || oracleUnit.value !== 6 || !targetUnit) {
+			this.addLog("Transmute failed: Invalid units.", state);
 			return;
 		}
 
 		if (oracleUnit.playerId === targetUnit.playerId) {
-			this.addLog("Sacrifice failed: Cannot target friendly unit.", state);
+			this.addLog("Transmute failed: Cannot target friendly unit.", state);
 			return;
 		}
 
 		const distance = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
 		if (distance > 1) {
-			this.addLog("Sacrifice failed: Target must be adjacent.", state);
+			this.addLog("Transmute failed: Target must be adjacent.", state);
 			return;
 		}
 
-		// Both Oracles are removed
+		// Both units are removed
 		oracleUnit.isDeath = true;
 		targetUnit.isDeath = true;
 		oracleHex.unit = null;
@@ -1429,7 +1423,39 @@ function alpineHexDiceTacticGame() { return {
 		targetHex.unit = null;
 		targetHex.unitId = null;
 
-		this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to eliminate P${targetUnit.playerId+1} Oracle! Both Oracles removed.`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to transmute P${targetUnit.playerId+1} D${targetUnit.value}!`, state);
+
+		// Try to find a reserve die for the player
+		const player = (state || this).players[oracleUnit.playerId];
+		const reserveDie = player.dice.find(d => !d.isDeployed && !d.isDeath);
+
+		if (reserveDie) {
+			// Place reserve die on targetHex
+			reserveDie.isDeployed = true;
+			reserveDie.hexId = targetHexId;
+			targetHex.unit = reserveDie;
+			targetHex.unitId = reserveDie.id;
+
+			// Reroll the new unit
+			const oldVal = reserveDie.value;
+			const newRoll = Math.floor(Math.random() * 6) + 1;
+			reserveDie.value = newRoll;
+			
+			// Update stats
+			const stats = UNIT_STATS[newRoll];
+			Object.assign(reserveDie, stats);
+			reserveDie.currentArmor = stats.armor;
+			reserveDie.armorReduction = 0;
+			reserveDie.isGuarding = 0;
+			
+			// Apply penalties
+			reserveDie.isRerolled = true; // 0 Effective Armor until next turn
+			reserveDie.hasMovedOrAttackedThisTurn = true; // Cannot act this turn
+
+			this.addLog(`Transmutation complete! New P${oracleUnit.playerId+1} D${newRoll} (was D${oldVal}) created at (${targetHex.q},${targetHex.r}).`, state);
+		} else {
+			this.addLog(`Transmutation incomplete: No reserve dice available for P${oracleUnit.playerId+1}.`, state);
+		}
 
 		oracleUnit.hasMovedOrAttackedThisTurn = true;
 		oracleUnit.actionsTakenThisTurn++;
