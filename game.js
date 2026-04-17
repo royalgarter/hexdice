@@ -34,8 +34,8 @@ const PLAYER_CONFIG = [
 	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-700' },
 	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-700' },
 	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-700' },
-	{ id: 4, color: 'White', sprite: 'white', bg: 'bg-hexwhite', logColor: 'text-white-700' },
-	{ id: 5, color: 'Yellow', sprite: 'brown', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
+	{ id: 4, color: 'Black', sprite: 'shadow', bg: 'bg-hexwhite', logColor: 'text-gray-700' },
+	{ id: 5, color: 'Yellow', sprite: 'sepia', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
 ];
 
 const TERRAIN_CONFIG = {
@@ -89,11 +89,7 @@ function alpineHexDiceTacticGame() { return {
 
 	// --- SETUP TERRAIN METHODS ---
 	setupTerrain(force) {
-		const urlParams = new URLSearchParams(location.search);
-		const v12Active = urlParams.get('v') === '1.2';
-		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
-
-		if (!v12Active && !force) return; // Only setup terrain for v1.2
+		const radius = this.getRadius();
 
 		this.addLog("Setting up terrain");
 
@@ -156,7 +152,7 @@ function alpineHexDiceTacticGame() { return {
 			else
 				hex.terrainType = randomTerrainType;
 
-			this.addLog(`${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
+			this.addLog(`Placed ${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
 		}
 	},
 
@@ -244,7 +240,7 @@ function alpineHexDiceTacticGame() { return {
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
 
 		// Map size modifier: 2, 3 players -> R=5; 4, 6 players -> R=6
-		const radius = (this.playerCount <= 3) ? 5 : 6;
+		const radius = this.getRadius();
 		this.generateHexGrid(radius);
 
 		// Adjust dice per player based on player count (Total 24 dice)
@@ -281,14 +277,14 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 
-		const radius = (this.playerCount <= 3) ? 5 : 6;
+		const radius = this.getRadius();
 		this.generateHexGrid(radius);
 		this.hexes.forEach(h => {
 			h.unitId = null; // Clear units from hexes
 			h.terrainType = 'PLAIN'; // Reset terrain
 		});
 		this.determineBaseLocations(radius); // Redetermine bases on reset
-		this.setupTerrain(); // Trigger terrain setup for v1.2 rules
+		//this.setupTerrain(); // Trigger terrain setup for v1.2 rules
 		this.phase = 'SETUP_ROLL';
 		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
@@ -311,6 +307,11 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- HEX GRID --- */
+	getRadius(link=location) {
+		const urlParams = new URLSearchParams(link?.search || 'http://localhost/');
+		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
+		return radius;
+	},
 	generateHexGrid(radius, padding=1) {
 		this.hexes = [];
 		this.hexesQR = {};
@@ -853,7 +854,7 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog("No valid targets for Brave Charge.");
 				// this.cancelAction();
 			}
-		} else if (actionType === 'ORACLE_SACRIFICE') {
+		} else if (actionType === 'SPELLCAST_SACRIFICE') {
 			// Show adjacent enemy Oracles as valid targets
 			this.validTargets = this.calcValidSacrificeTargets(this.selectedUnitHexId);
 			if (this.validTargets.length === 0) {
@@ -867,7 +868,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
-		if (this.actionMode === 'ORACLE_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
+		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy Oracle to eliminate (both Oracles will be removed).";
 		if (this.actionMode === 'SKIRMISH_POST_MOVE') return "Skirmish success! Select an adjacent hex to move to (or stay put).";
 		return "";
 	},
@@ -894,7 +895,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		// Oracle Sacrifice
-		if (action === 'ORACLE_SACRIFICE' && this.validTargets.includes(targetHexId)) {
+		if (action === 'SPELLCAST_SACRIFICE' && this.validTargets.includes(targetHexId)) {
 			this.performOracleSacrifice(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
@@ -978,13 +979,15 @@ function alpineHexDiceTacticGame() { return {
 
 		switch(actionType) {
 			case 'MOVE': return true;
-			case 'REROLL': return options.includes('r') && !unit.isRerolled && !unit.isGuarding;
+			case 'REROLL': 
+				const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
+				return options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
 			case 'MERGE': return options.includes('m');
-			case 'ORACLE_SACRIFICE':
+			case 'SPELLCAST_SACRIFICE':
 				// Oracle can sacrifice if it's the last unit for its player and has adjacent enemy Oracles
 				if (unit.value !== 6) return false;
 				return this.isOracleLastUnitAndCanSacrifice(unitHexId, state);
@@ -1098,7 +1101,7 @@ function alpineHexDiceTacticGame() { return {
 			this.handleCombat(unitHexId, targetHexId, 'MELEE', state);
 		} else { // Moving to an empty hex
 			this.addLog([
-				`P${attackerUnit.playerId+1} D${attackerUnit.value} moved `,
+				`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} moved `,
 				`[${attackerHex.id}](${attackerHex.q},${attackerHex.r},${attackerHex.s})`,
 				`->`,
 				`[${defenderHex.id}](${defenderHex.q},${defenderHex.r},${defenderHex.s}).`
@@ -1143,6 +1146,13 @@ function alpineHexDiceTacticGame() { return {
 		const targetHex = this.getHex(unitHexId, state);
 		const unit = this.getUnitOnHex(unitHexId, state);
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return;
+
+		const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
+		if (unitHexId !== playerBaseHexId) {
+			this.addLog(`P${unit.playerId + 1} D${unit.value} cannot reroll outside of its Base.`, state);
+			this.deselectUnit(state);
+			return;
+		}
 
 		const oldVal = unit.value;
 		const newRoll = Math.floor(random() * 6) + 1;
@@ -1580,8 +1590,8 @@ function alpineHexDiceTacticGame() { return {
 			case 'MOUNTAIN': minRange = 1; maxRange = 3; break;
 		}
 
-		// Archer (Dice 2) gets range +1 if it is currently guarding
-		if (attackerUnit.value === 2 && attackerUnit.isGuarding > 0) {
+		// Archer (Dice 2) gets range +1 if it is currently skirmish
+		if (attackerUnit.value === 2 && attackerUnit.skirmishBuff) {
 			maxRange += 1;
 		}
 
@@ -2364,13 +2374,13 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);
+		attackerUnit.isGuarding = 0;
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
 		let attackMod = 0;
 		if (isSkirmishing) attackMod -= 1;
-		
+
 		// Archer (Dice 2) damage for range 3 attack is reduced by 1
 		if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
 
@@ -2398,7 +2408,7 @@ function alpineHexDiceTacticGame() { return {
 			defenderHex.unitId = null;
 
 			if (isSkirmishing) {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
 
 				if (!state) {
 					// Switch to post-skirmish move mode
@@ -2420,33 +2430,46 @@ function alpineHexDiceTacticGame() { return {
 			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
 			} else {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
 			}
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
 			this.trailAttack = {};
 		} else { // Attacker fails
 			if (isSkirmishing) {
-				this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} has been eliminated.`, state);
-				this.removeUnit(attackerHexId, state);
-			} else {
-				this.addLog(`Attack failed! Both party's Armor reduced by 1.`, state);
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
-
-				// Ranged attacks don't receive counter-damage (attacker is at safe distance)
-				if (combatType === 'RANGED_ATTACK') {
-					if (defenderUnit.isGuarding <= 1) {
-						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
-					}
+				if (combatType !== 'RANGED_ATTACK') {
+					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} has been eliminated.`, state);
+					this.removeUnit(attackerHexId, state);
 				} else {
+					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''}'s armor exhausted.`, state);
+					this.applyDamage(attackerHexId, 1, state, false);
+				}
+			} else {
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
+
+				if (combatType !== 'RANGED_ATTACK') {
 					if (attackerUnit.isGuarding <= 1) {
+						this.addLog(`Attack failed! Attacker's Armor reduced by 1.`, state);
 						this.applyDamage(attackerHexId, 1, state, false);
 					}
 
-					if (defenderUnit.isGuarding <= 1) {
-						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding ? false : true);
+					if (defenderUnit.value == 5) {
+						const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
+						if (attackerEffectiveArmor <= 0) {
+							this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
+							this.removeUnit(attackerHexId, state);
+						}
 					}
+				}
+
+				this.addLog(`Attack failed! Defender's Armor damaged by 1.`, state);
+				if (defenderUnit.value != 5 && defenderUnit.isGuarding <= 1) {
+					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding > 0 ? false : true);
+				}
+
+				if (defenderUnit.value == 5 && defenderUnit.isGuarding <= 0) {
+					this.applyDamage(defenderHexId, 1, state, false);
 				}
 			}
 		}
@@ -2547,20 +2570,6 @@ function alpineHexDiceTacticGame() { return {
 				die.isRerolled = false; // Penalty expires when turn starts
 				// Decrement skirmish buff
 				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
-				
-				// Archer guard (range bonus) fades away if not refreshed by a new Guard action
-				if (die.value === 2) {
-					if (die.isGuarding > 0) {
-						if (die.wasGuarding) {
-							die.isGuarding = 0;
-							die.wasGuarding = false;
-						} else {
-							die.wasGuarding = true;
-						}
-					} else {
-						die.wasGuarding = false;
-					}
-				}
 			}
 		});
 	},

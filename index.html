@@ -26,12 +26,13 @@
 			scale: 101% 102%;
 			background-repeat: no-repeat;
 			background-position: center;
+			background-color: #896648;
 		}
 		.bg-wood {
 			background-color: #c3a471aa;
 		}
 		.bg-hexdefault {
-			background-color: #896648;
+			/*background-color: #896648;*/
 		}
 		.bg-hexselect {
 			background-color: #f4ecd8;
@@ -99,8 +100,8 @@
 		}
 		/* Terrain Colors */
 		.bg-hexplain {
-			background-color: #896648;
-			/*background-image: url('/assets/sprites/terrain/plain_01.png');
+			/*background-color: #896648;
+			background-image: url('/assets/sprites/terrain/plain_01.png');
 			background-size: cover;
 			background-repeat: no-repeat;
 			background-position: center;*/
@@ -225,6 +226,7 @@
 	<script type="text/javascript" src="/ai/ai-priority.js"></script>
 	<script type="text/javascript" src="/ai/ai-random.js"></script>
 	<script type="text/javascript" src="/ai/ai-heuristic.js"></script>
+	<script type="text/javascript" src="/ai/heuristic-profiles.js"></script>
 </head>
 
 <body class="text-black min-h-screen flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
@@ -250,7 +252,7 @@
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-xs text-center relative">
-						<span style="top:-8px;right:-8px;color:#20ee8099" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
 
 						<span class="text-lg invisible"
 							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
@@ -259,31 +261,32 @@
 						>
 						</span>
 
+						<span style="top:-14px;right:12px;" class="absolute text-red-700"
+							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
+						</span>
+						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
+							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
+							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
+						</span>
+						<span style="top:-14px;right:-4px;" class="absolute text-green-700 font-bold"
+							x-show="getUnitOnHex(hex.id)?.isRerolled">R
+						</span>
 						<span style="top:4px;right:18px;" class="absolute text-blue-900 font-bold"
 							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'">
 						</span>
 						<span style="top:-2px;right:16px;" class="absolute text-red-900 font-bold"
 							x-show="getUnitOnHex(hex.id)?.skirmishBuff">⚔
 						</span>
-						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
-							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
-							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
-						</span>
-						<span style="top:-14px;right:-4px;" class="absolute text-blue-700"
-							x-show="getUnitOnHex(hex.id)?.isRerolled">®
-						</span>
-						<span style="top:-14px;right:12px;" class="absolute text-red-700"
-							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
-						</span>
-						<span style="top:24px;right:-12px;" class="absolute font-bold text-red-700"
+
+						<!-- <span style="top:24px;right:-12px;" class="absolute font-bold text-red-700"
 							x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction">
-						</span>
+						</span> -->
 					</div>
 				</div>
 			</template>
 
 			<!-- Trail Arrow -->
-			<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" class="absolute inset-0 pointer-events-none z-10" x-show="!phase.startsWith('SETUP')">
+			<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor" class="absolute inset-0 pointer-events-none z-10" x-show="!phase.startsWith('SETUP')">
 				<!-- Movement -->
 				<g x-show="trail && trail.fromHex && trail.toHex">
 					<circle
@@ -428,9 +431,9 @@
 					@click="initiateAction('MERGE')"
 				>MERGE</button>
 				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white font-bold bg-red-100"
-					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'ORACLE_SACRIFICE')"
-					@click="initiateAction('ORACLE_SACRIFICE')"
-				>SACRIFICE</button>
+					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
+					@click="initiateAction('SPELLCAST_SACRIFICE')"
+				>TRANSMUTE</button>
 				<button class="cursor-pointer border border-black p-1 hover:bg-black hover:text-white font-bold"
 					x-show="actionMode !== null"
 					@click="cancelAction()"
@@ -451,7 +454,7 @@
 	<!-- Message Log -->
 	<div x-show="showLog" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-36 overflow-y-auto border-t border-black" id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
-			<p x-text="log.message" :class="PLAYER_CONFIG[ (log.message?.match(/P(\d)/)?.[1] || 1) - 1 ]?.logColor"></p>
+			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>
 	</div>
 

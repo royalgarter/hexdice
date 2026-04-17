@@ -21,17 +21,22 @@ const heuristicProfiles = {
         weights: {
             captureBonus: 10000,
             killBonus: 1200,
-            attackBonus: 100,
+            attackBonus: 300,
             safeBonus: 500,
-            threatPenalty: -250,
+            threatPenalty: -300,
             protectedRangeBonus: 100,
             friendlySixBonus: 150,
-            advanceBonus: 80,
+            advanceBonus: 100,
             guardPenalty: -500,
-            mergeOver6Penalty: -500,
-            backAndForthPenalty: -300,
-            teamPositionWeight: 0.7,
-            pressureWeight: 0.3
+            mergeOver6Penalty: -600,
+            backAndForthPenalty: -500,
+            teamPositionWeight: 0.8,
+            pressureWeight: 0.5,
+            spells: {
+                SPELLCAST_SHIELD: 0.7,
+                SPELLCAST_SWAP: 0.7,
+                SPELLCAST_SKIRMISH: 1.2,
+            }
         },
         riskTolerance: 0.5,
         targetSelection: 'highestValue',
@@ -58,8 +63,13 @@ const heuristicProfiles = {
             guardPenalty: -1000,
             mergeOver6Penalty: -200,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.3,
-            pressureWeight: 0.1
+            teamPositionWeight: 0.4,
+            pressureWeight: 0.2,
+            spells: {
+                SPELLCAST_SHIELD: 0.4,
+                SPELLCAST_SWAP: 0.6,
+                SPELLCAST_SKIRMISH: 2.0,
+            }
         },
         riskTolerance: 0.9,
         targetSelection: 'highestValue',
@@ -76,18 +86,23 @@ const heuristicProfiles = {
         priorityOrder: ['capture', 'spell', 'dodge', 'position', 'kill', 'attack'],
         weights: {
             captureBonus: 10000,
-            killBonus: 500,
-            attackBonus: 50,
+            killBonus: 800,
+            attackBonus: 100,
             safeBonus: 2000,
-            threatPenalty: -500,
+            threatPenalty: -600,
             protectedRangeBonus: 200,
             friendlySixBonus: 300,
-            advanceBonus: 20,
+            advanceBonus: 40,
             guardPenalty: -100,
             mergeOver6Penalty: -50,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.6,
-            pressureWeight: 0.3
+            teamPositionWeight: 0.7,
+            pressureWeight: 0.4,
+            spells: {
+                SPELLCAST_SHIELD: 1.5,
+                SPELLCAST_SWAP: 0.8,
+                SPELLCAST_SKIRMISH: 0.5,
+            }
         },
         riskTolerance: 0.1,
         targetSelection: 'threatRemoval',
@@ -105,17 +120,22 @@ const heuristicProfiles = {
         weights: {
             captureBonus: 10000,
             killBonus: 1500,
-            attackBonus: 200,
-            safeBonus: 500,
-            threatPenalty: -300,
+            attackBonus: 300,
+            safeBonus: 800,
+            threatPenalty: -400,
             protectedRangeBonus: 400,
             friendlySixBonus: 300,
             advanceBonus: 120,
             guardPenalty: -300,
             mergeOver6Penalty: -400,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.8,
-            pressureWeight: 0.3
+            teamPositionWeight: 0.9,
+            pressureWeight: 0.4,
+            spells: {
+                SPELLCAST_SHIELD: 1.0,
+                SPELLCAST_SWAP: 1.5,
+                SPELLCAST_SKIRMISH: 1.0,
+            }
         },
         riskTolerance: 0.4,           // Moderate-low risk
         targetSelection: 'lowArmor',      // Pick easy fights
@@ -143,7 +163,12 @@ const heuristicProfiles = {
             mergeOver6Penalty: 200,   // Bonus for merging over 6!
             backAndForthPenalty: -300,
             teamPositionWeight: 0.5,
-            pressureWeight: 0.3
+            pressureWeight: 0.3,
+            spells: {
+                SPELLCAST_SHIELD: 1.0,
+                SPELLCAST_SWAP: 1.0,
+                SPELLCAST_SKIRMISH: 1.0,
+            }
         },
         riskTolerance: 0.3,           // Cautious with valuable units
         targetSelection: 'highestValue',
@@ -171,7 +196,12 @@ const heuristicProfiles = {
             mergeOver6Penalty: -450,
             backAndForthPenalty: -300,
             teamPositionWeight: 0.5,
-            pressureWeight: 0.3
+            pressureWeight: 0.3,
+            spells: {
+                SPELLCAST_SHIELD: 0.5,
+                SPELLCAST_SWAP: 1.2,
+                SPELLCAST_SKIRMISH: 1.5,
+            }
         },
         riskTolerance: 0.6,           // Moderate-high risk for good targets
         targetSelection: 'lowArmor',      // Pick easiest kills

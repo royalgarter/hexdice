@@ -3,6 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- <link href='https://fonts.googleapis.com/css?family=EB Garamond' rel='stylesheet'> -->
 	<title>Hex Dice Rules</title>
 	<style>
 		* {
@@ -12,7 +13,7 @@
 		}
 		
 		body {
-			font-family: 'Old English Text MT', 'Garamond', monospace;
+			font-family: 'EB Garamond', monospace;
 			line-height: 1.6;
 			color: #333;
 			background: #f5f5f5;
@@ -22,7 +23,7 @@
 		.container {
 			max-width: 900px;
 			margin: 0 auto;
-			background: #C3A471D4;
+			background: #C3A471EE;
 			padding: 2rem;
 			border-radius: 8px;
 			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -42,19 +43,19 @@
 		}
 		
 		#markdown-viewer h1 {
-			font-size: 2rem;
+			font-size: 3rem;
 			border-bottom: 2px solid #333;
 			padding-bottom: 0.5rem;
 		}
 		
 		#markdown-viewer h2 {
-			font-size: 1.5rem;
+			font-size: 2rem;
 			border-bottom: 1px solid #ddd;
 			padding-bottom: 0.3rem;
 		}
 		
 		#markdown-viewer h3 {
-			font-size: 1.25rem;
+			font-size: 1.5rem;
 		}
 		
 		#markdown-viewer p {
@@ -160,8 +161,9 @@
 		.back-link {
 			display: inline-block;
 			margin-bottom: 1rem;
-			color: #0366d6;
+			color: #574427;
 			text-decoration: none;
+			font-weight: bold;
 		}
 		
 		.back-link:hover {
@@ -280,9 +282,13 @@
 			}
 		}
 		
+		function DEFAULT_RULE() {
+			return 'rules/RULES.md';
+		}
+
 		// Handle browser back/forward buttons
 		window.addEventListener('popstate', (e) => {
-			const mdPath = e.state?.path || 'rules.md';
+			const mdPath = e.state?.path || DEFAULT_RULE();
 			loadAndRenderMarkdown(`/${mdPath}`);
 		});
 		
@@ -290,12 +296,12 @@
 		if (document.readyState === 'loading') {
 			document.addEventListener('DOMContentLoaded', () => {
 				const params = new URLSearchParams(window.location.search);
-				const mdPath = params.get('path') || 'rules.md';
+				const mdPath = params.get('path') || DEFAULT_RULE();
 				loadAndRenderMarkdown(`/${mdPath}`);
 			});
 		} else {
 			const params = new URLSearchParams(window.location.search);
-			const mdPath = params.get('path') || 'rules.md';
+			const mdPath = params.get('path') || DEFAULT_RULE();
 			loadAndRenderMarkdown(`/${mdPath}`);
 		}
 	</script>

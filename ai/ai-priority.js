@@ -146,26 +146,30 @@ function performAIByPriority(GAME) {
              }
         }
 
-        // Check for Oracle Sacrifice opportunity (breaks stalemates)
-        if (unit.value === 6 && GAME.canPerformAction(unit.hexId, 'ORACLE_SACRIFICE', state)) {
+        // Check for Oracle Transmute opportunity
+        if (unit.value === 6 && GAME.canPerformAction(unit.hexId, 'SPELLCAST_SACRIFICE', state)) {
             const validSacrificeTargets = GAME.calcValidSacrificeTargets(unit.hexId, state);
             for (const targetHexId of validSacrificeTargets) {
                 const targetUnit = GAME.getUnitOnHex(targetHexId, state);
-                if (targetUnit && targetUnit.value === 6) {
-                    // This is a game-winning move if both players only have Oracles
+                if (targetUnit) {
                     const player = state.players[aiPlayerIndex];
                     const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
                     const enemyPlayer = state.players[targetUnit.playerId];
                     const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
                     
-                    // Priority 0.1: GAME WINNER - both down to last Oracle
-                    if (activeUnits.length === 1 && enemyActiveUnits.length === 1) {
-                        bestMove = { actionType: 'ORACLE_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                    // Priority 0.1: GAME WINNER - both down to last Oracle (stalemate break)
+                    if (activeUnits.length === 1 && enemyActiveUnits.length === 1 && targetUnit.value === 6) {
+                        bestMove = { actionType: 'SPELLCAST_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
                         bestPriority = 0.1; // Highest priority - wins the game
                     }
-                    // Priority 4.5: Sacrificial removal (less ideal but breaks stalemate)
+                    // Priority 1.5: High value conversion (3, 4, 5) if we have reserve
+                    else if (targetUnit.value >= 3 && targetUnit.value <= 5 && player.dice.some(d => !d.isDeployed && !d.isDeath)) {
+                         bestMove = { actionType: 'SPELLCAST_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                         bestPriority = 1.5;
+                    }
+                    // Priority 4.5: Sacrificial removal (less ideal but useful)
                     else if (!bestMove) {
-                        bestMove = { actionType: 'ORACLE_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
+                        bestMove = { actionType: 'SPELLCAST_SACRIFICE', unitHexId: unit.hexId, targetHexId: targetHexId };
                         bestPriority = 4.5;
                     }
                 }

@@ -20,13 +20,13 @@ const DEFAULT_PROFILE = {
     weights: {
         captureBonus: 10000,
         killBonus: 1000,
-        attackBonus: 300,
-        safeBonus: 200,
-        friendlySixBonus: 150,
+        attackBonus: 500,
+        safeBonus: 500,
+        friendlySixBonus: 50,
         advanceBonus: 100,
         protectedRangeBonus: 100,
 
-        threatPenalty: -250,
+        threatPenalty: -500,
         guardPenalty: -500,
         mergeOver6Penalty: -500,
         backAndForthPenalty: -1000,
@@ -35,8 +35,8 @@ const DEFAULT_PROFILE = {
         pressureWeight: 0.8,
 
         spells: {
-            SPELLCAST_SHIELD: 0.7,
-            SPELLCAST_SWAP: 0.7,
+            SPELLCAST_SHIELD: 0.8,
+            SPELLCAST_SWAP: 0.8,
             SPELLCAST_SKIRMISH: 1.2,
         }
     },
@@ -130,6 +130,12 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         console.log("AI stupid. Ending turn.");
         return;
     }
+
+    GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
+        || Object.keys(heuristicProfiles).random()
+        || profileName;
+
+    profileName = GAME.players[GAME.currentPlayerIndex].profileName;
 
     // Load profile (use inline definition if heuristic-profiles.js not loaded)
     let profile = DEFAULT_PROFILE;
@@ -321,7 +327,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
         case 'spell': {
             // Support and utility actions (mostly Oracle)
-            const spellMoves = scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_') || m.move.actionType === 'ORACLE_SACRIFICE');
+            const spellMoves = scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_'));
             if (spellMoves.length > 0) {
                 // Filter out spells that are currently unsafe unless they are escape actions
                 const viableSpells = spellMoves.filter(m => m.isSafe || m.isEscapeAction || profile.riskTolerance > 0.7);
@@ -384,7 +390,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
         case 'position': {
             const strategicMoves = scoredMoves.filter(m => !m.isThreatened)
-                .filter(m => !m.move.actionType.includes('SPELLCAST_') && m.move.actionType !== 'ORACLE_SACRIFICE');
+                                            .filter(m => !m.move.actionType.includes('SPELLCAST_'));
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -562,6 +568,25 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
     } else if (analysis.isThreatened) {
         analysis.score += w.threatPenalty * threatCount;
+    }
+
+    // --- TERRAIN-SPECIFIC HEURISTICS ---
+    const targetHex = nextState.hexes.find(h => h.id === move.targetHexId);
+    if (targetHex && targetHex.terrainType !== 'PLAIN') {
+        // 1. Defensive Bonus: Value +1 Armor from Forest, Tower, Mountain
+        if (['FOREST', 'TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
+            analysis.score += 50;
+        }
+
+        // 2. Archer Advantage: Value Tower/Mountain for overriding Engaged restriction
+        if ((unit.value === 2 || unit.value === 6) && ['TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
+            analysis.score += 100;
+        }
+
+        // 3. Mountain Range: Extra value for Archer on high ground
+        if (unit.value === 2 && targetHex.terrainType === 'MOUNTAIN') {
+            analysis.score += 50;
+        }
     }
 
     // --- ROLE-SPECIFIC HEURISTICS ---
@@ -800,22 +825,28 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             }
         }
 
-        if (move.actionType === 'ORACLE_SACRIFICE') {
+        if (move.actionType === 'SPELLCAST_SACRIFICE') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
             
-            if (targetUnit && targetUnit.value === 6 && oracleUnit) {
+            if (targetUnit && oracleUnit) {
                 const player = state.players[state.currentPlayerIndex];
                 const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
-                
-                if (activeUnits.length === 1) {
+                const hasReserve = player.dice.some(d => !d.isDeployed && !d.isDeath);
+
+                // Base score for removal
+                analysis.score += (targetUnit.value * 20);
+                if (hasReserve) analysis.score += 50;
+
+                // Stalemate break bonus
+                if (targetUnit.value === 6 && activeUnits.length === 1) {
                     const enemyPlayer = state.players[targetUnit.playerId];
                     const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
                     analysis.score += 100;
                     if (enemyActiveUnits.length > 1) analysis.score += 50;
                     if (enemyActiveUnits.length === 1) analysis.score += 500;
-                    analysis.isSupportAction = true;
                 }
+                analysis.isSupportAction = true;
             }
         }
 

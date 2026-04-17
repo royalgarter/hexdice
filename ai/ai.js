@@ -70,10 +70,10 @@ function generateAllPossibleMoves(GAME, state) {
 			});
 
 			// Oracle Sacrifice: Check if this is the last unit and can sacrifice
-			if (GAME.canPerformAction(unitHexId, 'ORACLE_SACRIFICE', state)) {
+			if (GAME.canPerformAction(unitHexId, 'SPELLCAST_SACRIFICE', state)) {
 				const validSacrificeTargets = GAME.calcValidSacrificeTargets(unitHexId, state);
 				validSacrificeTargets.forEach(targetHexId => {
-					moves.push({ actionType: 'ORACLE_SACRIFICE', unitHexId, targetHexId });
+					moves.push({ actionType: 'SPELLCAST_SACRIFICE', unitHexId, targetHexId });
 				});
 			}
 		}
@@ -115,8 +115,8 @@ function applyMove(GAME, move, state) {
 		case 'SPELLCAST_SKIRMISH':
 			GAME.performSpellCast(move.unitHexId, move.targetHexId, 'SKIRMISH', applyState);
 			break;
-		case 'ORACLE_SACRIFICE':
-			GAME.performOracleSacrifice(move.unitHexId, move.targetHexId, applyState);
+		case 'SPELLCAST_SACRIFICE':
+			GAME.performOracleTransmute(move.unitHexId, move.targetHexId, applyState);
 			break;
 		case 'MERGE':
 			GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState);
