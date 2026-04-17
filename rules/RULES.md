@@ -16,7 +16,6 @@
 
 ![Hexagonal Grid board](board.png)
 
-
 ---
 
 
@@ -58,6 +57,8 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 ### **4\. Dice Soldiers (Unit Types)**
 
 Its face value (1-6) determines each dice unit's capabilities according to the table below. The rolled value is kept face up on the board.
+
+![Units](/assets/infographics/hexdice_units.png)
 
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
