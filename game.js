@@ -1101,7 +1101,7 @@ function alpineHexDiceTacticGame() { return {
 			this.handleCombat(unitHexId, targetHexId, 'MELEE', state);
 		} else { // Moving to an empty hex
 			this.addLog([
-				`P${attackerUnit.playerId+1} D${attackerUnit.value} moved `,
+				`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} moved `,
 				`[${attackerHex.id}](${attackerHex.q},${attackerHex.r},${attackerHex.s})`,
 				`->`,
 				`[${defenderHex.id}](${defenderHex.q},${defenderHex.r},${defenderHex.s}).`
@@ -2408,7 +2408,7 @@ function alpineHexDiceTacticGame() { return {
 			defenderHex.unitId = null;
 
 			if (isSkirmishing) {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
 
 				if (!state) {
 					// Switch to post-skirmish move mode
@@ -2430,23 +2430,23 @@ function alpineHexDiceTacticGame() { return {
 			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
 			} else {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
 			}
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
 			this.trailAttack = {};
 		} else { // Attacker fails
 			if (isSkirmishing) {
 				if (combatType !== 'RANGED_ATTACK') {
-					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} has been eliminated.`, state);
+					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} has been eliminated.`, state);
 					this.removeUnit(attackerHexId, state);
 				} else {
-					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value}'s armor exhausted.`, state);
+					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''}'s armor exhausted.`, state);
 					this.applyDamage(attackerHexId, 1, state, false);
 				}
 			} else {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
+				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
 
 				if (combatType !== 'RANGED_ATTACK') {
 					if (attackerUnit.isGuarding <= 1) {
@@ -2457,7 +2457,7 @@ function alpineHexDiceTacticGame() { return {
 					if (defenderUnit.value == 5) {
 						const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
 						if (attackerEffectiveArmor <= 0) {
-							this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
+							this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
 							this.removeUnit(attackerHexId, state);
 						}
 					}

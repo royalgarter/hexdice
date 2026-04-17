@@ -131,6 +131,12 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         return;
     }
 
+    GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
+        || Object.keys(heuristicProfiles).random()
+        || profileName;
+
+    profileName = GAME.players[GAME.currentPlayerIndex].profileName;
+
     // Load profile (use inline definition if heuristic-profiles.js not loaded)
     let profile = DEFAULT_PROFILE;
     if (typeof getProfile === 'function') {
@@ -562,6 +568,25 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
     } else if (analysis.isThreatened) {
         analysis.score += w.threatPenalty * threatCount;
+    }
+
+    // --- TERRAIN-SPECIFIC HEURISTICS ---
+    const targetHex = nextState.hexes.find(h => h.id === move.targetHexId);
+    if (targetHex && targetHex.terrainType !== 'PLAIN') {
+        // 1. Defensive Bonus: Value +1 Armor from Forest, Tower, Mountain
+        if (['FOREST', 'TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
+            analysis.score += 50;
+        }
+
+        // 2. Archer Advantage: Value Tower/Mountain for overriding Engaged restriction
+        if ((unit.value === 2 || unit.value === 6) && ['TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
+            analysis.score += 100;
+        }
+
+        // 3. Mountain Range: Extra value for Archer on high ground
+        if (unit.value === 2 && targetHex.terrainType === 'MOUNTAIN') {
+            analysis.score += 50;
+        }
     }
 
     // --- ROLE-SPECIFIC HEURISTICS ---

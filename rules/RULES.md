@@ -14,13 +14,11 @@
 
 **Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)**
 
+![Hexagonal Grid board](board.png)
+
 
 ---
 
-
-## **Tactical Dice Combat on a Hexagonal Grid board game**
-
-![Hexagonal Grid board](board.png)
 
 ### **1\. Overview**
 
@@ -33,7 +31,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
   - For 2 Players: 2 distinct colors (Red/Blue), 12 dice each (Total 24).
   - For 3 Players: 3 distinct colors, 8 dice each (Total 24).
   - For 4 Players: 4 distinct colors, 6 dice each (Total 24).
-  - For 6 Players: 6 distinct colors, 4 dice each (Total 24).
+  - For 6 Players: 6 distinct colors, 6 dice each (Total 36).
 - **Armor Reduction Tokens**: Small markers (e.g., beads, tokens, or coins) used to track damage to a unit's armor. These help players calculate the current **Effective Armor** of each unit.
 
 ### **3\. Setup**
@@ -64,10 +62,10 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
-| 2 | **Archer** | 1 | 2 | 2-3* | 1 | \* | Ranged (LoS req). Range 3 (requires Guard) has -1 Atk power. |
+| 2 | **Archer** | 1 | 2 | 2-3* | 1 | \* | Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
-| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Diagonal Maneuver (X-shape) |
-| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Heavy Shield (BFS 1-step) |
+| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Six Diagonal Maneuver (X-shape) |
+| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Steady Heavy Armor (BFS 1-step) |
 | 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
 
 * **Armor:** Defensive value used in combat.  
@@ -75,9 +73,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Range:** Ranged/Special attack from current hex.  
 * **Distance:** The maximum distance a unit can move following its pattern.
 * **Movement:** The pattern the unit follows:
-    - **`*`**: BFS movement (any direction, can move through empty hexes).
+    - **`*`**: Breadth-First Search (BFS) movement (any direction, can move through empty hexes).
     - **`L`**: L-shaped jump (2 steps straight, then 1 step offset).
-    - **`X`**: Diagonal movement (only along the six diagonal axes).
+    - **`X`**: Six diagonal movement (only along the six diagonal axes).
     - **`0`**: Stationary (cannot move except when attacking).
 
 **Dice Visualization Diagram**
