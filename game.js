@@ -433,14 +433,13 @@ function alpineHexDiceTacticGame() { return {
 	/* --- UI STYLING --- */
 	hexColor(hex, state) {
 		// const unit = this.getUnitOnHex(hex.id, state);
+		state = state || this;
 
 		let cls = TERRAIN_CONFIG[hex.terrainType]?.bg || 'bg-hexdefault';
 
-		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined) {
+		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined && !state?.players?.[hex.basePlayerId]?.isEliminated) {
 			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
 		}
-
-		state = state || this;
 
 		if (state.selectedUnitHexId === hex.id) cls = 'bg-hexselect';
 		else if (state.validMoves?.includes(hex.id)) cls = 'bg-hexmove';

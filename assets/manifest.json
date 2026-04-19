@@ -13,11 +13,12 @@
       "purpose": "any maskable"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#c3a471",
   "background_color": "#ffffff",
   "display": "minimal-ui",
   "name": "HexDice",
   "short_name": "HexDice",
+  "description": "Tactical hexagon board game where players command armies of dice, using their values to determine their abilities.",
   "id": "hexdice",
   "start_url": "/",
   "dir": "auto",

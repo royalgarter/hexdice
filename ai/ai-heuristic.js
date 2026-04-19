@@ -14,37 +14,7 @@
  */
 
 // Default profile if none specified
-const DEFAULT_PROFILE = {
-    name: "Baseline",
-    priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
-    weights: {
-        captureBonus: 10000,
-        killBonus: 1000,
-        attackBonus: 500,
-        safeBonus: 500,
-        friendlySixBonus: 50,
-        advanceBonus: 100,
-        protectedRangeBonus: 100,
-
-        threatPenalty: -500,
-        guardPenalty: -500,
-        mergeOver6Penalty: -500,
-        backAndForthPenalty: -1000,
-        
-        teamPositionWeight: 0.8,
-        pressureWeight: 0.8,
-
-        spells: {
-            SPELLCAST_SHIELD: 0.8,
-            SPELLCAST_SWAP: 0.8,
-            SPELLCAST_SKIRMISH: 1.2,
-        }
-    },
-    riskTolerance: 0.5,
-    targetSelection: 'highestValue',
-    positioningStyle: 'balanced',
-    unitSelection: 'leastMoved'
-};
+const DEFAULT_PROFILE = heuristicProfiles.baseline;
 
 /**
  * Adjust AI weights based on the current game phase
@@ -131,11 +101,11 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         return;
     }
 
-    GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
-        || Object.keys(heuristicProfiles).random()
-        || profileName;
+    // GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
+    //     || Object.keys(heuristicProfiles).random()
+    //     || profileName;
 
-    profileName = GAME.players[GAME.currentPlayerIndex].profileName;
+    // profileName = GAME.players[GAME.currentPlayerIndex].profileName;
 
     // Load profile (use inline definition if heuristic-profiles.js not loaded)
     let profile = DEFAULT_PROFILE;
@@ -878,7 +848,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
  * Calculate the overall strategic score for a player's team position.
  * This encourages units to move towards the nearest enemy base while remaining grouped.
  */
-function calculateTeamScore(GAME, state, playerIndex, opponentBases) {
+function calculateTeamScore(GAME, state, playerIndex, opponentBases=[]) {
     const player = state.players[playerIndex];
     let score = 0;
     for (const unit of player.dice) {

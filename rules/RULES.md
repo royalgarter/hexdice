@@ -14,7 +14,7 @@
 
 **Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)**
 
-![Hexagonal Grid board](board.png)
+![Hexagonal Grid board](/assets/board.png)
 
 ---
 
