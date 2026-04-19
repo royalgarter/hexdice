@@ -52,3 +52,79 @@ Give the dice *scars and medals*. If a specific dice survives a grueling boss le
 
 ### Summary of the Campaign Flow
 A player logs in, looks at the **Overworld Map**, and selects a **Siege Level**. They deploy their persistent, upgraded army. The map is shrouded in **Fog of War**. They push forward, solving a **Chess-like positional puzzle** to breach the gates, utilizing **Teleportation Runes** to flank the enemy. Finally, they defeat the **Swarm AI Faction**, earning **3 Stars** and unlocking the ability to roll **Oracle (6)** dice for the rest of the campaign.
+
+---
+
+<REASONING>
+<CONDUCTOR_NOTE>
+The user has provided a specific, constrained vision for the first draft: *Journey of the Six*. The player has exactly 6 dice (one of each value), faces deployment limits per map, must manage a fatigue/scar system preventing 3 consecutive deployments, and can collect consumable runes. I will convene the panel to refine this draft, specifically looking for mathematical edge cases in the deployment rules.
+</CONDUCTOR_NOTE>
+
+<EXPERT NAME="Garry" FIELD="Chess Grandmaster & Puzzle Designer">
+Garry, let's look at the core premise: you only have 6 dice, one of each value (1 through 6), and you must pick a subset (e.g., 3 or 5) for each map. How does this affect the tactical depth?
+</EXPERT>
+
+<SPEAKS NAME="Garry">
+It turns the pre-game lobby into a brilliant puzzle. In standard Hex Dice, you roll to see what you get. Here, you have a deterministic toolkit. If a map is filled with Lava, you *must* bring the Hussar (3) and Knight (4). If it's a defense map, you bring the Tank (5) and Archer (2). It shifts the game from "adapting to RNG" to "perfect loadout optimization." I love it.
+</SPEAKS>
+
+<EXPERT NAME="Jordan" FIELD="Mobile Casual Strategy Designer">
+Jordan, the user proposed a rule: "A unit could not be used consecutively 3 in a row of campaigns." How does this fatigue system interact with the deployment limits?
+</EXPERT>
+
+<SPEAKS NAME="Jordan">
+There is a mathematical soft-lock here that we need to fix. If the player has exactly 6 dice, and a level requires them to deploy 5, they are leaving 1 behind.
+Level 1: Leave Die A. (Dice B, C, D, E, F are used).
+Level 2: Leave Die B. (Dice A, C, D, E, F are used).
+Level 3: Leave Die C. (Dice A, B, D, E, F are used).
+Notice that Dice D, E, and F have now been used 3 times in a row. If the rule is a strict lockout, the player literally cannot play Level 4 because they don't have enough legal dice to form a team of 5.
+Instead of a strict lockout, the "Scar" should be a severe debuff. If used 3 times in a row, the unit enters the battle "Scarred" (e.g., -1 Armor, or movement reduced by 1). This forces the player to choose: play a sub-optimal team of 3 rested dice, or bring a 5-dice team but two of them are heavily crippled.
+</SPEAKS>
+
+<EXPERT NAME="Rob" FIELD="Legacy Board Game Creator">
+Rob, what about the Runes? The user wants them to be one-time use abilities acquired across the journey.
+</EXPERT>
+
+<SPEAKS NAME="Rob">
+Consumables are great for legacy/campaign feel. Since the player only has these six specific "heroes," the runes should be equipped to the dice between levels. Think of them as single-use equipment. A "Rune of Swiftness" lets the Tank (5) move two hexes for one turn. A "Rune of the Aegis" gives the fragile Pawn (1) a one-time shield. This gives players a way to mitigate the "Scarred" debuff Jordan mentioned—if you *must* bring a Scarred unit, you can burn a valuable Rune to keep it alive.
+</SPEAKS>
+
+<CONDUCTOR_NOTE>
+The panel has identified a critical mathematical flaw in the strict lockout rule and proposed a more engaging "Scar Debuff" system. They have also fleshed out the Rune system. I will now synthesize this into the first official draft of *Journey of the Six*.
+</CONDUCTOR_NOTE>
+
+<DRAFT VERSION="1" BY="Conductor">
+Synthesizing the panel's feedback into the final game design document for the user.
+</DRAFT>
+</REASONING>
+
+<ANSWER>
+Here is the first drafted version of your mobile game concept, refined by the expert panel to ensure the math and mechanics work smoothly for a campaign:
+
+### 🎲 Game Title: *Journey of the Six*
+**Core Concept:** You do not command a massive, faceless army. You command exactly six legendary dice, each representing a distinct class (1: Pawn, 2: Archer, 3: Hussar, 4: Knight, 5: Tank, 6: Oracle).
+
+#### 1. The Overworld & Deployment Limits
+*   **The Campaign Map:** Players navigate a node-based overworld. Each node is a specific tactical puzzle with unique terrain and enemy layouts.
+*   **The Pre-Battle Puzzle:** You cannot bring all six dice to every fight. Each map has a strict deployment limit (e.g., "Deploy 3," "Deploy 4," or "Deploy 5"). Because you only have one of each class, choosing your loadout is half the strategy.
+    *   *Example:* A map with impassable chasms means you *must* select the Hussar (3) to jump them, leaving your heavy Tank (5) behind.
+
+#### 2. The "Scar" Fatigue System
+*   *Expert Correction:* A strict "cannot be used 3 times in a row" rule mathematically breaks the game if a level requires you to deploy 5 out of your 6 dice (some dice will inevitably hit the 3-game limit, preventing you from starting the next level).
+*   **The Solution - The Burden of War:** Instead of a hard lockout, we use a "Scar" debuff system.
+    *   **Fresh:** Normal stats.
+    *   **Fatigued (Used 2 times in a row):** Normal stats, but a visual warning.
+    *   **Scarred (Used 3 times in a row):** The unit can still be deployed, but it enters the board with a "Scar" (e.g., -1 Effective Armor, or cannot use its class ability).
+    *   **Resting:** Leaving a die out of a battle completely clears its fatigue/scars. This forces players to constantly rotate their squad and sometimes attempt levels with sub-optimal, but fully rested, classes.
+
+#### 3. The Rune System (Consumables)
+*   **Acquisition:** As you defeat enemies or land on specific hexes on the campaign map, you acquire Runes.
+*   **Equipping:** Before a battle, you can attach these single-use Runes to specific dice in your loadout.
+*   **Tactical Depth:** Runes allow you to break the deterministic rules in emergencies.
+    *   *Rune of the Aegis:* Negates the first point of damage taken. (Perfect for protecting a "Scarred" unit you were forced to deploy).
+    *   *Rune of the Pegasus:* Grants any unit the "Jump" ability for a single turn.
+    *   *Rune of the Forge:* Temporarily changes a die's face value to anything you want for one turn, allowing a clutch Oracle swap or Knight diagonal strike.
+
+**The Gameplay Loop:**
+Look at the next map node -> See it requires 4 units -> Check your roster (The Archer and Tank are dangerously close to being Scarred) -> Decide to rest them and deploy the Pawn, Hussar, Knight, and Oracle -> Equip the fragile Pawn with a defensive Rune -> Enter the tactical battle.
+</ANSWER>
