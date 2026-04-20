@@ -7,7 +7,7 @@ const CampaignManager = {
 		unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Consecutive uses
 		runes: { aegis: 2, pegasus: 1, forge: 1 },       // Inventory
 		currentLevel: 1,
-		isCampaignActive: new URLSearchParams(location.search).get('campaign_mode') === 'true'
+		isCampaignActive: new URLSearchParams(location.search).get('campaign') === 'true'
 	},
 
 	STORAGE_KEY: 'hexdice_campaign_state',

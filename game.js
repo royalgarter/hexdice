@@ -77,7 +77,9 @@ function alpineHexDiceTacticGame() { return {
 	logCounter: 0,
 	winnerMessage: "",
 	winnerPlayerId: null,
+	isCampaign: false,
 	nextCampaignMap: null,
+	deploymentLimit: 666,
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
@@ -241,7 +243,7 @@ function alpineHexDiceTacticGame() { return {
 	async init() {
 		CampaignManager.init();
 
-		const campaignMapParam = new URLSearchParams(location.search).get('campaign_map');
+		const campaignMapParam = new URLSearchParams(location.search).get('map');
 		let campaignData = null;
 		if (campaignMapParam) {
 			try {
@@ -263,7 +265,7 @@ function alpineHexDiceTacticGame() { return {
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
 		this.resetGame({
-			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign_mode') == 'true'),
+			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign') == 'true'),
 			campaignData: campaignData
 		});
 	},
@@ -640,7 +642,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	canConfirmReroll() {
-		return this.players[this.currentPlayerIndex].rerollsUsed === 0; // Only one reroll phase
+		return this.players[this.currentPlayerIndex]?.rerollsUsed === 0; // Only one reroll phase
 	},
 	performReroll() {
 		if (!this.canConfirmReroll() || this.diceToReroll.length === 0) {
@@ -1066,12 +1068,12 @@ function alpineHexDiceTacticGame() { return {
 			case 'MOVE': return true;
 			case 'REROLL': 
 				const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
-				return options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
+				return this.options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
-			case 'MERGE': return options.includes('m');
+			case 'MERGE': return this.options.includes('m');
 			case 'SPELLCAST_SACRIFICE':
 				// Oracle can sacrifice if it's the last unit for its player and has adjacent enemy Oracles
 				if (unit.value !== 6) return false;

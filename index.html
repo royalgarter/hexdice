@@ -295,7 +295,7 @@
 			</template>
 
 			<!-- Trail Arrow -->
-			<svg :height="hexGrid.gridHeight" :width="hexGrid.gridWidth" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor" class="absolute inset-0 pointer-events-none z-10" x-show="!phase.startsWith('SETUP')">
+			<svg :height="hexGrid.gridHeight || 0" :width="hexGrid.gridWidth || 0" class="absolute inset-0 pointer-events-none z-10" x-show="!phase.startsWith('SETUP')">
 				<!-- Movement -->
 				<g x-show="trail && trail.fromHex && trail.toHex">
 					<circle
@@ -346,7 +346,7 @@
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Start Random</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Start Normal: Roll The Dice</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Single</button>
-				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="location.href='?campaign_mode=true'" x-show="!isCampaign">Start Campaign</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=level1.json'" x-show="!isCampaign">Start Campaign</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="setupTerrain(true)" >Terrain</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="startRomanceMode()" >RotDK</button>
 				</div>
@@ -357,9 +357,9 @@
 				</div>
 			</div>
 			<div x-show="phase === 'SETUP_REROLL'" class="bg-wood">
-				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
+				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
 				<div class="flex justify-center space-x-2 mb-2">
-					<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
+					<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
 						<div x-show="!die.isDeployed" class="p-2 border border-black cursor-pointer"
 							 :class="{'bg-black text-white': diceToReroll.includes(index)}"
 							 @click="toggleRerollSelection(index)">
@@ -371,12 +371,12 @@
 				<button @click="skipReroll()" class="border border-black px-4 py-2 hover:bg-black hover:text-white ml-2">Skip Reroll</button>
 			</div>
 			 <div x-show="phase === 'SETUP_DEPLOY'">
-				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
+				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
 				<p class="mb-2 text-sm font-bold" x-show="isCampaign && currentPlayerIndex === 0">
-					Units Deployed: <span x-text="players[0].dice.filter(d => d.isDeployed).length"></span> / <span x-text="deploymentLimit"></span>
+					Units Deployed: <span x-text="players[0]?.dice?.filter(d => d.isDeployed)?.length || '0'"></span> / <span x-text="deploymentLimit"></span>
 				</p>
 				<div class="flex justify-center flex-wrap gap-1 mb-2">
-					<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
+					<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
 						<div
 							class="p-1 border border-black text-xs cursor-pointer min-w-[60px]"
 							:class="
@@ -388,7 +388,7 @@
 								].join(' ')
 							"
 							@click="selectDieToDeploy(index)">
-							D<span x-text="players[currentPlayerIndex].dice[index]?.value"></span>
+							D<span x-text="players[currentPlayerIndex]?.dice[index]?.value"></span>
 							<div class="text-[8px]" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
 						</div>
 					</template>
@@ -412,13 +412,13 @@
 
 			<div x-show="!isCampaign">
 				<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
-					@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})"
+					@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'single'})"
 				>New Game</button>
 			</div>
 
 			<div x-show="isCampaign">
 				<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
-					@click="location.href='?campaign_mode=true&campaign_map=' + nextCampaignMap"
+					@click="location.href='?campaign=true&map=' + nextCampaignMap"
 				>
 					<span x-text="winnerPlayerId === 0 ? 'Next Level' : 'Retry Level'"></span>
 				</button>
@@ -485,7 +485,7 @@
 
 			<p class="text-sm font-bold">
 				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
-				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex].isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex].color"></span>)
+				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
 		</div>

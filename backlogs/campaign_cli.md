@@ -30,7 +30,7 @@
   3. Integrated Workflow
    1. Generate: Use the CLI to create level1.json, level2.json, etc., in the campaign/
       folder.
-   2. Play: Access the levels directly (e.g., index.html?campaign_map=level1.json).
+   2. Play: Access the levels directly (e.g., index.html?map=level1.json).
    3. Persistence: The Fatigue system in CampaignManager will still track unit usage
       across these JSON-loaded sessions, ensuring "Scars" carry over if you play multiple
       maps in sequence.

@@ -1,6 +1,7 @@
 /**
  * Hex Dice Campaign Generator CLI
  * Usage: node campaign/generator.js --name="Forest Ambush" --dice="11/21/31/41/51/61" --enemies="22/51" --terrain="forest:5,mountain:2" --output="campaign/level1.json"
+ * URL: http://localhost:1166/?options=r&players=2&campaign=true&map=level1.json
  */
 
 const fs = require('fs');

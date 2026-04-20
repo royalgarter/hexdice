@@ -59,5 +59,5 @@ async function handleRequest(req: Request) {
 	return response(JSON.stringify({error: 'E404'}), {status: 404});
 }
 
-let port = 1134;try {port = process.env.PORT || port} catch{}
+let port = 1166;try {port = process.env.PORT || port} catch{}
 serve(handleRequest, {port});
