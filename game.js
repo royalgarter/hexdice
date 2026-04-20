@@ -76,6 +76,8 @@ function alpineHexDiceTacticGame() { return {
 	messageLog: [],
 	logCounter: 0,
 	winnerMessage: "",
+	winnerPlayerId: null,
+	nextCampaignMap: null,
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
@@ -236,56 +238,137 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- INITIALIZATION --- */
-	init() {
+	async init() {
+		CampaignManager.init();
+
+		const campaignMapParam = new URLSearchParams(location.search).get('campaign_map');
+		let campaignData = null;
+		if (campaignMapParam) {
+			try {
+				campaignData = await CampaignManager.fetchCampaignMap(campaignMapParam);
+				this.addLog(`Loaded Campaign Map: ${campaignData.name}`);
+			} catch (e) {
+				this.addLog(`Error loading campaign map: ${e.message}`);
+			}
+		}
+
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
 
-		// Map size modifier: 2, 3 players -> R=5; 4, 6 players -> R=6
-		const radius = this.getRadius();
+		// Map size modifier
+		const radius = campaignData?.radius || this.getRadius();
 		this.generateHexGrid(radius);
-
-		// Adjust dice per player based on player count (Total 24 dice)
-		this.rules.dicePerPlayer = Math.floor((this.playerCount <= 3 ? 24 : 36) / this.playerCount);
 
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
-		try {
-			const url = new URL(location.href || location.toString());
-			url.searchParams.set('options', this.options);
-			url.searchParams.set('players', this.playerCount);
-			if (window?.history?.replaceState) window.history.replaceState(null, '', url);
-		} catch(e) {
-			// Silent fail for non-browser environments
-		}
-
-		this.addLog("Game started. Welcome to Hex Dice!");
 		this.resetGame({
-			isCampaign: new URLSearchParams(location.search).get('mode') == 'campaign',
+			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign_mode') == 'true'),
+			campaignData: campaignData
 		});
 	},
 	resetGame(opts) {
+		const campaignData = opts?.campaignData;
+		this.campaignData = campaignData;
+		this.isCampaign = CampaignManager.state.isCampaignActive || !!campaignData;
+		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || 4) : 99;
+
 		this.players = [];
 		for (let i = 0; i < this.playerCount; i++) {
 			this.players.push({
 				...PLAYER_CONFIG[i],
 				dice: [],
-				initialRollDone: false,
+				initialRollDone: (i === 0 && this.isCampaign) || (i === 1 && !!campaignData), // P1 is pre-rolled in campaign, P2 is too if JSON
 				baseHexId: null,
 				rerollsUsed: 0,
 				isEliminated: false,
-				isAI: (i > 0 && opts?.isCampaign)
+				isAI: (i > 0 && (opts?.isCampaign || this.isCampaign || campaignData?.config?.p2AI))
 			});
 		}
 
-		const radius = this.getRadius();
+		// Load Dice from Campaign Data OR Use Legendary Six
+		if (this.isCampaign) {
+			const player = this.players[0];
+			const diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
+
+			diceToLoad.forEach((val, idx) => {
+				const die = {
+					id: `0_${idx}`,
+					originalIndex: idx,
+					playerId: 0,
+					value: val,
+					...UNIT_STATS[val],
+					currentArmor: UNIT_STATS[val].armor,
+					armorReduction: 0,
+					isDeployed: false,
+					hexId: null,
+					hasMovedOrAttackedThisTurn: false,
+					isGuarding: 0,
+					skirmishBuff: 0,
+					isDeath: false,
+					actionsTakenThisTurn: 0
+				};
+				CampaignManager.applyFatigueDebuffs(die);
+				player.dice.push(die);
+			});
+
+			if (campaignData) {
+				// Load Enemy Dice
+				const p2 = this.players[1];
+				(campaignData.enemyDice || []).forEach((val, idx) => {
+					p2.dice.push({
+						id: `1_${idx}`,
+						originalIndex: idx,
+						playerId: 1,
+						value: val,
+						...UNIT_STATS[val],
+						currentArmor: UNIT_STATS[val].armor,
+						armorReduction: 0,
+						isDeployed: false,
+						hexId: null,
+						hasMovedOrAttackedThisTurn: false,
+						isGuarding: 0,
+						skirmishBuff: 0,
+						isDeath: false,
+						actionsTakenThisTurn: 0
+					});
+				});
+			} else {
+				this.addLog("Campaign Mode: You command the Legendary Six.");
+			}
+		}
+
+		const radius = campaignData?.radius || this.getRadius();
 		this.generateHexGrid(radius);
 		this.hexes.forEach(h => {
-			h.unitId = null; // Clear units from hexes
-			h.terrainType = 'PLAIN'; // Reset terrain
+			h.unitId = null;
+			h.terrainType = 'PLAIN';
 		});
-		this.determineBaseLocations(radius); // Redetermine bases on reset
-		//this.setupTerrain(); // Trigger terrain setup for v1.2 rules
-		this.phase = 'SETUP_ROLL';
+
+		// Apply Terrain from Campaign Data
+		if (campaignData?.terrain) {
+			campaignData.terrain.forEach(t => {
+				const [q, r] = t.id.split(',').map(Number);
+				const hex = this.getHexByQR(q, r);
+				if (hex) hex.terrainType = t.type;
+			});
+		}
+
+		this.determineBaseLocations(radius);
+		this.phase = (this.isCampaign && !!campaignData) ? 'SETUP_DEPLOY' : 'SETUP_ROLL';
+		if (this.isCampaign && campaignData) {
+			// Auto-deploy enemy (P2) randomly
+			const p2 = this.players[1];
+			p2.dice.forEach((die, idx) => {
+				const validHexes = this.calcValidDeploymentHexes(1);
+				if (validHexes.length > 0) {
+					const hexId = validHexes[Math.floor(random() * validHexes.length)];
+					die.isDeployed = true;
+					this.move(die, null, this.getHex(hexId));
+				}
+			});
+			this.addLog("Enemy forces have taken their positions.");
+		}
 		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
 		this.selectedUnitHexId = null;
@@ -637,17 +720,15 @@ function alpineHexDiceTacticGame() { return {
 		dieToDeploy.isDeployed = true;
 
 		this.move(dieToDeploy, null, targetHex);
-		// dieToDeploy.hexId = hexId;
-		// targetHex.unit = dieToDeploy;
-		// targetHex.unitId = dieToDeploy.id;
 
 		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}]`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 
-		// Check if current player has deployed all dice
-		if (player.dice.every(d => d.isDeployed)) {
+		// Check if current player has deployed all dice OR reached deployment limit
+		const deployedCount = player.dice.filter(d => d.isDeployed).length;
+		if (player.dice.every(d => d.isDeployed) || (this.isCampaign && player.id === 0 && deployedCount >= this.deploymentLimit)) {
 			// Find next player who hasn't deployed all dice
-			const nextDeployPlayer = this.players.find(p => p.dice.some(d => !d.isDeployed));
+			const nextDeployPlayer = this.players.find(p => p.id > player.id && p.dice.some(d => !d.isDeployed));
 
 			if (nextDeployPlayer) {
 				this.currentPlayerIndex = nextDeployPlayer.id;
@@ -974,7 +1055,12 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(unitHexId, state);
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
 
-		const options = (state || this).options || ''; //'rm';
+		// Campaign Scarred Units cannot use class abilities
+		if (CampaignManager.isAbilityDisabled(unit)) {
+			if (['RANGED_ATTACK', 'SPECIAL_ATTACK', 'SPELLCAST_SACRIFICE'].includes(actionType)) {
+				return false;
+			}
+		}
 
 		switch(actionType) {
 			case 'MOVE': return true;
@@ -2094,6 +2180,8 @@ function alpineHexDiceTacticGame() { return {
 		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
 		effectiveArmor -= defenderUnit.armorReduction;
 
+		if (defenderUnit.isScarred) effectiveArmor -= 1;
+
 		switch (defenderHex.terrainType) {
 			case 'FOREST':
 			case 'TOWER':
@@ -2615,6 +2703,25 @@ function alpineHexDiceTacticGame() { return {
 	},
 	gameOver(winnerPlayerIndex, message) {
 		this.phase = 'GAME_OVER';
+		this.winnerPlayerId = winnerPlayerIndex;
+
+		if (this.isCampaign) {
+			const deployedValues = this.players[0].dice
+				.filter(d => d.isDeployed && !d.isDeath)
+				.map(d => d.value);
+			CampaignManager.updateAfterBattle(deployedValues);
+
+			if (winnerPlayerIndex === 0) {
+				CampaignManager.advanceLevel();
+				if (this.campaignData?.rewards) {
+					CampaignManager.grantRewards(this.campaignData.rewards);
+					this.addLog("Rewards Granted: " + Object.entries(this.campaignData.rewards).map(([k,v]) => `${v}x ${k.toUpperCase()}`).join(', '));
+				}
+				this.addLog("Campaign Advanced: New Level Unlocked!");
+			}
+			this.nextCampaignMap = CampaignManager.getCurrentMapName();
+		}
+
 		if (winnerPlayerIndex === -1) { // Draw
 			 this.winnerMessage = message;
 		} else {

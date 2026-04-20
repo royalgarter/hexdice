@@ -229,6 +229,7 @@
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
 	<script type="text/javascript" src="/assets/alpine.min.js" defer></script>
 	<script type="text/javascript" src="/game.js"></script>
+	<script type="text/javascript" src="/campaign/campaign-manager.js"></script>
 	<script type="text/javascript" src="/ai/ai.js"></script>
 	<!-- <script type="text/javascript" src="/ai/ai-minimax.js"></script> -->
 	<!-- <script type="text/javascript" src="/ai/ai-priority.js"></script> -->
@@ -345,6 +346,7 @@
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()" >Start Random</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))" >Start Normal: Roll The Dice</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))" >Start Single</button>
+				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="location.href='?campaign_mode=true'" x-show="!isCampaign">Start Campaign</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="setupTerrain(true)" >Terrain</button>
 				<button class="cursor-pointer border border-black px-4 py-2 hover:bg-black hover:text-white" @click="startRomanceMode()" >RotDK</button>
 				</div>
@@ -370,18 +372,33 @@
 			</div>
 			 <div x-show="phase === 'SETUP_DEPLOY'">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex].color"></span>), deploy your units.</p>
-				<div class="flex justify-center space-x-1 mb-2">
+				<p class="mb-2 text-sm font-bold" x-show="isCampaign && currentPlayerIndex === 0">
+					Units Deployed: <span x-text="players[0].dice.filter(d => d.isDeployed).length"></span> / <span x-text="deploymentLimit"></span>
+				</p>
+				<div class="flex justify-center flex-wrap gap-1 mb-2">
 					<template x-for="(die, index) in players[currentPlayerIndex].dice" :key="index">
 						<div
-							class="p-1 border border-black text-xs cursor-pointer"
+							class="p-1 border border-black text-xs cursor-pointer min-w-[60px]"
 							:class="
 								[
 									selectedDieToDeploy === index ? 'bg-black text-white font-bold' : '',
-									players[currentPlayerIndex]?.dice[index]?.isDeployed ? 'border-dashed' : '',
+									players[currentPlayerIndex]?.dice[index]?.isDeployed ? 'opacity-50 border-dashed' : '',
+									(players[currentPlayerIndex]?.dice[index]?.fatigueStatus === 'FATIGUED') ? 'border-yellow-500' : '',
+									(players[currentPlayerIndex]?.dice[index]?.fatigueStatus === 'SCARRED') ? 'border-red-500 text-red-700' : '',
 								].join(' ')
 							"
 							@click="selectDieToDeploy(index)">
-							Dice <span x-text="players[currentPlayerIndex].dice[index]?.value"></span>
+							D<span x-text="players[currentPlayerIndex].dice[index]?.value"></span>
+							<div class="text-[8px]" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
+						</div>
+					</template>
+				</div>
+				<!-- Campaign Runes UI -->
+				<div x-show="isCampaign && currentPlayerIndex === 0" class="flex justify-center space-x-2 mt-2">
+					<div class="text-xs font-bold self-center">RUNES:</div>
+					<template x-for="(count, type) in CampaignManager.state.runes" :key="type">
+						<div class="border border-black px-2 py-1 text-[10px] bg-white">
+							<span class="uppercase" x-text="type"></span>: <span x-text="count"></span>
 						</div>
 					</template>
 				</div>
@@ -392,10 +409,25 @@
 		<div x-cloak x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 py-2 px-4 border border-black text-center">
 			<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 			<p x-text="winnerMessage"></p>
-			<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
-				@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})"
-			>New Game</button>
+
+			<div x-show="!isCampaign">
+				<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
+					@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'campaign'})"
+				>New Game</button>
+			</div>
+
+			<div x-show="isCampaign">
+				<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
+					@click="location.href='?campaign_mode=true&campaign_map=' + nextCampaignMap"
+				>
+					<span x-text="winnerPlayerId === 0 ? 'Next Level' : 'Retry Level'"></span>
+				</button>
+				<button class="cursor-pointer mt-3 border border-black px-4 py-2 hover:bg-black hover:text-white"
+					@click="location.href='index.html'"
+				>Exit Campaign</button>
+			</div>
 		</div>
+
 
 		<!-- Action Mode Info -->
 		<div x-cloak x-show="false && (actionMode !== null)" class="bg-wood mb-1 py-2 px-4 border border-black text-center">
