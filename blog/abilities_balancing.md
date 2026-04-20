@@ -1,13 +1,4 @@
 <REASONING>
-<CONDUCTOR_NOTE>
-The user wants to refine the balance and inter-unit relationships for "Hex Dice Tactics." The core request is to ensure each dice unit has a unique function, counter at least one other unit, and that their value reflects uniqueness, not necessarily strength (e.g., a low-value die should be able to counter a high-value die). This requires a deep dive into the current unit stats and actions.
-
-I will convene a panel of game design experts with diverse perspectives to tackle this.
-</CONDUCTOR_NOTE>
-
-<CONDUCTOR_NOTE>
-**Phase 1: Convene the Panel**
-</CONDUCTOR_NOTE>
 
 <EXPERT NAME="Richard Garfield" FIELD="Game Design Theory, Card Games">
 Richard Garfield, renowned for Magic: The Gathering and King of Tokyo, is an ideal choice for his deep understanding of emergent gameplay, unit interaction, and balancing complex systems. His focus on elegant mechanics and player decision-making will be crucial.

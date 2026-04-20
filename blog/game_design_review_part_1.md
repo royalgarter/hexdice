@@ -1,5 +1,4 @@
 <reasoning>
-The user wants a thorough review of the "Hex Dice Tactics" rules document. The review should be conducted by simulated experts in board game design and mechanics, and then synthesized into a standalone answer.
 
 **Expert Selection:**
 1.  **Jamey Stegmaier:** Known for designing popular, well-regarded tactical games with clear rules (Scythe, Viticulture). Good perspective on player experience, setup balance, action economy, and component interaction on a board.

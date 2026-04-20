@@ -1,7 +1,4 @@
 <reasoning>
-The user wants a review of the "Hex Dice Tactics" rules document (v1.0 to v1.5) compared to traditional hexagonal chess. This is a complex request as "Hex Dice Tactics" is a custom game with evolving rules, while "Hexagonal Chess" refers to a family of variants (Gliński's, Shafran's, de Vasa's, Brusky's, McCooey's, Starchess, multiplayer variants, etc.). The comparison should highlight similarities and differences in core mechanics, strategic depth, and overall player experience.
-
-I need to bring in experts who have deep knowledge of board game design, game mechanics, and specifically, chess variants and tactical games on hexagonal grids.
 
 **Expert Selection:**
 1.  **Jamey Stegmaier (Board Game Design):** Known for designing popular, well-regarded tactical games with clear rules (Scythe, Viticulture). Good perspective on player experience, setup balance, action economy, and component interaction on a board. He can assess "Hex Dice Tactics" on its own merits as a modern tactical game.

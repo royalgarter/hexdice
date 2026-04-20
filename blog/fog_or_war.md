@@ -1,7 +1,4 @@
 <reasoning>
-The user wants to add a single-player mode with an AI opponent and a "Fog of War" (FoW) mechanic to "Hex Dice Tactics." This is a significant design shift, requiring new rules for visibility, AI behavior, and how existing mechanics interact with hidden information.
-
-I'll bring in experts who can tackle these specific challenges:
 
 1.  **Richard Garfield (Game Mechanics & Systems):** Essential for dissecting how FoW impacts information flow, unit interactions, and strategic decision-making. He'll also be key in defining how the AI "sees" the board and processes information.
 2.  **Eric Lang (Tactical Game Design):** Perfect for considering the player's tactical experience under FoW, how unit movement and attacks change, and how to design an engaging AI opponent for a tactical game.

@@ -1,7 +1,4 @@
 <reasoning>
-The user wants to draft rules for "v1.6 Empires Mode" where each of 6 empires provides a special buff to one specific Dice unit type. This is a significant addition that will introduce asymmetry and unique strategic choices.
-
-I need to design 6 distinct empires, each with a thematic buff for one of the Dice types (1-6). The buffs should be impactful but not game-breaking, and ideally, encourage different playstyles.
 
 **Expert Selection:**
 1.  **Richard Garfield (Game Mechanics & Systems):** Crucial for balancing the buffs, ensuring they interact well with existing mechanics, and identifying potential abuses or unintended power spikes. He'll also consider how these buffs affect the overall game economy (e.g., if a Dice 1 buff makes them too strong relative to their low cost).

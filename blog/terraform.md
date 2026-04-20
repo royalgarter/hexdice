@@ -1,7 +1,4 @@
 <reasoning>
-The user wants to explore a new special ability for a unit (potentially Dice 6, or a new unit type) that allows it to change adjacent terrain. This is an exciting but potentially very disruptive mechanic, as terrain has significant effects on movement, combat, and line of sight.
-
-I'll bring back the experts, focusing on their areas of expertise regarding mechanics, balance, and player experience:
 
 1.  **Richard Garfield (Game Mechanics & Systems):** Crucial for evaluating the systemic implications of terrain alteration. How does it affect the game's balance, how often can it be used, what are the potential abuses, and how does it interact with the existing deterministic combat and FoW?
 2.  **Eric Lang (Tactical Game Design):** Perfect for assessing the tactical impact of changing terrain. Does it create interesting new strategies or just chaos? How does it affect unit movement, choke points, and ranged attacks?

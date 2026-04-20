@@ -1,7 +1,4 @@
 <reasoning>
-The user wants a focused review of Hex Dice Tactics v1.0, specifically identifying any features that might be "too complicated" for a "casual board game." If complications are found, I should suggest modifications.
-
-This requires careful scrutiny of each section of v1.0, keeping the "casual" user in mind.
 
 **Expert Selection:**
 1.  **Jamey Stegmaier (Board Game Design):** Excellent for assessing overall player experience, rule clarity, setup friction, and the general "casual" feel.
