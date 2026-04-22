@@ -4,6 +4,36 @@ const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
+const EPIC_PRESETS = {
+	'EPIC_21': {
+		name: 'Standard 21 Dices',
+		dicePerPlayer: 21,
+		dice: [
+			       3,
+			      3, 3,
+			    4, 6, 4,
+			   2, 2, 2, 2,
+			 4, 1, 2, 1, 4,
+			1, 1, 5, 5, 1, 1
+		],
+		radius: 8,
+		noReroll: true
+	},
+	'QUICK_15': {
+		name: 'Quick Mode 15 Dices',
+		dicePerPlayer: 15,
+		dice: [
+			      3,
+			     3, 3,
+			   4, 6, 4,
+			  2, 2, 2, 2,
+			1, 1, 5, 1, 1
+		],
+		radius: 8,
+		noReroll: true
+	}
+};
+
 // BIND-EDIT rules.md: ### **4. Dice Soldiers (Unit Types)**
 const UNIT_STATS = {
 	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
@@ -255,6 +285,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+		this.preset = new URLSearchParams(location.search).get('preset');
 		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
 
 		// Map size modifier
@@ -274,6 +305,16 @@ function alpineHexDiceTacticGame() { return {
 		this.campaignData = campaignData;
 		this.isCampaign = CampaignManager.state.isCampaignActive || !!campaignData;
 		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || 4) : 99;
+
+		const preset = this.preset && EPIC_PRESETS[this.preset];
+		if (preset) {
+			this.rules.dicePerPlayer = preset.dicePerPlayer;
+			this.rules.noReroll = preset.noReroll;
+			this.addLog(`Applying preset: ${preset.name}`);
+		} else {
+			this.rules.dicePerPlayer = 12; // Default
+			this.rules.noReroll = false;
+		}
 
 		this.players = [];
 		for (let i = 0; i < this.playerCount; i++) {
@@ -394,7 +435,10 @@ function alpineHexDiceTacticGame() { return {
 	/* --- HEX GRID --- */
 	getRadius(link=location) {
 		const urlParams = new URLSearchParams(link?.search || 'http://localhost/');
-		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
+		const presetKey = urlParams.get('preset');
+		const preset = EPIC_PRESETS[presetKey];
+
+		const radius = parseInt(urlParams.get('R')) || preset?.radius || ((this.playerCount <= 3) ? 5 : 6);
 		return radius;
 	},
 	generateHexGrid(radius, padding=1) {
@@ -599,8 +643,11 @@ function alpineHexDiceTacticGame() { return {
 		if (this.players[playerId].initialRollDone) return;
 		const player = this.players[playerId];
 		player.dice = [];
+
+		const preset = this.preset && EPIC_PRESETS[this.preset];
+
 		for (let i = 0; i < this.rules.dicePerPlayer; i++) {
-			const roll = Math.floor(random() * 6) + 1;
+			const roll = (preset && preset.dice) ? preset.dice[i] : (Math.floor(random() * 6) + 1);
 			player.dice.push({
 				id: `${playerId}_${i}`, // Unique ID for the die unit
 				originalIndex: i, // to link back to player.dice array
@@ -619,14 +666,25 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 		player.initialRollDone = true;
-		this.addLog(`P${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
+		if (preset) {
+			this.addLog(`P${playerId + 1} army ready (${preset.name})`);
+		} else {
+			this.addLog(`P${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
+		}
 
 		if (this.players.every(p => p.initialRollDone)) {
-			this.phase = 'SETUP_REROLL';
-			this.currentPlayerIndex = 0; // Player 1 starts reroll
-			this.diceToReroll = [];
+			if (this.rules.noReroll) {
+				this.phase = 'SETUP_DEPLOY';
+				this.currentPlayerIndex = 0;
+				this.selectedDieToDeploy = 0;
+				this.addLog("Reroll phase skipped (Epic Mode).");
+			} else {
+				this.phase = 'SETUP_REROLL';
+				this.currentPlayerIndex = 0; // Player 1 starts reroll
+				this.diceToReroll = [];
 
-			if (this.debug?.skipReroll) this.players.forEach(() => this.skipReroll());
+				if (this.debug?.skipReroll) this.players.forEach(() => this.skipReroll());
+			}
 		}
 	},
 	toggleRerollSelection(diceIndex) {
@@ -1068,7 +1126,7 @@ function alpineHexDiceTacticGame() { return {
 			case 'MOVE': return true;
 			case 'REROLL': 
 				const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
-				return this.options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
+				return !this.rules.noReroll && this.options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
@@ -2153,7 +2211,21 @@ function alpineHexDiceTacticGame() { return {
 		} else if (this.rules.dicePerPlayer <= 14) {
 			// Full 2-ring expansion
 			this.getNeighbors(baseHex, state).forEach(neighbor => {
-				this.getNeighbors(neighbor, state).forEach(neighbor => deploymentHexes.push(neighbor));
+				deploymentHexes.push(neighbor);
+				this.getNeighbors(neighbor, state).forEach(n => deploymentHexes.push(n));
+			});
+		} else {
+			// Epic mode (15-21 units): 5-ring wedge-like expansion
+			state.hexes.forEach(hex => {
+				const distFromBase = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
+				if (distFromBase <= 5) {
+					// Check if it's "inward" or at least not way "outward"
+					const distFromCenter = this.axialDistance(0, 0, hex.q, hex.r);
+					const baseDistFromCenter = this.axialDistance(0, 0, baseHex.q, baseHex.r);
+					if (distFromCenter <= baseDistFromCenter) {
+						deploymentHexes.push(hex);
+					}
+				}
 			});
 		}
 

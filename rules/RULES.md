@@ -67,7 +67,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 | 2 | **Archer** | 1 | 2 | 2-3* | 1 | \* | Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
 | 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
 | 4 | **Knight** | 1 | 2 | 0 | 3 | X | Six Diagonal Maneuver (X-shape) |
-| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Steady Heavy Armor (BFS 1-step) |
+| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Steady Heavy Armor (BFS 1-step). Melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack. |
 | 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
 
 * **Armor:** Defensive value used in combat.  
@@ -230,7 +230,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 5 (Tanker)
 * Can move to any adjacent hex (1 step BFS).
-* Melee units are eliminated if Armor Reduction from attacking this unit drops their Armor to 0.
+* Melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack against this unit.
 
 ```
                 .
