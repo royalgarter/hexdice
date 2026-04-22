@@ -34,6 +34,14 @@ const heuristicProfiles = {
             teamPositionWeight: 0.6,
             pressureWeight: 0.5,
 
+            terrainWeights: {
+                defenseBonusWeight: 100,
+                archerTowerBonus: 200,
+                archerMountainBonus: 300,
+                mountainMovePenalty: -150,
+                losBlockBonus: 150
+            },
+
             spells: {
                 SPELLCAST_SHIELD: 0.8,
                 SPELLCAST_SWAP: 0.8,
@@ -67,6 +75,13 @@ const heuristicProfiles = {
             backAndForthPenalty: -300,
             teamPositionWeight: 0.4,
             pressureWeight: 0.2,
+            terrainWeights: {
+                defenseBonusWeight: 50,
+                archerTowerBonus: 300,
+                archerMountainBonus: 400,
+                mountainMovePenalty: -50,
+                losBlockBonus: 50
+            },
             spells: {
                 SPELLCAST_SHIELD: 0.4,
                 SPELLCAST_SWAP: 0.6,
@@ -100,6 +115,13 @@ const heuristicProfiles = {
             backAndForthPenalty: -300,
             teamPositionWeight: 0.7,
             pressureWeight: 0.4,
+            terrainWeights: {
+                defenseBonusWeight: 300,
+                archerTowerBonus: 150,
+                archerMountainBonus: 200,
+                mountainMovePenalty: -200,
+                losBlockBonus: 400
+            },
             spells: {
                 SPELLCAST_SHIELD: 1.5,
                 SPELLCAST_SWAP: 0.8,
@@ -133,6 +155,13 @@ const heuristicProfiles = {
             backAndForthPenalty: -300,
             teamPositionWeight: 0.9,
             pressureWeight: 0.4,
+            terrainWeights: {
+                defenseBonusWeight: 200,
+                archerTowerBonus: 250,
+                archerMountainBonus: 350,
+                mountainMovePenalty: -100,
+                losBlockBonus: 250
+            },
             spells: {
                 SPELLCAST_SHIELD: 1.0,
                 SPELLCAST_SWAP: 1.5,
@@ -166,6 +195,13 @@ const heuristicProfiles = {
             backAndForthPenalty: -300,
             teamPositionWeight: 0.5,
             pressureWeight: 0.3,
+            terrainWeights: {
+                defenseBonusWeight: 150,
+                archerTowerBonus: 100,
+                archerMountainBonus: 150,
+                mountainMovePenalty: -100,
+                losBlockBonus: 150
+            },
             spells: {
                 SPELLCAST_SHIELD: 1.0,
                 SPELLCAST_SWAP: 1.0,
@@ -199,6 +235,13 @@ const heuristicProfiles = {
             backAndForthPenalty: -300,
             teamPositionWeight: 0.5,
             pressureWeight: 0.3,
+            terrainWeights: {
+                defenseBonusWeight: 100,
+                archerTowerBonus: 150,
+                archerMountainBonus: 200,
+                mountainMovePenalty: -50,
+                losBlockBonus: 200
+            },
             spells: {
                 SPELLCAST_SHIELD: 0.5,
                 SPELLCAST_SWAP: 1.2,
@@ -352,6 +395,15 @@ function mutateProfile(baseProfileName, mutationRate = 0.2) {
     
     // Mutate weights
     for (const key in mutated.weights) {
+        if (key === 'terrainWeights' || key === 'spells') {
+            for (const subKey in mutated.weights[key]) {
+                const original = mutated.weights[key][subKey];
+                const variance = original * mutationRate;
+                const randomOffset = (Math.random() * 2 - 1) * variance;
+                mutated.weights[key][subKey] = Math.round(original + randomOffset);
+            }
+            continue;
+        }
         const original = mutated.weights[key];
         const variance = original * mutationRate;
         const randomOffset = (Math.random() * 2 - 1) * variance; // -variance to +variance
@@ -399,7 +451,14 @@ function generateRandomProfile() {
             mergeOver6Penalty: Math.floor(Math.random() * 600) - 500,
             backAndForthPenalty: -300,
             teamPositionWeight: 0.1,
-            pressureWeight: 0.2
+            pressureWeight: 0.2,
+            terrainWeights: {
+                defenseBonusWeight: Math.floor(Math.random() * 200) + 50,
+                archerTowerBonus: Math.floor(Math.random() * 300) + 50,
+                archerMountainBonus: Math.floor(Math.random() * 400) + 50,
+                mountainMovePenalty: Math.floor(Math.random() * -200) - 50,
+                losBlockBonus: Math.floor(Math.random() * 300) + 50
+            }
         },
         riskTolerance: Math.random(),
         targetSelection: ['highestValue', 'lowArmor', 'threatRemoval'][Math.floor(Math.random() * 3)],

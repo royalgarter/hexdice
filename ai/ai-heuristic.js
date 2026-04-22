@@ -548,19 +548,44 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     // --- TERRAIN-SPECIFIC HEURISTICS ---
     const targetHex = nextState.hexes.find(h => h.id === move.targetHexId);
     if (targetHex && targetHex.terrainType !== 'PLAIN') {
-        // 1. Defensive Bonus: Value +1 Armor from Forest, Tower, Mountain
-        if (['FOREST', 'TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
-            analysis.score += 50;
+        const tw = w.terrainWeights || {
+            defenseBonusWeight: 50,
+            archerTowerBonus: 100,
+            archerMountainBonus: 150,
+            mountainMovePenalty: -100,
+            losBlockBonus: 100
+        };
+
+        // 1. Defensive Bonus: Value Armor from Forest (+1), Tower (+1), Mountain (+2)
+        if (targetHex.terrainType === 'FOREST' || targetHex.terrainType === 'TOWER') {
+            analysis.score += tw.defenseBonusWeight;
+        } else if (targetHex.terrainType === 'MOUNTAIN') {
+            analysis.score += tw.defenseBonusWeight * 2;
+            
+            // Mountain Move Penalty (Cost 2, reduced distance) - Tankers (Dice 5) ignore this
+            if (unit.value !== 5) {
+                analysis.score += tw.mountainMovePenalty;
+            }
+
+            // Hussars (Dice 3) cannot enter Mountains
+            if (unit.value === 3) {
+                analysis.score -= 5000; 
+            }
         }
 
-        // 2. Archer Advantage: Value Tower/Mountain for overriding Engaged restriction
-        if ((unit.value === 2 || unit.value === 6) && ['TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
-            analysis.score += 100;
+        // 2. Archer/Oracle Specialization
+        if (unit.value === 2 || unit.value === 6) {
+            if (targetHex.terrainType === 'TOWER') {
+                analysis.score += tw.archerTowerBonus;
+            } else if (targetHex.terrainType === 'MOUNTAIN') {
+                analysis.score += tw.archerMountainBonus;
+            }
         }
 
-        // 3. Mountain Range: Extra value for Archer on high ground
-        if (unit.value === 2 && targetHex.terrainType === 'MOUNTAIN') {
-            analysis.score += 50;
+        // 3. Line of Sight (LoS) Hiding
+        // If unit was threatened before move, and target terrain blocks LoS
+        if (analysis.isCurrentlyThreatened && ['FOREST', 'TOWER', 'MOUNTAIN'].includes(targetHex.terrainType)) {
+            analysis.score += tw.losBlockBonus;
         }
     }
 
