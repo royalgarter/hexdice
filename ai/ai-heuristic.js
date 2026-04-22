@@ -317,7 +317,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'dodge': {
-            const threatenedMoves = scoredMoves.filter(m => m.isThreatened || m.canBeKilled);
+            const threatenedMoves = scoredMoves.filter(m => m.isCurrentlyThreatened || m.canBeKilledCurrently);
             if (threatenedMoves.length > 0) {
                 const unitEscapeMoves = new Map();
                 threatenedMoves.forEach(m => {
@@ -334,14 +334,14 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                     moves.sort((a, b) => {
                         if (a.canBeKilled && !b.canBeKilled) return 1;
                         if (!a.canBeKilled && b.canBeKilled) return -1;
-                        if (b.isSafe !== a.isSafe) return b.isSafe - a.isSafe;
-                        if (b.isInProtectedRange !== a.isInProtectedRange) return b.isInProtectedRange - a.isInProtectedRange;
-                        if (b.nearFriendlySix !== a.nearFriendlySix) return b.nearFriendlySix - a.nearFriendlySix;
+                        if (b.isSafe !== a.isSafe) return (b.isSafe ? 1 : 0) - (a.isSafe ? 1 : 0);
+                        if (b.isInProtectedRange !== a.isInProtectedRange) return (b.isInProtectedRange ? 1 : 0) - (a.isInProtectedRange ? 1 : 0);
+                        if (b.nearFriendlySix !== a.nearFriendlySix) return (b.nearFriendlySix ? 1 : 0) - (a.nearFriendlySix ? 1 : 0);
                         return b.score - a.score;
                     });
 
                     const bestMoveForUnit = moves[0];
-                    if (bestMoveForUnit.isSafe && !bestMoveForUnit.canBeKilled) {
+                    if (bestMoveForUnit.isSafe || !bestMoveForUnit.canBeKilled) {
                         if (!bestEscape || bestMoveForUnit.score > bestEscapeScore) {
                             bestEscape = bestMoveForUnit;
                             bestEscapeScore = bestMoveForUnit.score;
@@ -451,6 +451,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         isEscapeAction: false
     };
 
+    analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id);
+    analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill);
+
     // Simulate the move
     const nextState = applyMove(GAME, move, state);
     if (!nextState) return analysis;
@@ -537,6 +540,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.isSafe = false;
         analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
     } else if (analysis.isThreatened) {
+        analysis.isSafe = false;
         analysis.score += w.threatPenalty * threatCount;
     }
 

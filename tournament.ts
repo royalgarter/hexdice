@@ -70,6 +70,15 @@ function stubBrowserAPIs(playerCount: number = 2) {
     const documentStub = {
         getElementById: () => null,
     };
+    // Stub localStorage
+    const localStorageStub = {
+        getItem: () => null,
+        setItem: () => null,
+        removeItem: () => null,
+        clear: () => null,
+    };
+    (globalThis as any).localStorage = localStorageStub;
+
     return { location: locationStub, document: documentStub };
 }
 
@@ -96,7 +105,7 @@ class SimulationLogger {
 async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<string, string>): Promise<any> {
     const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
 
-    let gameCode: string, aiCoreCode: string, aiRandomCode: string, aiHeuristicCode: string, aiPriorityCode: string, aiMinimaxCode: string, heuristicProfilesCode: string;
+    let gameCode: string, aiCoreCode: string, aiRandomCode: string, aiHeuristicCode: string, aiPriorityCode: string, aiMinimaxCode: string, heuristicProfilesCode: string, campaignManagerCode: string;
 
     if (engineCodes) {
         gameCode = engineCodes.gameCode;
@@ -106,6 +115,7 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
         aiPriorityCode = engineCodes.aiPriorityCode;
         aiMinimaxCode = engineCodes.aiMinimaxCode;
         heuristicProfilesCode = engineCodes.heuristicProfilesCode;
+        campaignManagerCode = engineCodes.campaignManagerCode;
     } else {
         gameCode = await Deno.readTextFile("./game.js");
         aiCoreCode = await Deno.readTextFile("./ai/ai.js");
@@ -114,6 +124,7 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
         aiPriorityCode = await Deno.readTextFile("./ai/ai-priority.js");
         aiMinimaxCode = await Deno.readTextFile("./ai/ai-minimax.js");
         heuristicProfilesCode = await Deno.readTextFile("./ai/heuristic-profiles.js");
+        campaignManagerCode = await Deno.readTextFile("./campaign/campaign-manager.js");
     }
 
     gameCode = gameCode.replace(
@@ -131,6 +142,7 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
             var setRandomSeed = (s) => { _seed = s; };
 
             ${gameCode}
+            ${campaignManagerCode}
             ${heuristicProfilesCode}
             ${aiCoreCode}
             ${aiRandomCode}
@@ -167,14 +179,14 @@ function createSimulationGame(logger: SimulationLogger, engine: any) {
 }
 
 // Run a single game between N profiles
-function runHeuristicGame(
+async function runHeuristicGame(
     gameNumber: number,
     profiles: string[],
     verbose: boolean,
     quiet: boolean,
     engine: any,
     seed?: number
-): { winner: number | -1; winnerReason: string; totalTurns: number } {
+): Promise<{ winner: number | -1; winnerReason: string; totalTurns: number }> {
     const logger = new SimulationLogger(verbose, quiet);
 
     if (seed !== undefined && engine.setRandomSeed) {
@@ -251,7 +263,7 @@ function runHeuristicGame(
         }
     };
 
-    game.init();
+    await game.init();
     game.handleSetupPhase();
 
     game.players.forEach((p: any) => p.isAI = true);
@@ -313,7 +325,7 @@ async function runMatchup(
         if (pool) {
             p = pool.run({ gameNumber: i, profiles, verbose, quiet, seed });
         } else {
-            p = Promise.resolve(runHeuristicGame(i, profiles, verbose, quiet, engine, seed));
+            p = runHeuristicGame(i, profiles, verbose, quiet, engine, seed);
         }
         p.then((result) => {
             if (result.winner >= 0 && result.winner < profiles.length) {
@@ -384,6 +396,7 @@ async function runTournament(args: any) {
         aiPriorityCode: await Deno.readTextFile("./ai/ai-priority.js"),
         aiMinimaxCode: await Deno.readTextFile("./ai/ai-minimax.js"),
         heuristicProfilesCode: await Deno.readTextFile("./ai/heuristic-profiles.js"),
+        campaignManagerCode: await Deno.readTextFile("./campaign/campaign-manager.js"),
     };
 
     const engine = await loadGameEngine(playerCount, engineCodes);
@@ -629,7 +642,7 @@ if (import.meta.main && !isWorker) {
             }
             (self as any).postMessage({ type: 'ready' });
         } else if (type === 'task') {
-            const result = runHeuristicGame(task.gameNumber, task.profiles, task.verbose, task.quiet, engine, task.seed);
+            const result = await runHeuristicGame(task.gameNumber, task.profiles, task.verbose, task.quiet, engine, task.seed);
             (self as any).postMessage({ type: 'result', result });
         }
     };
