@@ -380,7 +380,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                             if (dist < minBaseDist) minBaseDist = dist;
                         });
 
-                        positionScore += (w.advanceBonus * (5 - Math.min(minBaseDist, 5)));
+                        const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
+                        positionScore += (w.advanceBonus * (maxDist - minBaseDist));
                     }
 
                     // Check if unit is already on a captured base
@@ -867,7 +868,8 @@ function calculateTeamScore(GAME, state, playerIndex, opponentBases=[]) {
                 const dist = GAME.axialDistance(hex.q, hex.r, base.baseHex.q, base.baseHex.r);
                 if (dist < minBaseDist) minBaseDist = dist;
             });
-            score += (10 - Math.min(minBaseDist, 10)) * 10;
+            const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
+            score += (maxDist - minBaseDist) * 50;
         }
 
         // 2. Grouping/Support: Bonus for being near teammates

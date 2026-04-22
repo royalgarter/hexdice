@@ -21,18 +21,18 @@ const heuristicProfiles = {
             captureBonus: 10000,
             killBonus: 1000,
             attackBonus: 500,
-            safeBonus: 500,
+            safeBonus: 400,
             friendlySixBonus: 50,
-            advanceBonus: 300,
+            advanceBonus: 500,
             protectedRangeBonus: 100,
 
-            threatPenalty: -500,
+            threatPenalty: -400,
             guardPenalty: -500,
             mergeOver6Penalty: -500,
             backAndForthPenalty: -1000,
 
-            teamPositionWeight: 0.8,
-            pressureWeight: 0.8,
+            teamPositionWeight: 0.6,
+            pressureWeight: 0.5,
 
             spells: {
                 SPELLCAST_SHIELD: 0.8,
@@ -61,7 +61,7 @@ const heuristicProfiles = {
             threatPenalty: -100,
             protectedRangeBonus: 25,
             friendlySixBonus: 50,
-            advanceBonus: 150,
+            advanceBonus: 800,
             guardPenalty: -1000,
             mergeOver6Penalty: -200,
             backAndForthPenalty: -300,
@@ -94,7 +94,7 @@ const heuristicProfiles = {
             threatPenalty: -600,
             protectedRangeBonus: 200,
             friendlySixBonus: 300,
-            advanceBonus: 40,
+            advanceBonus: 100,
             guardPenalty: -100,
             mergeOver6Penalty: -50,
             backAndForthPenalty: -300,
@@ -127,7 +127,7 @@ const heuristicProfiles = {
             threatPenalty: -400,
             protectedRangeBonus: 400,
             friendlySixBonus: 300,
-            advanceBonus: 120,
+            advanceBonus: 300,
             guardPenalty: -300,
             mergeOver6Penalty: -400,
             backAndForthPenalty: -300,
@@ -160,7 +160,7 @@ const heuristicProfiles = {
             threatPenalty: -200,
             protectedRangeBonus: 100,
             friendlySixBonus: 150,
-            advanceBonus: 30,         // Slow, methodical advance
+            advanceBonus: 150,         // Increased from 30
             guardPenalty: -200,
             mergeOver6Penalty: 200,   // Bonus for merging over 6!
             backAndForthPenalty: -300,
@@ -193,7 +193,7 @@ const heuristicProfiles = {
             threatPenalty: -350,
             protectedRangeBonus: 75,
             friendlySixBonus: 100,
-            advanceBonus: 60,
+            advanceBonus: 250,        // Increased from 60
             guardPenalty: -400,
             mergeOver6Penalty: -450,
             backAndForthPenalty: -300,
