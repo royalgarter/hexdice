@@ -101,11 +101,11 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         return;
     }
 
-    // GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
-    //     || Object.keys(heuristicProfiles).random()
-    //     || profileName;
+    GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
+        || Object.keys(heuristicProfiles).random()
+        || profileName;
 
-    // profileName = GAME.players[GAME.currentPlayerIndex].profileName;
+    profileName = GAME.players[GAME.currentPlayerIndex].profileName;
 
     // Load profile (use inline definition if heuristic-profiles.js not loaded)
     let profile = DEFAULT_PROFILE;
@@ -561,7 +561,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             analysis.score += tw.defenseBonusWeight;
         } else if (targetHex.terrainType === 'MOUNTAIN') {
             analysis.score += tw.defenseBonusWeight * 2;
-            
+
             // Mountain Move Penalty (Cost 2, reduced distance) - Tankers (Dice 5) ignore this
             if (unit.value !== 5) {
                 analysis.score += tw.mountainMovePenalty;
@@ -569,7 +569,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
             // Hussars (Dice 3) cannot enter Mountains
             if (unit.value === 3) {
-                analysis.score -= 5000; 
+                analysis.score -= 5000;
             }
         }
 
