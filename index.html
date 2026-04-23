@@ -280,7 +280,7 @@
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-xs text-center relative">
-						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" --x-text="hex.id" x-text="hex.q + ', ' + hex.r"></span>
+						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute" x-show="!getUnitOnHex(hex.id)" x-text="hex.id" --x-text="hex.q + ', ' + hex.r"></span>
 
 						<span class="text-lg invisible"
 							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
@@ -289,7 +289,7 @@
 						>
 						</span>
 
-						<span style="top:-14px;right:12px;" class="absolute text-red-700"
+						<span style="top:-14px;right:14px;" class="absolute text-red-700"
 							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
 						</span>
 						<span style="top:-14px;right:-12px;" class="absolute text-gray-700"
