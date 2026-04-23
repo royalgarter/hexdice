@@ -5,32 +5,31 @@ const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
 const EPIC_PRESETS = {
-	'EPIC_21': {
+	'E_21': {
 		name: 'Standard 21 Dices',
-		dicePerPlayer: 21,
+		radius: R,
+		noReroll: true,
 		dice: [
-			       3,
-			      3, 3,
-			    4, 6, 4,
-			   2, 2, 2, 2,
-			 4, 1, 2, 1, 4,
-			1, 1, 5, 5, 1, 1
+		     3,
+		    3,3,
+		   4,6,4,
+		  2,2,2,2,
+		 4,1,2,1,4,
+		1,1,5,5,1,1
 		],
-		radius: 8,
-		noReroll: true
+
 	},
-	'QUICK_15': {
+	'E_15': {
 		name: 'Quick Mode 15 Dices',
-		dicePerPlayer: 15,
+		radius: R,
+		noReroll: true,
 		dice: [
-			      3,
-			     3, 3,
-			   4, 6, 4,
-			  2, 2, 2, 2,
-			1, 1, 5, 1, 1
+		    3,
+		   3,3,
+		  4,6,4,
+		 2,2,2,2,
+		1,1,5,1,1
 		],
-		radius: 8,
-		noReroll: true
 	}
 };
 
@@ -308,7 +307,7 @@ function alpineHexDiceTacticGame() { return {
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];
 		if (preset) {
-			this.rules.dicePerPlayer = preset.dicePerPlayer;
+			this.rules.dicePerPlayer = preset.dice.length;
 			this.rules.noReroll = preset.noReroll;
 			this.addLog(`Applying preset: ${preset.name}`);
 		} else {
@@ -439,6 +438,17 @@ function alpineHexDiceTacticGame() { return {
 		const preset = EPIC_PRESETS[presetKey];
 
 		const radius = parseInt(urlParams.get('R')) || preset?.radius || ((this.playerCount <= 3) ? 5 : 6);
+
+		const cls = `radius-${radius}`;
+		if (typeof document !== 'undefined' && document.querySelector) {
+			let dom = document.querySelector('.hex-grid-container');
+			if (dom && !dom.classList?.contains?.(cls)) {
+				if ([...dom.classList].find(x => x.includes('radius-')))
+					dom.classList.remove([...dom.classList].find(x => x.includes('radius-')));
+				dom.classList.add(cls);
+			}
+		}
+
 		return radius;
 	},
 	generateHexGrid(radius, padding=1) {
@@ -639,6 +649,41 @@ function alpineHexDiceTacticGame() { return {
 		if (this.phase === 'SETUP_DEPLOY') return `P${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Deployment Phase.`;
 		return "Setup";
 	},
+	autoDeployPreset(preset) {
+		const numRows = Math.floor(Math.sqrt(preset.dice.length * 2));
+
+		this.players.forEach((player, playerIdx) => {
+			const baseHex = this.getHex(player.baseHexId);
+			if (!baseHex) return;
+
+			let diceIdx = 0;
+			for (let i = 1; i <= numRows; i++) {
+				for (let k = 0; k < i; k++) {
+					let targetQ, targetR;
+					if (playerIdx === 0) {
+						// P0 (Blue): Bottom corner (0, 7)
+						// Shifted back 2 hexes: Row 1 now starts at R=8 instead of R=6
+						targetQ = -(i - 1) + (2 * k);
+						targetR = baseHex.r + 1 - k;
+					} else {
+						// P1 (Red): Top corner (0, -7)
+						// Shifted back 2 hexes: Row 1 now starts at R=-8 instead of R=-6
+						targetQ = (i - 1) - (2 * k);
+						targetR = baseHex.r - 1 + k;
+					}
+
+					const targetHex = this.getHexByQR(targetQ, targetR);
+					if (targetHex && diceIdx < player.dice.length) {
+						const die = player.dice[diceIdx];
+						die.isDeployed = true;
+						this.move(die, null, targetHex);
+					}
+					diceIdx++;
+				}
+			}
+		});
+		this.addLog(`Units auto-deployed for ${preset.name}.`);
+	},
 	rollInitialDice(playerId) {
 		if (this.players[playerId].initialRollDone) return;
 		const player = this.players[playerId];
@@ -673,11 +718,16 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (this.players.every(p => p.initialRollDone)) {
-			if (this.rules.noReroll) {
+			if (preset) {
+				this.autoDeployPreset(preset);
+				this.phase = 'PLAYER_TURN';
+				this.currentPlayerIndex = 0;
+				this.addLog("Battle Begins!");
+			} else if (this.rules.noReroll) {
 				this.phase = 'SETUP_DEPLOY';
 				this.currentPlayerIndex = 0;
 				this.selectedDieToDeploy = 0;
-				this.addLog("Reroll phase skipped (Epic Mode).");
+				this.addLog("Reroll phase skipped.");
 			} else {
 				this.phase = 'SETUP_REROLL';
 				this.currentPlayerIndex = 0; // Player 1 starts reroll
@@ -738,17 +788,25 @@ function alpineHexDiceTacticGame() { return {
 			this.diceToReroll = [];
 		} else {
 			// All players finished reroll phase
-			this.phase = 'SETUP_DEPLOY';
-			this.currentPlayerIndex = 0; // Player 1 starts deployment
-			this.selectedDieToDeploy = 0;
+			const preset = this.preset && EPIC_PRESETS[this.preset];
+			if (preset) {
+				this.autoDeployPreset(preset);
+				this.phase = 'PLAYER_TURN';
+				this.currentPlayerIndex = 0;
+				this.addLog("Battle Begins!");
+			} else {
+				this.phase = 'SETUP_DEPLOY';
+				this.currentPlayerIndex = 0; // Player 1 starts deployment
+				this.selectedDieToDeploy = 0;
 
-			if (this.debug?.skipDeploy) {
-				this.players.forEach((player, playerIdx) => {
-					player.dice.forEach((dice, diceIdx) => {
-						this.selectDieToDeploy(diceIdx);
-						this.handleHexClick(this.calcValidDeploymentHexes(playerIdx).random());
+				if (this.debug?.skipDeploy) {
+					this.players.forEach((player, playerIdx) => {
+						player.dice.forEach((dice, diceIdx) => {
+							this.selectDieToDeploy(diceIdx);
+							this.handleHexClick(this.calcValidDeploymentHexes(playerIdx).random());
+						});
 					});
-				});
+				}
 			}
 		}
 	},
@@ -2615,7 +2673,7 @@ function alpineHexDiceTacticGame() { return {
 						this.applyDamage(attackerHexId, 1, state, false);
 					}
 
-					if (defenderUnit.value == 5) {
+					if (defenderUnit.value == 5 && defenderUnit.isGuarding > 0) {
 						const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
 						if (attackerEffectiveArmor <= 0) {
 							this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);

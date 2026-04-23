@@ -142,43 +142,62 @@
 			/*transition: zoom 0.3s ease;*/
 		}
 		@media (max-width: 1280px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 1.2;
 			}
+
 		}
 		@media (max-width: 1024px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 1.1;
 			}
 		}
 		@media (max-width: 768px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 1.05;
+			}
+			.hex-grid-container.radius-6 {
+				zoom: 1.0;
 			}
 		}
 		@media (max-width: 640px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 1;
+			}
+			.hex-grid-container.radius-6 {
+				zoom: 0.9;
 			}
 		}
 		@media (max-width: 540px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 0.90;
 			}
-		}
-		@media (max-width: 480px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-6 {
 				zoom: 0.80;
 			}
 		}
+		@media (max-width: 480px) {
+			.hex-grid-container.radius-5 {
+				zoom: 0.80;
+			}
+			.hex-grid-container.radius-6 {
+				zoom: 0.70;
+			}
+		}
 		@media (max-width: 400px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 0.75;
+			}
+			.hex-grid-container.radius-6 {
+				zoom: 0.65;
 			}
 		}
 		@media (max-width: 360px) {
-			.hex-grid-container {
+			.hex-grid-container.radius-5 {
 				zoom: 0.70;
+			}
+			.hex-grid-container.radius-6 {
+				zoom: 0.6;
 			}
 		}
 	</style>
@@ -242,7 +261,7 @@
 	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
 
 	<!-- Romance Mode Banner -->
-	<div x-cloak x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'"
+	<div style="display: none;" x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'"
 		class="w-full bg-yellow-100 border-y-2 border-yellow-600 py-2 text-center font-bold text-yellow-800 text-lg">
 		👑 Romance of the Dice Kingdoms in Progress 👑
 	</div>
@@ -250,7 +269,7 @@
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-center justify-center w-full overflow-auto">
 		<!-- Hex Grid -->
-		<div class="hex-grid-container relative" :style="hexGrid.style">
+		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
 				<div class="hexagon absolute flex items-center justify-center cursor-pointer"
 					:class="hexColor(hex) + ' hex-' + hex.id"
@@ -261,7 +280,7 @@
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-xs text-center relative">
-						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" x-text="hex.id"></span>
+						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute font-bold" x-show="!getUnitOnHex(hex.id)" --x-text="hex.id" x-text="hex.q + ', ' + hex.r"></span>
 
 						<span class="text-lg invisible"
 							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
@@ -333,25 +352,26 @@
 
 	<div id="game-controller" class="w-full flex flex-col items-center">
 		<!-- Game Setup -->
-		<div x-cloak x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-4 border text-center">
+		<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
 			<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
 			<div x-show="phase === 'SETUP_ROLL'">
 				<div class="mb-4">
-					<span class="mr-2 font-bold text-sm">Players:</span>
-					<a href="?players=2" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 2 ? 'bg-black text-white' : ''">2</a>
-					<a href="?players=3" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 ? 'bg-black text-white' : ''">3</a>
-					<a href="?players=4" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 ? 'bg-black text-white' : ''">4</a>
-					<a href="?players=6" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 ? 'bg-black text-white' : ''">6</a>
-					<span class="mx-2">|</span>
-					<a href="?players=2&preset=EPIC_21" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="preset === 'EPIC_21' ? 'bg-black text-white' : ''">Epic 21</a>
-					<a href="?players=2&preset=QUICK_15" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="preset === 'QUICK_15' ? 'bg-black text-white' : ''">Quick 15</a>
+					<span class="mr-2 font-bold text-sm">PLAYERS:</span>
+					<a href="?players=2" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 2 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">2</a>
+					<a href="?players=3" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">3</a>
+					<a href="?players=4" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">4</a>
+					<a href="?players=6" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">6</a>
 				</div>
-				<button class="cursor-pointer border px-4 py-2 hover:bg-black hover:text-white" @click="setupTerrain(true)">Terrain</button>
-				<button class="cursor-pointer border px-4 py-2 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">Start</button>
-				<button class="cursor-pointer border px-4 py-2 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i))">Single/AI</button>
-				<button class="cursor-pointer border px-4 py-2 hover:bg-black hover:text-white mb-2" @click="randomStart()">Random</button>
-				<button class="cursor-pointer border px-4 py-2 hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=level1.json'" x-show="!isCampaign">Campaign</button>
-				<button class="cursor-pointer border px-4 py-2 hover:bg-black hover:text-white" @click="startRomanceMode()">RotDK</button>
+				<div class="mb-4">
+					<a href="?players=2&preset=E_21" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">Epic 21</a>
+					<a href="?players=2&preset=E_15" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">Quick 15</a>
+				</div>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="setupTerrain(true)">Terrain</button>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">2 Players</button>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">AI Practice</button>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white mb-2" @click="randomStart()">Random</button>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=level1.json'" x-show="!isCampaign">Campaign</button>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="startRomanceMode()">RotDK</button>
 				</div>
 
 				<a href="/rules.html" target="_blank" class="text-sm underline hover:text-blue-700">Game Rules</a>
@@ -371,8 +391,8 @@
 						</div>
 					</template>
 				</div>
-				<button @click="performReroll()" class="border px-4 py-2 hover:bg-black hover:text-white" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span>)</button>
-				<button @click="skipReroll()" class="border px-4 py-2 hover:bg-black hover:text-white ml-2">Skip Reroll</button>
+				<button @click="performReroll()" class="border px-2 py-1 hover:bg-black hover:text-white" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span>)</button>
+				<button @click="skipReroll()" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Skip Reroll</button>
 			</div>
 			 <div x-show="phase === 'SETUP_DEPLOY'">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
@@ -410,23 +430,23 @@
 		</div>
 
 		<!-- Game Over -->
-		<div x-cloak x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 py-2 px-4 border text-center">
+		<div style="display: none;" x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
 			<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 			<p x-text="winnerMessage"></p>
 
 			<div x-show="!isCampaign">
-				<button class="cursor-pointer mt-3 border px-4 py-2 hover:bg-black hover:text-white"
+				<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
 					@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'single'})"
 				>New Game</button>
 			</div>
 
 			<div x-show="isCampaign">
-				<button class="cursor-pointer mt-3 border px-4 py-2 hover:bg-black hover:text-white"
+				<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
 					@click="location.href='?campaign=true&map=' + nextCampaignMap"
 				>
 					<span x-text="winnerPlayerId === 0 ? 'Next Level' : 'Retry Level'"></span>
 				</button>
-				<button class="cursor-pointer mt-3 border px-4 py-2 hover:bg-black hover:text-white"
+				<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
 					@click="location.href='index.html'"
 				>Exit Campaign</button>
 			</div>
@@ -434,13 +454,13 @@
 
 
 		<!-- Action Mode Info -->
-		<div x-cloak x-show="false && (actionMode !== null)" class="bg-wood mb-1 py-2 px-4 border text-center">
+		<div style="display: none;" x-show="false && (actionMode !== null)" class="bg-wood mb-1 p-2 border text-center">
 			<p x-text="actionModeMessage()"></p>
 			<button @click="cancelAction()" class="mt-2 border px-3 py-1 text-sm hover:bg-black hover:text-white">Cancel Action</button>
 		</div>
 
 		<!-- Game Info -->
-		<div x-cloak x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 py-2 px-4 border text-center">
+		<div style="display: none;" x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
 			<div class="my-2 space-x-2">
 				<button class="hidden cursor-pointer border p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
@@ -487,7 +507,7 @@
 				>END TURN</button>
 			</div>
 
-			<p class="text-sm font-bold">
+			<p class="text-sm font-bold" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
 				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
 			</p>
@@ -496,7 +516,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div x-show="showLog" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-2 text-xs font-mono h-36 overflow-y-auto border-t " id="messageLogContainer">
+	<div style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-1 text-xs font-mono h-14 lg:h-28 overflow-y-auto border-t " id="messageLogContainer">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>

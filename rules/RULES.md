@@ -61,14 +61,14 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 ![Units](/assets/infographics/hexdice_units.png)
 
-| Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
-| 2 | **Archer** | 1 | 2 | 2-3* | 1 | \* | Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
-| 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
-| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Six Diagonal Maneuver (X-shape) |
-| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Steady Heavy Armor (BFS 1-step). Melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack. |
-| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
+|  Dice |    Unit    | Armor | Attack| Range | Distance | Movement | Notes |
+| :---: |    :---:   | :---: | :---: | :---: |   :---:  |   :---:  | :---: |
+|   1   | **Fencer** |   2   |   2   |   0   |     2    |    `*`   | Balanced All-rounder (BFS 2-step). |
+|   2   | **Archer** |   1   |   2   |   2   |     1    |    `*`   | BFS 1-step. Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
+|   3   | **Hussar** |   0   |   3   |   0   |     3    |    `L`   | Fast Striker (L-shape jump). |
+|   4   | **Knight** |   1   |   2   |   0   |     3    |    `ж`   | Six Diagonal Maneuver (six-star shape). |
+|   5   | **Tanker** |   4   |   1   |   0   |     1    |    `*`   | Heavy Reflected Armor (BFS 1-step). During Guarding, failed melee attackers are eliminated if their Armor drops to 0 or less. |
+|   6   | **Oracle** |   0   |   0   |   2   |     1    |    `*`   | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells. |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -77,7 +77,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Movement:** The pattern the unit follows:
     - **`*`**: Breadth-First Search (BFS) movement (any direction, can move through empty hexes).
     - **`L`**: L-shaped jump (2 steps straight, then 1 step offset).
-    - **`X`**: Six diagonal movement (only along the six diagonal axes).
+    - **`ж`**: Six diagonal movement (only along the six diagonal axes).
     - **`0`**: Stationary (cannot move except when attacking).
 
 **Dice Visualization Diagram**
@@ -230,7 +230,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 5 (Tanker)
 * Can move to any adjacent hex (1 step BFS).
-* Melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack against this unit.
+* During Guarding, melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack against this unit.
 
 ```
                 .
