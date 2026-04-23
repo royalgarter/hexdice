@@ -4,6 +4,35 @@ const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
+const EPIC_PRESETS = {
+	'E_21': {
+		name: 'Standard 21 Dices',
+		radius: R,
+		noReroll: true,
+		dice: [
+		     3,
+		    3,3,
+		   4,6,4,
+		  2,2,2,2,
+		 4,1,2,1,4,
+		1,1,5,5,1,1
+		],
+
+	},
+	'E_15': {
+		name: 'Quick Mode 15 Dices',
+		radius: R,
+		noReroll: true,
+		dice: [
+		    3,
+		   3,3,
+		  4,6,4,
+		 2,2,2,2,
+		1,1,5,1,1
+		],
+	}
+};
+
 // BIND-EDIT rules.md: ### **4. Dice Soldiers (Unit Types)**
 const UNIT_STATS = {
 	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
@@ -76,6 +105,10 @@ function alpineHexDiceTacticGame() { return {
 	messageLog: [],
 	logCounter: 0,
 	winnerMessage: "",
+	winnerPlayerId: null,
+	isCampaign: false,
+	nextCampaignMap: null,
+	deploymentLimit: 666,
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
@@ -152,7 +185,7 @@ function alpineHexDiceTacticGame() { return {
 			else
 				hex.terrainType = randomTerrainType;
 
-			this.addLog(`Placed ${randomTerrainType} at [${hex.id}](${hex.q},${hex.r},${hex.s}).`);
+			this.addLog(`Placed ${randomTerrainType} at [${hex.id}].`);
 		}
 	},
 
@@ -236,56 +269,148 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- INITIALIZATION --- */
-	init() {
+	async init() {
+		CampaignManager.init();
+
+		const campaignMapParam = new URLSearchParams(location.search).get('map');
+		let campaignData = null;
+		if (campaignMapParam) {
+			try {
+				campaignData = await CampaignManager.fetchCampaignMap(campaignMapParam);
+				this.addLog(`Loaded Campaign Map: ${campaignData.name}`);
+			} catch (e) {
+				this.addLog(`Error loading campaign map: ${e.message}`);
+			}
+		}
+
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+		this.preset = new URLSearchParams(location.search).get('preset');
+		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
 
-		// Map size modifier: 2, 3 players -> R=5; 4, 6 players -> R=6
-		const radius = this.getRadius();
+		// Map size modifier
+		const radius = campaignData?.radius || this.getRadius();
 		this.generateHexGrid(radius);
-
-		// Adjust dice per player based on player count (Total 24 dice)
-		this.rules.dicePerPlayer = Math.floor((this.playerCount <= 3 ? 24 : 36) / this.playerCount);
 
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
-		try {
-			const url = new URL(location.href || location.toString());
-			url.searchParams.set('options', this.options);
-			url.searchParams.set('players', this.playerCount);
-			if (window?.history?.replaceState) window.history.replaceState(null, '', url);
-		} catch(e) {
-			// Silent fail for non-browser environments
-		}
-
-		this.addLog("Game started. Welcome to Hex Dice!");
 		this.resetGame({
-			isCampaign: new URLSearchParams(location.search).get('mode') == 'campaign',
+			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign') == 'true'),
+			campaignData: campaignData
 		});
 	},
 	resetGame(opts) {
+		const campaignData = opts?.campaignData;
+		this.campaignData = campaignData;
+		this.isCampaign = CampaignManager.state.isCampaignActive || !!campaignData;
+		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || 4) : 99;
+
+		const preset = this.preset && EPIC_PRESETS[this.preset];
+		if (preset) {
+			this.rules.dicePerPlayer = preset.dice.length;
+			this.rules.noReroll = preset.noReroll;
+			this.addLog(`Applying preset: ${preset.name}`);
+		} else {
+			this.rules.dicePerPlayer = 12; // Default
+			this.rules.noReroll = false;
+		}
+
 		this.players = [];
 		for (let i = 0; i < this.playerCount; i++) {
 			this.players.push({
 				...PLAYER_CONFIG[i],
 				dice: [],
-				initialRollDone: false,
+				initialRollDone: (i === 0 && this.isCampaign) || (i === 1 && !!campaignData), // P1 is pre-rolled in campaign, P2 is too if JSON
 				baseHexId: null,
 				rerollsUsed: 0,
 				isEliminated: false,
-				isAI: (i > 0 && opts?.isCampaign)
+				isAI: (i > 0 && (opts?.isCampaign || this.isCampaign || campaignData?.config?.p2AI))
 			});
 		}
 
-		const radius = this.getRadius();
+		// Load Dice from Campaign Data OR Use Legendary Six
+		if (this.isCampaign) {
+			const player = this.players[0];
+			const diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
+
+			diceToLoad.forEach((val, idx) => {
+				const die = {
+					id: `0_${idx}`,
+					originalIndex: idx,
+					playerId: 0,
+					value: val,
+					...UNIT_STATS[val],
+					currentArmor: UNIT_STATS[val].armor,
+					armorReduction: 0,
+					isDeployed: false,
+					hexId: null,
+					hasMovedOrAttackedThisTurn: false,
+					isGuarding: 0,
+					skirmishBuff: 0,
+					isDeath: false,
+					actionsTakenThisTurn: 0
+				};
+				CampaignManager.applyFatigueDebuffs(die);
+				player.dice.push(die);
+			});
+
+			if (campaignData) {
+				// Load Enemy Dice
+				const p2 = this.players[1];
+				(campaignData.enemyDice || []).forEach((val, idx) => {
+					p2.dice.push({
+						id: `1_${idx}`,
+						originalIndex: idx,
+						playerId: 1,
+						value: val,
+						...UNIT_STATS[val],
+						currentArmor: UNIT_STATS[val].armor,
+						armorReduction: 0,
+						isDeployed: false,
+						hexId: null,
+						hasMovedOrAttackedThisTurn: false,
+						isGuarding: 0,
+						skirmishBuff: 0,
+						isDeath: false,
+						actionsTakenThisTurn: 0
+					});
+				});
+			} else {
+				this.addLog("Campaign Mode: You command the Legendary Six.");
+			}
+		}
+
+		const radius = campaignData?.radius || this.getRadius();
 		this.generateHexGrid(radius);
 		this.hexes.forEach(h => {
-			h.unitId = null; // Clear units from hexes
-			h.terrainType = 'PLAIN'; // Reset terrain
+			h.unitId = null;
+			h.terrainType = 'PLAIN';
 		});
-		this.determineBaseLocations(radius); // Redetermine bases on reset
-		//this.setupTerrain(); // Trigger terrain setup for v1.2 rules
-		this.phase = 'SETUP_ROLL';
+
+		// Apply Terrain from Campaign Data
+		if (campaignData?.terrain) {
+			campaignData.terrain.forEach(t => {
+				const [q, r] = t.id.split(',').map(Number);
+				const hex = this.getHexByQR(q, r);
+				if (hex) hex.terrainType = t.type;
+			});
+		}
+
+		this.determineBaseLocations(radius);
+		this.phase = (this.isCampaign && !!campaignData) ? 'SETUP_DEPLOY' : 'SETUP_ROLL';
+		if (this.isCampaign && campaignData) {
+			// Auto-deploy enemy (P2) randomly
+			const p2 = this.players[1];
+			p2.dice.forEach((die, idx) => {
+				const validHexes = this.calcValidDeploymentHexes(1);
+				if (validHexes.length > 0) {
+					const hexId = validHexes[Math.floor(random() * validHexes.length)];
+					die.isDeployed = true;
+					this.move(die, null, this.getHex(hexId));
+				}
+			});
+			this.addLog("Enemy forces have taken their positions.");
+		}
 		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
 		this.selectedUnitHexId = null;
@@ -309,7 +434,21 @@ function alpineHexDiceTacticGame() { return {
 	/* --- HEX GRID --- */
 	getRadius(link=location) {
 		const urlParams = new URLSearchParams(link?.search || 'http://localhost/');
-		const radius = parseInt(urlParams.get('R')) || ((this.playerCount <= 3) ? 5 : 6);
+		const presetKey = urlParams.get('preset');
+		const preset = EPIC_PRESETS[presetKey];
+
+		const radius = parseInt(urlParams.get('R')) || preset?.radius || ((this.playerCount <= 3) ? 5 : 6);
+
+		const cls = `radius-${radius}`;
+		if (typeof document !== 'undefined' && document.querySelector) {
+			let dom = document.querySelector('.hex-grid-container');
+			if (dom && !dom.classList?.contains?.(cls)) {
+				if ([...dom.classList].find(x => x.includes('radius-')))
+					dom.classList.remove([...dom.classList].find(x => x.includes('radius-')));
+				dom.classList.add(cls);
+			}
+		}
+
 		return radius;
 	},
 	generateHexGrid(radius, padding=1) {
@@ -433,14 +572,13 @@ function alpineHexDiceTacticGame() { return {
 	/* --- UI STYLING --- */
 	hexColor(hex, state) {
 		// const unit = this.getUnitOnHex(hex.id, state);
+		state = state || this;
 
 		let cls = TERRAIN_CONFIG[hex.terrainType]?.bg || 'bg-hexdefault';
 
-		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined) {
+		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined && !state?.players?.[hex.basePlayerId]?.isEliminated) {
 			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
 		}
-
-		state = state || this;
 
 		if (state.selectedUnitHexId === hex.id) cls = 'bg-hexselect';
 		else if (state.validMoves?.includes(hex.id)) cls = 'bg-hexmove';
@@ -511,12 +649,50 @@ function alpineHexDiceTacticGame() { return {
 		if (this.phase === 'SETUP_DEPLOY') return `P${this.currentPlayerIndex + 1} (${this.players[this.currentPlayerIndex].color}) - Deployment Phase.`;
 		return "Setup";
 	},
+	autoDeployPreset(preset) {
+		const numRows = Math.floor(Math.sqrt(preset.dice.length * 2));
+
+		this.players.forEach((player, playerIdx) => {
+			const baseHex = this.getHex(player.baseHexId);
+			if (!baseHex) return;
+
+			let diceIdx = 0;
+			for (let i = 1; i <= numRows; i++) {
+				for (let k = 0; k < i; k++) {
+					let targetQ, targetR;
+					if (playerIdx === 0) {
+						// P0 (Blue): Bottom corner (0, 7)
+						// Shifted back 2 hexes: Row 1 now starts at R=8 instead of R=6
+						targetQ = -(i - 1) + (2 * k);
+						targetR = baseHex.r + 1 - k;
+					} else {
+						// P1 (Red): Top corner (0, -7)
+						// Shifted back 2 hexes: Row 1 now starts at R=-8 instead of R=-6
+						targetQ = (i - 1) - (2 * k);
+						targetR = baseHex.r - 1 + k;
+					}
+
+					const targetHex = this.getHexByQR(targetQ, targetR);
+					if (targetHex && diceIdx < player.dice.length) {
+						const die = player.dice[diceIdx];
+						die.isDeployed = true;
+						this.move(die, null, targetHex);
+					}
+					diceIdx++;
+				}
+			}
+		});
+		this.addLog(`Units auto-deployed for ${preset.name}.`);
+	},
 	rollInitialDice(playerId) {
 		if (this.players[playerId].initialRollDone) return;
 		const player = this.players[playerId];
 		player.dice = [];
+
+		const preset = this.preset && EPIC_PRESETS[this.preset];
+
 		for (let i = 0; i < this.rules.dicePerPlayer; i++) {
-			const roll = Math.floor(random() * 6) + 1;
+			const roll = (preset && preset.dice) ? preset.dice[i] : (Math.floor(random() * 6) + 1);
 			player.dice.push({
 				id: `${playerId}_${i}`, // Unique ID for the die unit
 				originalIndex: i, // to link back to player.dice array
@@ -535,14 +711,30 @@ function alpineHexDiceTacticGame() { return {
 			});
 		}
 		player.initialRollDone = true;
-		this.addLog(`P${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
+		if (preset) {
+			this.addLog(`P${playerId + 1} army ready (${preset.name})`);
+		} else {
+			this.addLog(`P${playerId + 1} rolled: ${player.dice.map(d => d.value).join(', ')}`);
+		}
 
 		if (this.players.every(p => p.initialRollDone)) {
-			this.phase = 'SETUP_REROLL';
-			this.currentPlayerIndex = 0; // Player 1 starts reroll
-			this.diceToReroll = [];
+			if (preset) {
+				this.autoDeployPreset(preset);
+				this.phase = 'PLAYER_TURN';
+				this.currentPlayerIndex = 0;
+				this.addLog("Battle Begins!");
+			} else if (this.rules.noReroll) {
+				this.phase = 'SETUP_DEPLOY';
+				this.currentPlayerIndex = 0;
+				this.selectedDieToDeploy = 0;
+				this.addLog("Reroll phase skipped.");
+			} else {
+				this.phase = 'SETUP_REROLL';
+				this.currentPlayerIndex = 0; // Player 1 starts reroll
+				this.diceToReroll = [];
 
-			if (this.debug?.skipReroll) this.players.forEach(() => this.skipReroll());
+				if (this.debug?.skipReroll) this.players.forEach(() => this.skipReroll());
+			}
 		}
 	},
 	toggleRerollSelection(diceIndex) {
@@ -558,7 +750,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	canConfirmReroll() {
-		return this.players[this.currentPlayerIndex].rerollsUsed === 0; // Only one reroll phase
+		return this.players[this.currentPlayerIndex]?.rerollsUsed === 0; // Only one reroll phase
 	},
 	performReroll() {
 		if (!this.canConfirmReroll() || this.diceToReroll.length === 0) {
@@ -596,17 +788,25 @@ function alpineHexDiceTacticGame() { return {
 			this.diceToReroll = [];
 		} else {
 			// All players finished reroll phase
-			this.phase = 'SETUP_DEPLOY';
-			this.currentPlayerIndex = 0; // Player 1 starts deployment
-			this.selectedDieToDeploy = 0;
+			const preset = this.preset && EPIC_PRESETS[this.preset];
+			if (preset) {
+				this.autoDeployPreset(preset);
+				this.phase = 'PLAYER_TURN';
+				this.currentPlayerIndex = 0;
+				this.addLog("Battle Begins!");
+			} else {
+				this.phase = 'SETUP_DEPLOY';
+				this.currentPlayerIndex = 0; // Player 1 starts deployment
+				this.selectedDieToDeploy = 0;
 
-			if (this.debug?.skipDeploy) {
-				this.players.forEach((player, playerIdx) => {
-					player.dice.forEach((dice, diceIdx) => {
-						this.selectDieToDeploy(diceIdx);
-						this.handleHexClick(this.calcValidDeploymentHexes(playerIdx).random());
+				if (this.debug?.skipDeploy) {
+					this.players.forEach((player, playerIdx) => {
+						player.dice.forEach((dice, diceIdx) => {
+							this.selectDieToDeploy(diceIdx);
+							this.handleHexClick(this.calcValidDeploymentHexes(playerIdx).random());
+						});
 					});
-				});
+				}
 			}
 		}
 	},
@@ -638,17 +838,15 @@ function alpineHexDiceTacticGame() { return {
 		dieToDeploy.isDeployed = true;
 
 		this.move(dieToDeploy, null, targetHex);
-		// dieToDeploy.hexId = hexId;
-		// targetHex.unit = dieToDeploy;
-		// targetHex.unitId = dieToDeploy.id;
 
-		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}](${targetHex.q},${targetHex.r},${targetHex.s})`);
+		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}]`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 
-		// Check if current player has deployed all dice
-		if (player.dice.every(d => d.isDeployed)) {
+		// Check if current player has deployed all dice OR reached deployment limit
+		const deployedCount = player.dice.filter(d => d.isDeployed).length;
+		if (player.dice.every(d => d.isDeployed) || (this.isCampaign && player.id === 0 && deployedCount >= this.deploymentLimit)) {
 			// Find next player who hasn't deployed all dice
-			const nextDeployPlayer = this.players.find(p => p.dice.some(d => !d.isDeployed));
+			const nextDeployPlayer = this.players.find(p => p.id > player.id && p.dice.some(d => !d.isDeployed));
 
 			if (nextDeployPlayer) {
 				this.currentPlayerIndex = nextDeployPlayer.id;
@@ -975,18 +1173,23 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(unitHexId, state);
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
 
-		const options = (state || this).options || ''; //'rm';
+		// Campaign Scarred Units cannot use class abilities
+		if (CampaignManager.isAbilityDisabled(unit)) {
+			if (['RANGED_ATTACK', 'SPECIAL_ATTACK', 'SPELLCAST_SACRIFICE'].includes(actionType)) {
+				return false;
+			}
+		}
 
 		switch(actionType) {
 			case 'MOVE': return true;
 			case 'REROLL': 
 				const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
-				return options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
+				return !this.rules.noReroll && this.options.includes('r') && !unit.isRerolled && !unit.isGuarding && (unitHexId === playerBaseHexId);
 			case 'GUARD': return true;
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
-			case 'MERGE': return options.includes('m');
+			case 'MERGE': return this.options.includes('m');
 			case 'SPELLCAST_SACRIFICE':
 				// Oracle can sacrifice if it's the last unit for its player and has adjacent enemy Oracles
 				if (unit.value !== 6) return false;
@@ -1101,10 +1304,10 @@ function alpineHexDiceTacticGame() { return {
 			this.handleCombat(unitHexId, targetHexId, 'MELEE', state);
 		} else { // Moving to an empty hex
 			this.addLog([
-				`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} moved `,
-				`[${attackerHex.id}](${attackerHex.q},${attackerHex.r},${attackerHex.s})`,
+				`${this.logUnit(attackerUnit)} moved `,
+				`[${attackerHex.id}]`,
 				`->`,
-				`[${defenderHex.id}](${defenderHex.q},${defenderHex.r},${defenderHex.s}).`
+				`[${defenderHex.id}].`
 			].join(''), state);
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			// attackerHex.unit = null;
@@ -1132,10 +1335,10 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || !fromHex || !toHex) return;
 
 		if (unitHexId !== targetHexId) {
-			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: (${fromHex.q},${fromHex.r}) -> (${toHex.q},${toHex.r}).`);
+			this.addLog(`${this.logUnit(unit)} skirmish reposition: [${fromHex.id}]->[${toHex.id}].`);
 			this.move(unit, fromHex, toHex);
 		} else {
-			this.addLog(`P${unit.playerId + 1} D${unit.value} skirmish reposition: stayed at (${fromHex.q},${fromHex.r}).`);
+			this.addLog(`${this.logUnit(unit)} skirmish reposition: stayed at [${fromHex.id}].`);
 		}
 
 		unit.hasMovedOrAttackedThisTurn = true;
@@ -1149,7 +1352,7 @@ function alpineHexDiceTacticGame() { return {
 
 		const playerBaseHexId = (state || this).players[unit.playerId].baseHexId;
 		if (unitHexId !== playerBaseHexId) {
-			this.addLog(`P${unit.playerId + 1} D${unit.value} cannot reroll outside of its Base.`, state);
+			this.addLog(`${this.logUnit(unit)} cannot reroll outside of its Base.`, state);
 			this.deselectUnit(state);
 			return;
 		}
@@ -1166,7 +1369,7 @@ function alpineHexDiceTacticGame() { return {
 
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
-		this.addLog(`P${unit.playerId + 1} D${oldVal} rerolled D${newRoll} (${targetHex.q},${targetHex.r}). Penalty: 0 Effective Armor until next turn.`, state);
+		this.addLog(`${this.logUnit(unit)} rerolled D${newRoll} [${targetHex.id}]. Penalty: 0 Effective Armor until next turn.`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
 	},
@@ -1183,7 +1386,7 @@ function alpineHexDiceTacticGame() { return {
 		// Actual armor buff is applied during combat calculation
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
-		this.addLog(`P${unit.playerId + 1} D${unit.value} guarded [${unitHexId}](${targetHex.q},${targetHex.r},${targetHex.s}).`, state);
+		this.addLog(`${this.logUnit(unit)} guarded [${unitHexId}].`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state); // Though guard alone won't win
 	},
@@ -1204,7 +1407,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		this.addLog(`P${mergingUnit.playerId + 1} D${mergingUnit.value} merged D${targetUnit.value} (${mergingHex.q},${mergingHex.r})->(${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${mergingUnit.playerId + 1} D${mergingUnit.value} merged D${targetUnit.value} [${mergingHex.id}]->[${targetHex.id}].`, state);
 
 		const sum = mergingUnit.value + targetUnit.value;
 		let newDieValue;
@@ -1488,7 +1691,7 @@ function alpineHexDiceTacticGame() { return {
 			this.trail.dist = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
 		}
 
-		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} (${oracleHex.q},${oracleHex.r})<->(${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} [${oracleHex.id}]<->[${targetHex.id}].`, state);
 	},
 	/**
 	 * Skirmish Spell: Target unit gains Hit & Run status for its next attack.
@@ -1541,7 +1744,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		this.addLog(`P${attackerUnit.playerId+1} D1 charged P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
+		this.addLog(`${this.logUnit(attackerUnit)} charged ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
 
 		// Effect: Remove the Dice 1 unit
 		this.removeUnit(attackerHexId, state);
@@ -2066,7 +2269,21 @@ function alpineHexDiceTacticGame() { return {
 		} else if (this.rules.dicePerPlayer <= 14) {
 			// Full 2-ring expansion
 			this.getNeighbors(baseHex, state).forEach(neighbor => {
-				this.getNeighbors(neighbor, state).forEach(neighbor => deploymentHexes.push(neighbor));
+				deploymentHexes.push(neighbor);
+				this.getNeighbors(neighbor, state).forEach(n => deploymentHexes.push(n));
+			});
+		} else {
+			// Epic mode (15-21 units): 5-ring wedge-like expansion
+			state.hexes.forEach(hex => {
+				const distFromBase = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
+				if (distFromBase <= 5) {
+					// Check if it's "inward" or at least not way "outward"
+					const distFromCenter = this.axialDistance(0, 0, hex.q, hex.r);
+					const baseDistFromCenter = this.axialDistance(0, 0, baseHex.q, baseHex.r);
+					if (distFromCenter <= baseDistFromCenter) {
+						deploymentHexes.push(hex);
+					}
+				}
 			});
 		}
 
@@ -2094,6 +2311,8 @@ function alpineHexDiceTacticGame() { return {
 		let effectiveArmor = defenderUnit.currentArmor;
 		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
 		effectiveArmor -= defenderUnit.armorReduction;
+
+		if (defenderUnit.isScarred) effectiveArmor -= 1;
 
 		switch (defenderHex.terrainType) {
 			case 'FOREST':
@@ -2408,7 +2627,7 @@ function alpineHexDiceTacticGame() { return {
 			defenderHex.unitId = null;
 
 			if (isSkirmishing) {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+				this.addLog(`${this.logUnit(attackerUnit)} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
 
 				if (!state) {
 					// Switch to post-skirmish move mode
@@ -2430,23 +2649,23 @@ function alpineHexDiceTacticGame() { return {
 			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 				// Attacker moves into vacated hex (melee or command & conquer)
 				this.move(attackerUnit, attackerHex, defenderHex, state);
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${attackerHex.q},${attackerHex.r})->(${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
 			} else {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} ${combatType.toLowerCase()} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} (${defenderHex.q},${defenderHex.r}).`, state);
+				this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
 			}
 			// For Ranged, attacker stays. For Special, attacker moves if successful.
 			this.trailAttack = {};
 		} else { // Attacker fails
 			if (isSkirmishing) {
 				if (combatType !== 'RANGED_ATTACK') {
-					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} has been eliminated.`, state);
+					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} has been eliminated.`, state);
 					this.removeUnit(attackerHexId, state);
 				} else {
-					this.addLog(`Skirmish failed! P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''}'s armor exhausted.`, state);
+					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} s armor exhausted.`, state);
 					this.applyDamage(attackerHexId, 1, state, false);
 				}
 			} else {
-				this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} attacked P${defenderUnit.playerId+1} D${defenderUnit.value} failed.`, state);
+				this.addLog(`${this.logUnit(attackerUnit)} attacked ${this.logUnit(defenderUnit)} failed.`, state);
 
 				if (combatType !== 'RANGED_ATTACK') {
 					if (attackerUnit.isGuarding <= 1) {
@@ -2454,10 +2673,10 @@ function alpineHexDiceTacticGame() { return {
 						this.applyDamage(attackerHexId, 1, state, false);
 					}
 
-					if (defenderUnit.value == 5) {
+					if (defenderUnit.value == 5 && defenderUnit.isGuarding > 0) {
 						const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
 						if (attackerEffectiveArmor <= 0) {
-							this.addLog(`P${attackerUnit.playerId+1} D${attackerUnit.value} ${attackerUnit.profileName?attackerUnit.profileName:''} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
+							this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
 							this.removeUnit(attackerHexId, state);
 						}
 					}
@@ -2493,7 +2712,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit) return;
 		// Only log when not simulating (state is provided)
 		if (!state) {
-			this.addLog(`P${unit.playerId+1} D${unit.value} removed (${this.getHex(hexId, state).q},${this.getHex(hexId, state).r}).`);
+			this.addLog(`${this.logUnit(unit)} removed [${this.getHex(hexId, state).id}].`);
 		}
 		(state || this).players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
 		this.getHex(hexId, state).unitId = null; // Clear hex
@@ -2616,6 +2835,25 @@ function alpineHexDiceTacticGame() { return {
 	},
 	gameOver(winnerPlayerIndex, message) {
 		this.phase = 'GAME_OVER';
+		this.winnerPlayerId = winnerPlayerIndex;
+
+		if (this.isCampaign) {
+			const deployedValues = this.players[0].dice
+				.filter(d => d.isDeployed && !d.isDeath)
+				.map(d => d.value);
+			CampaignManager.updateAfterBattle(deployedValues);
+
+			if (winnerPlayerIndex === 0) {
+				CampaignManager.advanceLevel();
+				if (this.campaignData?.rewards) {
+					CampaignManager.grantRewards(this.campaignData.rewards);
+					this.addLog("Rewards Granted: " + Object.entries(this.campaignData.rewards).map(([k,v]) => `${v}x ${k.toUpperCase()}`).join(', '));
+				}
+				this.addLog("Campaign Advanced: New Level Unlocked!");
+			}
+			this.nextCampaignMap = CampaignManager.getCurrentMapName();
+		}
+
 		if (winnerPlayerIndex === -1) { // Draw
 			 this.winnerMessage = message;
 		} else {
@@ -2632,6 +2870,15 @@ function alpineHexDiceTacticGame() { return {
 		delete data.messageLog;
 
 		return data;
+	},
+	logUnit(attackerUnit, state) {
+		state = state || this;
+		if (!attackerUnit) return '';
+
+		return [
+			`P${attackerUnit.playerId+1} D${attackerUnit.value}`,
+			state.players[attackerUnit.playerId]?.profileName ? `(${state.players[attackerUnit.playerId]?.profileName})` : '',
+		].filter(x => x).join(' ');
 	},
 	addLog(message, state) {
 		if (this.debug.quiet) return;

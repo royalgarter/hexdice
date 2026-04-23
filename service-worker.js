@@ -5,10 +5,10 @@ const urlsToCache = [
 	'/rules.html',
 	// Core JS files
 	'/game.js',
-	'/alpine.min.js',
-	'/litewind.css',
+	'/assets/alpine.min.js',
+	'/assets/litewind.css',
 	// Rules markdown files
-	'/rules.md',
+	'/rules/RULES.md',
 	'/rules/v1.0.md',
 	'/rules/v1.0.1.md',
 	'/rules/v1.1.md',
@@ -23,8 +23,8 @@ const urlsToCache = [
 	'/ai/ai-random.js',
 	'/ai/heuristic-profiles.js',
 	// Root assets
-	'/board.png',
-	'/hex.png',
+	'/assets/board.png',
+	'/assets/hex.png',
 	// Icons
 	'/assets/images/android-chrome-192x192.png',
 	'/assets/images/android-chrome-512x512.png',

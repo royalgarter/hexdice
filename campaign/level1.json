@@ -1,0 +1,147 @@
+{
+  "name": "First Journey",
+  "radius": 5,
+  "deploymentLimit": 3,
+  "player1Dice": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "enemyDice": [
+    1,
+    1,
+    2
+  ],
+  "terrain": [
+    {
+      "id": "-1,-4",
+      "type": "FOREST"
+    },
+    {
+      "id": "-3,0",
+      "type": "FOREST"
+    },
+    {
+      "id": "0,-2",
+      "type": "FOREST"
+    },
+    {
+      "id": "1,-4",
+      "type": "FOREST"
+    },
+    {
+      "id": "-4,1",
+      "type": "FOREST"
+    },
+    {
+      "id": "-2,2",
+      "type": "FOREST"
+    },
+    {
+      "id": "4,-4",
+      "type": "FOREST"
+    },
+    {
+      "id": "0,3",
+      "type": "FOREST"
+    },
+    {
+      "id": "5,-1",
+      "type": "FOREST"
+    },
+    {
+      "id": "4,-3",
+      "type": "FOREST"
+    },
+    {
+      "id": "1,3",
+      "type": "FOREST"
+    },
+    {
+      "id": "-1,-2",
+      "type": "FOREST"
+    },
+    {
+      "id": "1,4",
+      "type": "FOREST"
+    },
+    {
+      "id": "-4,3",
+      "type": "FOREST"
+    },
+    {
+      "id": "4,-2",
+      "type": "FOREST"
+    },
+    {
+      "id": "4,1",
+      "type": "LAKE"
+    },
+    {
+      "id": "-4,2",
+      "type": "LAKE"
+    },
+    {
+      "id": "-3,-1",
+      "type": "LAKE"
+    },
+    {
+      "id": "-5,3",
+      "type": "LAKE"
+    },
+    {
+      "id": "-5,0",
+      "type": "LAKE"
+    },
+    {
+      "id": "2,2",
+      "type": "LAKE"
+    },
+    {
+      "id": "3,1",
+      "type": "LAKE"
+    },
+    {
+      "id": "-2,0",
+      "type": "LAKE"
+    },
+    {
+      "id": "2,-2",
+      "type": "LAKE"
+    },
+    {
+      "id": "-2,3",
+      "type": "LAKE"
+    },
+    {
+      "id": "2,-5",
+      "type": "MOUNTAIN"
+    },
+    {
+      "id": "-3,3",
+      "type": "MOUNTAIN"
+    },
+    {
+      "id": "5,-4",
+      "type": "MOUNTAIN"
+    },
+    {
+      "id": "0,2",
+      "type": "MOUNTAIN"
+    },
+    {
+      "id": "3,-4",
+      "type": "MOUNTAIN"
+    }
+  ],
+  "rewards": {
+    "aegis": 1
+  },
+  "config": {
+    "p2AI": true,
+    "options": "rm"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "name": "The Grassy Plains",
+  "radius": 5,
+  "deploymentLimit": 4,
+  "player1Dice": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "enemyDice": [
+    2,
+    2,
+    2,
+    5
+  ],
+  "terrain": [
+    {
+      "id": "-2,3",
+      "type": "FOREST"
+    },
+    {
+      "id": "3,2",
+      "type": "FOREST"
+    },
+    {
+      "id": "3,-5",
+      "type": "FOREST"
+    },
+    {
+      "id": "3,-3",
+      "type": "FOREST"
+    },
+    {
+      "id": "-1,5",
+      "type": "FOREST"
+    },
+    {
+      "id": "-3,0",
+      "type": "FOREST"
+    },
+    {
+      "id": "4,-3",
+      "type": "FOREST"
+    },
+    {
+      "id": "0,1",
+      "type": "FOREST"
+    },
+    {
+      "id": "-2,-3",
+      "type": "FOREST"
+    },
+    {
+      "id": "-4,4",
+      "type": "FOREST"
+    },
+    {
+      "id": "0,4",
+      "type": "LAKE"
+    },
+    {
+      "id": "0,-5",
+      "type": "LAKE"
+    },
+    {
+      "id": "-2,-2",
+      "type": "LAKE"
+    },
+    {
+      "id": "3,-2",
+      "type": "LAKE"
+    },
+    {
+      "id": "-2,4",
+      "type": "LAKE"
+    }
+  ],
+  "rewards": {
+    "pegasus": 1,
+    "forge": 1
+  },
+  "config": {
+    "p2AI": true,
+    "options": "rm"
+  }
+}

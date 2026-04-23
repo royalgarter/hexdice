@@ -1,6 +1,9 @@
 # **Hex Dice**
 
-## *Tactical hexagon board game where players command armies of dice, using their values to determine their abilities.*
+### *Tactical hexagon board game where players command armies of dice, using their values to determine their abilities.*
+
+![Hex Dice recap](/assets/infographics/hexdice_recap.png)
+
 
 ### ***Foreword***
 
@@ -14,17 +17,14 @@
 
 **Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)**
 
-![Hexagonal Grid board](board.png)
-
-
 ---
 
 
-### **1\. Overview**
+## **1\. Overview**
 
 Hex Dice is a tactical board game where players command armies of dice, using their face values to determine their unit type, abilities, and movement. Played on a hexagonal map, players maneuver their forces, engage in deterministic combat, and aim to defeat all opponents or capture their base.
 
-### **2\. Components**
+## **2\. Components**
 
 - 1 Hexagonal Map (**Dynamic Size**: R=5 for 2-3 players, R=6 for 4-6 players)
 - Standard 6-sided dice: Multiple sets of distinct colors are required, one color per player.  
@@ -34,7 +34,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
   - For 6 Players: 6 distinct colors, 6 dice each (Total 36).
 - **Armor Reduction Tokens**: Small markers (e.g., beads, tokens, or coins) used to track damage to a unit's armor. These help players calculate the current **Effective Armor** of each unit.
 
-### **3\. Setup**
+## **3\. Setup**
 
 1. **Place the Hexagonal Map** in the center of the playground.  
 2. **Each player takes the appropriate number of dice** for the player count (in section 2.) and chooses a distinct color.  
@@ -55,18 +55,20 @@ Hex Dice is a tactical board game where players command armies of dice, using th
  
 
 
-### **4\. Dice Soldiers (Unit Types)**
+## **4\. Dice Soldiers (Unit Types)**
 
 Its face value (1-6) determines each dice unit's capabilities according to the table below. The rolled value is kept face up on the board.
 
-| Dice | Unit | Armor | Attack | Range | Distance | Movement | Notes |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | **Fencer** | 2 | 2 | 0 | 2 | \* | Balanced All-rounder |
-| 2 | **Archer** | 1 | 2 | 2-3* | 1 | \* | Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
-| 3 | **Hussar** | 0 | 3 | 0 | 3 | L | Fast Striker (L-shape jump) |
-| 4 | **Knight** | 1 | 2 | 0 | 3 | X | Six Diagonal Maneuver (X-shape) |
-| 5 | **Tanker** | 4 | 1 | 0 | 1 | \* | Steady Heavy Armor (BFS 1-step) |
-| 6 | **Oracle** | 0 | 0 | 2 | 1 | \* | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells |
+![Units](/assets/infographics/hexdice_units.png)
+
+|  Dice |    Unit    | Armor | Attack| Range | Distance | Movement | Notes |
+| :---: |    :---:   | :---: | :---: | :---: |   :---:  |   :---:  | :---: |
+|   1   | **Fencer** |   2   |   2   |   0   |     2    |    `*`   | Balanced All-rounder (BFS 2-step). |
+|   2   | **Archer** |   1   |   2   |   2   |     1    |    `*`   | BFS 1-step. Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
+|   3   | **Hussar** |   0   |   3   |   0   |     3    |    `L`   | Fast Striker (L-shape jump). |
+|   4   | **Knight** |   1   |   2   |   0   |     3    |    `ж`   | Six Diagonal Maneuver (six-star shape). |
+|   5   | **Tanker** |   4   |   1   |   0   |     1    |    `*`   | Heavy Reflected Armor (BFS 1-step). During Guarding, failed melee attackers are eliminated if their Armor drops to 0 or less. |
+|   6   | **Oracle** |   0   |   0   |   2   |     1    |    `*`   | Spells: Shield, Swap, Skirmish; Sacrifice (Anti-stalemate); Engaged: Cannot cast spells. |
 
 * **Armor:** Defensive value used in combat.  
 * **Attack:** The minimum Effective Armor value an *enemy* unit must have for this unit to be able to defeat it in combat.  
@@ -75,7 +77,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 * **Movement:** The pattern the unit follows:
     - **`*`**: Breadth-First Search (BFS) movement (any direction, can move through empty hexes).
     - **`L`**: L-shaped jump (2 steps straight, then 1 step offset).
-    - **`X`**: Six diagonal movement (only along the six diagonal axes).
+    - **`ж`**: Six diagonal movement (only along the six diagonal axes).
     - **`0`**: Stationary (cannot move except when attacking).
 
 **Dice Visualization Diagram**
@@ -228,7 +230,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 
 #### Dice 5 (Tanker)
 * Can move to any adjacent hex (1 step BFS).
-* Melee units are eliminated if Armor Reduction from attacking this unit drops their Armor to 0.
+* During Guarding, melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack against this unit.
 
 ```
                 .
@@ -316,7 +318,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
                 B
 ```
 
-### **5\. Gameplay**
+## **5\. Gameplay**
 
 The gameplay will proceed with an **Alternating Activations** turn structure (players activating one unit each turn) to enhance player engagement, tactical responsiveness, and balance.
 
@@ -324,9 +326,9 @@ Players take turns in set order. On a player's turn, they activate one of their 
 
 Units cannot move through hexes occupied by other units (friendly or enemy) unless the Movement explicitly allows it (e.g., Dice 3 jump).
 
-#### **Actions**
+### **Actions**
 
-* ##### **Move**
+* #### **Move**
 
   * Choose one of your units.  
   * Determine its valid move destinations based on its current face value, Movement, and Distance.  
@@ -334,7 +336,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * If moving to an empty hex, the unit occupies that hex. Action complete.  
   * If moving to an enemy-occupied hex, melee combat occurs (see Section 6: Combat). If the attacker wins, it moves to the hex. If it fails, it stays in its original hex. Action complete.
 
-* ##### **Reroll**
+* #### **Reroll**
 
   * Choose one of your units that is **standing on its player's Base hex**.
   * The unit stays in its current hex.  
@@ -342,7 +344,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Penalty**: The rerolled unit has **0 Effective Armor** until its owner's next turn starts.
   * Action complete. This unit cannot Move or Attack this turn.
 
-* ##### **Guard**
+* #### **Guard**
 
   * Choose one of your units that is **not currently guarding**.
   * Activate **Guard Mode** to gain **1 Shield Charge** (+1 Effective Armor).
@@ -350,7 +352,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Note**: A unit cannot stack Guard charges manually. Use the Oracle's **Shield** spell to grant **2 charges**.
   * Action complete. This unit cannot Move or Attack this turn.
 
-* ##### **Ranged Attack (Dice 2\)**
+* #### **Ranged Attack (Dice 2\)**
 
   * Choose one of your Dice 2 Archer units.
   * **Restrictions**: Cannot attack if an enemy is adjacent (unless on specialized terrain). Requires clear Line of Sight.
@@ -359,7 +361,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * Combat occurs. Regardless of the outcome, the attacking Dice 2 unit **remains in its current hex** and does not suffer counter-damage on failure.
   * Action complete.
 
-* ##### **Spellcast (Dice 6\)**
+* #### **Spellcast (Dice 6\)**
 
   * Choose one of your Dice 6 Oracle units.
   * **Select a Spell**: Choose one of three spells - Shield, Swap, or Skirmish.
@@ -374,7 +376,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).
   * Action complete.
 
-* ##### **Oracle Sacrifice (Dice 6\)**
+* #### **Oracle Sacrifice (Dice 6\)**
 
   * **Condition**: Only available when the Oracle is the **last remaining unit** for its player.
   * Choose one of your Dice 6 Oracle units.
@@ -383,7 +385,7 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   * **Purpose**: This action prevents unwinnable stalemates when both players are down to only Oracles.
   * Action complete.
 
-### **6\. Combat**
+## **6\. Combat**
 
 Combat is deterministic and occurs when a unit enters an enemy hex or uses a special/ranged attack.
 
@@ -412,7 +414,7 @@ Combat is deterministic and occurs when a unit enters an enemy hex or uses a spe
         *   **Tanker (Dice 5)**: Suffer **1 Armor Reduction** only if they have 0 Guard Charges. This damage is not immediately lethal unless Effective Armor drops below 0.
 5.  **Post-Combat**: All of the **Defender's** remaining Guard Charges are removed.
 
-### **7\. Winning the Game**
+## **7\. Winning the Game**
 
 The conditions for winning depend on the number of players:
 
@@ -425,7 +427,7 @@ The conditions for winning depend on the number of players:
     2. An opponent's unit successfully moves onto and occupies their Base corner hex. If the Base hex was occupied by one of the eliminated player's units, combat occurs first, and the attacking unit must win to occupy the hex and eliminate the player.  
   - Play continues among the remaining players until only one player is left.
 
-### **8\. Map Description**
+## **8\. Map Description**
 
 The map is a hexagonal grid with a dynamic radius:
 - **2-3 Players**: R=5 (extends 5 hexes from the center).
@@ -433,9 +435,11 @@ The map is a hexagonal grid with a dynamic radius:
 
 Movement is measured in steps between adjacent hexes. Specific hexes are marked as Base locations for 2-player games, and the corner hexes serve as Base locations for multiplayer games.
 
-#### **Terrain Types**
+### **Terrain Types**
 
 Each hex on the map has a terrain type that affects movement and combat. By default, all hexes are `PLAIN` terrain unless modified by expansion rules (e.g., v1.2).
+
+![Terrain Types](/assets/infographics/hexdice_terrain.png)
 
 | Terrain | Movement Cost | Defense Bonus | Line of Sight | Special Effects |
 | :--- | :---: | :---: | :---: | :--- |
@@ -452,7 +456,7 @@ Each hex on the map has a terrain type that affects movement and combat. By defa
 - **Movement**: LAKE is completely impassable. MOUNTAIN costs 2 movement steps and reduces max distance by 1 for most units.
 - **Archer Ranged Attacks**: Units on TOWER or MOUNTAIN can perform ranged attacks even when engaged by adjacent enemies. TOWER allows range 1-2, MOUNTAIN allows range 1-3.
 
-### **9\. Development References**
+## **9\. Development References**
 
 * [https://hamhambone.github.io/hexgrid/](https://hamhambone.github.io/hexgrid/)  
 * [https://github.com/kislay707/hexagonGenerator](https://github.com/kislay707/hexagonGenerator)   
@@ -460,7 +464,9 @@ Each hex on the map has a terrain type that affects movement and combat. By defa
 
 ---
 
-### **10\. Expansions**
+## **10\. Expansions**
+
+![Red vs Blue](/assets/infographics/red_n_blue.jpg)
 
 * [v1.0](/rules?path=rules/v1.0.md)
 * [v1.0.1](/rules?path=rules/v1.0.1.md)

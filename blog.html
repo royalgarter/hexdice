@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Hex Dice Dev Blog</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		
+		body {
+			font-family: 'EB Garamond', serif;
+			line-height: 1.6;
+			color: #333;
+			background: #f5f5f5;
+			padding: 2rem 1rem;
+		}
+		
+		.container {
+			max-width: 1000px;
+			margin: 0 auto;
+			display: grid;
+			grid-template-columns: 250px 1fr;
+			gap: 2rem;
+		}
+
+		@media (max-width: 768px) {
+			.container {
+				grid-template-columns: 1fr;
+			}
+		}
+		
+		.sidebar {
+			background: #C3A471EE;
+			padding: 1.5rem;
+			border-radius: 8px;
+			height: fit-content;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+		}
+
+		.content-area {
+			background: #C3A471EE;
+			padding: 2rem;
+			border-radius: 8px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+			min-height: 600px;
+		}
+		
+		#markdown-viewer {
+			line-height: 1.8;
+		}
+		
+		#markdown-viewer h1 { font-size: 2.5rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+		#markdown-viewer h2 { font-size: 1.8rem; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; margin: 1.5rem 0 1rem; }
+		#markdown-viewer h3 { font-size: 1.4rem; margin: 1.2rem 0 0.8rem; }
+		#markdown-viewer p { margin-bottom: 1rem; }
+		#markdown-viewer ul, #markdown-viewer ol { margin-left: 2rem; margin-bottom: 1rem; }
+		#markdown-viewer li { margin-bottom: 0.5rem; }
+		#markdown-viewer img { max-width: 100%; height: auto; display: block; margin: 1rem auto; border-radius: 4px; }
+		#markdown-viewer blockquote { border-left: 4px solid #574427; padding-left: 1rem; margin: 1rem 0; color: #444; font-style: italic; }
+		
+		#markdown-viewer code {
+			background: #f5f5f5d4;
+			padding: 0.2rem 0.4rem;
+			border-radius: 3px;
+			font-family: monospace;
+			font-size: 0.9em;
+		}
+
+		#markdown-viewer pre {
+			background: #2d2d2d;
+			color: #f8f8f2;
+			padding: 1rem;
+			border-radius: 4px;
+			overflow-x: auto;
+			margin: 1rem 0;
+		}
+
+		#markdown-viewer pre code {
+			background: none;
+			color: inherit;
+		}
+
+		.sidebar h2 {
+			font-size: 1.2rem;
+			margin-bottom: 1rem;
+			border-bottom: 1px solid #574427;
+			padding-bottom: 0.5rem;
+		}
+
+		.blog-list {
+			list-style: none;
+		}
+
+		.blog-list li {
+			margin-bottom: 0.8rem;
+		}
+
+		.blog-list a {
+			color: #333;
+			text-decoration: none;
+			font-size: 1rem;
+			transition: color 0.2s;
+		}
+
+		.blog-list a:hover, .blog-list a.active {
+			color: #574427;
+			font-weight: bold;
+			text-decoration: underline;
+		}
+		
+		.back-link {
+			display: inline-block;
+			margin-bottom: 1.5rem;
+			color: #574427;
+			text-decoration: none;
+			font-weight: bold;
+		}
+		
+		.loading { text-align: center; padding: 2rem; color: #666; }
+		.error { color: #d32f2f; background: #ffebee; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
+
+		body::before {
+			content: '';
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: url('/assets/infographics/hexdice_background.jpg') center/cover no-repeat;
+			opacity: 0.4;
+			z-index: -1;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<aside class="sidebar">
+			<a href="/" class="back-link">← Back to Game</a>
+			<h2>Dev Diary</h2>
+			<ul class="blog-list" id="blog-list">
+				<!-- Links will be populated here -->
+			</ul>
+		</aside>
+
+		<main class="content-area">
+			<div id="markdown-viewer">
+				<div class="loading">Select a post to read...</div>
+			</div>
+		</main>
+	</div>
+
+	<!-- Load marked library -->
+	<script src="https://unpkg.com/marked@12.0.0/marked.min.js"></script>
+	<script>
+		const BLOG_POSTS = [
+			{ id: 'campaign_part_1', title: 'Journey of the Six - Campaign Mode(Part 1)' },
+			{ id: 'oracle_pivot', title: 'The Oracle Pivot' },
+			{ id: 'abilities_balancing', title: 'Abilities Balancing' },
+			{ id: 'empires', title: 'Empires Expansion' },
+			{ id: 'simplify_gameplay_part_1', title: 'Simplify Gameplay (Part 1)' },
+			{ id: 'compare_with_traditional_chess', title: 'Compare with Traditional Chess' },
+			{ id: 'turnbase_debate', title: 'Turnbase Debate' },
+			{ id: 'terraform', title: 'Terraform Expansion' },
+			{ id: 'fog_or_war', title: 'For of War (Single player)' },
+			{ id: 'game_design_review_part_1', title: 'Design Review (Part 1)' },
+		];
+
+		function renderBlogList() {
+			const listElement = document.getElementById('blog-list');
+			const currentPath = new URLSearchParams(window.location.search).get('post');
+			
+			listElement.innerHTML = BLOG_POSTS.map(post => `
+				<li>
+					<a href="?post=${post.id}" 
+					   class="${currentPath === post.id ? 'active' : ''}"
+					   onclick="event.preventDefault(); navigateToPost('${post.id}')">
+						${post.title}
+					</a>
+				</li>
+			`).join('');
+		}
+
+		function navigateToPost(postId) {
+			window.history.pushState({postId}, '', `?post=${postId}`);
+			loadPost(postId);
+			renderBlogList();
+		}
+
+		async function loadPost(postId) {
+			const viewer = document.getElementById('markdown-viewer');
+			const post = BLOG_POSTS.find(p => p.id === postId) || BLOG_POSTS[0];
+			
+			if (!post) return;
+
+			viewer.innerHTML = '<div class="loading">Loading post...</div>';
+
+			try {
+				const response = await fetch('/blog/' + post.id + '.md');
+				if (!response.ok) throw new Error('Failed to load post content.');
+				
+				const markdown = await response.text();
+				viewer.innerHTML = marked.parse(markdown);
+				
+				// Ensure all links in the blog post open in new tabs if they are external
+				viewer.querySelectorAll('a').forEach(link => {
+					if (!link.href.includes(window.location.hostname)) {
+						link.target = '_blank';
+					}
+				});
+			} catch (error) {
+				viewer.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+			}
+		}
+
+		window.addEventListener('popstate', (e) => {
+			const postId = e.state?.postId || new URLSearchParams(window.location.search).get('post');
+			loadPost(postId || BLOG_POSTS[0].id);
+			renderBlogList();
+		});
+
+		// Initial load
+		const initialPostId = new URLSearchParams(window.location.search).get('post') || BLOG_POSTS[0].id;
+		loadPost(initialPostId);
+		renderBlogList();
+	</script>
+</body>
+</html>
