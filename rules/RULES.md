@@ -4,8 +4,7 @@
 
 ![Hex Dice recap](/assets/infographics/hexdice_recap.png)
 
-
-### ***Foreword***
+<small>
 
 *In the gaming world, as in life, adaptation is key. This philosophy, coupled with a deep admiration for the strategic depth of titles like Final Fantasy Tactics, the emergent battles of GBA Advanced Wars and Polytopia, sparked an idea of the authors. We yearned for a tactical game where every session felt truly unique, a vibrant tapestry woven from simple, familiar threads.*
 
@@ -17,6 +16,7 @@
 
 **Rep. Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Google](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) / [Facebook](https://www.facebook.com/royalgarter) / [Twitter](https://x.com/royalgarter)**
 
+</small>
 ---
 
 
