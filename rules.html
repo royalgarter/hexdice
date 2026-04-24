@@ -17,7 +17,7 @@
 			line-height: 1.6;
 			color: #333;
 			background: #f5f5f5;
-			padding: 2rem 1rem;
+			padding: 0.5rem 0.2rem;
 		}
 		
 		.container {
@@ -79,6 +79,12 @@
 			margin: 1rem 0;
 			overflow-x: auto;
 			display: block;
+			/*zoom: 0.8;*/
+			font-size: smaller;
+		}
+
+		#markdown-viewer img {
+			padding: 1rem;
 		}
 		
 		#markdown-viewer th,
@@ -108,11 +114,12 @@
 		}
 		#markdown-viewer pre {
 			background: #e9dcc8d4;
-			padding: 1rem;
+			padding: 0.25rem;
 			border-radius: 4px;
 			overflow-x: auto;
 			margin: 1rem 0;
 			place-self: center;
+			zoom: 0.9;
 		}
 		
 		#markdown-viewer pre code {
@@ -170,9 +177,9 @@
 			text-decoration: underline;
 		}
 		
-		@media (max-width: 768px) {
+		/*@media (max-width: 768px) {
 			body {
-				padding: 1rem 0.5rem;
+				padding: 0.5rem 0.25rem;
 			}
 
 			.container {
@@ -186,7 +193,7 @@
 			#markdown-viewer h2 {
 				font-size: 1.25rem;
 			}
-		}
+		}*/
 
 		body::before {
 			content: '';

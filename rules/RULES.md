@@ -2,7 +2,7 @@
 
 ### *Tactical hexagon board game where players command armies of dice, using their values to determine their abilities.*
 
-![Hex Dice recap](/assets/infographics/hexdice_recap.png)
+![Hex Dice Introduction](/assets/infographics/hexdice_intro_full.jpg)
 
 <small>
 
@@ -25,7 +25,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 ## **2\. Components**
 
 - 1 Hexagonal Map (**Dynamic Size**: R=5 for 2-3 players, R=6 for 4-6 players)
-- Standard 6-sided dice: Multiple sets of distinct colors are required, one color per player.  
+- Standard 6-sided dice: Multiple sets of distinct colors are required, one color per player.
   - For 2 Players: 2 distinct colors (Red/Blue), 12 dice each (Total 24).
   - For 3 Players: 3 distinct colors, 8 dice each (Total 24).
   - For 4 Players: 4 distinct colors, 6 dice each (Total 24).
@@ -34,19 +34,19 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 
 ## **3\. Setup**
 
-1. **Place the Hexagonal Map** in the center of the playground.  
-2. **Each player takes the appropriate number of dice** for the player count (in section 2.) and chooses a distinct color.  
+1. **Place the Hexagonal Map** in the center of the playground.
+2. **Each player takes the appropriate number of dice** for the player count (in section 2.) and chooses a distinct color.
 3. **Determine Your Army:**
-   - Each player rolls all their assigned dice simultaneously.   
-   - The face values of these dice determine the types of units available to that player for the entire game.   
-   - The dice are placed showing the rolled value face up.   
-   - A hex can hold a maximum of one unit at all times.   
+   - Each player rolls all their assigned dice simultaneously.
+   - The face values of these dice determine the types of units available to that player for the entire game.
+   - The dice are placed showing the rolled value face up.
+   - A hex can hold a maximum of one unit at all times.
    - Each player is able to choose ⅓ of maximum dice amount (round down) to reroll after their initial roll once (e.g., 2 players \-\> 12 dices each \-\> 4 maximum reroll, 3 players \-\> 8 dices each \-\> 2 maximum reroll)
-4. **Base Locations & Deployment:**  
+4. **Base Locations & Deployment:**
    - **Deployment Area Scaling:** The deployment area expands based on the number of dice per player:
-     - **6 dice or fewer:** The Base cell and its immediate adjacent hexes.
-     - **7 to 9 dice:** The Base cell, its adjacent hexes, and two specific offset hexes along the primary axis.
-     - **10 to 14 dice:** The Base cell and a full 2-ring expansion around it.
+	 - **6 dice or fewer:** The Base cell and its immediate adjacent hexes.
+	 - **7 to 9 dice:** The Base cell, its adjacent hexes, and two specific offset hexes along the primary axis.
+	 - **10 to 14 dice:** The Base cell and a full 2-ring expansion around it.
    - **2 Players:** The two far ends of the map along the vertical axis are the Base cells. Players deploy their rolled dice units onto empty hexes within their defined deployment area.
    - **3, 4, or 6 Players:** Corner hexes serve as potential Base locations, with deployment areas extending towards the center based on the scaling rules above.
 5. **Determine the first player** (e.g., by rolling a dice , highest roll goes first). In multiplayer games, establish the turn order (e.g., clockwise around the table).
@@ -72,9 +72,9 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - **Range:** Ranged/Special attack from current hex.
 - **Distance:** The maximum distance a unit can move following its pattern.
 - **Movement:** The pattern the unit follows:
-    - **`*`**: Breadth-First Search (BFS) movement (broadcast maximum n-steps to any direction, can move through empty hexes).
-    - **`L`**: L-shaped jump (2 steps straight, then 1 step offset, knight-like in traditional chess).
-    - **`ж`**: Six diagonal movement (only along the six diagonal axes).
+	- **`*`**: Breadth-First Search (BFS) movement (broadcast maximum n-steps to any direction, can move through empty hexes).
+	- **`L`**: L-shaped jump (2 steps straight, then 1 step offset, knight-like in traditional chess).
+	- **`ж`**: Six diagonal movement (only along the six diagonal axes).
 
 ### **Hexagon Grid & Dice Monospace Visualization Diagram**
 
@@ -83,27 +83,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - Target-able hex will be marked by `x` in diagrams below
 
 ```
-                ^
-             .     .
-          .     |     .
-       .     .     .     .
-    .     .     |     .     .
+				^
+			 .     .
+		  .     |     .
+	   .     .     .     .
+	.     .     |     .     .
  .     .     .     .     .     .
-    .     .     |     .     .
+	.     .     |     .     .
  .     .     .     .     .     .
-    .     .     |     .     .
+	.     .     |     .     .
  .     .     .     .     .     .
-    .     .     |     .     .
+	.     .     |     .     .
  .     .     .     .     .     .
-    .     .     |     .     .
+	.     .     |     .     .
  .     .     .     .     .     .
-    .     .     |     .     .
+	.     .     |     .     .
  .     .     .     .     .     .
-    .     .     |     .     .
-       .     .     .     .
-          .    BASE   .
-             .     .
-                |
+	.     .     |     .     .
+	   .     .     .     .
+		  .    BASE   .
+			 .     .
+				|
 ```
 
 #### Dice 1 (Fencer)
@@ -112,27 +112,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - Can move up to 2 steps in any direction (BFS pattern).
 
 ```
-                .
-             .     .
-          .     .     .
-       .     .     .     .
-    .     .     .     .     .
+				.
+			 .     .
+		  .     .     .
+	   .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
+	.     .     +     .     .
  .     .     +     +     .     .
-    .     +     +     +     .
+	.     +     +     +     .
  .     +     +     +     +     .
-    +     +     1     +     +
+	+     +     1     +     +
  .     +     +     +     +     .
-    .     +     +     +     .
+	.     +     +     +     .
  .     .     +     +     .     .
-    .     .     +     .     .
+	.     .     +     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
-       .     .     .     .
-          .     .     .
-             .     .
-                .
+	.     .     .     .     .
+	   .     .     .     .
+		  .     .     .
+			 .     .
+				.
 ```
 
 #### Dice 2 (Archer)
@@ -144,27 +144,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - **Long Range Penalty**: Attacks at extra-range 3 (with special buff or terrain) have **-1 Attack power** (minimum attack remains 1).
 
 ```
-                .
-             .     .
-          .     .     .
-       .     .     .     .
-    .     .     .     .     .
+				.
+			 .     .
+		  .     .     .
+	   .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     x     .     .
+	.     .     x     .     .
  .     .     x     x     .     .
-    .     x     +     x     .
+	.     x     +     x     .
  .     x     +     +     x     .
-    x     +     2     +     x
+	x     +     2     +     x
  .     x     +     +     x     .
-    .     x     +     x     .
+	.     x     +     x     .
  .     .     x     x     .     .
-    .     .     x     .     .
+	.     .     x     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
-       .     .     .     .
-          .     .     .
-             .     .
-                .
+	.     .     .     .     .
+	   .     .     .     .
+		  .     .     .
+			 .     .
+				.
 ```
 
 #### Dice 3 (Hussar)
@@ -173,27 +173,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - Can jump over units (could not be blocked).
 
 ```
-                .
-             .     .
-          .     .     .
-       .     .     .     .
-    .     .     .     .     .
+				.
+			 .     .
+		  .     .     .
+	   .     .     .     .
+	.     .     .     .     .
  .     .     +     +     .     .
-    .     +     ▪     +     .
+	.     +     ▪     +     .
  .     .     .     .     .     .
-    .     ▪     ▪     ▪     .
+	.     ▪     ▪     ▪     .
  .     +     ▪     ▪     +     .
-    .     .     3     .     .
+	.     .     3     .     .
  .     +     ▪     ▪     +     .
-    .     ▪     ▪     ▪     .
+	.     ▪     ▪     ▪     .
  .     .     .     .     .     .
-    .     +     ▪     +     .
+	.     +     ▪     +     .
  .     .     +     +     .     .
-    .     .     .     .     .
-       .     .     .     .
-          .     .     .
-             .     .
-                .
+	.     .     .     .     .
+	   .     .     .     .
+		  .     .     .
+			 .     .
+				.
 ```
 
 #### Dice 4 (Knight)
@@ -202,27 +202,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - **Blocked Path**: Movement is blocked by any unit on the path.
 
 ```
-                .
-             .     .
-          .     .     .
-       .     .     .     .
-    .     .     +     .     .
+				.
+			 .     .
+		  .     .     .
+	   .     .     .     .
+	.     .     +     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
+	.     .     +     .     .
  .     +     .     .     +     .
-    .     +     +     +     .
+	.     +     +     +     .
  .     .     +     +     .     .
-    .     .     4     .     .
+	.     .     4     .     .
  .     .     +     +     .     .
-    .     +     +     +     .
+	.     +     +     +     .
  .     +     .     .     +     .
-    .     .     +     .     .
+	.     .     +     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
-       .     .     .     .
-          .     .     .
-             .     .
-                .
+	.     .     +     .     .
+	   .     .     .     .
+		  .     .     .
+			 .     .
+				.
 ```
 
 #### Dice 5 (Tanker)
@@ -231,27 +231,27 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 - During Guarding, melee attackers are eliminated if their Effective Armor drops to 0 or less after a failed attack against this unit.
 
 ```
-                .
-             .     .
-          .     .     .
-       .     .     .     .
-    .     .     .     .     .
+				.
+			 .     .
+		  .     .     .
+	   .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
+	.     .     +     .     .
  .     .     +     +     .     .
-    .     +     5     +     .
+	.     +     5     +     .
  .     .     +     +     .     .
-    .     .     +     .     .
+	.     .     +     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
-       .     .     .     .
-          .     .     .
-             .     .
-                .
+	.     .     .     .     .
+	   .     .     .     .
+		  .     .     .
+			 .     .
+				.
 ```
 
 #### Dice 6 (Oracle)
@@ -261,62 +261,62 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
   - **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks without Armor Reduction).
   - **Swap**: The Oracle and the target unit **exchange positions** on the board.
   - **Skirmish**: Target unit gains **Hit & Run** status for its next turn.
-    - **Effect**: During the next attack, the unit has **-1 Attack strength**, additionally **ranged** unit has **+1 Attack range**,  minimum attack remains **1**.
-    - **On Success (Win)**: The target is removed, and the melee attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
-    - **On Failure (Loss/Tie)**: The melee attacker is **immediately eliminated** from the board.
-    - **Duration**: Buff expires after one attack or at the end of the player's next activation.
+	- **Effect**: During the next attack, the unit has **-1 Attack strength**, additionally **ranged** unit has **+1 Attack range**,  minimum attack remains **1**.
+	- **On Success (Win)**: The target is removed, and the melee attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
+	- **On Failure (Loss/Tie)**: The melee attacker is **immediately eliminated** from the board.
+	- **Duration**: Buff expires after one attack or at the end of the player's next activation.
 - **Engaged Casting Limitation**: The Oracle **cannot cast spells when an enemy unit is adjacent** (engaged in melee). This prevents Oracles from safely supporting while in danger and encourages tactical positioning.
 - **Transmute (Sacrifice)**: The Oracle can perform a forbidden art to convert an enemy if the player only has Oracle unit(s) left, losing its own life in the chaotic process.
   - **Target**: One adjacent enemy unit.
   - **Effect**: The Oracle is removed from the board. Remove the target enemy die and replace it with your own new one. You must immediately **Reroll** this new die to determine its new unit type.
   - **Penalty**: The newly created unit suffers the standard Reroll penalty (**0 Effective Armor** until the start of your next turn) and **cannot act this turn**.
 ```
-                .
-             .     .
-          .     .     .
-       .     .     .     .
-    .     .     .     .     .
+				.
+			 .     .
+		  .     .     .
+	   .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     x     .     .
+	.     .     x     .     .
  .     .     x     x     .     .
-    .     x     +     x     .
+	.     x     +     x     .
  .     x     +     +     x     .
-    x     +     6     +     x
+	x     +     6     +     x
  .     x     +     +     x     .
-    .     x     +     x     .
+	.     x     +     x     .
  .     .     x     x     .     .
-    .     .     x     .     .
+	.     .     x     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
-       .     .     .     .
-          .     .     .
-             .     .
-                .
+	.     .     .     .     .
+	   .     .     .     .
+		  .     .     .
+			 .     .
+				.
 ```
 
 #### Two-Players Bases
 - Player can deploy each single new unit in base or its adjacent hex
 
 ```
-                R
-             R     R
-          R     R     R
-       .     R     R     .
-    .     .     R     .     .
+				R
+			 R     R
+		  R     R     R
+	   .     R     R     .
+	.     .     R     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
+	.     .     .     .     .
  .     .     .     .     .     .
-    .     .     B     .     .
-       .     B     B     .
-          B     B     B
-             B     B
-                B
+	.     .     B     .     .
+	   .     B     B     .
+		  B     B     B
+			 B     B
+				B
 ```
 
 ## **5\. Gameplay**
@@ -370,10 +370,10 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   - **Shield**: Target unit gains **2 Guard Charges** (+2 Effective Armor, absorbs 2 attacks).
   - **Swap**: Oracle and target unit **exchange positions**.
   - **Skirmish**: Target unit gains **Hit & Run** status for its next turn.
-    - **Effect**: During the next attack, the unit has **-1 Attack strength**, but minimum attack remains **1**.
-    - **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
-    - **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
-    - **Duration**: Buff expires after one attack or at the end of the player's next activation.
+	- **Effect**: During the next attack, the unit has **-1 Attack strength**, but minimum attack remains **1**.
+	- **On Success (Win)**: The target is removed, and the attacker **chooses any adjacent empty hex to the target** to move to (this includes staying in their original starting hex).
+	- **On Failure (Loss/Tie)**: The attacker is **immediately eliminated** from the board.
+	- **Duration**: Buff expires after one attack or at the end of the player's next activation.
   - **Restriction**: The Oracle **cannot cast spells** if an enemy unit is adjacent (engaged in melee).
   - Action complete.
 
@@ -382,9 +382,9 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
   - Choose one of your Dice 6 Oracle units.
   - **Target**: Choose any single **enemy unit** in an **adjacent hex**.
   - **Effect**:
-    1. The Oracle and the target enemy unit are both **removed from the board**.
-    2. A new unit from your **reserve** (unused dice) is placed on the hex previously occupied by the enemy unit.
-    3. The new unit is immediately **rerolled** to determine its type.
+	1. The Oracle and the target enemy unit are both **removed from the board**.
+	2. A new unit from your **reserve** (unused dice) is placed on the hex previously occupied by the enemy unit.
+	3. The new unit is immediately **rerolled** to determine its type.
   - **Penalty**: The new unit has **0 Effective Armor** until your next turn and **cannot act** on the turn it is created.
   - Action complete.
 
@@ -393,41 +393,41 @@ Units cannot move through hexes occupied by other units (friendly or enemy) unle
 Combat is deterministic and occurs when a unit enters an enemy hex or uses a special/ranged attack.
 
 **Effective Armor calculation:**
-`Unit Armor + Terrain Bonus + Base Defense Bonus + Guard Charges - Armor Reduction`.
+`Unit Armor + (Terrain/Base Defense Bonus) + Guard Charges - Armor Reduction`.
 
 -   **Terrain Bonus**: Units on **FOREST**, **TOWER**, or **MOUNTAIN** gain **+1 Effective Armor**.
 -   **Base Defense Bonus**: A unit on its own **Base hex** gains **+2 Effective Armor**.
 -   **Guard Charges**: Temporary protection.
-    -   **1 Charge** (+1 Armor) from the **Guard** action.
-    -   **2 Charges** (+2 Armor) from the Oracle's **Shield** spell.
+	-   **1 Charge** (+1 Armor) from the **Guard** action.
+	-   **2 Charges** (+2 Armor) from the Oracle's **Shield** spell.
 -   **Armor Reduction**: Cumulative damage. Track this using tokens.
 
 **Combat Resolution:**
 
 1.  **Clearance**: The attacker's Guard Charges are immediately reset to 0.
 2.  **Attacker Wins** if one of below conditions matched:
-    -   **Armor Depleted**: Defender's `Armor Reduction >= Defender's Base Armor`.
-    -   **Attack > Defender's Effective Armor** (if Defender is currently guarding).
-    -   **Attack ≥ Defender's Effective Armor** (if Defender is NOT guarding).
+	-   **Armor Depleted**: Defender's `Armor Reduction >= Defender's Base Armor`.
+	-   **Attack > Defender's Effective Armor** (if Defender is currently guarding).
+	-   **Attack ≥ Defender's Effective Armor** (if Defender is NOT guarding).
 3.  **On Success (Win)**: The defending unit is removed. Melee attackers move into the hex.
 4.  **On Failure (Loss/Tie)**:
-    -   **Attacker**: Melee attackers suffer **1 Armor Reduction** if they have 1 or 0 Guard Charges *remaining after the attack*. Ranged attackers suffer no damage.
-    -   **Defender**:
-        -   **Standard Units**: Suffer **1 Armor Reduction** unless they have 2 Guard Charges. If they have 0 charges, this damage is lethal if Effective Armor hits 0.
-        -   **Tanker (Dice 5)**: Suffer **1 Armor Reduction** only if they have 0 Guard Charges. This damage is not immediately lethal unless Effective Armor drops below 0.
+	-   **Attacker**: Melee attackers suffer **1 Armor Reduction** if they have 1 or 0 Guard Charges *remaining after the attack*. Ranged attackers suffer no damage.
+	-   **Defender**:
+		-   **Standard Units**: Suffer **1 Armor Reduction** unless they have 2 Guard Charges. If they have 0 charges, this damage is lethal if Effective Armor hits 0.
+		-   **Tanker (Dice 5)**: Suffer **1 Armor Reduction** only if they have 0 Guard Charges. This damage is not immediately lethal unless Effective Armor drops below 0.
 5.  **Post-Combat**: All of the **Defender's** remaining Guard Charges are removed.
 
 ## **7\. Winning the Game**
 
 The conditions for winning depend on the number of players:
 
-- **2 Players:** A player wins immediately if either of the following conditions is met during their turn:  
-  1. **Annihilation:** All enemy units are removed from the board.  
-  2. **Base Capture:** One of your units successfully moves onto the opponent's Base cell. If the Base cell was occupied by an enemy unit, your unit must win the combat to occupy the cell and win.  
-- **3, 4, or 6 Players:** The game ends immediately when only one player has units remaining on the board. That player is the winner.  
-  - A player is **eliminated** from the game if either of the following conditions is met during *any* player's turn:  
-    1. All their units are removed from the board.  
-    2. An opponent's unit successfully moves onto and occupies their Base corner hex. If the Base hex was occupied by one of the eliminated player's units, combat occurs first, and the attacking unit must win to occupy the hex and eliminate the player.  
+- **2 Players:** A player wins immediately if either of the following conditions is met during their turn:
+  1. **Annihilation:** All enemy units are removed from the board.
+  2. **Base Capture:** One of your units successfully moves onto the opponent's Base cell. If the Base cell was occupied by an enemy unit, your unit must win the combat to occupy the cell and win.
+- **3, 4, or 6 Players:** The game ends immediately when only one player has units remaining on the board. That player is the winner.
+  - A player is **eliminated** from the game if either of the following conditions is met during *any* player's turn:
+	1. All their units are removed from the board.
+	2. An opponent's unit successfully moves onto and occupies their Base corner hex. If the Base hex was occupied by one of the eliminated player's units, combat occurs first, and the attacking unit must win to occupy the hex and eliminate the player.
   - Play continues among the remaining players until only one player is left.
 
 
@@ -451,6 +451,19 @@ Each hex on the map has a terrain type that affects movement and combat. By defa
 - **Line of Sight Blocking**: FOREST, TOWER, and MOUNTAIN block ranged attacks and spell targeting. LAKE is transparent to LoS.
 - **Movement**: LAKE is completely impassable. MOUNTAIN costs 2 movement steps and reduces max distance by 1 for most units.
 - **Archer Ranged Attacks**: Units on TOWER or MOUNTAIN can perform ranged attacks even when engaged by adjacent enemies. TOWER allows range 1-2, MOUNTAIN allows range 1-3.
+
+<div align="center">
+	<a href="/" style="
+		background-color: #896648;
+		color: white;
+		padding: 15px 30px;
+		text-decoration: none;
+		font-size: 18px;
+		font-weight: bold;
+		border-radius: 5px;
+		display: inline-block;
+	">🎲 ⚔ 🛡 🔥 Start New Game 🔥 🛡 ⚔ 🎲</a>
+</div>
 
 ## **9\. Development References**
 
