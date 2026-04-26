@@ -23,8 +23,8 @@
 Hex Dice is a tactical board game where players command armies of dice, using their face values to determine their unit type, abilities, and movement. Played on a hexagonal map, players maneuver their forces, engage in combat, and aim to defeat all opponents or capture their base.
 
 **Players can choose one of two Gameplay Versions before starting:**
-- **Version 1 (Classic):** Strategic, deterministic combat with armor tracking and alternating activations.
-- **Version 2 (God of Fate):** Fast-paced, explosive turns with "Fate" rolls, probabilistic combat, and risk of fumbles.
+- **Version 1 (Decisive Dice):** Strategic, deterministic combat with armor tracking and alternating activations.
+- **Version 2 (Destiny Dice):** Fast-paced, explosive turns with "Fate" rolls, probabilistic combat, and risk of fumbles.
 
 ## **2\. Components**
 
@@ -35,7 +35,7 @@ Hex Dice is a tactical board game where players command armies of dice, using th
   - For 4 Players: 6 dice each.
   - For 6 Players: 6 dice each.
 - **Armor Tokens (Version 1 Only)**: Small markers (e.g., tiny-dice, beads, tokens, or coins) used to track damage to a unit's armor.
-- **Combat Die (Version 2 Only)**: One common 6-sided die to resolve attacks and spells.
+- **Combat Die (Version 2 Only)**: One common 6-sided die (`1D6`) to resolve attacks and spells.
 
 
 ## **3\. Setup**
@@ -85,7 +85,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 ### **Hexagon Grid & Dice Monospace Visualization Diagram**
 
 - Each player's primary axis on the board extends from their starting area towards the central hexagon.
-- Moveable hex will be marked by `+` in diagrams below
+- Moveable hex will be marked by `~` in diagrams below
 - Target-able hex will be marked by `x` in diagrams below
 
 ```
@@ -124,15 +124,15 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
        .     .     .     .
     .     .     .     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
- .     .     +     +     .     .
-    .     +     +     +     .
- .     +     +     +     +     .
-    +     +     1     +     +
- .     +     +     +     +     .
-    .     +     +     +     .
- .     .     +     +     .     .
-    .     .     +     .     .
+    .     .     ~     .     .
+ .     .     ~     ~     .     .
+    .     ~     ~     ~     .
+ .     ~     ~     ~     ~     .
+    ~     ~     1     ~     ~
+ .     ~     ~     ~     ~     .
+    .     ~     ~     ~     .
+ .     .     ~     ~     .     .
+    .     .     ~     .     .
  .     .     .     .     .     .
     .     .     .     .     .
        .     .     .     .
@@ -158,11 +158,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
  .     .     .     .     .     .
     .     .     x     .     .
  .     .     x     x     .     .
-    .     x     +     x     .
- .     x     +     +     x     .
-    x     +     2     +     x
- .     x     +     +     x     .
-    .     x     +     x     .
+    .     x     ~     x     .
+ .     x     ~     ~     x     .
+    x     ~     2     ~     x
+ .     x     ~     ~     x     .
+    .     x     ~     x     .
  .     .     x     x     .     .
     .     .     x     .     .
  .     .     .     .     .     .
@@ -184,17 +184,17 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
           .     .     .
        .     .     .     .
     .     .     .     .     .
- .     .     +     +     .     .
-    .     +     ▪     +     .
+ .     .     ~     ~     .     .
+    .     ~     ▪     ~     .
  .     .     .     .     .     .
     .     ▪     ▪     ▪     .
- .     +     ▪     ▪     +     .
+ .     ~     ▪     ▪     ~     .
     .     .     3     .     .
- .     +     ▪     ▪     +     .
+ .     ~     ▪     ▪     ~     .
     .     ▪     ▪     ▪     .
  .     .     .     .     .     .
-    .     +     ▪     +     .
- .     .     +     +     .     .
+    .     ~     ▪     ~     .
+ .     .     ~     ~     .     .
     .     .     .     .     .
        .     .     .     .
           .     .     .
@@ -212,19 +212,19 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
              .     .
           .     .     .
        .     .     .     .
-    .     .     +     .     .
+    .     .     ~     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
- .     +     .     .     +     .
-    .     +     +     +     .
- .     .     +     +     .     .
+    .     .     ~     .     .
+ .     ~     .     .     ~     .
+    .     ~     ~     ~     .
+ .     .     ~     ~     .     .
     .     .     4     .     .
- .     .     +     +     .     .
-    .     +     +     +     .
- .     +     .     .     +     .
-    .     .     +     .     .
+ .     .     ~     ~     .     .
+    .     ~     ~     ~     .
+ .     ~     .     .     ~     .
+    .     .     ~     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
+    .     .     ~     .     .
        .     .     .     .
           .     .     .
              .     .
@@ -245,11 +245,11 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
  .     .     .     .     .     .
     .     .     .     .     .
  .     .     .     .     .     .
-    .     .     +     .     .
- .     .     +     +     .     .
-    .     +     5     +     .
- .     .     +     +     .     .
-    .     .     +     .     .
+    .     .     ~     .     .
+ .     .     ~     ~     .     .
+    .     ~     5     ~     .
+ .     .     ~     ~     .     .
+    .     .     ~     .     .
  .     .     .     .     .     .
     .     .     .     .     .
  .     .     .     .     .     .
@@ -283,15 +283,15 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
        .     .     .     .
     .     .     .     .     .
  .     .     .     .     .     .
-    .     .     .     .     .
- .     .     .     .     .     .
-    .     .     +     .     .
- .     .     +     +     .     .
-    .     +     6     +     .
- .     .     +     +     .     .
-    .     .     +     .     .
- .     .     .     .     .     .
-    .     .     .     .     .
+    .     .     x     .     .
+ .     .     x     x     .     .
+    .     x     ~     x     .
+ .     x     ~     ~     x     .
+    x     ~     6     ~     x
+ .     x     ~     ~     x     .
+    .     x     ~     x     .
+ .     .     x     x     .     .
+    .     .     x     .     .
  .     .     .     .     .     .
     .     .     .     .     .
        .     .     .     .
@@ -328,15 +328,15 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 ## **5\. Gameplay**
 
 Players can choose one of two Gameplay Versions before starting:
-- **Version 1 (Classic):** Strategic, deterministic combat with armor tracking and alternating activations.
-- **Version 2 (God of Fate):** Fast-paced, explosive turns with "Fate" rolls, probabilistic combat, and risk of fumbles.
+- **Version 1 (Decisive Dice):** Strategic, deterministic combat with armor tracking and alternating activations.
+- **Version 2 (Destiny Dice):** Fast-paced, explosive turns with "Fate" rolls, probabilistic combat, and risk of fumbles.
 
-### **Version 1: Classic (Alternating Activations)**
+### **Version 1: Decisive Dice (Alternating Activations)**
 The gameplay proceeds with an **Alternating Activations** turn structure. On a player's turn, they activate **one** unit to perform one action: **Move, Reroll, Guard, Ranged Attack, or Spell Cast**.
 
-### **Version 2: God of Fate (Fate's Call)**
+### **Version 2: Destiny Dice (Fate's Call)**
 Each turn is divided into two explosive phases:
-1. **Phase 1: Fate's Call.** The active player rolls 1d6. **All** friendly units on the board matching that face value immediately perform a free **Move** action.
+1. **Phase 1: Fate's Call.** The active player rolls `1D6`. **All** friendly units on the board matching that face value immediately perform a free **Move** action.
 2. **Phase 2: Tactical Command.** Choose exactly **one** friendly unit (even one that moved in Phase 1) to perform any standard action: **Move, Attack, Guard, or Spell**.
 
 ---
@@ -364,7 +364,7 @@ Each turn is divided into two explosive phases:
 
 - #### **Spellcast (Dice 6)**
   - **Version 1 (Choice):** Choose a spell (Shield, Swap, or Skirmish), then choose a friendly target within Range 2.
-  - **Version 2 (Channel First):** Roll the Spell Die (1d6) first to see what the gods grant:
+  - **Version 2 (Channel First):** Roll the Combat Die `1D6` first to see what the gods grant:
     - **1 or 4**: **Shield** (+2 Guard Charges)
     - **2 or 5**: **Swap** (Oracle and target unit exchange positions)
     - **3 or 6**: **Skirmish** (Grants Hit & Run buff)
@@ -378,7 +378,7 @@ Each turn is divided into two explosive phases:
 
 ## **6\. Combat**
 
-### **Version 1: Deterministic (Classic)**
+### **Version 1: Deterministic (Decisive Dice)**
 
 Effective Armor is calculated as: `Unit Armor + Terrain Bonus + Guard Charges - Armor Reduction`.
 
@@ -391,7 +391,7 @@ Effective Armor is calculated as: `Unit Armor + Terrain Bonus + Guard Charges - 
    - Melee attacker suffers **1 Armor Reduction**.
    - Defender suffers **1 Armor Reduction** (unless it has 2 Guard Charges).
 
-### **Version 2: Probabilistic (God of Fate)**
+### **Version 2: Probabilistic (Destiny Dice)**
 
 Effective Armor is calculated as: `Unit Armor + Terrain Bonus + Guard Charges`.
 
