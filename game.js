@@ -112,6 +112,9 @@ function alpineHexDiceTacticGame() { return {
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
+	preset: null,
+	spriteSets: [],
+	selectedSpriteSet: '', // DEPRECATED: use player.selectedSpriteSet instead
 	debug: {
 		quiet: false,
 		coordinate: new URLSearchParams(location.search).get('mode')?.includes('coordinate'),
@@ -272,6 +275,13 @@ function alpineHexDiceTacticGame() { return {
 	async init() {
 		CampaignManager.init();
 
+		try {
+			const response = await fetch('/assets/sets.json');
+			this.spriteSets = await response.json();
+		} catch (e) {
+			console.error("Failed to load sprite sets", e);
+		}
+
 		const campaignMapParam = new URLSearchParams(location.search).get('map');
 		let campaignData = null;
 		if (campaignMapParam) {
@@ -316,7 +326,20 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.players = [];
+		const usedSkins = new Set();
+
 		for (let i = 0; i < this.playerCount; i++) {
+			const isAI = (i > 0 && (opts?.isCampaign || this.isCampaign || campaignData?.config?.p2AI));
+			let selectedSkin = '';
+
+			if (isAI && this.spriteSets.length > 0) {
+				const availableSkins = this.spriteSets.filter(s => !usedSkins.has(s));
+				if (availableSkins.length > 0) {
+					selectedSkin = availableSkins[Math.floor(random() * availableSkins.length)];
+					usedSkins.add(selectedSkin);
+				}
+			}
+
 			this.players.push({
 				...PLAYER_CONFIG[i],
 				dice: [],
@@ -324,7 +347,8 @@ function alpineHexDiceTacticGame() { return {
 				baseHexId: null,
 				rerollsUsed: 0,
 				isEliminated: false,
-				isAI: (i > 0 && (opts?.isCampaign || this.isCampaign || campaignData?.config?.p2AI))
+				selectedSpriteSet: selectedSkin,
+				isAI: isAI
 			});
 		}
 
@@ -605,9 +629,19 @@ function alpineHexDiceTacticGame() { return {
 		const unit = this.getUnitOnHex(hex.id);
 		if (unit) {
 			const {value, playerId} = unit;
-			const spriteColor = PLAYER_CONFIG[playerId].sprite;
+			const player = this.players[playerId];
+			const spriteColor = player.sprite;
+			const unitUrl = player.selectedSpriteSet
+				? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
+				: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
+
+			if (player.selectedSpriteSet) {
+				const colors = ['#3867d6aa', '#eb3b5aaa', '#19ad62aa', '#a55eeaaa', '#333333aa', '#c8a00aaa'];
+				style.push(`background-color: ${colors[playerId]};`);
+			}
+
 			style.push(`background-size: auto 66%, cover;`,
-				`background-image: url("/assets/sprites/multi_players/d${value}_${spriteColor}.gif")
+				`background-image: url("${unitUrl}")
 					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
 						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")`
 						: ''
