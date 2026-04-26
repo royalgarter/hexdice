@@ -1,6 +1,7 @@
 {
   "scripts": {
     "start": "deno run --unstable-kv --allow-net --allow-read --allow-env server.ts",
+    "sprites:gen": "node -e \"require('fs').writeFileSync('./assets/sets.json',JSON.stringify(require('fs').readdirSync('./assets/sprites/sets/',{withFileTypes:true }).filter(d => d.isDirectory()).map(d => d.name),null,'\\t'));\"",
     "simulate": "deno run --allow-all simulate.ts",
     "tournament": "deno run --allow-all tournament.ts",
     "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",
