@@ -362,9 +362,9 @@
 				</div>
 				<div class="mt-2 flex flex-wrap justify-center gap-2" x-show="spriteSets.length > 0 && players.length > 0">
 					<template x-for="(player, idx) in players" :key="idx">
-						<div class="p-2 bg-white/50 text-sm" x-show="!player.isAI">
+						<div class="p-2 text-sm" x-show="!player.isAI">
 							<span class="font-bold" :class="player.logColor" x-text="player.color"></span>
-							<select x-model="player.selectedSpriteSet" class="w-20 text-xs bg-white cursor-pointer ml-1">
+							<select x-model="player.selectedSpriteSet" class="w-24 cursor-pointer ml-1">
 								<option value="">Default</option>
 								<template x-for="set in spriteSets" :key="set">
 									<option :value="set" x-text="set.replace(/_/g, ' ')"></option>
