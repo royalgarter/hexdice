@@ -1,112 +1,30 @@
 const CACHE_NAME = 'hexdice-cache-v3';
-const urlsToCache = [
+const CORE_ASSETS = [
 	'/',
 	'/index.html',
 	'/rules.html',
-	// Core JS files
 	'/game.js',
-	'/assets/alpine.min.js',
-	'/assets/litewind.css',
-	// Rules markdown files
-	'/rules/RULES.md',
-	'/rules/v1.0.md',
-	'/rules/v1.0.1.md',
-	'/rules/v1.1.md',
-	'/rules/v1.2.md',
-	'/rules/v1.3.md',
-	'/rules/v1.4.md',
-	// AI files
-	'/ai/ai.js',
-	'/ai/ai-heuristic.js',
-	'/ai/ai-minimax.js',
-	'/ai/ai-priority.js',
-	'/ai/ai-random.js',
-	'/ai/heuristic-profiles.js',
-	// Root assets
-	'/assets/board.png',
-	'/assets/hex.png',
-	// Icons
-	'/assets/images/android-chrome-192x192.png',
-	'/assets/images/android-chrome-512x512.png',
-	'/assets/images/apple-touch-icon.png',
-	'/assets/images/favicon-16x16.png',
-	'/assets/images/favicon-32x32.png',
-	'/assets/images/favicon.ico',
-	'/assets/images/favicon.png',
-	'/assets/images/site.webmanifest',
-	// iOS icons
-	'/assets/icons/ios/192.png',
-	'/assets/icons/ios/512.png',
-	// Sprite images for dice
-	'/assets/sprites/multi_players/d1_black.gif',
-	'/assets/sprites/multi_players/d1_blue.gif',
-	'/assets/sprites/multi_players/d1_brown.gif',
-	'/assets/sprites/multi_players/d1_fe8.webp',
-	'/assets/sprites/multi_players/d1_gold.gif',
-	'/assets/sprites/multi_players/d1_green.gif',
-	'/assets/sprites/multi_players/d1_purple.gif',
-	'/assets/sprites/multi_players/d1_red.gif',
-	'/assets/sprites/multi_players/d1_white.gif',
-	'/assets/sprites/multi_players/d1_yellow.gif',
-	'/assets/sprites/multi_players/d2_black.gif',
-	'/assets/sprites/multi_players/d2_blue.gif',
-	'/assets/sprites/multi_players/d2_brown.gif',
-	'/assets/sprites/multi_players/d2_fe8.webp',
-	'/assets/sprites/multi_players/d2_gold.gif',
-	'/assets/sprites/multi_players/d2_green.gif',
-	'/assets/sprites/multi_players/d2_purple.gif',
-	'/assets/sprites/multi_players/d2_red.gif',
-	'/assets/sprites/multi_players/d2_white.gif',
-	'/assets/sprites/multi_players/d2_yellow.gif',
-	'/assets/sprites/multi_players/d3_black.gif',
-	'/assets/sprites/multi_players/d3_blue.gif',
-	'/assets/sprites/multi_players/d3_brown.gif',
-	'/assets/sprites/multi_players/d3_fe8.webp',
-	'/assets/sprites/multi_players/d3_gold.gif',
-	'/assets/sprites/multi_players/d3_green.gif',
-	'/assets/sprites/multi_players/d3_purple.gif',
-	'/assets/sprites/multi_players/d3_red.gif',
-	'/assets/sprites/multi_players/d3_white.gif',
-	'/assets/sprites/multi_players/d3_yellow.gif',
-	'/assets/sprites/multi_players/d4_black.gif',
-	'/assets/sprites/multi_players/d4_blue.gif',
-	'/assets/sprites/multi_players/d4_brown.gif',
-	'/assets/sprites/multi_players/d4_fe8.webp',
-	'/assets/sprites/multi_players/d4_gold.gif',
-	'/assets/sprites/multi_players/d4_green.gif',
-	'/assets/sprites/multi_players/d4_purple.gif',
-	'/assets/sprites/multi_players/d4_red.gif',
-	'/assets/sprites/multi_players/d4_white.gif',
-	'/assets/sprites/multi_players/d4_yellow.gif',
-	'/assets/sprites/multi_players/d5_black.gif',
-	'/assets/sprites/multi_players/d5_blue.gif',
-	'/assets/sprites/multi_players/d5_brown.gif',
-	'/assets/sprites/multi_players/d5_fe8.webp',
-	'/assets/sprites/multi_players/d5_gold.gif',
-	'/assets/sprites/multi_players/d5_green.gif',
-	'/assets/sprites/multi_players/d5_purple.gif',
-	'/assets/sprites/multi_players/d5_red.gif',
-	'/assets/sprites/multi_players/d5_white.gif',
-	'/assets/sprites/multi_players/d5_yellow.gif',
-	'/assets/sprites/multi_players/d6_black.gif',
-	'/assets/sprites/multi_players/d6_blue.gif',
-	'/assets/sprites/multi_players/d6_brown.gif',
-	'/assets/sprites/multi_players/d6_fe8.webp',
-	'/assets/sprites/multi_players/d6_gold.gif',
-	'/assets/sprites/multi_players/d6_green.gif',
-	'/assets/sprites/multi_players/d6_purple.gif',
-	'/assets/sprites/multi_players/d6_red.gif',
-	'/assets/sprites/multi_players/d6_white.gif',
-	'/assets/sprites/multi_players/d6_yellow.gif',
+	'/assets/assets-manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
 	console.log('Service Worker installing...');
 	event.waitUntil(
 		caches.open(CACHE_NAME)
-			.then((cache) => {
+			.then(async (cache) => {
 				console.log('Opened cache');
-				return cache.addAll(urlsToCache);
+				// First cache core assets
+				await cache.addAll(CORE_ASSETS);
+				
+				// Then try to fetch and cache all other assets from manifest
+				try {
+					const response = await fetch('/assets/assets-manifest.json');
+					const urlsToCache = await response.json();
+					console.log(`Caching ${urlsToCache.length} assets from manifest`);
+					return cache.addAll(urlsToCache);
+				} catch (error) {
+					console.error('Failed to load assets manifest:', error);
+				}
 			})
 			.then(() => {
 				console.log('Service Worker installed successfully');
