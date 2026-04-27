@@ -12,9 +12,9 @@
 
 *Hex Dice was born from a desire to meld the simplicity of everyday components with deep strategic possibility, creating a casual yet fiercely tactical experience where your dice are the very essence of your command, and life is adaptation on an ever-changing battlefield.*
 
-***Development**: [Source](https://github.com/royalgarter/hexdice)*
+***Development**: [Source](https://github.com/royalgarter/hexdice), [Printable transparent board](/assets/board.png)*
 
-**Author: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter)**
+**Authors: [Tung “Djinni” Pham Thanh](mailto:royalgarter@gmail.com) / [Github](https://github.com/royalgarter) et al.**
 
 </small>
 
@@ -26,14 +26,14 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 - **Version 1 (Decisive Dice):** Strategic, deterministic combat with armor tracking and alternating activations.
 - **Version 2 (Destiny Dice):** Fast-paced, explosive turns with "Fate" rolls, probabilistic combat, and risk of fumbles.
 
-## **2\. Components**
+## **2\. Standard Components**
 
-- 1 Hexagonal Map (**Dynamic Size**: R=5 for 2-3 players, R=6 for 4-6 players)
+- 1 Hexagonal Map (**Dynamic Size**: R=5 for 2-3 players, R=6+ for 4-6 players)
 - Standard 6-sided dice: Multiple sets of distinct colors are required, one color per player.
-  - For 2 Players: 12 dice each.
-  - For 3 Players: 8 dice each.
-  - For 4 Players: 6 dice each.
-  - For 6 Players: 6 dice each.
+  - For 2 Players: 12+ dice each.
+  - For 3 Players: 12+ dice each.
+  - For 4 Players: 8+ dice each.
+  - For 6 Players: 6+ dice each.
 - **Armor Tokens (Version 1 Only)**: Small markers (e.g., tiny-dice, beads, tokens, or coins) used to track damage to a unit's armor.
 - **Combat Die (Version 2 Only)**: One common 6-sided die (`1D6`) to resolve attacks and spells.
 
@@ -64,7 +64,7 @@ Its face value (1-6) determines each dice unit's capabilities according to the t
 ![Units](/assets/infographics/hexdice_units.png)
 
 |  Dice |    Unit    | Armor | Attack| Range | Distance | Movement | Notes |
-| :---: |    :---:   | :---: | :---: | :---: |   :---:  |   :---:  | :---: |
+| :---: |   :---:    | :---: | :---: | :---: |   :---:  |   :---:  | :---: |
 |   1   | **Fencer** |   2   |   2   |   0   |     2    |    `*`   | Balanced All-rounder (BFS 2-step). |
 |   2   | **Archer** |   1   |   2   |   2   |     1    |    `*`   | BFS 1-step. Ranged (LoS req). Range 2+ (requires Skirmish) has -1 Atk power. |
 |   3   | **Hussar** |   0   |   3   |   0   |     3    |    `L`   | Fast Striker (L-shape jump). |
@@ -399,7 +399,7 @@ Effective Armor is calculated as: `Unit Armor + Terrain Bonus + Guard Charges`.
 2. **The Clash**:
    - If `Total ATK > Defender's Effective Armor`: Defender is destroyed.
    - If `Total ATK <= Defender's Effective Armor`: Attack is deflected.
-3. **The Fumble**: If the attack is deflected AND the Combat Die roll was a **'1'**, the **Attacker is destroyed**!
+3. **The Fumble**: If the attack is deflected AND the Combat Die roll was a **`1`**, the **Attacker is destroyed**!
 
 
 ## **7\. Winning the Game**
@@ -444,11 +444,11 @@ Each hex on the map has a terrain type that affects movement and combat. By defa
 		padding: 1rem 2rem;
 		text-decoration: none;
 		text-transform: uppercase;
-		font-size: 2rem;
+		font-size: 1.5rem;
 		font-weight: bold;
 		border-radius: 0.3rem;
 		display: inline-block;
-	">🎲🔥 Start New Game 🛡⚔</a>
+	">🎲 Start New Game ⚔</a>
 </div>
 
 ## **9\. Development References**
