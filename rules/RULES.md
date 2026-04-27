@@ -40,6 +40,8 @@ Hex Dice is a tactical board game where players command armies of dice, using th
 
 ## **3\. Setup**
 
+Players should consense on the rule version and any modifiers that fit the theme of the playground (e.g., combat version, or enabling features like Reroll, Merge, and Terrain). The rulebook serves as a standard guideline rather than a strict requirement.
+
 1. **Place the Hexagonal Map** in the center of the playground.
 2. **Each player takes the appropriate number of dice** for the player count (in section 2.) and chooses a distinct color.
 3. **Determine Your Army:**

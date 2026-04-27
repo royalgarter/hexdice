@@ -148,6 +148,7 @@ In `ui.js`, you would:
 ## Contributing
 
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+During the development process, any dot commit message `.` means the the commit should be a quick/minor fix/modify for the last meaningful commit message.
 
 ## License
 
