@@ -635,16 +635,17 @@ function alpineHexDiceTacticGame() { return {
 				? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
 				: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
 
-			if (player.selectedSpriteSet) {
-				const colors = ['#3867d6aa', '#eb3b5aaa', '#19ad62aa', '#a55eeaaa', '#333333aa', '#c8a00aaa'];
-				style.push(`background-color: ${colors[playerId]};`);
-			}
+			// if (player.selectedSpriteSet) {
+			// 	const colors = ['#3867d6aa', '#eb3b5aaa', '#19ad62aa', '#a55eeaaa', '#333333aa', '#c8a00aaa'];
+			// 	style.push(`background-color: ${colors[playerId]};`);
+			// }
 
 			style.push(`background-size: auto 66%, cover;`,
 				`background-image: url("${unitUrl}")
 					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
 						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")`
-						: ''
+						: ``
+						// : `, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");`
 					};`
 			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {

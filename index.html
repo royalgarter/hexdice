@@ -21,12 +21,54 @@
 	<link rel="manifest" href="/assets/manifest.json">
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
 	<style>
-		.hexagon {
+		.hex-grid-container {
+			/*background-image: url(/assets/ro_maps/alberta.gif);*/
+			/*background-position: center;*/
+			/*background-size: 120%;*/
+		}
+		.hexagon { /* Solid  */
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
-			scale: 101% 102%;
+			/*scale: 101% 102%;*/
 			background-repeat: no-repeat;
 			background-position: center;
-			background-color: #896648;
+			background-color: #896648ee;
+		}
+		.deprecated-lowperf-hexagon {
+			--border-width: 5%;   /* Control your border thickness here (can be px, rem, or %) */
+			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); /* Explicit 6-point hexagon (visually identical to your clipped 4-point one) */
+			background-color: #33333366;   /* Control opacity */
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+		.deprecated-lowperf-hexagon::before {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-color: #666666;
+			pointer-events: none; /* Allows clicking through the border */
+			/*The Magic: Draws a full box, then cuts out the inner hexagon shape. The outer box is drawn clockwise, the inner hole is drawn counter-clockwise.*/
+			clip-path: polygon(
+				/* Outer bounding box */
+				0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+				/* Inner hexagon hole */
+				calc(25% + var(--border-width) / 2) var(--border-width),              /* Top-Left */
+				var(--border-width) 50%,                                              /* Left */
+				calc(25% + var(--border-width) / 2) calc(100% - var(--border-width)), /* Bottom-Left */
+				calc(75% - var(--border-width) / 2) calc(100% - var(--border-width)), /* Bottom-Right */
+				calc(100% - var(--border-width)) 50%,                                 /* Right */
+				calc(75% - var(--border-width) / 2) var(--border-width),              /* Top-Right */
+				calc(25% + var(--border-width) / 2) var(--border-width)               /* Close Top-Left */
+			);
+		}
+		.next-hexagon {
+			/* 1. Clip the element to the exact hexagon shape */
+			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+			/* 2. Draw the border and transparent center using an inline SVG */
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+			/* 3. Ensure the background stretches to fit the element perfectly */
+			background-size: 100% 100%;
+			background-repeat: no-repeat;
+			background-position: center;
 		}
 		.bg-wood {
 			background-color: #c3a471aa;
@@ -360,14 +402,15 @@
 					<a href="?players=4" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">4</a>
 					<a href="?players=6" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">6</a>
 				</div>
-				<div class="mt-2 flex flex-wrap justify-center gap-2" x-show="spriteSets.length > 0 && players.length > 0">
+				<div class="mt-2 flex flex-wrap justify-center gap-4" x-show="spriteSets.length > 0 && players.length > 0">
 					<template x-for="(player, idx) in players" :key="idx">
-						<div class="p-2 text-sm" x-show="!player.isAI">
+						<div class="py-2 text-sm" x-show="!player.isAI">
 							<span class="font-bold" :class="player.logColor" x-text="player.color"></span>
-							<select x-model="player.selectedSpriteSet" class="w-24 cursor-pointer ml-1">
-								<option value="">Default</option>
+							<select x-model="player.selectedSpriteSet" class="w-24 cursor-pointer">
+								<option value="" class="text-xs uppercase">Default</option>
+								<option :value="spriteSets.random()" class="text-xs uppercase">Random</option>
 								<template x-for="set in spriteSets" :key="set">
-									<option :value="set" x-text="set.replace(/_/g, ' ')"></option>
+									<option :value="set" class="text-xs" x-text="set.replace(/_/g, ' ')"></option>
 								</template>
 							</select>
 						</div>
