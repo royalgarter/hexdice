@@ -170,6 +170,18 @@ function stubBrowserAPIs(playerCount: number = 2) {
 		try { fn(); } catch(e) { /* ignore */ }
 	};
 
+	// Stub fetch for assets
+	(globalThis as any).fetch = (url: string) => {
+		if (url.includes('sets.json')) {
+			return Promise.resolve({
+				json: () => Promise.resolve([])
+			});
+		}
+		return Promise.resolve({
+			json: () => Promise.resolve({})
+		});
+	};
+
 	return { location: locationStub, document: documentStub };
 }
 
@@ -187,21 +199,23 @@ function createSimulationGame(logger: SimulationLogger, aiType: string, engine: 
 
 // Load all game and AI code
 async function loadGameEngine(playerCount: number = 2): Promise<any> {
-	const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
-	
-	let gameCode = await Deno.readTextFile("./game.js");
+    const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
+
+    let gameCode = await Deno.readTextFile("./game.js");
     const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
     const aiRandomCode = await Deno.readTextFile("./ai/ai-random.js");
     const aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
+    const aiHeuristicProfiles = await Deno.readTextFile("./ai/heuristic-profiles.js");
     const aiMinimaxCode = await Deno.readTextFile("./ai/ai-minimax.js");
     const aiPriorityCode = await Deno.readTextFile("./ai/ai-priority.js");
-    
+    const campaignManagerCode = await Deno.readTextFile("./campaign/campaign-manager.js");
+
     // Replace const random with var for override capability
     gameCode = gameCode.replace(
         'const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}',
         'var random = () => Math.random()'
     );
-    
+
     // Combine all code with seeded random
     const fullCode = `
         // Seeded random for reproducibility
@@ -210,14 +224,16 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
             _seed = (_seed * 9301 + 49297) % 233280;
             return _seed / 233280;
         };
-        
+
+        ${campaignManagerCode}
         ${gameCode}
         ${aiCoreCode}
         ${aiRandomCode}
+        ${aiHeuristicProfiles}
         ${aiHeuristicCode}
         ${aiMinimaxCode}
         ${aiPriorityCode}
-        
+
         // Return exports object
         return {
             createGame: alpineHexDiceTacticGame,
@@ -229,8 +245,7 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
             applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
             boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
         };
-    `;
-    
+    `;    
 	// Evaluate and get exports using Function constructor
 	const createModule = new Function('location', 'document', fullCode);
 	
@@ -252,13 +267,13 @@ function calculateStateHash(game: any): string {
 }
 
 // Run a single game simulation
-function runGame(
+async function runGame(
     gameNumber: number,
     aiTypes: string[],
     minimaxDepth: number,
     verbose: boolean,
     engine: any
-): GameReplay {
+): Promise<GameReplay> {
     const logger = new SimulationLogger(verbose);
 
     // Create fresh game instance with stubs
@@ -363,7 +378,7 @@ function runGame(
     };
 
     // Initialize game and run setup
-    game.init();
+    await game.init();
     game.handleSetupPhase();
     
     // NOW set up AI players
@@ -507,11 +522,10 @@ async function runSimulation() {
     // Run games
     for (let i = 1; i <= numGames; i++) {
         console.log(`\n━━━ Game ${i}/${numGames} ━━━`);
-        
+
         try {
-            const gameResult = runGame(i, aiTypes, minimaxDepth, verbose, engine);
-            replayData.games.push(gameResult);
-            
+            const gameResult = await runGame(i, aiTypes, minimaxDepth, verbose, engine);
+            replayData.games.push(gameResult);            
             // Update summary
             if (gameResult.winner >= 0 && gameResult.winner < playerCount) {
                 replayData.summary.wins[gameResult.winner]++;

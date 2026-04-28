@@ -208,17 +208,19 @@ interface ReplayData {
     metadata: {
         date: string;
         games: number;
-        aiTypes: [string, string];
+        aiTypes: string[];
         minimaxDepth: number;
         version: string;
+        playerCount?: number;
     };
     games: GameReplay[];
     summary: {
-        p1Wins: number;
-        p2Wins: number;
+        wins: number[];
         draws: number;
         totalTurns: number;
         avgTurnsPerGame: number;
+        p1Wins?: number; // For backward compatibility
+        p2Wins?: number; // For backward compatibility
     };
 }
 
@@ -404,12 +406,17 @@ class ReplayViewer {
         console.log("╚════════════════════════════════════════╝");
         console.log(`Date: ${this.data.metadata.date}`);
         console.log(`Total Games: ${this.data.metadata.games}`);
-        console.log(`AI Types: P1=${this.data.metadata.aiTypes[0]} vs P2=${this.data.metadata.aiTypes[1]}`);
+        
+        const aiList = this.data.metadata.aiTypes.map((t, i) => `P${i+1}=${t}`).join(", ");
+        console.log(`AI Types: ${aiList}`);
         console.log(`Minimax Depth: ${this.data.metadata.minimaxDepth}`);
         console.log("");
         console.log("Results:");
-        console.log(`  P1 Wins: ${this.data.summary.p1Wins} (${(this.data.summary.p1Wins / this.data.metadata.games * 100).toFixed(1)}%)`);
-        console.log(`  P2 Wins: ${this.data.summary.p2Wins} (${(this.data.summary.p2Wins / this.data.metadata.games * 100).toFixed(1)}%)`);
+        
+        const wins = this.data.summary.wins || [this.data.summary.p1Wins || 0, this.data.summary.p2Wins || 0];
+        wins.forEach((w, i) => {
+            console.log(`  P${i+1} Wins: ${w} (${(w / this.data.metadata.games * 100).toFixed(1)}%)`);
+        });
         console.log(`  Draws: ${this.data.summary.draws} (${(this.data.summary.draws / this.data.metadata.games * 100).toFixed(1)}%)`);
         console.log("");
         console.log(`Avg Turns/Game: ${this.data.summary.avgTurnsPerGame.toFixed(1)}`);
@@ -418,8 +425,8 @@ class ReplayViewer {
         // Game by game breakdown
         console.log("\nGame Results:");
         this.data.games.forEach(g => {
-            const winner = g.winner === 0 ? "P1" : g.winner === 1 ? "P2" : "Draw";
-            console.log(`  Game ${g.gameNumber}: ${winner} (${g.totalTurns} turns)`);
+            const winnerLabel = g.winner === -1 ? "Draw" : `P${g.winner + 1}`;
+            console.log(`  Game ${g.gameNumber}: ${winnerLabel} (${g.totalTurns} turns)`);
         });
     }
 
@@ -511,7 +518,9 @@ class ReplayViewer {
         console.log("║     Hex Dice Replay Viewer             ║");
         console.log("╚════════════════════════════════════════╝");
         console.log(`Loaded: ${this.data.metadata.games} games`);
-        console.log(`P1 (${this.data.metadata.aiTypes[0]}) vs P2 (${this.data.metadata.aiTypes[1]})`);
+        
+        const aiList = this.data.metadata.aiTypes.map((t, i) => `P${i+1} (${t})`).join(" vs ");
+        console.log(aiList);
         console.log("\nType 'help' for commands (keys: n, p, b, s, q, ...)\n");
 
         // Go to specified game/turn if provided
