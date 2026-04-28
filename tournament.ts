@@ -41,6 +41,38 @@ interface TournamentResults {
     };
 }
 
+interface GameReplay {
+    gameNumber: number;
+    winner: number | -1;
+    winnerReason: string;
+    totalTurns: number;
+    moves: MoveRecord[];
+    metadata?: any;
+}
+
+interface MoveRecord {
+    turn: number;
+    player: number;
+    aiType: string;
+    actionType: string;
+    logMessage: string;
+    stateHash: string;
+}
+
+// Calculate state hash for replay
+function calculateStateHash(game: any): string {
+    const playersDice = game.players.map((p: any, i: number) => 
+        `p${i}Dice:` + p.dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|")
+    ).join(";");
+    
+    const state = {
+        playersDice,
+        turn: game.currentPlayerIndex,
+        phase: game.phase,
+    };
+    return btoa(JSON.stringify(state));
+}
+
 // Global state for progress tracking (only used in main process)
 let totalGamesScheduled = 0;
 let totalGamesCompleted = 0;
@@ -78,6 +110,18 @@ function stubBrowserAPIs(playerCount: number = 2) {
         clear: () => null,
     };
     (globalThis as any).localStorage = localStorageStub;
+
+    // Stub fetch for assets
+    (globalThis as any).fetch = (url: string) => {
+        if (url.includes('sets.json')) {
+            return Promise.resolve({
+                json: () => Promise.resolve([])
+            });
+        }
+        return Promise.resolve({
+            json: () => Promise.resolve({})
+        });
+    };
 
     return { location: locationStub, document: documentStub };
 }
@@ -186,7 +230,7 @@ async function runHeuristicGame(
     quiet: boolean,
     engine: any,
     seed?: number
-): Promise<{ winner: number | -1; winnerReason: string; totalTurns: number }> {
+): Promise<GameReplay> {
     const logger = new SimulationLogger(verbose, quiet);
 
     if (seed !== undefined && engine.setRandomSeed) {
@@ -282,14 +326,28 @@ async function runHeuristicGame(
         };
     };
 
+    const moves: MoveRecord[] = [];
     let turnCount = 0;
     const maxTurns = 500;
     while (game.phase !== "GAME_OVER" && turnCount < maxTurns) {
+        const currentPlayerIndex = game.currentPlayerIndex;
+        const stateHash = calculateStateHash(game);
+
         if (game.phase === "PLAYER_TURN" && game.players[game.currentPlayerIndex].isAI) {
             game.performAITurn();
         } else {
             game.endTurn();
         }
+
+        moves.push({
+            turn: turnCount,
+            player: currentPlayerIndex,
+            aiType: profiles[currentPlayerIndex],
+            actionType: "ai",
+            logMessage: `Turn ${turnCount}: P${currentPlayerIndex + 1} (${profiles[currentPlayerIndex]}) move`,
+            stateHash: stateHash
+        });
+
         turnCount++;
     }
 
@@ -306,18 +364,32 @@ async function runHeuristicGame(
         }
     }
     logger.log(`Game ${gameNumber} ended: ${winnerReason}`, "result");
-    return { winner, winnerReason, totalTurns: turnCount };
+    
+    return { 
+        gameNumber, 
+        winner, 
+        winnerReason, 
+        totalTurns: turnCount,
+        moves,
+        metadata: {
+            profiles,
+            date: new Date().toISOString()
+        }
+    };
 }
 
 // Run a matchup between N profiles (multiple games)
 async function runMatchup(
     profiles: string[], numGames: number,
-    verbose: boolean, quiet: boolean, engine: any, pool?: GameWorkerPool
+    verbose: boolean, quiet: boolean, engine: any, outputDir: string, pool?: GameWorkerPool
 ): Promise<MatchupResult> {
     if (!quiet && !pool) console.log(`\n━━━ ${profiles.join(' vs ')} ━━━`);
     let wins = new Array(profiles.length).fill(0);
     let draws = 0, totalTurns = 0;
     const gamePromises: Promise<any>[] = [];
+
+    const matchupDir = `${outputDir}/matchup_${profiles.join('_v_')}`;
+    await ensureDir(matchupDir);
 
     for (let i = 1; i <= numGames; i++) {
         const seed = Date.now() + Math.floor(Math.random() * 1000000) + (i * 1000);
@@ -327,13 +399,18 @@ async function runMatchup(
         } else {
             p = runHeuristicGame(i, profiles, verbose, quiet, engine, seed);
         }
-        p.then((result) => {
+        p.then(async (result: GameReplay) => {
             if (result.winner >= 0 && result.winner < profiles.length) {
                 wins[result.winner]++;
             } else {
                 draws++;
             }
             totalTurns += result.totalTurns;
+            
+            // Save individual game replay
+            const replayFile = `${matchupDir}/game_${i}_replay.json`;
+            await Deno.writeTextFile(replayFile, JSON.stringify(result, null, 2));
+
             totalGamesCompleted++;
             updateGlobalProgress(quiet, verbose);
         });
@@ -459,7 +536,7 @@ async function runTournament(args: any) {
 
     const matchupPromises: Promise<MatchupResult>[] = [];
     for (const combo of profileCombinations) {
-        matchupPromises.push(runMatchup(combo, numGames, verbose, quiet, engine, pool));
+        matchupPromises.push(runMatchup(combo, numGames, verbose, quiet, engine, outputDir, pool));
     }
 
     if (pool && !quiet) updateGlobalProgress(quiet, verbose);
