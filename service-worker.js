@@ -21,7 +21,8 @@ self.addEventListener('install', (event) => {
 					const response = await fetch('/assets/assets-manifest.json');
 					const urlsToCache = await response.json();
 					console.log(`Caching ${urlsToCache.length} assets from manifest`);
-					return cache.addAll(urlsToCache);
+					cache.addAll(urlsToCache).then(x => console.log(`Cached ${urlsToCache.length} assets from manifest`));
+					return;
 				} catch (error) {
 					console.error('Failed to load assets manifest:', error);
 				}
