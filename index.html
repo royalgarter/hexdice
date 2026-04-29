@@ -26,21 +26,21 @@
 			/*background-position: center;*/
 			/*background-size: 120%;*/
 		}
-		.hexagon { /* Solid  */
+		.v0-hexagon { /* Solid  */
 			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
 			/*scale: 101% 102%;*/
 			background-repeat: no-repeat;
 			background-position: center;
 			background-color: #896648ee;
 		}
-		.deprecated-lowperf-hexagon {
+		.hexagon {
 			--border-width: 5%;   /* Control your border thickness here (can be px, rem, or %) */
 			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); /* Explicit 6-point hexagon (visually identical to your clipped 4-point one) */
 			background-color: #33333366;   /* Control opacity */
 			background-repeat: no-repeat;
 			background-position: center;
 		}
-		.deprecated-lowperf-hexagon::before {
+		.hexagon::before {
 			content: "";
 			position: absolute;
 			inset: 0;
@@ -60,7 +60,7 @@
 				calc(25% + var(--border-width) / 2) var(--border-width)               /* Close Top-Left */
 			);
 		}
-		.next-hexagon {
+		.v2-hexagon {
 			/* 1. Clip the element to the exact hexagon shape */
 			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
 			/* 2. Draw the border and transparent center using an inline SVG */
@@ -141,35 +141,31 @@
 		}
 		/* Terrain Colors */
 		.bg-hexplain {
-			/*background-color: #896648;
-			background-image: url('/assets/sprites/terrain/plain_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;*/
+			background-color: #89664811;
 		}
 		.bg-hexforest {
-			background-color: #896648;
+			background-color: #228b2266;
 			background-image: url('/assets/sprites/terrain/forest_01.png');
 			background-size: cover;
 			background-repeat: no-repeat;
 			background-position: center;
 		}
 		.bg-hexlake {
-			background-color: #896648;
+			background-color: #4169e166;
 			background-image: url('/assets/sprites/terrain/lake_01.png');
 			background-size: cover;
 			background-repeat: no-repeat;
 			background-position: center;
 		}
 		.bg-hextower {
-			background-color: #896648;
+			background-color: #80008066;
 			background-image: url('/assets/sprites/terrain/tower_01.png');
 			background-size: cover;
 			background-repeat: no-repeat;
 			background-position: center;
 		}
 		.bg-hexmountain {
-			background-color: #896648;
+			background-color: #8b451366;
 			background-image: url('/assets/sprites/terrain/mountain_01.png');
 			background-size: 120%;
 			background-repeat: no-repeat;
@@ -308,6 +304,8 @@
 
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-center justify-center w-full overflow-auto">
+		<div x-show="isCampaign" class="hex-grid-campaign-background fixed" :style="hexGrid.style + ';scale: 1.05;filter: contrast(0.6) opacity(0.4);'" >
+		</div>
 		<!-- Hex Grid -->
 		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">

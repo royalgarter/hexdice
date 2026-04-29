@@ -1,5 +1,6 @@
 {
   "name": "First Journey",
+  "rmi": "prt_fild05.gif",
   "radius": 5,
   "deploymentLimit": 3,
   "player1Dice": [

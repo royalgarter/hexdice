@@ -75,6 +75,14 @@ const TERRAIN_CONFIG = {
 	'MOUNTAIN': { color: 'Mountain', bg: 'bg-hexmountain', logColor: 'text-gray-700' },
 };
 
+const RMI_TERRAIN_PALETTE = {
+	'PLAIN':    [80, 0.6, 0.7], // Grass Green Hue (approx 80-120)
+	'FOREST':   [120, 0.7, 0.4], // Darker Green Hue
+	'LAKE':     [220, 0.7, 0.8], // Blue Hue
+	'TOWER':    [280, 0.6, 0.6], // Purple Hue
+	'MOUNTAIN': [30, 0.5, 0.5],  // Brown/Orange Hue
+};
+
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
 const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
 
@@ -124,10 +132,15 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	// --- SETUP TERRAIN METHODS ---
-	setupTerrain(force) {
+	async setupTerrain(force) {
 		const radius = this.getRadius();
 
 		this.addLog("Setting up terrain");
+
+		if (this.campaignData?.rmi) {
+			await this.generateTerrainFromRMI(this.campaignData.rmi);
+			return;
+		}
 
 		// Implement Roulette (sum-of-6-dice and clockwise placement)
 		// User chose "Auto-Placement (Simple)" for roulette
@@ -137,6 +150,141 @@ function alpineHexDiceTacticGame() { return {
 		if (radius === 8) {
 			this.generateR8Terrain();
 		}
+	},
+
+	async generateTerrainFromRMI(rmiName) {
+		const url = `/assets/ro_maps/${rmiName}`;
+		this.addLog(`Generating terrain from RMI: ${rmiName}...`);
+
+		try {
+			const img = new Image();
+			img.src = url;
+			await img.decode();
+
+			const canvas = document.createElement('canvas');
+			canvas.width = img.width;
+			canvas.height = img.height;
+			const ctx = canvas.getContext('2d');
+			ctx.drawImage(img, 0, 0);
+			const imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+			// Map hexes to image coordinates and sample color
+			// background-size: cover logic
+			const containerWidth = this.hexGrid.gridWidth;
+			const containerHeight = this.hexGrid.gridHeight;
+			const containerRatio = containerWidth / containerHeight;
+			const imgRatio = img.width / img.height;
+
+			let scale, offsetX = 0, offsetY = 0;
+			if (containerRatio > imgRatio) {
+				// Container is wider than image (image is cropped vertically)
+				scale = containerWidth / img.width;
+				offsetY = (img.height * scale - containerHeight) / 2;
+			} else {
+				// Container is taller than image (image is cropped horizontally)
+				scale = containerHeight / img.height;
+				offsetX = (img.width * scale - containerWidth) / 2;
+			}
+
+			this.hexes.forEach(hex => {
+				// Convert container-space coordinates (hex.trailX/Y) to image-space coordinates
+				const imgX = (hex.trailX + offsetX) / scale;
+				const imgY = (hex.trailY + offsetY) / scale;
+
+				const px = Math.floor(Math.max(0, Math.min(img.width - 1, imgX)));
+				const py = Math.floor(Math.max(0, Math.min(img.height - 1, imgY)));
+
+				const color = this.sampleMeanColor(imageData, px, py, 5);
+				hex.terrainType = this.classifyTerrain(color);
+			});
+
+			this.addLog("RMI Terrain Generation complete.");
+
+			// Update background image of container
+			const container = document.querySelector('.hex-grid-campaign-background');
+			if (container) {
+				container.style.backgroundImage = `url(${url})`;
+				container.style.backgroundSize = 'cover';
+				container.style.backgroundPosition = 'center';
+			}
+
+		} catch (e) {
+			this.addLog(`Failed to load RMI: ${e.message}`);
+			console.error(e);
+		}
+	},
+
+	sampleMeanColor(imageData, x, y, size) {
+		let r = 0, g = 0, b = 0, count = 0;
+		const half = Math.floor(size / 2);
+
+		for (let sy = y - half; sy <= y + half; sy++) {
+			for (let sx = x - half; sx <= x + half; sx++) {
+				if (sx >= 0 && sx < imageData.width && sy >= 0 && sy < imageData.height) {
+					const idx = (sy * imageData.width + sx) * 4;
+					r += imageData.data[idx];
+					g += imageData.data[idx + 1];
+					b += imageData.data[idx + 2];
+					count++;
+				}
+			}
+		}
+
+		return [r / count, g / count, b / count];
+	},
+
+	rgbToHsv(r, g, b) {
+		r /= 255; g /= 255; b /= 255;
+		const max = Math.max(r, g, b), min = Math.min(r, g, b);
+		let h, s, v = max;
+		const d = max - min;
+		s = max === 0 ? 0 : d / max;
+
+		if (max === min) {
+			h = 0; // achromatic
+		} else {
+			switch (max) {
+				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+				case g: h = (b - r) / d + 2; break;
+				case b: h = (r - g) / d + 4; break;
+			}
+			h /= 6;
+		}
+		return [h * 360, s, v];
+	},
+
+	classifyTerrain(rgb) {
+		const [h, s, v] = this.rgbToHsv(rgb[0], rgb[1], rgb[2]);
+
+		// Desaturated or very dark colors default to PLAIN or MOUNTAIN
+		if (s < 0.15) return 'PLAIN';
+		if (v < 0.15) return 'MOUNTAIN';
+
+		let minDistance = Infinity;
+		let closestTerrain = 'PLAIN';
+
+		for (const [terrain, refHsv] of Object.entries(RMI_TERRAIN_PALETTE)) {
+			// Hue distance (circular)
+			let hDiff = Math.abs(h - refHsv[0]);
+			if (hDiff > 180) hDiff = 360 - hDiff;
+
+			// Distance is primarily Hue difference
+			const dist = hDiff;
+
+			if (dist < minDistance) {
+				minDistance = dist;
+				closestTerrain = terrain;
+			}
+		}
+
+		// Bias towards PLAIN: If the distance is too large or we're in a "greenish" range, prefer PLAIN
+		if (minDistance > 50) return 'PLAIN';
+
+		// Refined check for PLAIN vs FOREST (both are green)
+		// Forest is typically more saturated and darker
+		if (closestTerrain === 'FOREST' && v > 0.6) return 'PLAIN';
+
+		return closestTerrain;
 	},
 
 	generateRouletteTerrain() {
@@ -304,12 +452,12 @@ function alpineHexDiceTacticGame() { return {
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
-		this.resetGame({
+		await this.resetGame({
 			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign') == 'true'),
 			campaignData: campaignData
 		});
 	},
-	resetGame(opts) {
+	async resetGame(opts) {
 		const campaignData = opts?.campaignData;
 		this.campaignData = campaignData;
 		this.isCampaign = CampaignManager.state.isCampaignActive || !!campaignData;
@@ -410,6 +558,10 @@ function alpineHexDiceTacticGame() { return {
 			h.unitId = null;
 			h.terrainType = 'PLAIN';
 		});
+
+		if (this.isCampaign && campaignData?.rmi) {
+			await this.setupTerrain();
+		}
 
 		// Apply Terrain from Campaign Data
 		if (campaignData?.terrain) {
@@ -643,14 +795,14 @@ function alpineHexDiceTacticGame() { return {
 			style.push(`background-size: auto 66%, cover;`,
 				`background-image: url("${unitUrl}")
 					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
-						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png")`
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'transparent' : '01'}.png")`
 						: ``
 						// : `, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");`
 					};`
 			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
 			style.push(`background-size: 114%;`,
-				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_01.png");`
+				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'transparent' : '01'}.png");`
 			);
 		}
 		return style.join(' ');
