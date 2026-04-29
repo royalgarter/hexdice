@@ -78,7 +78,7 @@ const TERRAIN_CONFIG = {
 const RMI_TERRAIN_PALETTE = {
 	'PLAIN':    [80, 0.6, 0.7], // Grass Green Hue (approx 80-120)
 	'FOREST':   [120, 0.7, 0.4], // Darker Green Hue
-	'LAKE':     [220, 0.7, 0.8], // Blue Hue
+	'LAKE':     [235, 0.6, 0.6], // Blue Hue
 	'TOWER':    [280, 0.6, 0.6], // Purple Hue
 	'MOUNTAIN': [30, 0.5, 0.5],  // Brown/Orange Hue
 };
@@ -186,7 +186,20 @@ function alpineHexDiceTacticGame() { return {
 				offsetX = (img.width * scale - containerWidth) / 2;
 			}
 
+			this.determineBaseLocations(this.getRadius());
+			const baseHex = this.getHex(this.players[0].baseHexId);
+			const enemyHex = this.getHex(this.players[1].baseHexId);
+			let deploymentHexes = [baseHex, enemyHex];
+			this.getNeighbors(baseHex).forEach(neighbor => {
+				deploymentHexes.push(neighbor);
+			});
+
 			this.hexes.forEach(hex => {
+				if (deploymentHexes.find(x => x.id == hex.id)) {
+					hex.terrainType == 'PLAIN';
+					return;
+				}
+
 				// Convert container-space coordinates (hex.trailX/Y) to image-space coordinates
 				const imgX = (hex.trailX + offsetX) / scale;
 				const imgY = (hex.trailY + offsetY) / scale;
@@ -258,12 +271,12 @@ function alpineHexDiceTacticGame() { return {
 
 		// Desaturated or very dark colors default to PLAIN or MOUNTAIN
 		if (s < 0.15) return 'PLAIN';
-		if (v < 0.15) return 'MOUNTAIN';
+		if (v < 0.35) return 'MOUNTAIN';
 
 		let minDistance = Infinity;
 		let closestTerrain = 'PLAIN';
 
-		for (const [terrain, refHsv] of Object.entries(RMI_TERRAIN_PALETTE)) {
+		for (const [terrain, refHsv] of Object.entries(RMI_TERRAIN_PALETTE).filter(([k, v]) => k != 'MOUNTAIN')) {
 			// Hue distance (circular)
 			let hDiff = Math.abs(h - refHsv[0]);
 			if (hDiff > 180) hDiff = 360 - hDiff;
