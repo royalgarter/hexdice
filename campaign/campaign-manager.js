@@ -161,9 +161,32 @@ const CampaignManager = {
 	 * @returns {Promise<object>} The campaign level data.
 	 */
 	async fetchCampaignMap(filename) {
-		const path = filename.startsWith('/') ? filename : `/campaign/${filename}`;
+		// const path = filename.startsWith('/') ? filename : `/campaign/${filename}`;
+		// const response = await fetch(path);
+		// if (!response.ok) throw new Error(`Failed to load campaign map: ${filename}`);
+		// return await response.json();
+
+		const path = `/campaign/ro_level_rmi.json`;
 		const response = await fetch(path);
 		if (!response.ok) throw new Error(`Failed to load campaign map: ${filename}`);
-		return await response.json();
+
+		let maps = await response.json();
+		let levelNum = filename.match(/\d+/)?.[0];
+		let map = maps[levelNum - 1]
+		let enemyDiceCount = Math.ceil(levelNum / 10 + 2);
+		let enemyDice = Array.from({ length: enemyDiceCount }, () => Math.floor(Math.random() * 6) + 1);
+
+		return {
+			name: `Ragnarok Online Level ${levelNum} (${map})`,
+			rmi: `${map}.gif`,
+			radius: 5,
+			deploymentLimit: 3,
+			player1Dice: [1, 2, 3, 4, 5, 6],
+			enemyDice: enemyDice,
+			config: {
+				p2AI: true,
+				options: "rm"
+			}
+		}
 	}
 };
