@@ -1266,7 +1266,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
 		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
-		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy unit to transmute (Oracle and enemy unit will be removed).";
+		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy unit to transmute (Oracle sacrificed, enemy converted).";
 		if (this.actionMode === 'SKIRMISH_POST_MOVE') return "Skirmish success! Select an adjacent hex to move to (or stay put).";
 		return "";
 	},
@@ -1950,12 +1950,17 @@ function alpineHexDiceTacticGame() { return {
 
 		this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to transmute P${targetUnit.playerId+1} D${targetUnit.value}!`, state);
 
-		// Try to find a reserve die for the player
+		// Try to find a reserve die for the player (prefer unused, then dead)
 		const player = (state || this).players[oracleUnit.playerId];
-		const reserveDie = player.dice.find(d => !d.isDeployed && !d.isDeath);
+		let reserveDie = player.dice.find(d => !d.isDeployed && !d.isDeath);
+		
+		if (!reserveDie) {
+			reserveDie = player.dice.find(d => d.isDeath);
+		}
 
 		if (reserveDie) {
 			// Place reserve die on targetHex
+			reserveDie.isDeath = false;
 			reserveDie.isDeployed = true;
 			reserveDie.hexId = targetHexId;
 			targetHex.unit = reserveDie;
@@ -1977,9 +1982,9 @@ function alpineHexDiceTacticGame() { return {
 			reserveDie.isRerolled = true; // 0 Effective Armor until next turn
 			reserveDie.hasMovedOrAttackedThisTurn = true; // Cannot act this turn
 
-			this.addLog(`Transmutation complete! New P${oracleUnit.playerId+1} D${newRoll} (was D${oldVal}) created at [${targetHexId}].`, state);
+			this.addLog(`Transmutation complete! P${oracleUnit.playerId+1} sacrificed Oracle to convert enemy. New P${oracleUnit.playerId+1} D${newRoll} created at [${targetHexId}].`, state);
 		} else {
-			this.addLog(`Transmutation incomplete: No reserve dice available for P${oracleUnit.playerId+1}.`, state);
+			this.addLog(`Transmutation failed: No dice available for P${oracleUnit.playerId+1} to inhabit.`, state);
 		}
 
 		oracleUnit.hasMovedOrAttackedThisTurn = true;
@@ -2280,7 +2285,7 @@ function alpineHexDiceTacticGame() { return {
 			if (!neighborHex) return;
 
 			const targetUnit = this.getUnitOnHex(neighborHex.id, state);
-			if (targetUnit && targetUnit.playerId !== oracleUnit.playerId && targetUnit.value === 6) {
+			if (targetUnit && targetUnit.playerId !== oracleUnit.playerId) {
 				targets.push(neighborHex.id);
 			}
 		});
