@@ -516,7 +516,10 @@ function alpineHexDiceTacticGame() { return {
 		// Load Dice from Campaign Data OR Use Legendary Six
 		if (this.isCampaign) {
 			const player = this.players[0];
-			const diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
+			let diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
+			
+			// Filter out units that are currently locked out (eliminated in previous level)
+			diceToLoad = diceToLoad.filter(val => CampaignManager.isUnitAvailable(val));
 
 			diceToLoad.forEach((val, idx) => {
 				const die = {
@@ -3144,7 +3147,11 @@ function alpineHexDiceTacticGame() { return {
 			const deployedValues = this.players[0].dice
 				.filter(d => d.isDeployed && !d.isDeath)
 				.map(d => d.value);
-			CampaignManager.updateAfterBattle(deployedValues);
+			const eliminatedValues = this.players[0].dice
+				.filter(d => d.isDeployed && d.isDeath)
+				.map(d => d.value);
+
+			CampaignManager.updateAfterBattle(deployedValues, eliminatedValues);
 
 			if (winnerPlayerIndex === 0) {
 				CampaignManager.advanceLevel();

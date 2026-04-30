@@ -5,6 +5,7 @@
 const CampaignManager = {
 	state: {
 		unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Consecutive uses
+		recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Level when unit becomes available again
 		runes: { aegis: 2, pegasus: 1, forge: 1 },       // Inventory
 		currentLevel: 1,
 		isCampaignActive: new URLSearchParams(location.search).get('campaign') === 'true'
@@ -16,20 +17,25 @@ const CampaignManager = {
 	 * Initialize the campaign state by loading from localStorage.
 	 */
 	init() {
-		if (!this.state.isCampaignActive) return;
-
 		const savedState = localStorage.getItem(this.STORAGE_KEY);
 		if (savedState) {
 			try {
 				this.state = { ...this.state, ...JSON.parse(savedState) };
-				// Ensure isCampaignActive is always correctly derived from the URL
-				this.state.isCampaignActive = true;
+				// Ensure recoveryLevels exists for backward compatibility
+				if (!this.state.recoveryLevels) {
+					this.state.recoveryLevels = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+				}
 			} catch (e) {
 				console.error("Failed to parse campaign state:", e);
 			}
 		}
 
-		console.log("Campaign Mode Active:", this.state);
+		// Ensure isCampaignActive is correctly synced with URL
+		this.state.isCampaignActive = new URLSearchParams(location.search).get('campaign') === 'true';
+
+		if (this.state.isCampaignActive) {
+			console.log("Campaign Mode Active:", this.state);
+		}
 	},
 
 	/**
@@ -37,6 +43,17 @@ const CampaignManager = {
 	 */
 	save() {
 		localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+	},
+
+	/**
+	 * Check if a unit is currently available (not locked out due to elimination).
+	 * @param {number} unitValue - The face value of the die (1-6).
+	 * @returns {boolean} True if the unit is available.
+	 */
+	isUnitAvailable(unitValue) {
+		if (!this.state.isCampaignActive) return true;
+		const recoveryLevel = this.state.recoveryLevels[unitValue] || 0;
+		return this.state.currentLevel >= recoveryLevel;
 	},
 
 	/**
@@ -82,9 +99,10 @@ const CampaignManager = {
 
 	/**
 	 * Update usage tracking after a battle finishes.
-	 * @param {Array<number>} deployedUnitValues - The face values of units that were deployed.
+	 * @param {Array<number>} deployedUnitValues - The face values of units that were deployed and survived.
+	 * @param {Array<number>} eliminatedUnitValues - The face values of units that were eliminated.
 	 */
-	updateAfterBattle(deployedUnitValues) {
+	updateAfterBattle(deployedUnitValues, eliminatedUnitValues = []) {
 		if (!this.state.isCampaignActive) return;
 
 		// 1. Increment usage for deployed units
@@ -96,6 +114,13 @@ const CampaignManager = {
 				this.state.unitUsage[val] = 0; // Resting resets usage
 			}
 		}
+
+		// 3. Handle eliminated units (locked out for 1 level)
+		eliminatedUnitValues.forEach(val => {
+			// Unit recovers in 2 levels (skips the next level)
+			this.state.recoveryLevels[val] = this.state.currentLevel + 2;
+			this.state.unitUsage[val] = 0; // Reset usage when eliminated
+		});
 
 		this.save();
 	},
@@ -148,6 +173,7 @@ const CampaignManager = {
 	resetCampaign() {
 		this.state = {
 			unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+			recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			runes: { aegis: 2, pegasus: 1, forge: 1 },
 			currentLevel: 1,
 			isCampaignActive: true

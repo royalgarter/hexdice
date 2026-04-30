@@ -418,7 +418,7 @@
 				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">2 Players</button>
 				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: true}); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">AI Practice</button>
 				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white mb-2" @click="randomStart()">Random</button>
-				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=level1.json'" x-show="!isCampaign">Campaign</button>
+				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=' + CampaignManager.getCurrentMapName()" x-show="!isCampaign">Campaign</button>
 				<button class="cursor-pointer border mt-2 px-2 py-1 hover:bg-black hover:text-white" @click="startRomanceMode()">RotDK</button>
 				<div class="mt-2">
 					<a href="?players=2&preset=E_21" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">Epic 21</a>
