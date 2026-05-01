@@ -826,24 +826,25 @@ function alpineHexDiceTacticGame() { return {
 			const player = this.players[playerId];
 			const spriteColor = player.sprite;
 			
-			let unitUrl = unit.spriteUrl ||
+			player.sprites = player.sprites || [];
+			let unitUrl = player.sprites[value] ||
 					( player.selectedSpriteSet
 					? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
 					: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`
 				);
 
-			if (player.selectedSpriteSet.includes('mix') && !player.selectedSpriteMix && !unit.spriteUrl) {
+			if (player.selectedSpriteSet.includes('mix') && !player.selectedSpriteMix && !player.sprites[value]) {
 				fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json`)
 					.then(r => r.json())
 					.then(json => player.selectedSpriteMix = json)
 					.catch();
 			}
 
-			if (player.selectedSpriteMix && !unit.spriteUrl) {
+			if (player.selectedSpriteMix && !player.sprites[value]) {
 				const sprite = player.selectedSpriteMix.filter(x => x.includes(`${value}_`)).random();
 
 				if (sprite) {
-					unit.spriteUrl = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
+					player.sprites[value] = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
 					unitUrl = unit.spriteUrl;
 				}
 			}
