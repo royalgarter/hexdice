@@ -530,6 +530,7 @@ function alpineHexDiceTacticGame() { return {
 				baseHexId: null,
 				rerollsUsed: 0,
 				isEliminated: false,
+				selectedSpriteMix: null,
 				selectedSpriteSet: selectedSkin,
 				isAI: isAI
 			});
@@ -817,13 +818,35 @@ function alpineHexDiceTacticGame() { return {
 		let style = [];
 
 		const unit = this.getUnitOnHex(hex.id);
+		const isTerrain = TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN');
+		const fileTerrain = `${hex.terrainType.toLowerCase()}_${this.isCampaign ? '02_trans' : '01'}`;
+
 		if (unit) {
 			const {value, playerId} = unit;
 			const player = this.players[playerId];
 			const spriteColor = player.sprite;
-			const unitUrl = player.selectedSpriteSet
-				? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
-				: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
+			
+			let unitUrl = unit.spriteUrl ||
+					( player.selectedSpriteSet
+					? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
+					: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`
+				);
+
+			if (player.selectedSpriteSet.includes('mix') && !player.selectedSpriteMix && !unit.spriteUrl) {
+				fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json`)
+					.then(r => r.json())
+					.then(json => player.selectedSpriteMix = json)
+					.catch();
+			}
+
+			if (player.selectedSpriteMix && !unit.spriteUrl) {
+				const sprite = player.selectedSpriteMix.filter(x => x.includes(`${value}_`)).random();
+
+				if (sprite) {
+					unit.spriteUrl = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
+					unitUrl = unit.spriteUrl;
+				}
+			}
 
 			// if (player.selectedSpriteSet) {
 			// 	const colors = ['#3867d6aa', '#eb3b5aaa', '#19ad62aa', '#a55eeaaa', '#333333aa', '#c8a00aaa'];
@@ -835,18 +858,18 @@ function alpineHexDiceTacticGame() { return {
 				`background-blend-mode: multiply;`,
 				`background-size: auto 66%, cover;`,
 				`background-image: url("${unitUrl}")
-					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
-						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? '02_trans' : '01'}.png")`
+					${isTerrain
+						? `, url("/assets/sprites/terrain/${fileTerrain}.png")`
 						: ``
 						// : `, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");`
 					};`
 			);
-		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
+		} else if (isTerrain) {
 			style.push(
 				`background-color: unset;`,
 				`background-blend-mode: multiply;`,
-				`background-size: ${this.isCampaign ? 'cover' : '114%'};`,
-				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? '02_trans' : '01'}.png");`
+				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
+				`background-image: url("/assets/sprites/terrain/${fileTerrain}.png");`
 			);
 		}
 		return style.join(' ');
