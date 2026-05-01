@@ -114,6 +114,7 @@ function alpineHexDiceTacticGame() { return {
 	logCounter: 0,
 	winnerMessage: "",
 	winnerPlayerId: null,
+	campaignData: null,
 	isCampaign: false,
 	nextCampaignMap: null,
 	deploymentLimit: 666,
@@ -196,19 +197,12 @@ function alpineHexDiceTacticGame() { return {
 			}
 
 			this.determineBaseLocations(this.getRadius());
-			const baseHex = this.getHex(this.players[0].baseHexId);
-			const enemyHex = this.getHex(this.players[1].baseHexId);
-			let deploymentHexes = [baseHex, enemyHex];
-			this.getNeighbors(baseHex).forEach(neighbor => {
-				deploymentHexes.push(neighbor);
+			const deploymentHexIds = new Set();
+			this.players.forEach((_, playerId) => {
+				this.calcValidDeploymentHexes(playerId).forEach(id => deploymentHexIds.add(id));
 			});
 
 			this.hexes.forEach(hex => {
-				if (deploymentHexes.find(x => x.id == hex.id)) {
-					hex.terrainType == 'PLAIN';
-					return;
-				}
-
 				// Convert container-space coordinates (hex.trailX/Y) to image-space coordinates
 				const imgX = (hex.trailX + offsetX) / scale;
 				const imgY = (hex.trailY + offsetY) / scale;
@@ -218,6 +212,10 @@ function alpineHexDiceTacticGame() { return {
 
 				const color = this.sampleMeanColor(imageData, px, py, 10);
 				hex.terrainType = this.classifyTerrain(color);
+
+				if (hex.terrainType == 'LAKE' && deploymentHexIds.has(hex.id)) {
+					hex.terrainType = 'PLAIN';
+				}
 			});
 
 			this.addLog("RMI Terrain Generation complete.");
@@ -857,7 +855,7 @@ function alpineHexDiceTacticGame() { return {
 			style.push(
 				`background-color: unset;`,
 				`background-blend-mode: multiply;`,
-				`background-size: auto 66%, cover;`,
+				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
 					${isTerrain
 						? `, url("/assets/sprites/terrain/${fileTerrain}.png")`
@@ -2373,9 +2371,16 @@ function alpineHexDiceTacticGame() { return {
 				for (let i = 1; i <= unitStats.distance; i++) {
 					const hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 					if (!hex) break;
-					if (hex.terrainType === 'LAKE') break;
 					let stepCost = 1;
 					let effDist = unitStats.distance;
+					if (hex.terrainType === 'LAKE') {
+						if (!this.isCampaign) {
+							break;
+						} else {
+							stepCost = 2;
+							effDist = unitStats.distance - 1;	
+						}
+					}
 					if (hex.terrainType === 'MOUNTAIN') {
 						stepCost = 2;
 						effDist = unitStats.distance - 1;
@@ -2399,9 +2404,16 @@ function alpineHexDiceTacticGame() { return {
 					for (let i = 1; i <= unitStats.distance; i++) {
 						const hex = this.getHexByQR(startHex.q + axis.q * i, startHex.r + axis.r * i, state);
 						if (!hex) break;
-						if (hex.terrainType === 'LAKE') break;
 						let stepCost = 1;
 						let effDist = unitStats.distance;
+						if (hex.terrainType === 'LAKE') {
+							if (!this.isCampaign) {
+								break;
+							} else {
+								stepCost = 2;
+								effDist = unitStats.distance - 1;	
+							}
+						}
 						if (hex.terrainType === 'MOUNTAIN') {
 							stepCost = 2;
 							effDist = unitStats.distance - 1;
@@ -2424,7 +2436,7 @@ function alpineHexDiceTacticGame() { return {
 				];
 				for (let valid of dValidsLShape) {
 					const hex = this.getHexByQR(startHex.q + valid[0], startHex.r + valid[1], state);
-					if (hex && hex.terrainType !== 'LAKE') possibleMoves.push(hex.id);
+					if (hex && (hex.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(hex.id);
 				}
 				break;
 			case '+': // Dice 4 variant - primary + adjacent axes
@@ -2436,9 +2448,16 @@ function alpineHexDiceTacticGame() { return {
 				for (let i = 1; i <= 2; i++) {
 					const hex = this.getHexByQR(startHex.q + primary.q * i, startHex.r + primary.r * i, state);
 					if (!hex) break;
-					if (hex.terrainType === 'LAKE') break;
 					let stepCost = 1;
 					let effDist = 2;
+					if (hex.terrainType === 'LAKE') {
+						if (!this.isCampaign) {
+							break;
+						} else {
+							stepCost = 2;
+							effDist = 1;
+						}
+					}
 					if (hex.terrainType === 'MOUNTAIN') {
 						stepCost = 2;
 						effDist = 1;
@@ -2452,9 +2471,16 @@ function alpineHexDiceTacticGame() { return {
 				for (let i = 1; i <= 2; i++) {
 					const hex = this.getHexByQR(startHex.q + axes_b.q * i, startHex.r + axes_b.r * i, state);
 					if (!hex) break;
-					if (hex.terrainType === 'LAKE') break;
 					let stepCost = 1;
 					let effDist = 2;
+					if (hex.terrainType === 'LAKE') {
+						if (!this.isCampaign) {
+							break;
+						} else {
+							stepCost = 2;
+							effDist = 1;
+						}
+					}
 					if (hex.terrainType === 'MOUNTAIN') {
 						stepCost = 2;
 						effDist = 1;
@@ -2468,18 +2494,18 @@ function alpineHexDiceTacticGame() { return {
 				if (mod3 == 2) {
 					const h1 = this.getHexByQR(startHex.q + -2, startHex.r + 1, state);
 					const h2 = this.getHexByQR(startHex.q + 2, startHex.r + -1, state);
-					if (h1 && h1.terrainType !== 'LAKE') possibleMoves.push(h1.id);
-					if (h2 && h2.terrainType !== 'LAKE') possibleMoves.push(h2.id);
+					if (h1 && (h1.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(h1.id);
+					if (h2 && (h2.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(h2.id);
 				} else if (mod3 == 1) {
 					const h1 = this.getHexByQR(startHex.q + -1, startHex.r + 2, state);
 					const h2 = this.getHexByQR(startHex.q + 1, startHex.r + -2, state);
-					if (h1 && h1.terrainType !== 'LAKE') possibleMoves.push(h1.id);
-					if (h2 && h2.terrainType !== 'LAKE') possibleMoves.push(h2.id);
+					if (h1 && (h1.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(h1.id);
+					if (h2 && (h2.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(h2.id);
 				} else if (mod3 == 0) {
 					const h1 = this.getHexByQR(startHex.q + -1, startHex.r + -1, state);
 					const h2 = this.getHexByQR(startHex.q + 1, startHex.r + 1, state);
-					if (h1 && h1.terrainType !== 'LAKE') possibleMoves.push(h1.id);
-					if (h2 && h2.terrainType !== 'LAKE') possibleMoves.push(h2.id);
+					if (h1 && (h1.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(h1.id);
+					if (h2 && (h2.terrainType !== 'LAKE' || this.isCampaign)) possibleMoves.push(h2.id);
 				}
 				break;
 			case '*': // Dice 2, 5 (Archer, Tanker) - BFS any direction
@@ -2489,8 +2515,9 @@ function alpineHexDiceTacticGame() { return {
 				break;
 		}
 
+		// In Campaign Mode, LAKE is temporarily considered passable with movement cost = 2
 		possibleMoves = [...new Set(possibleMoves.filter(x => x))];
-		possibleMoves = possibleMoves.filter(id => this.getHex(id, state)?.terrainType != 'LAKE')
+		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || this.isCampaign); 
 
 		// Filter based on target: empty or enemy (for move), or friendly (for merge)
 		return possibleMoves.filter(hexId => {
@@ -2523,7 +2550,7 @@ function alpineHexDiceTacticGame() { return {
 			this.getNeighbors(curr, state).forEach(n => {
 				if (!n) return; // Skip invalid neighbors
 
-				if (n.terrainType === 'LAKE') return; // Unit could not stand on LAKE & LAKE should block movement
+				if (n.terrainType === 'LAKE' && !this.isCampaign) return;
 
 				let costToEnter = 1;
 				// let effectiveMaxDistance = maxDistance;
