@@ -138,7 +138,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("Setting up terrain");
 
 		if (this.campaignData?.rmi) {
-			await this.generateTerrainFromRMI(this.campaignData.rmi);
+			await this.generateTerrainFromRMI(this.campaignData);
 			return;
 		}
 
@@ -152,11 +152,20 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 
-	async generateTerrainFromRMI(rmiName) {
+	async generateTerrainFromRMI(campaignData) {
+		let rmiName = campaignData.rmi;
+		let level = campaignData.level;
+
 		const url = `/assets/ro_maps/${rmiName}`;
 		this.addLog(`Generating terrain from RMI: ${rmiName}...`);
 
 		try {
+			if (typeof window != 'undefined' && window.history) {
+				const url = new URL(window.location.href);
+				url.searchParams.set('rmi', rmiName.split('.')[0]);
+				window.history.replaceState(null, null, url);
+			}
+
 			const img = new Image();
 			img.src = url;
 			await img.decode();
@@ -207,7 +216,7 @@ function alpineHexDiceTacticGame() { return {
 				const px = Math.floor(Math.max(0, Math.min(img.width - 1, imgX)));
 				const py = Math.floor(Math.max(0, Math.min(img.height - 1, imgY)));
 
-				const color = this.sampleMeanColor(imageData, px, py, 5);
+				const color = this.sampleMeanColor(imageData, px, py, 10);
 				hex.terrainType = this.classifyTerrain(color);
 			});
 
@@ -270,6 +279,7 @@ function alpineHexDiceTacticGame() { return {
 		const [h, s, v] = this.rgbToHsv(rgb[0], rgb[1], rgb[2]);
 
 		// Desaturated or very dark colors default to PLAIN or MOUNTAIN
+		if (s < 0.1 && s < 0.3) return 'TOWER';
 		if (s < 0.15) return 'PLAIN';
 		if (v < 0.35) return 'MOUNTAIN';
 
@@ -496,7 +506,19 @@ function alpineHexDiceTacticGame() { return {
 			if (isAI && this.spriteSets.length > 0) {
 				const availableSkins = this.spriteSets.filter(s => !usedSkins.has(s));
 				if (availableSkins.length > 0) {
-					selectedSkin = availableSkins[Math.floor(random() * availableSkins.length)];
+					let ro_skins = availableSkins.filter(x => x.includes('ro_'));
+
+					if (this.isCampaign && campaignData?.rmi) {
+						let words = campaignData.rmi.split('.')?.[0]?.replace(/\d/g, '')?.split('_');
+						let ro_rmi_skins = words?.length 
+							? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
+							: [];
+
+						selectedSkin = ro_rmi_skins?.length ? ro_rmi_skins.random() : availableSkins.random();
+					} else {
+						selectedSkin = availableSkins.random();
+					}
+					
 					usedSkins.add(selectedSkin);
 				}
 			}
@@ -808,17 +830,23 @@ function alpineHexDiceTacticGame() { return {
 			// 	style.push(`background-color: ${colors[playerId]};`);
 			// }
 
-			style.push(`background-size: auto 66%, cover;`,
+			style.push(
+				`background-color: unset;`,
+				`background-blend-mode: multiply;`,
+				`background-size: auto 66%, cover;`,
 				`background-image: url("${unitUrl}")
 					${(TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN'))
-						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'transparent' : '01'}.png")`
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? '02_trans' : '01'}.png")`
 						: ``
 						// : `, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");`
 					};`
 			);
 		} else if (TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN')) {
-			style.push(`background-size: 114%;`,
-				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'transparent' : '01'}.png");`
+			style.push(
+				`background-color: unset;`,
+				`background-blend-mode: multiply;`,
+				`background-size: ${this.isCampaign ? 'cover' : '114%'};`,
+				`background-image: url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? '02_trans' : '01'}.png");`
 			);
 		}
 		return style.join(' ');

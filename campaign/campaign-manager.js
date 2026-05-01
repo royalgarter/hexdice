@@ -198,13 +198,21 @@ const CampaignManager = {
 
 		let maps = await response.json();
 		let levelNum = filename.match(/\d+/)?.[0];
-		let map = maps[levelNum - 1]
+		let map = maps[levelNum - 1];
+
+		if ( (parseInt(levelNum) % 5) == 0 ) {
+			const pathMaps = `/assets/ro_maps.json`;
+			const allMaps = await fetch(pathMaps).then(r => r.json()).catch();
+			map = allMaps?.map(x => x?.split('/').pop().split('.')[0]).filter(x => !x?.match(/[\d\_]/)).random() || map;
+		}
+
 		let enemyDiceCount = Math.ceil(levelNum / 10 + 2);
 		let enemyDice = Array.from({ length: enemyDiceCount }, () => Math.floor(Math.random() * 6) + 1);
 
 		return {
 			name: `Ragnarok Online Level ${levelNum} (${map})`,
 			rmi: `${map}.gif`,
+			level: levelNum,
 			radius: 5,
 			deploymentLimit: 3,
 			player1Dice: [1, 2, 3, 4, 5, 6],
