@@ -310,7 +310,7 @@
 
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-center justify-center w-full overflow-auto">
-		<div x-show="isCampaign" class="hex-grid-campaign-background fixed" :style="hexGrid.style">
+		<div x-show="isCampaign && showMinimap" class="hex-grid-campaign-background fixed" :style="hexGrid.style">
 		</div>
 		<!-- Hex Grid -->
 		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
@@ -333,14 +333,14 @@
 						>
 						</span>
 
-						<span style="top:-0.5rem;right:0.8rem;" class="absolute text-red-700"
+						<span style="top:-0.6rem;right:0.8rem;" class="absolute text-red-700"
 							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
 						</span>
-						<span style="top:-0.5rem;right:-0.6rem;" class="absolute text-gray-700"
+						<span style="top:-0.6rem;right:-0.6rem;" class="absolute text-gray-700"
 							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
 							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
 						</span>
-						<span style="top:-0.5rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
+						<span style="top:-0.6rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
 							x-show="getUnitOnHex(hex.id)?.isRerolled">R
 						</span>
 						<span style="top:0.25rem;right:-0.8rem;" class="absolute text-blue-900 font-bold"
@@ -454,7 +454,7 @@
 			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
 				<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
-					Level: <span x-text="campaignData?.level"></span>, <span x-text="campaignData?.rmi?.split('.')[0]"></span> 
+					Level: <span x-text="campaignData?.level"></span>, <span class="cursor-pointer underline hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span> 
 				</p>
 				<!-- <p class="mb-2 text-sm font-bold" x-show="isCampaign && currentPlayerIndex === 0">
 					Units Deployed: <span x-text="players[0]?.dice?.filter(d => d.isDeployed)?.length || '0'"></span> / <span x-text="deploymentLimit"></span>

@@ -121,6 +121,7 @@ function alpineHexDiceTacticGame() { return {
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
+	showMinimap: true,
 	preset: null,
 	spriteSets: [],
 	selectedSpriteSet: '', // DEPRECATED: use player.selectedSpriteSet instead
