@@ -203,7 +203,7 @@ const CampaignManager = {
 		if ( (parseInt(levelNum) % 5) == 0 ) {
 			const pathMaps = `/assets/ro_maps.json`;
 			const allMaps = await fetch(pathMaps).then(r => r.json()).catch();
-			map = allMaps?.map(x => x?.split('/').pop().split('.')[0]).filter(x => !x?.match(/[\d\_]/)).random() || map;
+			map = allMaps?.map(x => x?.split('/').pop().split('.')[0]).filter(x => !x?.match(/[\d\_A-Z]/)).random() || map;
 		}
 
 		let enemyDiceCount = Math.ceil(levelNum / 10 + 2);

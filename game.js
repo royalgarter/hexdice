@@ -53,10 +53,10 @@ const AXES = [
 const PLAYER_PRIMARY_AXIS = {
 	1: [ AXES[5] ],
 	2: [ AXES[5], AXES[2] ],
-	3: [ AXES[4], AXES[2], AXES[0] ],
+	3: [ AXES[5], AXES[3], AXES[1] ],
 	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
-	5: [ AXES[5], AXES[3], AXES[0], AXES[2], AXES[4] ],
-	6: [ AXES[0], AXES[1], AXES[2], AXES[3], AXES[4], AXES[5] ],
+	// 5: [ AXES[5], AXES[3], AXES[0], AXES[2], AXES[4] ],
+	6: [ AXES[5], AXES[2], AXES[0], AXES[3], AXES[4], AXES[1] ],
 };
 const PLAYER_CONFIG = [
 	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-700' },
@@ -76,7 +76,7 @@ const TERRAIN_CONFIG = {
 };
 
 const RMI_TERRAIN_PALETTE = {
-	'PLAIN':    [80, 0.6, 0.7], // Grass Green Hue (approx 80-120)
+	'PLAIN':    [50, 0.6, 0.7], // Grass Green Hue (approx 80-120)
 	'FOREST':   [120, 0.7, 0.4], // Darker Green Hue
 	'LAKE':     [235, 0.6, 0.6], // Blue Hue
 	'TOWER':    [280, 0.6, 0.6], // Purple Hue
@@ -211,7 +211,7 @@ function alpineHexDiceTacticGame() { return {
 				const py = Math.floor(Math.max(0, Math.min(img.height - 1, imgY)));
 
 				const color = this.sampleMeanColor(imageData, px, py, 10);
-				hex.terrainType = this.classifyTerrain(color);
+				hex.terrainType = this.classifyTerrain(color, hex);
 
 				if (hex.terrainType == 'LAKE' && deploymentHexIds.has(hex.id)) {
 					hex.terrainType = 'PLAIN';
@@ -273,7 +273,7 @@ function alpineHexDiceTacticGame() { return {
 		return [h * 360, s, v];
 	},
 
-	classifyTerrain(rgb) {
+	classifyTerrain(rgb, hex) {
 		const [h, s, v] = this.rgbToHsv(rgb[0], rgb[1], rgb[2]);
 
 		// Desaturated or very dark colors default to PLAIN or MOUNTAIN
@@ -297,6 +297,8 @@ function alpineHexDiceTacticGame() { return {
 				closestTerrain = terrain;
 			}
 		}
+
+		console.log('classifyTerrain', hex?.id, h, s, v, closestTerrain)
 
 		// Bias towards PLAIN: If the distance is too large or we're in a "greenish" range, prefer PLAIN
 		if (minDistance > 50) return 'PLAIN';
@@ -837,7 +839,7 @@ function alpineHexDiceTacticGame() { return {
 
 		const unit = this.getUnitOnHex(hex.id);
 		const isTerrain = TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN');
-		const fileTerrain = `${hex.terrainType.toLowerCase()}_${this.isCampaign ? '02_trans' : '01'}`;
+		const fileTerrain = `${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}`;
 
 		if (unit) {
 			const {value, playerId} = unit;
@@ -874,7 +876,7 @@ function alpineHexDiceTacticGame() { return {
 
 			style.push(
 				`background-color: unset;`,
-				`background-blend-mode: multiply;`,
+				// `background-blend-mode: multiply;`,
 				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
 					${isTerrain
@@ -886,9 +888,10 @@ function alpineHexDiceTacticGame() { return {
 		} else if (isTerrain) {
 			style.push(
 				`background-color: unset;`,
-				`background-blend-mode: multiply;`,
+				// `background-blend-mode: multiply;`,
 				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
-				`background-image: url("/assets/sprites/terrain/${fileTerrain}.png");`
+				`background-image: url("/assets/sprites/terrain/${fileTerrain}.png");`,
+				// this.isCampaign ? `opacity: 0.9;` : undefined,
 			);
 		}
 		return style.join(' ');
