@@ -298,7 +298,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 
-		console.log('classifyTerrain', hex?.id, h, s, v, closestTerrain)
+		// console.log('classifyTerrain', hex?.id, h, s, v, closestTerrain)
 
 		// Bias towards PLAIN: If the distance is too large or we're in a "greenish" range, prefer PLAIN
 		if (minDistance > 50) return 'PLAIN';
@@ -847,6 +847,21 @@ function alpineHexDiceTacticGame() { return {
 			const spriteColor = player.sprite;
 			
 			player.sprites = player.sprites || [];
+
+			if (playerId == 0 && this.isCampaign) {
+				player.sprites = [];
+
+				if (this?.campaignData.level < 11) {
+					player.selectedSpriteSet = 'ro_novice';
+				} else if (this?.campaignData.level < 51) {
+					player.selectedSpriteSet = 'ro_job1';
+				} else if (this?.campaignData.level > 80) {
+					player.selectedSpriteSet = 'ro_job3';
+				} else {
+					player.selectedSpriteSet = 'tos_mix';	
+				}
+			}
+			
 			let unitUrl = player.sprites[value] ||
 					( player.selectedSpriteSet
 					? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
