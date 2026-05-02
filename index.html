@@ -21,7 +21,15 @@
 	<link rel="manifest" href="/assets/manifest.json">
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
 	<style>
+		.hex-grid-campaign-background {
+			scale: 1.02;
+			filter: contrast(0.6) opacity(0.6);
+			/*clip-path: polygon(50% -2%, 150% 50%, 50% 102%, -50% 50%);*/
+		}
 		.hex-grid-container {
+			transform-origin: center center;
+			max-width: 100%;
+			/*transition: zoom 0.3s ease;*/
 			/*background-image: url(/assets/ro_maps/alberta.gif);*/
 			/*background-position: center;*/
 			/*background-size: 120%;*/
@@ -174,12 +182,7 @@
 		}
 
 		/* Responsive Grid Scaling */
-		.hex-grid-container {
-			transform-origin: center center;
-			max-width: 100%;
-			/*transition: zoom 0.3s ease;*/
-		}
-		@media (max-width: 1280px) {
+		/*@media (max-width: 1280px) {
 			.hex-grid-container.radius-5 {
 				zoom: 1.2;
 			}
@@ -236,7 +239,7 @@
 			.hex-grid-container.radius-6 {
 				zoom: 0.6;
 			}
-		}
+		}*/
 	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
@@ -305,7 +308,7 @@
 
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-center justify-center w-full overflow-auto">
-		<div x-show="isCampaign" class="hex-grid-campaign-background fixed" :style="hexGrid.style + ';scale: 1.06;filter: contrast(0.6) opacity(0.6);clip-path: polygon(50% -2%, 150% 50%, 50% 102%, -50% 50%)'" >
+		<div x-show="isCampaign" class="hex-grid-campaign-background fixed" :style="hexGrid.style">
 		</div>
 		<!-- Hex Grid -->
 		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
@@ -570,7 +573,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-1 text-xs font-mono h-14 lg:h-28 overflow-y-auto border-t " id="messageLogContainer">
+	<div  id="game-log" style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-1 text-xs font-mono h-14 lg:h-28 overflow-y-auto border-t ">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>

@@ -664,32 +664,52 @@ function alpineHexDiceTacticGame() { return {
 
 		return radius;
 	},
-	generateHexGrid(radius, padding=1) {
+	generateHexGrid(radius, padding=1, ratio) {
 		this.hexes = [];
 		this.hexesQR = {};
+
+		const ADJUSTED_WIDTH = Math.floor(HEX_WIDTH * (ratio || 1));
+		const ADJUSTED_HEIGHT = Math.floor(HEX_HEIGHT * (ratio || 1));
+
 		let id = 0;
 		for (let q = -radius; q <= radius; q++) {
 			for (let r = -radius; r <= radius; r++) {
-				if (-q - r >= -radius && -q - r <= radius) { // Check if s is also within radius
-					const x = HEX_WIDTH * 3/4 * q;
-					const y = HEX_HEIGHT * (r + q / 2);
+				// Check if s is also within radius
+				if (-q - r < -radius || -q - r > radius) continue;
 
-					this.hexes.push({ id, q, r, s: -q-r, unitId: null, visualX: x, visualY: y, terrainType: 'PLAIN' });
-					this.hexesQR[(q * 1e3) + r] = id;
+				const x = ADJUSTED_WIDTH * 3/4 * q;
+				const y = ADJUSTED_HEIGHT * (r + q / 2);
 
-					id++;
-				}
+				this.hexes.push({ id, q, r, s: -q-r, unitId: null, visualX: x, visualY: y, terrainType: 'PLAIN' });
+				this.hexesQR[(q * 1e3) + r] = id;
+
+				id++;
 			}
 		}
 
-		const allX = this.hexes.map(h => h.visualX);
-		const allY = this.hexes.map(h => h.visualY);
-		const minX = Math.min(...allX);
-		const maxX = Math.max(...allX);
-		const minY = Math.min(...allY);
-		const maxY = Math.max(...allY);
-		const gridWidth = maxX - minX + HEX_WIDTH;
-		const gridHeight = maxY - minY + HEX_HEIGHT; // Approx
+		let allX = this.hexes.map(h => h.visualX);
+		let allY = this.hexes.map(h => h.visualY);
+		let minX = Math.min(...allX);
+		let maxX = Math.max(...allX);
+		let minY = Math.min(...allY);
+		let maxY = Math.max(...allY);
+		let gridWidth = maxX - minX + ADJUSTED_WIDTH;
+		let gridHeight = maxY - minY + ADJUSTED_HEIGHT; // Approx
+
+		if (typeof window !== 'undefined' && window.screen && !ratio) {
+			if (gridWidth > window.screen.width) {
+				return this.generateHexGrid(radius, padding, window.screen.width / gridWidth);	
+			}
+
+			if (document.querySelectorAll('[id^="game-"]').length) {
+				let paddingHeight = [...document.querySelectorAll('[id^="game-"]')].reduce((a, v) => a + v.clientHeight, 0);
+				paddingHeight *= 2;
+
+				if (gridHeight < (window.screen.height - paddingHeight)) {
+					return this.generateHexGrid(radius, padding, (window.screen.height - paddingHeight) / gridHeight);	
+				}
+			}
+		}
 
 		const style = `width: ${gridWidth}px; height: ${gridHeight}px;`;
 
@@ -699,8 +719,8 @@ function alpineHexDiceTacticGame() { return {
 		for (let i=0; i<this.hexes.length; i++) {
 			this.hexes[i].left = this.hexes[i].visualX - this.hexGrid.minX + padding;
 			this.hexes[i].top = this.hexes[i].visualY - this.hexGrid.minY + padding;
-			this.hexes[i].width = HEX_WIDTH - (padding << 1);
-			this.hexes[i].height = HEX_HEIGHT - (padding << 1);
+			this.hexes[i].width = ADJUSTED_WIDTH - (padding << 1);
+			this.hexes[i].height = ADJUSTED_HEIGHT - (padding << 1);
 
 			this.hexes[i].trailX = this.hexes[i].left + (this.hexes[i].width / 2);
 			this.hexes[i].trailY = this.hexes[i].top + (this.hexes[i].height / 2);
@@ -3284,7 +3304,7 @@ function alpineHexDiceTacticGame() { return {
 		
 		// Auto-scroll log
 		this.$nextTick(() => {
-			const logContainer = document.getElementById('messageLogContainer');
+			const logContainer = document.querySelector('#game-log');
 			if (logContainer) logContainer.scrollTop = 0;
 		});
 	},
