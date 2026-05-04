@@ -168,7 +168,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         const unit = currentPlayer.dice.find(d => d.hexId === move.unitHexId);
         if (!unit) continue;
 
-        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats);
+        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
         scoredMoves.push({
             move,
             unit,
@@ -256,8 +256,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
     switch (priority) {
         case 'capture': {
             // Skip capture in annihilation mode
-            if (shouldExcludeBases) break;
-            
+            if (!opponentBases?.length) break;
+
             // Find moves that capture any enemy base (win condition)
             const captureMoves = scoredMoves.filter(m => m.canCapture);
             if (captureMoves.length > 0) {
@@ -376,7 +376,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                     if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
 
                     // Skip base capture calculations in annihilation mode
-                    if (!shouldExcludeBases && m.move.actionType === 'MOVE' && opponentBases.length > 0) {
+                    if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
                         const targetHex = GAME.getHex(m.move.targetHexId, state);
 
                         // Distance to nearest opponent base
@@ -391,7 +391,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                     }
 
                     // Skip base capture scoring in annihilation mode
-                    if (!shouldExcludeBases) {
+                    if (opponentBases.length) {
                         // Check if unit is already on a captured base
                         const unitCurrentHexId = m.unit.hexId;
                         const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
@@ -443,7 +443,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 /**
  * Analyze a single move for tactical value
  */
-function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile = DEFAULT_PROFILE, pressureMap = {}, predictedThreats = []) {
+function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile = DEFAULT_PROFILE, pressureMap = {}, predictedThreats = [], shouldExcludeBases = false) {
     const w = profile.weights;
     const analysis = {
         canKillEnemy: false,
@@ -732,9 +732,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     analysis.isSupportAction = true;
                 }
 
-// TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
+            // TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
             if (!oracleThreatened && !oracleWillBeKilled && !shouldExcludeBases) {
-                const opponentBasesList = opponentBases.length > 0 ? opponentBases : 
+                const opponentBasesList = opponentBases.length > 0 ? opponentBases :
                     state.players.filter((p, idx) => idx !== state.currentPlayerIndex && !p.isEliminated)
                         .map(p => ({ baseHex: GAME.getHex(p.baseHexId, state) })).filter(b => b.baseHex);
 
