@@ -863,6 +863,10 @@ function alpineHexDiceTacticGame() { return {
 
 		return (unit && !unit.isDeath) ? unit : null;
 	},
+	getHexQR(hexId) {
+		const hex = this.hexes[hexId];
+		return hex ? { q: hex.q, r: hex.r } : null;
+	},
 	getNeighbors(hex, state) {
 		if (!hex) return [];
 		return AXES.map(dir => this.getHexByQR(hex.q + dir.q, hex.r + dir.r, state)).filter(Boolean);
@@ -3419,6 +3423,62 @@ function alpineHexDiceTacticGame() { return {
 			if (logContainer) logContainer.scrollTop = 0;
 		});
 	},
+
+	generateHDFEN() {
+		// Piece Placement
+		let piecePlacementTokens = [];
+		let emptyCount = 0;
+		for (let i = 0; i < this.hexes.length; i++) {
+			const hex = this.hexes[i];
+			if (hex.unit) {
+				if (emptyCount > 0) {
+					piecePlacementTokens.push(emptyCount.toString());
+					emptyCount = 0;
+				}
+				const unit = hex.unit;
+				const playerID = unit.playerId;
+				const unitValue = unit.value;
+				const isMoved = unit.hasMovedOrAttackedThisTurn ? 'M' : 'm';
+				const isGuarding = unit.isGuarding > 0 ? 'G' : 'g';
+				const isDeath = unit.isDeath ? 'D' : 'd';
+				const skirmishBuff = unit.skirmishBuff; // Assuming single digit, e.g., 0-9
+
+				piecePlacementTokens.push(`${playerID}${unitValue}${isMoved}${isGuarding}${isDeath}${skirmishBuff}`);
+			} else {
+				emptyCount++;
+			}
+		}
+		if (emptyCount > 0) {
+			piecePlacementTokens.push(emptyCount.toString());
+		}
+		const piecePlacement = piecePlacementTokens.join('/');
+
+		// Active Player
+		const activePlayer = this.currentPlayerIndex;
+
+		// Game Phase
+		let gamePhase = '';
+		switch (this.phase) {
+			case 'SETUP_ROLL': gamePhase = 'SR'; break;
+			case 'SETUP_REROLL': gamePhase = 'SRR'; break;
+			case 'SETUP_DEPLOY': gamePhase = 'SD'; break;
+			case 'PLAYER_TURN': gamePhase = 'PT'; break;
+			case 'GAME_OVER': gamePhase = 'GO'; break;
+			default: gamePhase = '__'; break; // Unknown phase
+		}
+
+		// Turn Number
+		const turnNumber = this.turnCount;
+
+		// Other Flags
+		const noRerollFlag = this.rules.noReroll ? 'r' : '_';
+		const annihilationModeFlag = this.options.includes('a') ? 'a' : '_';
+		const mergeModeFlag = this.options.includes('m') ? 'm' : '_';
+		const otherFlags = `${noRerollFlag}${annihilationModeFlag}${mergeModeFlag}`;
+
+		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
+	},
+
 };}
 
 const BOARD_DOT = [
