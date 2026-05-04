@@ -324,35 +324,31 @@
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
 					<div class="hex-content text-xs text-center relative">
-						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute" x-show="!getUnitOnHex(hex.id)" x-text="hex.id" --x-text="hex.q + ', ' + hex.r"></span>
+						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute" x-show="!hex.unit" x-text="hex.id"></span>
 
 						<span class="text-lg invisible"
-							:class="getUnitOnHex(hex.id) ? PLAYER_CONFIG[getUnitOnHex(hex.id).playerId].logColor : ''"
-							x-show="getUnitOnHex(hex.id)"
-							x-text="getUnitOnHex(hex.id)?.value"
+							:class="PLAYER_CONFIG[hex.unit?.playerId]?.logColor || ''"
+							x-show="hex.unit"
+							x-text="hex.unit?.value"
 						>
 						</span>
 
 						<span style="top:-0.6rem;right:0.8rem;" class="absolute text-red-700"
-							x-show="getUnitOnHex(hex.id)" x-text="getUnitOnHex(hex.id)?.attack">
+							x-show="hex.unit" x-text="hex.unit?.attack">
 						</span>
 						<span style="top:-0.6rem;right:-0.6rem;" class="absolute text-gray-700"
-							:class="(getUnitOnHex(hex.id) && getUnitOnHex(hex.id)?.effectiveArmor > getUnitOnHex(hex.id)?.armor) ? 'font-bold' : ''"
-							x-show="getUnitOnHex(hex.id)" x-text="calcDefenderEffectiveArmor(hex.id)">
+							:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
+							x-show="hex.unit" x-text="hex.unit?.effectiveArmor">
 						</span>
 						<span style="top:-0.6rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
-							x-show="getUnitOnHex(hex.id)?.isRerolled">R
+							x-show="hex.unit?.isRerolled">R
 						</span>
 						<span style="top:0.25rem;right:-0.8rem;" class="absolute text-blue-900 font-bold"
-							x-show="getUnitOnHex(hex.id)?.isGuarding" x-html="(getUnitOnHex(hex.id)?.isGuarding == 2) ? '⛨' : '⛉'">
+							x-show="hex.unit?.isGuarding" x-html="(hex.unit?.isGuarding == 2) ? '⛨' : '⛉'">
 						</span>
 						<span style="top:0.25rem;right:0.8rem;" class="absolute text-red-900 font-bold"
-							x-show="getUnitOnHex(hex.id)?.skirmishBuff">⚔
+							x-show="hex.unit?.skirmishBuff">⚔
 						</span>
-
-						<!-- <span style="top:24px;right:-12px;" class="absolute font-bold text-red-700"
-							x-show="getUnitOnHex(hex.id)?.armorReduction > 0" x-text="'-' + getUnitOnHex(hex.id)?.armorReduction">
-						</span> -->
 					</div>
 				</div>
 			</template>
@@ -540,7 +536,7 @@
 				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 					@click="initiateAction('SPECIAL_ATTACK')"
-					x-text="getUnitOnHex(selectedUnitHexId)?.value === 6 ? 'SPELLS' : 'SPL ATK'"
+					x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? 'SPELLS' : 'SPL ATK'"
 				></button>
 
 				<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">

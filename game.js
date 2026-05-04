@@ -109,6 +109,10 @@ function alpineHexDiceTacticGame() { return {
 	validMoves: [], // array of hex IDs
 	validMerges: [], // array of hex IDs
 	validTargets: [], // array of hex IDs for attacks/merges
+	validMovesSet: new Set(),
+	validMergesSet: new Set(),
+	validTargetsSet: new Set(),
+	validDeploymentHexesSet: new Set(),
 	diceToReroll: [], // indices of dice selected for reroll
 	messageLog: [],
 	logCounter: 0,
@@ -151,6 +155,23 @@ function alpineHexDiceTacticGame() { return {
 		// Implement R=8 terrain generation (4-roll algorithm)
 		if (radius === 8) {
 			this.generateR8Terrain();
+		}
+	},
+
+	setTerrainType(hex, type) {
+		hex.terrainType = type;
+		hex.terrainClass = TERRAIN_CONFIG[type]?.bg || 'bg-hexplain';
+		
+		const isTerrain = (type !== 'PLAIN');
+		if (isTerrain) {
+			const fileTerrain = `${type.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}`;
+			hex.terrainStyle = [
+				`background-color: unset;`,
+				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
+				`background-image: url("/assets/sprites/terrain/${fileTerrain}.png");`
+			].join(' ');
+		} else {
+			hex.terrainStyle = '';
 		}
 	},
 
@@ -212,10 +233,11 @@ function alpineHexDiceTacticGame() { return {
 				const py = Math.floor(Math.max(0, Math.min(img.height - 1, imgY)));
 
 				const color = this.sampleMeanColor(imageData, px, py, 10);
-				hex.terrainType = this.classifyTerrain(color, hex);
+				const terrainType = this.classifyTerrain(color, hex);
+				this.setTerrainType(hex, terrainType);
 
 				if (hex.terrainType == 'LAKE' && deploymentHexIds.has(hex.id)) {
-					hex.terrainType = 'PLAIN';
+					this.setTerrainType(hex, 'PLAIN');
 				}
 			});
 
@@ -313,7 +335,7 @@ function alpineHexDiceTacticGame() { return {
 
 	generateRouletteTerrain() {
 		this.addLog("Generating Roulette Terrain...");
-		this.hexes.forEach(x => x.terrainType = 'PLAIN');
+		this.hexes.forEach(x => this.setTerrainType(x, 'PLAIN'));
 
 		const terrainDiceRolls = Array.from({ length: 6 }, () => Math.floor(random() * 6) + 1);
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
@@ -356,9 +378,9 @@ function alpineHexDiceTacticGame() { return {
 			const randomTerrainType = terrainTypes[Math.floor(random() * terrainTypes.length)];
 
 			if (randomTerrainType == 'LAKE' && deploymentHexIds.has(hex.id))
-				hex.terrainType = 'PLAIN';
+				this.setTerrainType(hex, 'PLAIN');
 			else
-				hex.terrainType = randomTerrainType;
+				this.setTerrainType(hex, randomTerrainType);
 
 			this.addLog(`Placed ${randomTerrainType} at [${hex.id}].`);
 		}
@@ -366,7 +388,7 @@ function alpineHexDiceTacticGame() { return {
 
 	generateR8Terrain() {
 		this.addLog("Generating R=8 Terrain...");
-		this.hexes.forEach(x => x.terrainType = 'PLAIN');
+		this.hexes.forEach(x => this.setTerrainType(x, 'PLAIN'));
 
 		const terrainDiceRolls = Array.from({ length: 6 }, () => Math.floor(random() * 6) + 1);
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
@@ -435,7 +457,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 
 				// If all checks pass, place the terrain
-				potentialTerrainHex.terrainType = terrainType;
+				this.setTerrainType(potentialTerrainHex, terrainType);
 				this.addLog(`Placed ${terrainType} at (${potentialTerrainHex.q}, ${potentialTerrainHex.r}).`);
 			} else {
 				this.addLog(`Skipped terrain #${i+1}: Invalid or out-of-bounds hex generated.`);
@@ -563,6 +585,8 @@ function alpineHexDiceTacticGame() { return {
 					actionsTakenThisTurn: 0
 				};
 				CampaignManager.applyFatigueDebuffs(die);
+				die.effectiveArmor = die.armor;
+				die.spriteUrl = this.getUnitSpriteUrl(die);
 				player.dice.push(die);
 			});
 
@@ -570,7 +594,7 @@ function alpineHexDiceTacticGame() { return {
 				// Load Enemy Dice
 				const p2 = this.players[1];
 				(campaignData.enemyDice || []).forEach((val, idx) => {
-					p2.dice.push({
+					const die = {
 						id: `1_${idx}`,
 						originalIndex: idx,
 						playerId: 1,
@@ -585,7 +609,10 @@ function alpineHexDiceTacticGame() { return {
 						skirmishBuff: 0,
 						isDeath: false,
 						actionsTakenThisTurn: 0
-					});
+					};
+					die.effectiveArmor = die.armor;
+					die.spriteUrl = this.getUnitSpriteUrl(die);
+					p2.dice.push(die);
 				});
 			} else {
 				this.addLog("Campaign Mode: You command the Legendary Six.");
@@ -596,7 +623,8 @@ function alpineHexDiceTacticGame() { return {
 		this.generateHexGrid(radius);
 		this.hexes.forEach(h => {
 			h.unitId = null;
-			h.terrainType = 'PLAIN';
+			h.unit = null;
+			this.setTerrainType(h, 'PLAIN');
 		});
 
 		if (this.isCampaign && campaignData?.rmi) {
@@ -608,12 +636,13 @@ function alpineHexDiceTacticGame() { return {
 			campaignData.terrain.forEach(t => {
 				const [q, r] = t.id.split(',').map(Number);
 				const hex = this.getHexByQR(q, r);
-				if (hex) hex.terrainType = t.type;
+				if (hex) this.setTerrainType(hex, t.type);
 			});
 		}
 
 		this.determineBaseLocations(radius);
 		this.phase = (this.isCampaign && !!campaignData) ? 'SETUP_DEPLOY' : 'SETUP_ROLL';
+		if (this.phase === 'SETUP_DEPLOY') this.refreshValidDeploymentHexes();
 		if (this.isCampaign && campaignData) {
 			// Auto-deploy enemy (P2) randomly
 			const p2 = this.players[1];
@@ -645,6 +674,41 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.addLog(`New game started with ${this.playerCount} players.`);
+		this.players.forEach((_, i) => this.initPlayerSkins(i));
+	},
+
+	initPlayerSkins(playerId) {
+		const player = this.players[playerId];
+		if (!player) return;
+
+		if (playerId === 0 && this.isCampaign) {
+			player.sprites = [];
+			if (this.campaignData?.level < 11) player.selectedSpriteSet = 'ro_novice';
+			else if (this.campaignData?.level < 51) player.selectedSpriteSet = 'ro_job1';
+			else if (this.campaignData?.level > 80) player.selectedSpriteSet = 'ro_job3';
+			else player.selectedSpriteSet = 'tos_mix';
+		}
+
+		if (player.selectedSpriteSet?.includes('mix')) {
+			fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json`)
+				.then(r => r.json())
+				.then(json => {
+					player.selectedSpriteMix = json;
+					player.dice.forEach(die => {
+						const sprite = json.filter(x => x.includes(`${die.value}_`)).random();
+						if (sprite) {
+							player.sprites = player.sprites || [];
+							player.sprites[die.value] = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
+							die.spriteUrl = player.sprites[die.value];
+						}
+					});
+				})
+				.catch(e => console.error("Failed to load sprite mix", e));
+		} else {
+			player.dice.forEach(die => {
+				die.spriteUrl = this.getUnitSpriteUrl(die);
+			});
+		}
 	},
 
 	/* --- HEX GRID --- */
@@ -683,7 +747,14 @@ function alpineHexDiceTacticGame() { return {
 				const x = ADJUSTED_WIDTH * 3/4 * q;
 				const y = ADJUSTED_HEIGHT * (r + q / 2);
 
-				this.hexes.push({ id, q, r, s: -q-r, unitId: null, visualX: x, visualY: y, terrainType: 'PLAIN' });
+				this.hexes.push({ 
+					id, q, r, s: -q-r, 
+					unitId: null, 
+					unit: null, // Pre-initialize unit to null for faster access
+					visualX: x, visualY: y, 
+					terrainType: 'PLAIN',
+					terrainClass: 'bg-hexplain'
+				});
 				this.hexesQR[(q * 1e3) + r] = id;
 
 				id++;
@@ -779,16 +850,18 @@ function alpineHexDiceTacticGame() { return {
 	getUnitOnHex(hexId, state) {
 		const hex = this.getHex(hexId, state);
 
-		if (!hex || (!hex.unit && !hex.unitId)) return null;
+		if (!hex || !hex.unitId) return null;
 
 		let unit = hex.unit;
 
-		if (!unit) {
-			const [playerId, diceIndex] = hex.unitId.split('_').map(Number);
+		if (!unit || state) {
+			const parts = hex.unitId.split('_');
+			const playerId = parseInt(parts[0]);
+			const diceIndex = parseInt(parts[1]);
 			unit = (state || this).players[playerId]?.dice[diceIndex];
 		}
 
-		return (!unit.isDeath) && unit;
+		return (unit && !unit.isDeath) ? unit : null;
 	},
 	getNeighbors(hex, state) {
 		if (!hex) return [];
@@ -810,27 +883,27 @@ function alpineHexDiceTacticGame() { return {
 		// const unit = this.getUnitOnHex(hex.id, state);
 		state = state || this;
 
-		let cls = TERRAIN_CONFIG[hex.terrainType]?.bg || 'bg-hexdefault';
+		let cls = hex.terrainClass || 'bg-hexdefault';
 
 		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined && !state?.players?.[hex.basePlayerId]?.isEliminated) {
 			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
 		}
 
 		if (state.selectedUnitHexId === hex.id) cls = 'bg-hexselect';
-		else if (state.validMoves?.includes(hex.id)) cls = 'bg-hexmove';
-		else if (state.validMerges?.includes(hex.id)) cls = 'bg-hexmerge';
-		else if (state.validTargets?.includes(hex.id)) cls = 'bg-hextarget';
+		else if (state.validMovesSet?.has(hex.id)) cls = 'bg-hexmove';
+		else if (state.validMergesSet?.has(hex.id)) cls = 'bg-hexmerge';
+		else if (state.validTargetsSet?.has(hex.id)) cls = 'bg-hextarget';
 		else if (state.dangerHexes?.[hex.id]) cls = 'bg-hexdanger';
 
-		if (state.phase === 'SETUP_DEPLOY' && this.calcValidDeploymentHexes(this.currentPlayerIndex).includes(hex.id)) {
+		if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
 			cls = 'bg-hexdeploy';
 		}
 
 		let hovering = state.hovering;
 		if (hovering.hexId && (state.selectedUnitHexId != hovering.hexId)) {
-			if (hovering.validMoves?.includes(hex.id)) cls += ' bg-hexmove';
-			else if (hovering.validMerges?.includes(hex.id)) cls += ' bg-hexmerge';
-			else if (hovering.validTargets?.includes(hex.id)) cls += ' bg-hextarget';
+			if (hovering.validMovesSet?.has(hex.id)) cls += ' bg-hexmove';
+			else if (hovering.validMergesSet?.has(hex.id)) cls += ' bg-hexmerge';
+			else if (hovering.validTargetsSet?.has(hex.id)) cls += ' bg-hextarget';
 		}
 
 		return cls;
@@ -838,77 +911,23 @@ function alpineHexDiceTacticGame() { return {
 	hexStyle(hex) {
 		let style = [];
 
-		const unit = this.getUnitOnHex(hex.id);
-		const isTerrain = TERRAIN_CONFIG[hex.terrainType] && (hex.terrainType!='PLAIN');
-		const fileTerrain = `${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}`;
+		const unit = hex.unit || this.getUnitOnHex(hex.id);
+		const terrainStyle = hex.terrainStyle;
 
 		if (unit) {
-			const {value, playerId} = unit;
-			const player = this.players[playerId];
-			const spriteColor = player.sprite;
-			
-			player.sprites = player.sprites || [];
-
-			if (playerId == 0 && this.isCampaign) {
-				player.sprites = [];
-
-				if (this?.campaignData.level < 11) {
-					player.selectedSpriteSet = 'ro_novice';
-				} else if (this?.campaignData.level < 51) {
-					player.selectedSpriteSet = 'ro_job1';
-				} else if (this?.campaignData.level > 80) {
-					player.selectedSpriteSet = 'ro_job3';
-				} else {
-					player.selectedSpriteSet = 'tos_mix';	
-				}
-			}
-			
-			let unitUrl = player.sprites[value] ||
-					( player.selectedSpriteSet
-					? `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`
-					: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`
-				);
-
-			if (player.selectedSpriteSet.includes('mix') && !player.selectedSpriteMix && !player.sprites[value]) {
-				fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json`)
-					.then(r => r.json())
-					.then(json => player.selectedSpriteMix = json)
-					.catch();
-			}
-
-			if (player.selectedSpriteMix && !player.sprites[value]) {
-				const sprite = player.selectedSpriteMix.filter(x => x.includes(`${value}_`)).random();
-
-				if (sprite) {
-					player.sprites[value] = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
-					unitUrl = unit.spriteUrl;
-				}
-			}
-
-			// if (player.selectedSpriteSet) {
-			// 	const colors = ['#3867d6aa', '#eb3b5aaa', '#19ad62aa', '#a55eeaaa', '#333333aa', '#c8a00aaa'];
-			// 	style.push(`background-color: ${colors[playerId]};`);
-			// }
+			const unitUrl = unit.spriteUrl;
 
 			style.push(
 				`background-color: unset;`,
-				// `background-blend-mode: multiply;`,
 				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
-					${isTerrain
-						? `, url("/assets/sprites/terrain/${fileTerrain}.png")`
+					${terrainStyle
+						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}.png")`
 						: ``
-						// : `, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");`
 					};`
 			);
-		} else if (isTerrain) {
-			style.push(
-				`background-color: unset;`,
-				// `background-blend-mode: multiply;`,
-				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
-				`background-image: url("/assets/sprites/terrain/${fileTerrain}.png");`,
-				// this.isCampaign ? `opacity: 0.9;` : undefined,
-			);
+		} else if (terrainStyle) {
+			style.push(terrainStyle);
 		}
 		return style.join(' ');
 	},
@@ -922,14 +941,18 @@ function alpineHexDiceTacticGame() { return {
 
 		if (this.hovering.unit) {
 			this.hovering.validMoves = this.calcValidMoves(hexId);
+			this.hovering.validMovesSet = new Set(this.hovering.validMoves);
 			this.hovering.validMerges = this.calcValidMoves(hexId, 'MERGE');
+			this.hovering.validMergesSet = new Set(this.hovering.validMerges);
 
 			if (this.hovering.unit?.value == 2) {
 				this.hovering.validTargets = this.calcValidRangedTargets(hexId, null, true);
+				this.hovering.validTargetsSet = new Set(this.hovering.validTargets);
 			}
 
 			if (this.hovering.unit?.value == 6) {
 				this.hovering.validTargets = this.calcValidSpecialAttackTargets(hexId, null, true);
+				this.hovering.validTargetsSet = new Set(this.hovering.validTargets);
 			}
 		}
 	},
@@ -976,6 +999,20 @@ function alpineHexDiceTacticGame() { return {
 		});
 		this.addLog(`Units auto-deployed for ${preset.name}.`);
 	},
+	getUnitSpriteUrl(unit) {
+		const player = this.players[unit.playerId];
+		const spriteColor = player.sprite;
+		const value = unit.value;
+
+		if (player.sprites?.[value]) return player.sprites[value];
+
+		if (player.selectedSpriteSet) {
+			return `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`;
+		}
+
+		return `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
+	},
+
 	rollInitialDice(playerId) {
 		if (this.players[playerId].initialRollDone) return;
 		const player = this.players[playerId];
@@ -985,7 +1022,7 @@ function alpineHexDiceTacticGame() { return {
 
 		for (let i = 0; i < this.rules.dicePerPlayer; i++) {
 			const roll = (preset && preset.dice) ? preset.dice[i] : (Math.floor(random() * 6) + 1);
-			player.dice.push({
+			const die = {
 				id: `${playerId}_${i}`, // Unique ID for the die unit
 				originalIndex: i, // to link back to player.dice array
 				playerId: playerId,
@@ -1000,9 +1037,13 @@ function alpineHexDiceTacticGame() { return {
 				skirmishBuff: 0,
 				isDeath: false,
 				actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
-			});
+			};
+			die.effectiveArmor = die.armor;
+			die.spriteUrl = this.getUnitSpriteUrl(die);
+			player.dice.push(die);
 		}
 		player.initialRollDone = true;
+		this.initPlayerSkins(playerId);
 		if (preset) {
 			this.addLog(`P${playerId + 1} army ready (${preset.name})`);
 		} else {
@@ -1019,6 +1060,7 @@ function alpineHexDiceTacticGame() { return {
 				this.phase = 'SETUP_DEPLOY';
 				this.currentPlayerIndex = 0;
 				this.selectedDieToDeploy = 0;
+				this.refreshValidDeploymentHexes();
 				this.addLog("Reroll phase skipped.");
 			} else {
 				this.phase = 'SETUP_REROLL';
@@ -1090,6 +1132,7 @@ function alpineHexDiceTacticGame() { return {
 				this.phase = 'SETUP_DEPLOY';
 				this.currentPlayerIndex = 0; // Player 1 starts deployment
 				this.selectedDieToDeploy = 0;
+				this.refreshValidDeploymentHexes();
 
 				if (this.debug?.skipDeploy) {
 					this.players.forEach((player, playerIdx) => {
@@ -1133,6 +1176,7 @@ function alpineHexDiceTacticGame() { return {
 
 		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}]`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
+		this.refreshValidDeploymentHexes();
 
 		// Check if current player has deployed all dice OR reached deployment limit
 		const deployedCount = player.dice.filter(d => d.isDeployed).length;
@@ -1144,6 +1188,7 @@ function alpineHexDiceTacticGame() { return {
 				this.currentPlayerIndex = nextDeployPlayer.id;
 				this.selectedDieToDeploy = this.players[this.currentPlayerIndex].dice.findIndex(d => !d.isDeployed);
 				this.addLog(`P${this.currentPlayerIndex + 1} turn to deploy`);
+				this.refreshValidDeploymentHexes();
 			} else {
 				this.startGamePlay();
 			}
@@ -1214,6 +1259,15 @@ function alpineHexDiceTacticGame() { return {
 		setTimeout(() => this.performAITurn(), 1e3);
 	},
 
+	refreshValidDeploymentHexes() {
+		if (this.phase !== 'SETUP_DEPLOY') {
+			this.validDeploymentHexesSet.clear();
+			return;
+		}
+		const hexIds = this.calcValidDeploymentHexes(this.currentPlayerIndex);
+		this.validDeploymentHexesSet = new Set(hexIds);
+	},
+
 	/* --- GAMEPLAY --- */
 	handleHexClick(hexId) {
 		if (this.phase === 'SETUP_DEPLOY') {
@@ -1262,17 +1316,22 @@ function alpineHexDiceTacticGame() { return {
 		this.selectedUnitHexId = hexId;
 		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 		this.validTargets = []; // Will be calculated if attack action is chosen
+		this.validMovesSet.clear();
+		this.validTargetsSet.clear();
 		this.validMerges = this.options.includes('m') ? this.calcValidMoves(this.selectedUnitHexId, 'MERGE') : [];
+		this.validMergesSet = new Set(this.validMerges);
 		this.dangerHexes = this.calcDangerHex(this.currentPlayerIndex, state);
 
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
 
 		if (unit.value == 2) {
 			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
+			this.validTargetsSet = new Set(this.validTargets);
 		}
 
 		if (unit.value == 6) {
 			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
+			this.validTargetsSet = new Set(this.validTargets);
 		}
 
 		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
@@ -1296,8 +1355,11 @@ function alpineHexDiceTacticGame() { return {
 		state.hovering = {}
 		state.selectedUnitHexId = null;
 		state.validMoves = [];
+		state.validMovesSet?.clear();
 		state.validTargets = [];
+		state.validTargetsSet?.clear();
 		state.validMerges = [];
+		state.validMergesSet?.clear();
 		state.actionMode = null;
 		state.dangerHexes = {};
 	},
@@ -1311,23 +1373,29 @@ function alpineHexDiceTacticGame() { return {
 
 		this.actionMode = actionType;
 		this.validMoves = [];
+		this.validMovesSet.clear();
+		this.validTargets = [];
+		this.validTargetsSet.clear();
 		// this.validMerges = [];
 		// this.validTargets = [];
 
 		if (actionType === 'MOVE' || actionType === 'MERGE') {
 			this.validMoves = this.calcValidMoves(this.selectedUnitHexId, actionType === 'MERGE');
+			this.validMovesSet = new Set(this.validMoves);
 			if (this.validMoves.length === 0) {
 				this.addLog("No valid moves for this unit.");
 				// this.cancelAction();
 			}
 		} else if (actionType === 'RANGED_ATTACK') {
 			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
+			this.validTargetsSet = new Set(this.validTargets);
 			 if (this.validTargets.length === 0) {
 				this.addLog("No valid targets for Ranged Attack.");
 				// this.cancelAction();
 			}
 		} else if (actionType === 'SPECIAL_ATTACK') {
 			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
+			this.validTargetsSet = new Set(this.validTargets);
 			 if (this.validTargets.length === 0) {
 				this.addLog("No valid targets for Special Attack.");
 				// this.cancelAction();
@@ -1340,6 +1408,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 		} else if (actionType === 'BRAVE_CHARGE') {
 			this.validMoves = this.calcValidBraveChargeMoves(this.selectedUnitHexId);
+			this.validMovesSet = new Set(this.validMoves);
 			 if (this.validMoves.length === 0) {
 				this.addLog("No valid targets for Brave Charge.");
 				// this.cancelAction();
@@ -1347,6 +1416,7 @@ function alpineHexDiceTacticGame() { return {
 		} else if (actionType === 'SPELLCAST_SACRIFICE') {
 			// Show adjacent enemy Oracles as valid targets
 			this.validTargets = this.calcValidSacrificeTargets(this.selectedUnitHexId);
+			this.validTargetsSet = new Set(this.validTargets);
 			if (this.validTargets.length === 0) {
 				this.addLog("No valid targets for Oracle Sacrifice.");
 			}
@@ -1526,6 +1596,7 @@ function alpineHexDiceTacticGame() { return {
 			toHex.unitId = unit.id;
 			unit.hexId = toHex.id;
 			this.trail.toHex = state ? null : toHex;
+			this.calcDefenderEffectiveArmor(toHex.id, state);
 		}
 
 		if (state) return;
@@ -1661,6 +1732,7 @@ function alpineHexDiceTacticGame() { return {
 
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
+		this.calcDefenderEffectiveArmor(unitHexId, state);
 		this.addLog(`${this.logUnit(unit)} rerolled D${newRoll} [${targetHex.id}]. Penalty: 0 Effective Armor until next turn.`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
@@ -1678,6 +1750,7 @@ function alpineHexDiceTacticGame() { return {
 		// Actual armor buff is applied during combat calculation
 		unit.hasMovedOrAttackedThisTurn = true;
 		unit.actionsTakenThisTurn++;
+		this.calcDefenderEffectiveArmor(unitHexId, state);
 		this.addLog(`${this.logUnit(unit)} guarded [${unitHexId}].`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state); // Though guard alone won't win
@@ -1757,6 +1830,8 @@ function alpineHexDiceTacticGame() { return {
 			skirmishBuff: 0,
 			actionsTakenThisTurn: newUnitCanAct ? 0 : 1, // If cannot act, it counts as action taken
 		};
+		newUnit.effectiveArmor = newUnit.armor;
+		newUnit.spriteUrl = this.getUnitSpriteUrl(newUnit);
 		p.dice.push(newUnit);
 
 		// Update hexes
@@ -1948,6 +2023,7 @@ function alpineHexDiceTacticGame() { return {
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
+		this.calcDefenderEffectiveArmor(targetHexId, state);
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
 	},
 	/**
@@ -1974,6 +2050,9 @@ function alpineHexDiceTacticGame() { return {
 		oracleUnit.hexId = targetHexId;
 		targetUnit.lastHexId = targetHexId;
 		targetUnit.hexId = oracleHexId;
+
+		this.calcDefenderEffectiveArmor(oracleHexId, state);
+		this.calcDefenderEffectiveArmor(targetHexId, state);
 
 		if (!state) {
 			this.trail.fromHex = oracleHex;
@@ -2002,6 +2081,7 @@ function alpineHexDiceTacticGame() { return {
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
+		this.calcDefenderEffectiveArmor(targetHexId, state);
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
 	/**
@@ -2067,12 +2147,14 @@ function alpineHexDiceTacticGame() { return {
 			const stats = UNIT_STATS[newRoll];
 			Object.assign(reserveDie, stats);
 			reserveDie.currentArmor = stats.armor;
+			reserveDie.effectiveArmor = stats.armor;
 			reserveDie.armorReduction = 0;
 			reserveDie.isGuarding = 0;
 
 			// Apply penalties
 			reserveDie.isRerolled = true; // 0 Effective Armor until next turn
 			reserveDie.hasMovedOrAttackedThisTurn = true; // Cannot act this turn
+			reserveDie.spriteUrl = this.getUnitSpriteUrl(reserveDie);
 
 			this.addLog(`Transmutation complete! P${oracleUnit.playerId+1} sacrificed Oracle to convert enemy. New P${oracleUnit.playerId+1} D${newRoll} created at [${targetHexId}].`, state);
 		} else {
@@ -2707,7 +2789,10 @@ function alpineHexDiceTacticGame() { return {
 		const defenderUnit = this.getUnitOnHex(defenderHexId, state);
 		const defenderHex = this.getHex(defenderHexId, state); // Get the hex to check terrain
 		if (!defenderUnit || !defenderHex) return 0;
-		if (defenderUnit.isRerolled) return 0; // Penalty for rerolling
+		if (defenderUnit.isRerolled) {
+			if (!state) defenderUnit.effectiveArmor = 0;
+			return 0; // Penalty for rerolling
+		}
 
 		let effectiveArmor = defenderUnit.currentArmor;
 		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
@@ -2727,7 +2812,9 @@ function alpineHexDiceTacticGame() { return {
 		if ((state||this).players[defenderUnit.playerId].baseHexId == defenderHexId)
 			effectiveArmor += 2;
 
-		return Math.max(0, effectiveArmor);
+		const result = Math.max(0, effectiveArmor);
+		if (!state) defenderUnit.effectiveArmor = result;
+		return result;
 	},
 	/**
 	 * Calculate valid positions for Dice 1 (Fencer) Brave Charge.
@@ -3139,7 +3226,9 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`${this.logUnit(unit)} removed [${this.getHex(hexId, state).id}].`);
 		}
 		(state || this).players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
-		this.getHex(hexId, state).unitId = null; // Clear hex
+		const hex = this.getHex(hexId, state);
+		hex.unitId = null; // Clear hex
+		hex.unit = null;
 	},
 	/**
 	 * Apply armor reduction damage to a unit.
@@ -3211,6 +3300,7 @@ function alpineHexDiceTacticGame() { return {
 				die.hasMovedOrAttackedThisTurn = false;
 				die.actionsTakenThisTurn = 0;
 				die.isRerolled = false; // Penalty expires when turn starts
+				this.calcDefenderEffectiveArmor(die.hexId, state);
 				// Decrement skirmish buff
 				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
 			}
