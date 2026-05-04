@@ -43,8 +43,13 @@ function calculatePhaseWeights(GAME, state, profile) {
         w.killBonus *= 0.5;          // Position over blood
         w.teamPositionWeight *= 0.8; // Formations less critical than speed
     } else if (phase === 'late') {
-        w.captureBonus *= 5.0;       // Focus on the win
-        w.killBonus *= 1.5;          // Finish them off
+        if (shouldExcludeBases) {
+            w.killBonus *= 2.5;      // Aggressively hunt remaining units
+            w.attackBonus *= 1.5;
+        } else {
+            w.captureBonus *= 5.0;   // Focus on the win (base capture)
+            w.killBonus *= 1.5;      // Finish them off
+        }
         dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.3); // More reckless
     }
 
@@ -128,8 +133,29 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         .filter(p => p.id !== state.currentPlayerIndex && !p.isEliminated)
         .map(p => p.id);
 
+    const shouldExcludeBases = GAME.options && GAME.options.includes('a');
+
     // Adjust weights based on game phase
     const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
+    
+    // Annihilation Mode specific adjustments
+    if (shouldExcludeBases) {
+        // 1. Remove capture from priorities and move lethal actions to top
+        dynamicProfile.priorityOrder = dynamicProfile.priorityOrder.filter(p => p !== 'capture');
+        if (dynamicProfile.priorityOrder[0] !== 'kill') {
+            const killIdx = dynamicProfile.priorityOrder.indexOf('kill');
+            if (killIdx > -1) {
+                dynamicProfile.priorityOrder.splice(killIdx, 1);
+                dynamicProfile.priorityOrder.unshift('kill');
+            }
+        }
+        
+        // 2. Reduce pressure weight (fear) to encourage closing the gap
+        // Original logic: targetPressure * pressureWeight (negative value = penalty)
+        // Lowering it makes the penalty for being near enemies smaller.
+        dynamicProfile.weights.pressureWeight *= 0.5;
+    }
+
     profile = dynamicProfile;
 
     // Calculate Pressure Map for this turn (already handles all players)
@@ -148,7 +174,6 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     }
 
     // Get all opponent bases (empty in annihilation mode 'a')
-    const shouldExcludeBases = GAME.options && GAME.options.includes('a');
     const opponentBases = shouldExcludeBases ? [] : opponentIndices
         .filter(idx => !state.players[idx].isEliminated)
         .map(idx => ({
@@ -375,19 +400,26 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                     if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
                     if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
 
-                    // Skip base capture calculations in annihilation mode
-                    if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
+                    // Advancement bonus (hunting or base capture)
+                    if (m.move.actionType === 'MOVE') {
                         const targetHex = GAME.getHex(m.move.targetHexId, state);
-
-                        // Distance to nearest opponent base
-                        let minBaseDist = Infinity;
-                        opponentBases.forEach(base => {
-                            const dist = GAME.axialDistance(targetHex.q, targetHex.r, base.baseHex.q, base.baseHex.r);
-                            if (dist < minBaseDist) minBaseDist = dist;
-                        });
-
                         const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
-                        positionScore += (w.advanceBonus * (maxDist - minBaseDist));
+
+                        if (opponentBases.length > 0) {
+                            // Distance to nearest opponent base
+                            let minBaseDist = Infinity;
+                            opponentBases.forEach(base => {
+                                const dist = GAME.axialDistance(targetHex.q, targetHex.r, base.baseHex.q, base.baseHex.r);
+                                if (dist < minBaseDist) minBaseDist = dist;
+                            });
+                            positionScore += (w.advanceBonus * (maxDist - minBaseDist));
+                        } else if (shouldExcludeBases) {
+                            // Hunting: Distance to nearest enemy unit
+                            const nearest = findNearestEnemyUnit(GAME, state, state.currentPlayerIndex, targetHex);
+                            if (nearest.unit) {
+                                positionScore += (w.advanceBonus * 0.8 * (maxDist - nearest.distance));
+                            }
+                        }
                     }
 
                     // Skip base capture scoring in annihilation mode
@@ -601,22 +633,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     // --- ROLE-SPECIFIC HEURISTICS ---
     // Archer (Dice 2) Kiting logic
     if (unit.value === 2) {
-        // Find nearest enemy from any opponent
-        let nearestEnemyDist = Infinity;
-        const allEnemies = nextState.players.flatMap((p, idx) =>
-            (idx === state.currentPlayerIndex || p.isEliminated) ? [] : p.dice.filter(d => d.isDeployed && !d.isDeath)
-        );
-
         const myHex = GAME.getHex(aiUnitNext.hexId, nextState);
-        allEnemies.forEach(opp => {
-            const oppHex = GAME.getHex(opp.hexId, nextState);
-            const dist = GAME.axialDistance(myHex.q, myHex.r, oppHex.q, oppHex.r);
-            if (dist < nearestEnemyDist) nearestEnemyDist = dist;
-        });
+        const nearest = findNearestEnemyUnit(GAME, nextState, state.currentPlayerIndex, myHex);
 
-        if (nearestEnemyDist === 2) {
+        if (nearest.distance === 2) {
             analysis.score += 200; // Optimal kiting range
-        } else if (nearestEnemyDist === 1) {
+        } else if (nearest.distance === 1) {
             analysis.score -= 500; // Too close!
         }
     }
@@ -884,8 +906,34 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 }
 
 /**
+ * Find the nearest enemy unit for a given hex
+ */
+function findNearestEnemyUnit(GAME, state, myPlayerIndex, currentHex) {
+    let minEnemyDist = Infinity;
+    let nearestEnemy = null;
+
+    for (const player of state.players) {
+        if (player.id === myPlayerIndex || player.isEliminated) continue;
+
+        for (const unit of player.dice) {
+            if (!unit.isDeployed || unit.isDeath) continue;
+
+            const enemyHex = GAME.getHex(unit.hexId, state);
+            if (!enemyHex) continue;
+
+            const dist = GAME.axialDistance(currentHex.q, currentHex.r, enemyHex.q, enemyHex.r);
+            if (dist < minEnemyDist) {
+                minEnemyDist = dist;
+                nearestEnemy = unit;
+            }
+        }
+    }
+    return { unit: nearestEnemy, distance: minEnemyDist };
+}
+
+/**
  * Calculate the overall strategic score for a player's team position.
- * This encourages units to move towards the nearest enemy base while remaining grouped.
+ * This encourages units to move towards the nearest enemy base (or nearest enemy unit in annihilation mode).
  */
 function calculateTeamScore(GAME, state, playerIndex, opponentBases=[], shouldExcludeBases=false) {
     const player = state.players[playerIndex];
@@ -895,15 +943,23 @@ function calculateTeamScore(GAME, state, playerIndex, opponentBases=[], shouldEx
         const hex = GAME.getHex(unit.hexId, state);
         if (!hex) continue;
 
-        // 1. Advancement: Bonus for being closer to the nearest opponent base (skip in annihilation mode)
+        // 1. Advancement: Bonus for being closer to the nearest objective
+        const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
+        
         if (!shouldExcludeBases && opponentBases.length > 0) {
+            // Target: Bases
             let minBaseDist = Infinity;
             opponentBases.forEach(base => {
                 const dist = GAME.axialDistance(hex.q, hex.r, base.baseHex.q, base.baseHex.r);
                 if (dist < minBaseDist) minBaseDist = dist;
             });
-            const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
             score += (maxDist - minBaseDist) * 50;
+        } else if (shouldExcludeBases) {
+            // Target: Nearest Enemy Unit (Hunting mode)
+            const nearest = findNearestEnemyUnit(GAME, state, playerIndex, hex);
+            if (nearest.unit) {
+                score += (maxDist - nearest.distance) * 40; // Slightly lower weight than base-rushing
+            }
         }
 
         // 2. Grouping/Support: Bonus for being near teammates
