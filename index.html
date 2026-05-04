@@ -86,24 +86,30 @@
 		.bg-hexdefault {
 		}
 		.bg-hexselect {
-			background-color: #f4ecd8;
-			background-size: auto 78% !important;
+			/*background-color: #f4ecd8;*/
+			/*filter: contrast(0.5);*/
 		}
 		.bg-hexmove {
-			background-color: #bd9b6b;
-			background-size: auto 78% !important;
+			/*background-color: #bd9b6b;*/
+			/*filter: brightness(0.5);*/
+			filter: drop-shadow(2px 4px 6px #3867d6);
 		}
 		.bg-hexmerge {
-			background-color: #2bcbba;
-			background-size: auto 78% !important;
+			/*background-color: #2bcbba;*/
+			filter: drop-shadow(2px 4px 6px #a55eea);
 		}
 		.bg-hextarget {
-			background-color: #fed330;
-			background-size: auto 78% !important;
+			/*background-color: #fed330;*/
+			/*filter: sepia(1);*/
+			filter: drop-shadow(2px 4px 6px #c8a00a);
+		}
+		.bg-hexdanger {
+			/*background-color: #705030;*/
+			filter: drop-shadow(2px 4px 6px #eb3b5a);
 		}
 		.bg-hexdeploy {
 			/*background-color: #f7b73166;*/
-			background-color: #c3a47166;
+			background-color: #f8f8f8aa;
 		}
 		.bg-hexred {
 			background-color: #eb3b5a33;
@@ -147,9 +153,7 @@
 			background-repeat: no-repeat;
 			background-position: center;
 		}
-		.bg-hexdanger {
-			background-color: #705030;
-		}
+
 		/* Terrain Colors */
 		.bg-hexplain {
 			background-color: #89664811;
@@ -450,7 +454,7 @@
 			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
 				<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
-					Level: <span x-text="campaignData?.level"></span>, <span class="cursor-pointer underline hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span> 
+					Level: <span x-text="campaignData?.level"></span>, <span class="cursor-pointer underline hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>
 				</p>
 				<!-- <p class="mb-2 text-sm font-bold" x-show="isCampaign && currentPlayerIndex === 0">
 					Units Deployed: <span x-text="players[0]?.dice?.filter(d => d.isDeployed)?.length || '0'"></span> / <span x-text="deploymentLimit"></span>
@@ -567,6 +571,7 @@
 				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
+			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showMinimap = !showMinimap">Minimap</a>
 		</div>
 	</div>
 

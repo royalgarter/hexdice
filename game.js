@@ -91,7 +91,7 @@ function alpineHexDiceTacticGame() { return {
 	rules: {
 		dicePerPlayer: 12,
 	},
-	options: 'a', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
+	options: '', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
