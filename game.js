@@ -91,7 +91,7 @@ function alpineHexDiceTacticGame() { return {
 	rules: {
 		dicePerPlayer: 12,
 	},
-	options: 'r', //'rm',
+	options: 'a', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
@@ -3227,13 +3227,15 @@ function alpineHexDiceTacticGame() { return {
 			const unitOnBase = this.getUnitOnHex(baseHex?.id, state);
 			const baseCaptured = baseHex && unitOnBase && unitOnBase.playerId !== p.id;
 
-			if (activeDice === 0 || baseCaptured) {
+			// Annihilation mode: only eliminate when all dice are gone
+			// Normal mode: eliminate when all dice gone OR base captured
+			if (activeDice === 0 || (!this.options.includes('a') && baseCaptured)) {
 				p.isEliminated = true;
 				const reason = activeDice === 0 ? "annihilated" : "base captured";
 				this.addLog(`P${p.id + 1} (${p.color}) has been ${reason}!`, state);
 			}
 
-			if (baseCaptured) {
+			if (baseCaptured && !this.options.includes('a')) {
 				// Remove all units of eliminated player from the board
 				p.dice.forEach(d => {
 					if (d.isDeployed && !d.isDeath && d.hexId !== null) {

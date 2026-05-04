@@ -26,6 +26,7 @@ function calculatePhaseWeights(GAME, state, profile) {
     const currentPlayer = state.players[state.currentPlayerIndex];
     const deployedUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath).length;
     const totalPossibleUnits = currentPlayer.dice.length;
+    const shouldExcludeBases = GAME.options && GAME.options.includes('a');
     
     // Estimate game phase
     let phase = 'mid';
@@ -146,8 +147,9 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         return;
     }
 
-    // Get all opponent bases
-    const opponentBases = opponentIndices
+    // Get all opponent bases (empty in annihilation mode 'a')
+    const shouldExcludeBases = GAME.options && GAME.options.includes('a');
+    const opponentBases = shouldExcludeBases ? [] : opponentIndices
         .filter(idx => !state.players[idx].isEliminated)
         .map(idx => ({
             id: idx,
@@ -253,6 +255,9 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
     switch (priority) {
         case 'capture': {
+            // Skip capture in annihilation mode
+            if (shouldExcludeBases) break;
+            
             // Find moves that capture any enemy base (win condition)
             const captureMoves = scoredMoves.filter(m => m.canCapture);
             if (captureMoves.length > 0) {
@@ -370,7 +375,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                     if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
                     if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
 
-                    if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
+                    // Skip base capture calculations in annihilation mode
+                    if (!shouldExcludeBases && m.move.actionType === 'MOVE' && opponentBases.length > 0) {
                         const targetHex = GAME.getHex(m.move.targetHexId, state);
 
                         // Distance to nearest opponent base
@@ -384,17 +390,20 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                         positionScore += (w.advanceBonus * (maxDist - minBaseDist));
                     }
 
-                    // Check if unit is already on a captured base
-                    const unitCurrentHexId = m.unit.hexId;
-                    const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
-                    const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === m.move.targetHexId);
+                    // Skip base capture scoring in annihilation mode
+                    if (!shouldExcludeBases) {
+                        // Check if unit is already on a captured base
+                        const unitCurrentHexId = m.unit.hexId;
+                        const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
+                        const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === m.move.targetHexId);
 
-                    if (isTargetOnEnemyBase) {
-                        // If unit is already on a captured base, reduce capture bonus to encourage movement
-                        if (isUnitOnCapturedBase && m.move.actionType === 'MOVE') {
-                            positionScore += w.captureBonus * 0.1; // Only 10% to encourage advancement
-                        } else {
-                            positionScore += w.captureBonus;
+                        if (isTargetOnEnemyBase) {
+                            // If unit is already on a captured base, reduce capture bonus to encourage movement
+                            if (isUnitOnCapturedBase && m.move.actionType === 'MOVE') {
+                                positionScore += w.captureBonus * 0.1; // Only 10% to encourage advancement
+                            } else {
+                                positionScore += w.captureBonus;
+                            }
                         }
                     }
 
@@ -473,8 +482,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
     // Team Position Score calculation
     if (typeof calculateTeamScore === 'function') {
-        const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases);
-        const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBases);
+        const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
+        const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
         analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
     }
 
@@ -483,12 +492,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score += (w.backAndForthPenalty || -300);
     }
 
-    // Check if unit is already on an enemy base (base already captured)
+    // Check if unit is already on an enemy base (base already captured) - skip in annihilation mode
     const unitCurrentHexId = unit.hexId;
-    const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === move.targetHexId);
+    const isTargetOnEnemyBase = shouldExcludeBases ? false : opponentBases.some(b => b.baseHexId === move.targetHexId);
 
-    // Check for capture (moving to any enemy base)
-    if (isTargetOnEnemyBase) {
+    // Check for capture (moving to any enemy base) - skip in annihilation mode
+    if (!shouldExcludeBases && isTargetOnEnemyBase) {
         analysis.canCapture = true;
         analysis.captureScore = w.captureBonus;
     }
@@ -723,11 +732,11 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     analysis.isSupportAction = true;
                 }
 
-                // TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
-                if (!oracleThreatened && !oracleWillBeKilled) {
-                    const opponentBasesList = opponentBases.length > 0 ? opponentBases : 
-                        state.players.filter((p, idx) => idx !== state.currentPlayerIndex && !p.isEliminated)
-                            .map(p => ({ baseHex: GAME.getHex(p.baseHexId, state) })).filter(b => b.baseHex);
+// TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
+            if (!oracleThreatened && !oracleWillBeKilled && !shouldExcludeBases) {
+                const opponentBasesList = opponentBases.length > 0 ? opponentBases : 
+                    state.players.filter((p, idx) => idx !== state.currentPlayerIndex && !p.isEliminated)
+                        .map(p => ({ baseHex: GAME.getHex(p.baseHexId, state) })).filter(b => b.baseHex);
 
                     const targetNeighbors = GAME.getNeighbors(targetHex, state);
                     let targetThreatCount = 0;
@@ -878,7 +887,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
  * Calculate the overall strategic score for a player's team position.
  * This encourages units to move towards the nearest enemy base while remaining grouped.
  */
-function calculateTeamScore(GAME, state, playerIndex, opponentBases=[]) {
+function calculateTeamScore(GAME, state, playerIndex, opponentBases=[], shouldExcludeBases=false) {
     const player = state.players[playerIndex];
     let score = 0;
     for (const unit of player.dice) {
@@ -886,8 +895,8 @@ function calculateTeamScore(GAME, state, playerIndex, opponentBases=[]) {
         const hex = GAME.getHex(unit.hexId, state);
         if (!hex) continue;
 
-        // 1. Advancement: Bonus for being closer to the nearest opponent base
-        if (opponentBases.length > 0) {
+        // 1. Advancement: Bonus for being closer to the nearest opponent base (skip in annihilation mode)
+        if (!shouldExcludeBases && opponentBases.length > 0) {
             let minBaseDist = Infinity;
             opponentBases.forEach(base => {
                 const dist = GAME.axialDistance(hex.q, hex.r, base.baseHex.q, base.baseHex.r);
