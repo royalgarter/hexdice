@@ -141,6 +141,8 @@ const heuristicProfiles = {
         name: "Tactician",
         description: "Strategic: Sets up advantageous positions before engaging",
         priorityOrder: ['capture', 'spell', 'position', 'kill', 'attack', 'dodge'],
+        minimax: true,
+        minimaxDepth: 2,
         weights: {
             captureBonus: 10000,
             killBonus: 1500,
@@ -181,6 +183,8 @@ const heuristicProfiles = {
         name: "Assassin",
         description: "Precision: Targets weak points and high-value enemies",
         priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
+        minimax: true,
+        minimaxDepth: 2,
         weights: {
             captureBonus: 10000,
             killBonus: 1800,
