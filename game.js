@@ -91,7 +91,7 @@ function alpineHexDiceTacticGame() { return {
 	rules: {
 		dicePerPlayer: 12,
 	},
-	options: 'a', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
+	options: '', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
@@ -161,7 +161,7 @@ function alpineHexDiceTacticGame() { return {
 	setTerrainType(hex, type) {
 		hex.terrainType = type;
 		hex.terrainClass = TERRAIN_CONFIG[type]?.bg || 'bg-hexplain';
-		
+
 		const isTerrain = (type !== 'PLAIN');
 		if (isTerrain) {
 			const fileTerrain = `${type.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}`;
@@ -533,7 +533,7 @@ function alpineHexDiceTacticGame() { return {
 
 					if (this.isCampaign && campaignData?.rmi) {
 						let words = campaignData.rmi.split('.')?.[0]?.replace(/\d/g, '')?.split('_');
-						let ro_rmi_skins = words?.length 
+						let ro_rmi_skins = words?.length
 							? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
 							: [];
 
@@ -541,7 +541,7 @@ function alpineHexDiceTacticGame() { return {
 					} else {
 						selectedSkin = availableSkins.random();
 					}
-					
+
 					usedSkins.add(selectedSkin);
 				}
 			}
@@ -563,7 +563,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.isCampaign) {
 			const player = this.players[0];
 			let diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
-			
+
 			// Filter out units that are currently locked out (eliminated in previous level)
 			diceToLoad = diceToLoad.filter(val => CampaignManager.isUnitAvailable(val));
 
@@ -747,11 +747,11 @@ function alpineHexDiceTacticGame() { return {
 				const x = ADJUSTED_WIDTH * 3/4 * q;
 				const y = ADJUSTED_HEIGHT * (r + q / 2);
 
-				this.hexes.push({ 
-					id, q, r, s: -q-r, 
-					unitId: null, 
+				this.hexes.push({
+					id, q, r, s: -q-r,
+					unitId: null,
 					unit: null, // Pre-initialize unit to null for faster access
-					visualX: x, visualY: y, 
+					visualX: x, visualY: y,
 					terrainType: 'PLAIN',
 					terrainClass: 'bg-hexplain'
 				});
@@ -772,7 +772,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (typeof window !== 'undefined' && window.screen && !ratio) {
 			if (gridWidth > window.screen.width) {
-				return this.generateHexGrid(radius, padding, window.screen.width / gridWidth);	
+				return this.generateHexGrid(radius, padding, window.screen.width / gridWidth);
 			}
 
 			if (document.querySelectorAll('[id^="game-"]').length) {
@@ -780,7 +780,7 @@ function alpineHexDiceTacticGame() { return {
 				paddingHeight *= 2;
 
 				if (gridHeight < (window.screen.height - paddingHeight)) {
-					return this.generateHexGrid(radius, padding, (window.screen.height - paddingHeight) / gridHeight);	
+					return this.generateHexGrid(radius, padding, (window.screen.height - paddingHeight) / gridHeight);
 				}
 			}
 		}
@@ -862,6 +862,10 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		return (unit && !unit.isDeath) ? unit : null;
+	},
+	getHexQR(hexId) {
+		const hex = this.hexes[hexId];
+		return hex ? { q: hex.q, r: hex.r } : null;
 	},
 	getNeighbors(hex, state) {
 		if (!hex) return [];
@@ -1261,7 +1265,7 @@ function alpineHexDiceTacticGame() { return {
 
 	refreshValidDeploymentHexes() {
 		if (this.phase !== 'SETUP_DEPLOY') {
-			this.validDeploymentHexesSet.clear();
+			this.validDeploymentHexesSet?.clear();
 			return;
 		}
 		const hexIds = this.calcValidDeploymentHexes(this.currentPlayerIndex);
@@ -1316,8 +1320,8 @@ function alpineHexDiceTacticGame() { return {
 		this.selectedUnitHexId = hexId;
 		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 		this.validTargets = []; // Will be calculated if attack action is chosen
-		this.validMovesSet.clear();
-		this.validTargetsSet.clear();
+		this.validMovesSet?.clear();
+		this.validTargetsSet?.clear();
 		this.validMerges = this.options.includes('m') ? this.calcValidMoves(this.selectedUnitHexId, 'MERGE') : [];
 		this.validMergesSet = new Set(this.validMerges);
 		this.dangerHexes = this.calcDangerHex(this.currentPlayerIndex, state);
@@ -1355,11 +1359,11 @@ function alpineHexDiceTacticGame() { return {
 		state.hovering = {}
 		state.selectedUnitHexId = null;
 		state.validMoves = [];
-		state.validMovesSet?.clear();
+		state.validMovesSet?.clear?.();
 		state.validTargets = [];
-		state.validTargetsSet?.clear();
+		state.validTargetsSet?.clear?.();
 		state.validMerges = [];
-		state.validMergesSet?.clear();
+		state.validMergesSet?.clear?.();
 		state.actionMode = null;
 		state.dangerHexes = {};
 	},
@@ -1373,9 +1377,9 @@ function alpineHexDiceTacticGame() { return {
 
 		this.actionMode = actionType;
 		this.validMoves = [];
-		this.validMovesSet.clear();
+		this.validMovesSet?.clear?.();
 		this.validTargets = [];
-		this.validTargetsSet.clear();
+		this.validTargetsSet?.clear?.();
 		// this.validMerges = [];
 		// this.validTargets = [];
 
@@ -2125,7 +2129,7 @@ function alpineHexDiceTacticGame() { return {
 		// Try to find a reserve die for the player (prefer unused, then dead)
 		const player = (state || this).players[oracleUnit.playerId];
 		let reserveDie = player.dice.find(d => !d.isDeployed && !d.isDeath);
-		
+
 		if (!reserveDie) {
 			reserveDie = player.dice.find(d => d.isDeath);
 		}
@@ -2499,7 +2503,7 @@ function alpineHexDiceTacticGame() { return {
 							break;
 						} else {
 							stepCost = 2;
-							effDist = unitStats.distance - 1;	
+							effDist = unitStats.distance - 1;
 						}
 					}
 					if (hex.terrainType === 'MOUNTAIN') {
@@ -2532,7 +2536,7 @@ function alpineHexDiceTacticGame() { return {
 								break;
 							} else {
 								stepCost = 2;
-								effDist = unitStats.distance - 1;	
+								effDist = unitStats.distance - 1;
 							}
 						}
 						if (hex.terrainType === 'MOUNTAIN') {
@@ -2638,7 +2642,7 @@ function alpineHexDiceTacticGame() { return {
 
 		// In Campaign Mode, LAKE is temporarily considered passable with movement cost = 2
 		possibleMoves = [...new Set(possibleMoves.filter(x => x))];
-		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || this.isCampaign); 
+		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || this.isCampaign);
 
 		// Filter based on target: empty or enemy (for move), or friendly (for merge)
 		return possibleMoves.filter(hexId => {
@@ -3419,6 +3423,62 @@ function alpineHexDiceTacticGame() { return {
 			if (logContainer) logContainer.scrollTop = 0;
 		});
 	},
+
+	generateHDFEN() {
+		// Piece Placement
+		let piecePlacementTokens = [];
+		let emptyCount = 0;
+		for (let i = 0; i < this.hexes.length; i++) {
+			const hex = this.hexes[i];
+			if (hex.unit) {
+				if (emptyCount > 0) {
+					piecePlacementTokens.push(emptyCount.toString());
+					emptyCount = 0;
+				}
+				const unit = hex.unit;
+				const playerID = unit.playerId;
+				const unitValue = unit.value;
+				const isMoved = unit.hasMovedOrAttackedThisTurn ? 'M' : 'm';
+				const isGuarding = unit.isGuarding > 0 ? 'G' : 'g';
+				const isDeath = unit.isDeath ? 'D' : 'd';
+				const skirmishBuff = unit.skirmishBuff; // Assuming single digit, e.g., 0-9
+
+				piecePlacementTokens.push(`${playerID}${unitValue}${isMoved}${isGuarding}${isDeath}${skirmishBuff}`);
+			} else {
+				emptyCount++;
+			}
+		}
+		if (emptyCount > 0) {
+			piecePlacementTokens.push(emptyCount.toString());
+		}
+		const piecePlacement = piecePlacementTokens.join('/');
+
+		// Active Player
+		const activePlayer = this.currentPlayerIndex;
+
+		// Game Phase
+		let gamePhase = '';
+		switch (this.phase) {
+			case 'SETUP_ROLL': gamePhase = 'SR'; break;
+			case 'SETUP_REROLL': gamePhase = 'SRR'; break;
+			case 'SETUP_DEPLOY': gamePhase = 'SD'; break;
+			case 'PLAYER_TURN': gamePhase = 'PT'; break;
+			case 'GAME_OVER': gamePhase = 'GO'; break;
+			default: gamePhase = '__'; break; // Unknown phase
+		}
+
+		// Turn Number
+		const turnNumber = this.turnCount;
+
+		// Other Flags
+		const noRerollFlag = this.rules.noReroll ? 'r' : '_';
+		const annihilationModeFlag = this.options.includes('a') ? 'a' : '_';
+		const mergeModeFlag = this.options.includes('m') ? 'm' : '_';
+		const otherFlags = `${noRerollFlag}${annihilationModeFlag}${mergeModeFlag}`;
+
+		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
+	},
+
 };}
 
 const BOARD_DOT = [
