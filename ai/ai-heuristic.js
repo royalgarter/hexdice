@@ -138,7 +138,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 
     // Adjust weights based on game phase
     const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
-    
+
     // Annihilation Mode specific adjustments
     if (shouldExcludeBases) {
         // 1. Remove capture from priorities and move lethal actions to top
@@ -150,7 +150,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
                 dynamicProfile.priorityOrder.unshift('kill');
             }
         }
-        
+
         // 2. Reduce pressure weight (fear) to encourage closing the gap
         // Original logic: targetPressure * pressureWeight (negative value = penalty)
         // Lowering it makes the penalty for being near enemies smaller.
@@ -284,7 +284,7 @@ function sortMovesByStrategy(moves, strategy, riskTolerance) {
             case 'threatRemoval':
                 if (b.isTargetThreat !== a.isTargetThreat) return (b.isTargetThreat ? 1 : -1);
                 return (b.targetValue || 0) - (a.targetValue || 0);
-            
+
             case 'lowArmor':
                 if (a.targetArmor !== b.targetArmor) return (a.targetArmor || 0) - (b.targetArmor || 0);
                 return (b.targetValue || 0) - (a.targetValue || 0);
@@ -465,7 +465,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                                 if (dist < minBaseDist) minBaseDist = dist;
                             });
                             positionScore += (w.advanceBonus * (maxDist - minBaseDist));
-                        } else if (shouldExcludeBases) {
+                        } else {
                             // Hunting: Distance to nearest enemy unit
                             const nearest = findNearestEnemyUnit(GAME, state, state.currentPlayerIndex, targetHex);
                             if (nearest.unit) {
@@ -533,7 +533,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 function calculateRoleBonus(unit, targetHex, GAME, state, w) {
     let bonus = 0;
     const value = unit.value;
-    
+
     // Assign role if not present
     if (!unit.role) {
         if (value === 3) unit.role = 'FLANKER';
@@ -1127,7 +1127,7 @@ function calculateTeamScore(GAME, state, playerIndex, opponentBases=[], shouldEx
 
         // 1. Advancement: Bonus for being closer to the nearest objective
         const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
-        
+
         if (!shouldExcludeBases && opponentBases.length > 0) {
             // Target: Bases
             let minBaseDist = Infinity;

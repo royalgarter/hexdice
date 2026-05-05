@@ -893,11 +893,11 @@ function alpineHexDiceTacticGame() { return {
 			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
 		}
 
-		if (state.selectedUnitHexId === hex.id) cls = 'bg-hexselect';
-		else if (state.validMovesSet?.has(hex.id)) cls = 'bg-hexmove';
-		else if (state.validMergesSet?.has(hex.id)) cls = 'bg-hexmerge';
-		else if (state.validTargetsSet?.has(hex.id)) cls = 'bg-hextarget';
-		else if (state.dangerHexes?.[hex.id]) cls = 'bg-hexdanger';
+		if (state.selectedUnitHexId === hex.id) cls += ' bg-hexselect';
+		if (state.validMovesSet?.has(hex.id)) cls += ' bg-hexmove';
+		if (state.validMergesSet?.has(hex.id)) cls += ' bg-hexmerge';
+		if (state.validTargetsSet?.has(hex.id)) cls += ' bg-hextarget';
+		if (state.dangerHexes?.[hex.id]) cls += ' bg-hexdanger';
 
 		if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
 			cls = 'bg-hexdeploy';
@@ -1284,7 +1284,11 @@ function alpineHexDiceTacticGame() { return {
 		const clickedHex = this.getHex(hexId);
 		const unitOnClickedHex = this.getUnitOnHex(hexId);
 
-		this.unitstat = unitOnClickedHex ? hexId : null
+		if (unitOnClickedHex && this.canPerformAction(this.selectedUnitHexId, 'RANGED_ATTACK') && unitOnClickedHex.playerId != this?.currentPlayerIndex) {
+			this.actionMode = 'RANGED_ATTACK';
+			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
+			this.validTargetsSet = new Set(this.validTargets);
+		}
 
 		if (this.actionMode) { // If in an action mode like MOVE or ATTACK
 			this.completeAction(hexId);
@@ -1297,6 +1301,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 		} else { // Normal selection mode
 			if (unitOnClickedHex) {
+				this.unitstat = unitOnClickedHex ? hexId : null;
 				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
 				this.hoverHex(hexId);
 			} else if (this.selectedUnitHexId !== null) { // Clicked on empty or enemy hex while a unit is selected (implies move/attack intent)
@@ -1428,9 +1433,9 @@ function alpineHexDiceTacticGame() { return {
 	},
 	actionModeMessage() {
 		if (this.actionMode === 'MOVE') return "Select a destination hex for your unit.";
+		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'RANGED_ATTACK') return "Select an ranged enemy unit to target.";
 		if (this.actionMode === 'SPECIAL_ATTACK') return "Select an adjacent enemy unit to target.";
-		if (this.actionMode === 'MERGE') return "Select a friendly unit to merge with.";
 		if (this.actionMode === 'SPELLCAST') return "Select a friendly unit to cast spell on.";
 		if (this.actionMode === 'SPELLCAST_SACRIFICE') return "Select an adjacent enemy unit to transmute (Oracle sacrificed, enemy converted).";
 		if (this.actionMode === 'SKIRMISH_POST_MOVE') return "Skirmish success! Select an adjacent hex to move to (or stay put).";
