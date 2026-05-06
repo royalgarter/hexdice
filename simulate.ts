@@ -489,8 +489,9 @@ async function runGame(
     
     // Run game loop
     while (game.phase !== "GAME_OVER" && turnCount < maxTurns) {
-        const currentPlayer = game.players[game.currentPlayerIndex];
-        const currentAIType = aiTypes[game.currentPlayerIndex];
+        const actingPlayerIndex = game.currentPlayerIndex;
+        const currentPlayer = game.players[actingPlayerIndex];
+        const currentAIType = aiTypes[actingPlayerIndex];
         const stateBeforeHash = calculateStateHash(game);
 
         // Get last log count to detect new logs
@@ -502,7 +503,7 @@ async function runGame(
                 game.performAITurn();
             } else {
                 // Human player - just end turn for simulation
-                logger.log(`P${game.currentPlayerIndex + 1} (human) - auto ending turn`, "game");
+                logger.log(`P${actingPlayerIndex + 1} (human) - auto ending turn`, "game");
                 game.endTurn();
             }
         } else {
@@ -518,7 +519,7 @@ async function runGame(
 
         moves.push({
             turn: turnCount,
-            player: game.currentPlayerIndex,
+            player: actingPlayerIndex,
             aiType: currentAIType,
             actionType: actionLog?.type || "unknown",
             logMessage: newLogs.map(l => l.message).join("; "),
