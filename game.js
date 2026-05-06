@@ -3446,7 +3446,7 @@ function alpineHexDiceTacticGame() { return {
 				const isMoved = unit.hasMovedOrAttackedThisTurn ? 'M' : 'm';
 				const isGuarding = unit.isGuarding > 0 ? 'G' : 'g';
 				const isDeath = unit.isDeath ? 'D' : 'd';
-				const skirmishBuff = unit.skirmishBuff; // Assuming single digit, e.g., 0-9
+				const skirmishBuff = (unit.skirmishBuff || 0).toString().substring(0, 1);
 
 				piecePlacementTokens.push(`${playerID}${unitValue}${isMoved}${isGuarding}${isDeath}${skirmishBuff}`);
 			} else {

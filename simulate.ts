@@ -254,18 +254,25 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
 
 // Calculate state hash for replay
 function calculateStateHash(game: any): string {
-    const playersDice = game.players.map((p: any, i: number) => 
-        `p${i}Dice:` + p.dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|")
+    const playersDice = game.players.map((p: any, i: number) =>
+        `p${i}Dice:` + p.dice.map((d: any) => {
+            const hasMoved = d.hasMovedOrAttackedThisTurn ? 1 : 0;
+            const isGuarding = d.isGuarding > 0 ? 1 : 0;
+            const skirmish = d.skirmishBuff || 0;
+            return `${d.value}-${d.hexId}-${d.isDeath}-${hasMoved}-${isGuarding}-${skirmish}`;
+        }).join("|")
     ).join(";");
-    
+
     const state = {
         playersDice,
-        turn: game.currentPlayerIndex,
+        currentPlayerIndex: game.currentPlayerIndex,
         phase: game.phase,
+        turnCount: game.turnCount,
+        noReroll: game.rules?.noReroll,
+        options: game.options || '',
     };
     return btoa(JSON.stringify(state));
 }
-
 // Run a single game simulation
 async function runGame(
     gameNumber: number,
