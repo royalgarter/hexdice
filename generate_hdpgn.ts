@@ -10,31 +10,34 @@
  *   deno run --allow-read --allow-write generate_hdpgn.ts <replay_file.json> [output_file.hdpgn]
  */
 
-// Simplified hex grid generation to get q,r from hexId
-function generateMinimalHexGrid(radius: number) {
-    const hexes = [];
-    const hexesQR: { [key: number]: number } = {}; // q*1000 + r -> id
-
-    let id = 0;
-    for (let q = -radius; q <= radius; q++) {
-        for (let r = -radius; r <= radius; r++) {
-            if (-q - r < -radius || -q - r > radius) continue; // Check s coordinate
-
-            hexes.push({ id, q, r, s: -q-r });
-            hexesQR[(q * 1e3) + r] = id;
-            id++;
-        }
-    }
-    return { hexes, hexesQR };
+// Stub browser APIs for headless execution
+function stubBrowserAPIs() {
+	const locationStub = {
+		search: `?mode=headless`,
+		href: `https://hexdice.local/`,
+		toString: () => `https://hexdice.local/`
+	};
+	const documentStub = { getElementById: () => null };
+	(globalThis as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { } };
+	return { location: locationStub, document: documentStub };
 }
 
-interface MinimalHexGrid {
-    hexes: {id: number, q: number, r: number, s: number}[];
-    hexesQR: { [key: number]: number };
+// Load game engine
+async function loadGameEngine(): Promise<any> {
+    const { location: locationStub, document: documentStub } = stubBrowserAPIs();
+    const gameCode = await Deno.readTextFile("./game.js");
+    const fullCode = `
+        ${gameCode}
+        return {
+            createGame: alpineHexDiceTacticGame,
+        };
+    `;
+	const createModule = new Function('location', 'document', fullCode);
+	return createModule(locationStub, documentStub);
 }
 
-function getHexQR(hexId: number, hexGrid: MinimalHexGrid) {
-    const hex = hexGrid.hexes[hexId];
+function getHexQR(hexId: number, game: any) {
+    const hex = game.hexes[hexId];
     return hex ? { q: hex.q, r: hex.r } : null;
 }
 
@@ -68,106 +71,33 @@ interface ReplayData {
     games: GameReplay[];
 }
 
-function convertStateToHDFEN(gameState: any, hexGrid: MinimalHexGrid) {
-    const piecePlacementTokens: string[] = [];
-    let emptyCount = 0;
-
-    const playersDiceStr = gameState.playersDice || "";
-    const playerUnits: { [hexId: number]: any } = {};
-
-    playersDiceStr.split(';').forEach((playerStr: string) => {
-        if (!playerStr) return;
-        const [playerKey, diceData] = playerStr.split(':');
-        const playerId = parseInt(playerKey.replace('p', '').replace('Dice', ''));
-
-        if (diceData) {
-            diceData.split('|').forEach((unitStr: string) => {
-                if (!unitStr) return;
-                const parts = unitStr.split('-');
-                const value = parseInt(parts[0]);
-                const hexId = parseInt(parts[1]);
-                const isDeath = parts[2] === 'true' || parts[2] === '1';
-                
-                // New flags (handle cases where they might be missing in older replays)
-                const hasMoved = parts[3] === '1';
-                const isGuarding = parts[4] === '1';
-                const skirmishBuff = parseInt(parts[5]) || 0;
-
-                if (!isDeath && !isNaN(hexId)) {
-                    playerUnits[hexId] = { playerId, value, isDeath, hasMoved, isGuarding, skirmishBuff };
-                }
-            });
-        }
-    });
-
-    for (let i = 0; i < hexGrid.hexes.length; i++) {
-        const hex = hexGrid.hexes[i];
-        const unitOnHex = playerUnits[hex.id];
-
-        if (unitOnHex) {
-            if (emptyCount > 0) {
-                piecePlacementTokens.push(emptyCount.toString());
-                emptyCount = 0;
-            }
-            const playerID = unitOnHex.playerId;
-            const unitValue = unitOnHex.value;
-            const isMoved = unitOnHex.hasMoved ? 'M' : 'm';
-            const isGuarding = unitOnHex.isGuarding ? 'G' : 'g';
-            const isDeath = unitOnHex.isDeath ? 'D' : 'd';
-            const skirmishBuff = unitOnHex.skirmishBuff.toString().substring(0, 1);
-
-            piecePlacementTokens.push(`${playerID}${unitValue}${isMoved}${isGuarding}${isDeath}${skirmishBuff}`);
-        } else {
-            emptyCount++;
-        }
-    }
-    if (emptyCount > 0) {
-        piecePlacementTokens.push(emptyCount.toString());
-    }
-    const piecePlacement = piecePlacementTokens.join('/');
-
-    const activePlayer = gameState.currentPlayerIndex ?? gameState.turn ?? 0;
-    let gamePhase = '';
-    switch (gameState.phase) {
-        case 'SETUP_ROLL': gamePhase = 'SR'; break;
-        case 'SETUP_REROLL': gamePhase = 'SRR'; break;
-        case 'SETUP_DEPLOY': gamePhase = 'SD'; break;
-        case 'PLAYER_TURN': gamePhase = 'PT'; break;
-        case 'GAME_OVER': gamePhase = 'GO'; break;
-        default: gamePhase = '__'; break;
-    }
-
-    const turnNumber = gameState.turnCount ?? 0;
-    const noRerollFlag = gameState.noReroll ? 'r' : '_';
-    const annihilationModeFlag = (gameState.options || '').includes('a') ? 'a' : '_';
-    const mergeModeFlag = (gameState.options || '').includes('m') ? 'm' : '_';
-    const otherFlags = `${noRerollFlag}${annihilationModeFlag}${mergeModeFlag}`;
-
-    return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
-}
-
 async function generateHDPGN(replayFile: string, outputFile?: string) {
     const replayData: ReplayData = JSON.parse(await Deno.readTextFile(replayFile));
+    const engine = await loadGameEngine();
+    const game = engine.createGame();
+    
+    // Initialize hex grid (Standard R=5)
+    game.generateHexGrid(5);
+    
     let hdpgnContent = '';
 
-    const hexGrid = generateMinimalHexGrid(5); // Default R=5 for now
-
-    for (const game of replayData.games) {
-        hdpgnContent += `[Event "HexDice Game ${game.gameNumber}"]\n`;
+    for (const gameInstance of replayData.games) {
+        hdpgnContent += `[Event "HexDice Game ${gameInstance.gameNumber}"]\n`;
         hdpgnContent += `[Site "Simulator"]\n`;
         hdpgnContent += `[Date "${replayData.metadata.date}"]\n`;
-        hdpgnContent += `[Round "${game.gameNumber}"]\n`;
+        hdpgnContent += `[Round "${gameInstance.gameNumber}"]\n`;
         hdpgnContent += `[White "Player 0"]\n`;
         hdpgnContent += `[Black "Player 1"]\n`;
-        hdpgnContent += `[Result "${game.winner === 0 ? '1-0' : game.winner === 1 ? '0-1' : '1/2-1/2'}"]\n`;
+        hdpgnContent += `[Result "${gameInstance.winner === 0 ? '1-0' : gameInstance.winner === 1 ? '0-1' : '1/2-1/2'}"]\n`;
 
         const p0AIType = replayData.metadata.aiTypes[0] || "Human";
         const p1AIType = replayData.metadata.aiTypes[1] || "Human";
         hdpgnContent += `[AIDice "P0=${p0AIType},P1=${p1AIType}"]\n`;
 
-        if (game.moves.length > 0 && game.moves[0].stateHash) {
-            const decodedState = JSON.parse(atob(game.moves[0].stateHash));
-            const initialHDFEN = convertStateToHDFEN(decodedState, hexGrid);
+        if (gameInstance.moves.length > 0 && gameInstance.moves[0].stateHash) {
+            const decodedState = JSON.parse(atob(gameInstance.moves[0].stateHash));
+            // Use consolidated HDFEN generation from the engine
+            const initialHDFEN = game.generateHDFEN(decodedState);
             hdpgnContent += `[HDFEN "${initialHDFEN}"]\n`;
         }
 
@@ -175,7 +105,7 @@ async function generateHDPGN(replayFile: string, outputFile?: string) {
 
         let currentTurn = 0;
         let moveText = '';
-        for (const move of game.moves) {
+        for (const move of gameInstance.moves) {
             if (move.turn > currentTurn) {
                 if (moveText !== '') {
                     hdpgnContent += `${currentTurn}. ${moveText.trim()}\n`;
@@ -184,8 +114,8 @@ async function generateHDPGN(replayFile: string, outputFile?: string) {
                 moveText = '';
             }
 
-            const fromQR = move.fromHex !== undefined ? getHexQR(move.fromHex, hexGrid) : null;
-            const toQR = move.toHex !== undefined ? getHexQR(move.toHex, hexGrid) : null;
+            const fromQR = move.fromHex !== undefined ? game.getHexQR(move.fromHex) : null;
+            const toQR = move.toHex !== undefined ? game.getHexQR(move.toHex) : null;
 
             let moveStr = `${move.player}${move.unitValue || ''}`;
             switch (move.actionType) {
@@ -199,7 +129,14 @@ async function generateHDPGN(replayFile: string, outputFile?: string) {
                     break;
                 case 'attack':
                 case 'MELEE':
-                    moveStr += `A(${fromQR ? `${fromQR.q},${fromQR.r}` : ''})-(${toQR ? `${toQR.q},${toQR.r}` : ''})`;
+                case 'combat':
+                    if (fromQR && toQR) {
+                        moveStr += `A(${fromQR.q},${fromQR.r})-(${toQR.q},${toQR.r})`;
+                    } else if (fromQR) {
+                        moveStr += `RA(${fromQR.q},${fromQR.r})`;
+                    } else {
+                        moveStr += `(combat)`;
+                    }
                     break;
                 case 'ranged_attack':
                 case 'RANGED_ATTACK':

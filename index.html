@@ -91,8 +91,8 @@
 		}
 		.bg-hexmove {
 			/*background-color: #bd9b6b;*/
-			/*filter: brightness(0.5);*/
-			filter: drop-shadow(2px 4px 6px #3867d6);
+			filter: brightness(0.5);
+			/*filter: drop-shadow(2px 4px 6px #3867d6);*/
 		}
 		.bg-hexmerge {
 			/*background-color: #2bcbba;*/
@@ -105,7 +105,7 @@
 		}
 		.bg-hexdanger {
 			/*background-color: #705030;*/
-			filter: drop-shadow(2px 4px 6px #eb3b5a);
+			filter: contrast(0.5);
 		}
 		.bg-hexdeploy {
 			/*background-color: #f7b73166;*/
@@ -185,6 +185,9 @@
 			background-size: cover;
 			background-repeat: no-repeat;
 			background-position: center;
+		}
+		.text-xxs {
+			font-size: 0.6rem;
 		}
 
 		/* Responsive Grid Scaling */
@@ -324,8 +327,8 @@
 				>
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
-					<div class="hex-content text-xs text-center relative">
-						<span style="top:-8px;right:-8px;color:#20ee8044" class="absolute" x-show="!hex.unit" x-text="hex.id"></span>
+					<div class="hex-content text-xxs text-center relative">
+						<span style="top:-0.5rem;right:-0.5rem;color:#44444444" class="absolute" x-show="!hex.unit" x-text="hex.id"></span>
 
 						<span class="text-lg invisible"
 							:class="PLAYER_CONFIG[hex.unit?.playerId]?.logColor || ''"
@@ -518,62 +521,63 @@
 		<!-- Game Info -->
 		<div style="display: none;" x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
 			<div class="my-2 space-x-2">
-				<button class="hidden cursor-pointer border p-1 hover:bg-black hover:text-white"
+				<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
 					@click="initiateAction('MOVE')"
-				>MOVE</button>
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white"
+				>[MOVE]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 					@click="performAction('REROLL', selectedUnitHexId)"
-				>REROLL</button>
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white"
+				>[REROLL]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 					@click="performAction('GUARD', selectedUnitHexId)"
-				>GUARD</button>
-				<button class="hidden cursor-pointer border p-1 hover:bg-black hover:text-white"
+				>[GUARD]</button>
+				<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 					@click="initiateAction('RANGED_ATTACK')"
-				>RANGE</button>
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white"
+				>[RANGE]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 					@click="initiateAction('SPECIAL_ATTACK')"
-					x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? 'SPELLS' : 'SPL ATK'"
+					x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? '[SPELLS]' : '[SPL ATK]'"
 				></button>
 
 				<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">
-					<button class="cursor-pointer border p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SHIELD')">SHIELD</button>
-					<button class="cursor-pointer border p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SWAP')">SWAP</button>
-					<button class="cursor-pointer border p-1 bg-blue-100 hover:bg-blue-300" @click="selectOracleSpell('SKIRMISH')">SKIRMISH</button>
+					<button class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">[SHIELD]</button>
+					<button class="cursor-pointer p-1" @click="selectOracleSpell('SWAP')">[SWAP]</button>
+					<button class="cursor-pointer p-1" @click="selectOracleSpell('SKIRMISH')">[SKIRMISH]</button>
 				</div>
 
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white"
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 					@click="initiateAction('MERGE')"
-				>MERGE</button>
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white font-bold bg-red-100"
+				>[MERGE]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white font-bold bg-red-100"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
 					@click="initiateAction('SPELLCAST_SACRIFICE')"
-				>TRANSMUTE</button>
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white font-bold"
+				>[TRANSMUTE]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== null"
 					@click="cancelAction()"
-				>CANCEL</button>
-				<button class="cursor-pointer border p-1 hover:bg-black hover:text-white font-bold"
+				>[CANCEL]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					@click="endTurn()"
-				>END TURN</button>
+				>[END TURN]</button>
 			</div>
 
-			<p class="text-sm font-bold" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
+			<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
-				Current Turn: Player <span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+				Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
 			</p>
+			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="location.href='/'" x-show="isCampaign">Home</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showMinimap = !showMinimap">Minimap</a>
 		</div>
 	</div>
 
 	<!-- Message Log -->
-	<div  id="game-log" style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-1 text-xs font-mono h-14 lg:h-28 overflow-y-auto border-t ">
+	<div  id="game-log" style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>

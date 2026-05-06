@@ -202,6 +202,27 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         });
     }
 
+    // Point 6: Selective Minimax Refinement (Slow) for top candidates
+    if (profile.minimax && profile.minimaxDepth > 0) {
+        // Sort by basic score and take top candidates for strategic refinement
+        // Only refine moves that are MOVE or POSITION (tactical/strategic)
+        const candidates = scoredMoves
+            .filter(m => m.move.actionType === 'MOVE' || m.move.actionType === 'POSITION')
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8); // Refine top 8 candidates
+
+        if (candidates.length > 0) {
+            const transpositionTable = new Map();
+            for (const candidate of candidates) {
+                const nextState = applyMove(GAME, candidate.move, state);
+                if (nextState) {
+                    const lookAheadScore = minimaxSearch(GAME, nextState, profile.minimaxDepth - 1, -Infinity, Infinity, false, state.currentPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                    candidate.score += (lookAheadScore * 0.1); // Blend minimax insight into heuristic score
+                }
+            }
+        }
+    }
+
 
     // Execute moves by priority order from profile
     for (const priority of profile.priorityOrder) {
@@ -601,35 +622,115 @@ function evaluateState(GAME, state, playerIndex, profile, opponentIndices, oppon
 }
 
 /**
- * Minimax search with heuristic evaluation
+ * Generate a unique key for the game state (for transposition table)
  */
-function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases) {
-    if (depth === 0 || state.phase === 'GAME_OVER') {
-        return evaluateState(GAME, state, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases);
+function generateStateKey(state) {
+    // Basic key using unit positions and values
+    let key = `p${state.currentPlayerIndex}`;
+    for (const player of state.players) {
+        if (player.isEliminated) continue;
+        key += `|${player.id}:`;
+        player.dice.forEach(d => {
+            if (d.isDeployed && !d.isDeath) {
+                key += `${d.hexId},${d.value},${d.currentArmor},${d.hasMovedOrAttackedThisTurn ? 1 : 0};`;
+            }
+        });
+    }
+    return key;
+}
+
+/**
+ * Lightweight move ordering for minimax
+ */
+function orderMoves(GAME, state, moves, myPlayerIndex) {
+    return moves.map(move => {
+        let priority = 0;
+        
+        // Priority 1: Captures
+        const targetHex = GAME.getHex(move.targetHexId, state);
+        const opponentBases = state.players
+            .filter(p => p.id !== myPlayerIndex && !p.isEliminated)
+            .map(p => p.baseHexId);
+            
+        if (opponentBases.includes(move.targetHexId)) {
+            priority += 10000;
+        }
+
+        // Priority 2: Kills
+        const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+        if (targetUnit && targetUnit.playerId !== myPlayerIndex) {
+            const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
+            const unit = state.players[myPlayerIndex].dice.find(d => d.hexId === move.unitHexId);
+            if (unit && unit.attack >= defenderArmor) {
+                priority += 5000 + targetUnit.value * 100;
+            } else {
+                priority += 1000 + targetUnit.value * 10;
+            }
+        }
+
+        // Priority 3: Support actions
+        if (move.actionType.startsWith('SPELLCAST')) priority += 500;
+        
+        // Priority 4: Movement towards center/bases
+        if (move.actionType === 'MOVE') priority += 100;
+
+        return { move, priority };
+    })
+    .sort((a, b) => b.priority - a.priority)
+    .map(x => x.move);
+}
+
+/**
+ * Minimax search with heuristic evaluation and optimizations
+ */
+function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable = new Map()) {
+    // Check transposition table
+    const stateKey = generateStateKey(state);
+    if (transpositionTable.has(stateKey)) {
+        const entry = transpositionTable.get(stateKey);
+        if (entry.depth >= depth) return entry.score;
     }
 
-    const possibleMoves = generateAllPossibleMoves(GAME, state);
+    if (depth === 0 || state.phase === 'GAME_OVER') {
+        const score = evaluateState(GAME, state, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases);
+        transpositionTable.set(stateKey, { score, depth });
+        return score;
+    }
+
+    let possibleMoves = generateAllPossibleMoves(GAME, state);
     possibleMoves.push({ actionType: 'END_TURN' });
+
+    // Move Ordering
+    possibleMoves = orderMoves(GAME, state, possibleMoves, state.currentPlayerIndex);
+    
+    // Branching factor reduction: Only consider top M moves at each depth
+    // More aggressive pruning at deeper levels
+    const branchingLimit = depth > 1 ? 8 : 12;
+    const movesToSearch = possibleMoves.slice(0, branchingLimit);
 
     if (isMaximizing) {
         let maxEval = -Infinity;
-        for (const move of possibleMoves) {
+        for (const move of movesToSearch) {
             const nextState = applyMove(GAME, move, state);
-            const eval = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, false, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases);
+            if (!nextState) continue;
+            const eval = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, false, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
             maxEval = Math.max(maxEval, eval);
             alpha = Math.max(alpha, eval);
             if (beta <= alpha) break;
         }
+        transpositionTable.set(stateKey, { score: maxEval, depth });
         return maxEval;
     } else {
         let minEval = Infinity;
-        for (const move of possibleMoves) {
+        for (const move of movesToSearch) {
             const nextState = applyMove(GAME, move, state);
-            const eval = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, true, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases);
+            if (!nextState) continue;
+            const eval = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, true, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
             minEval = Math.min(minEval, eval);
             beta = Math.min(beta, eval);
             if (beta <= alpha) break;
         }
+        transpositionTable.set(stateKey, { score: minEval, depth });
         return minEval;
     }
 }
@@ -679,13 +780,6 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const targetHexObj = GAME.getHex(move.targetHexId, state);
     if (targetHexObj) {
         analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
-    }
-
-    // Point 6: Minimax Look-ahead (Hybrid Mode)
-    // Only perform search if profile has minimax enabled and it's a strategic move
-    if (profile.minimax && profile.minimaxDepth > 0 && (move.actionType === 'MOVE' || move.actionType === 'POSITION')) {
-        const lookAheadScore = minimaxSearch(GAME, nextState, profile.minimaxDepth - 1, -Infinity, Infinity, false, state.currentPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases);
-        analysis.score += (lookAheadScore * 0.1); // Blend minimax insight into heuristic score
     }
 
     // Zone of Control (Pressure Map) bonus/penalty

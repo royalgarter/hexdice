@@ -3429,18 +3429,49 @@ function alpineHexDiceTacticGame() { return {
 		});
 	},
 
-	generateHDFEN() {
+	generateHDFEN(state = null) {
+		const target = state || this;
+		
 		// Piece Placement
 		let piecePlacementTokens = [];
 		let emptyCount = 0;
+
+		// Handle re-hydration if we only have playersDice string (minimal state)
+		let playerUnits = null;
+		if (target.playersDice) {
+			playerUnits = {};
+			target.playersDice.split(';').forEach(playerStr => {
+				if (!playerStr) return;
+				const [playerKey, diceData] = playerStr.split(':');
+				const playerId = parseInt(playerKey.replace('p', '').replace('Dice', ''));
+				if (diceData) {
+					diceData.split('|').forEach(unitStr => {
+						if (!unitStr) return;
+						const parts = unitStr.split('-');
+						const value = parseInt(parts[0]);
+						const hexId = parseInt(parts[1]);
+						const isDeath = parts[2] === 'true' || parts[2] === '1';
+						const hasMoved = parts[3] === '1';
+						const isGuarding = parts[4] === '1';
+						const skirmishBuff = parseInt(parts[5]) || 0;
+
+						if (!isDeath && !isNaN(hexId)) {
+							playerUnits[hexId] = { playerId, value, isDeath, hasMovedOrAttackedThisTurn: hasMoved, isGuarding: isGuarding ? 1 : 0, skirmishBuff };
+						}
+					});
+				}
+			});
+		}
+
 		for (let i = 0; i < this.hexes.length; i++) {
 			const hex = this.hexes[i];
-			if (hex.unit) {
+			const unit = playerUnits ? playerUnits[hex.id] : hex.unit;
+
+			if (unit) {
 				if (emptyCount > 0) {
 					piecePlacementTokens.push(emptyCount.toString());
 					emptyCount = 0;
 				}
-				const unit = hex.unit;
 				const playerID = unit.playerId;
 				const unitValue = unit.value;
 				const isMoved = unit.hasMovedOrAttackedThisTurn ? 'M' : 'm';
@@ -3459,11 +3490,12 @@ function alpineHexDiceTacticGame() { return {
 		const piecePlacement = piecePlacementTokens.join('/');
 
 		// Active Player
-		const activePlayer = this.currentPlayerIndex;
+		const activePlayer = target.currentPlayerIndex ?? target.turn ?? 0;
 
 		// Game Phase
 		let gamePhase = '';
-		switch (this.phase) {
+		const phase = target.phase;
+		switch (phase) {
 			case 'SETUP_ROLL': gamePhase = 'SR'; break;
 			case 'SETUP_REROLL': gamePhase = 'SRR'; break;
 			case 'SETUP_DEPLOY': gamePhase = 'SD'; break;
@@ -3473,12 +3505,14 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		// Turn Number
-		const turnNumber = this.turnCount;
+		const turnNumber = target.turnCount ?? 0;
 
 		// Other Flags
-		const noRerollFlag = this.rules.noReroll ? 'r' : '_';
-		const annihilationModeFlag = this.options.includes('a') ? 'a' : '_';
-		const mergeModeFlag = this.options.includes('m') ? 'm' : '_';
+		const rules = target.rules || {};
+		const options = target.options || '';
+		const noRerollFlag = rules.noReroll ? 'r' : '_';
+		const annihilationModeFlag = options.includes('a') ? 'a' : '_';
+		const mergeModeFlag = options.includes('m') ? 'm' : '_';
 		const otherFlags = `${noRerollFlag}${annihilationModeFlag}${mergeModeFlag}`;
 
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
