@@ -85,11 +85,14 @@ class SimulationLogger {
         this.verbose = verbose;
     }
 
-    log(message: string, type: LogType = "game") {
+    log(message: string, type: LogType = "game", fromHex?: number, toHex?: number, unitValue?: number) {
         const entry: GameLogEntry = {
             timestamp: Date.now(),
             type,
             message,
+            fromHex,
+            toHex,
+            unitValue,
         };
         this.logs.push(entry);
         
@@ -114,6 +117,9 @@ interface GameLogEntry {
     timestamp: number;
     type: LogType;
     message: string;
+    fromHex?: number;
+    toHex?: number;
+    unitValue?: number;
 }
 
 interface ReplayData {
@@ -149,6 +155,9 @@ interface MoveRecord {
     actionType: string;
     logMessage: string;
     stateHash: string;
+    fromHex?: number;
+    toHex?: number;
+    unitValue?: number;
 }
 
 // Stub browser APIs for headless execution
@@ -254,18 +263,25 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
 
 // Calculate state hash for replay
 function calculateStateHash(game: any): string {
-    const playersDice = game.players.map((p: any, i: number) => 
-        `p${i}Dice:` + p.dice.map((d: any) => `${d.value}-${d.hexId}-${d.isDeath}`).join("|")
+    const playersDice = game.players.map((p: any, i: number) =>
+        `p${i}Dice:` + p.dice.map((d: any) => {
+            const hasMoved = d.hasMovedOrAttackedThisTurn ? 1 : 0;
+            const isGuarding = d.isGuarding > 0 ? 1 : 0;
+            const skirmish = d.skirmishBuff || 0;
+            return `${d.value}-${d.hexId}-${d.isDeath}-${hasMoved}-${isGuarding}-${skirmish}`;
+        }).join("|")
     ).join(";");
-    
+
     const state = {
         playersDice,
-        turn: game.currentPlayerIndex,
+        currentPlayerIndex: game.currentPlayerIndex,
         phase: game.phase,
+        turnCount: game.turnCount,
+        noReroll: game.rules?.noReroll,
+        options: game.options || '',
     };
     return btoa(JSON.stringify(state));
 }
-
 // Run a single game simulation
 async function runGame(
     gameNumber: number,
@@ -377,6 +393,75 @@ async function runGame(
         }
     };
 
+    // Hook into game.addLog to capture internal logs in our logger
+    const originalAddLog = game.addLog.bind(game);
+    game.addLog = function(msg: string, state: any) {
+        let type: LogType = "game";
+        let fromHex: number | undefined;
+        let toHex: number | undefined;
+        let unitValue: number | undefined;
+
+        if (msg.includes("moved")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]->\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+                toHex = parseInt(match[3]);
+            }
+        } else if (msg.includes("deployed")) {
+            type = "move";
+            const match = msg.match(/deployed #(\d+) to \[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                toHex = parseInt(match[2]);
+            }
+        } else if (msg.includes("attacked")) {
+            type = "combat";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]->\[(\d+)\]/); // Melee
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+                toHex = parseInt(match[3]);
+            } else {
+                const rangedMatch = msg.match(/D(\d+).*?\[(\d+)\]/); // Ranged
+                if (rangedMatch) {
+                    unitValue = parseInt(rangedMatch[1]);
+                    fromHex = parseInt(rangedMatch[2]);
+                }
+            }
+        } else if (msg.includes("sacrificed") || msg.includes("eliminated") || msg.includes("removed")) {
+            type = "combat";
+        } else if (msg.includes("rerolled")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+            }
+        } else if (msg.includes("guarded")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+            }
+        } else if (msg.includes("merged")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]->\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+                toHex = parseInt(match[3]);
+            }
+        } else if (msg.includes("cast")) {
+            type = "move";
+        }
+
+        logger.log(msg, type, fromHex, toHex, unitValue);
+        originalAddLog(msg, state);
+    };
+
     // Initialize game and run setup
     await game.init();
     game.handleSetupPhase();
@@ -404,8 +489,9 @@ async function runGame(
     
     // Run game loop
     while (game.phase !== "GAME_OVER" && turnCount < maxTurns) {
-        const currentPlayer = game.players[game.currentPlayerIndex];
-        const currentAIType = aiTypes[game.currentPlayerIndex];
+        const actingPlayerIndex = game.currentPlayerIndex;
+        const currentPlayer = game.players[actingPlayerIndex];
+        const currentAIType = aiTypes[actingPlayerIndex];
         const stateBeforeHash = calculateStateHash(game);
 
         // Get last log count to detect new logs
@@ -417,7 +503,7 @@ async function runGame(
                 game.performAITurn();
             } else {
                 // Human player - just end turn for simulation
-                logger.log(`P${game.currentPlayerIndex + 1} (human) - auto ending turn`, "game");
+                logger.log(`P${actingPlayerIndex + 1} (human) - auto ending turn`, "game");
                 game.endTurn();
             }
         } else {
@@ -427,15 +513,20 @@ async function runGame(
 
         // Record move if any action happened
         const newLogs = logger.getLogs().slice(lastLogCount);
-        const actionLog = newLogs.find(l => l.type === "move" || l.type === "combat" || l.type === "ai");
+        const actionLog = newLogs.find(l => l.type === "combat") || 
+                          newLogs.find(l => l.type === "move") || 
+                          newLogs.find(l => l.type === "ai");
 
         moves.push({
             turn: turnCount,
-            player: game.currentPlayerIndex,
+            player: actingPlayerIndex,
             aiType: currentAIType,
             actionType: actionLog?.type || "unknown",
             logMessage: newLogs.map(l => l.message).join("; "),
             stateHash: stateBeforeHash,
+            fromHex: actionLog?.fromHex,
+            toHex: actionLog?.toHex,
+            unitValue: actionLog?.unitValue,
         });
 
         turnCount++;
