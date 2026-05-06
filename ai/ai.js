@@ -4,17 +4,6 @@
 
 function performAIByWeight(GAME) {
 	return performAIByHeuristic(GAME);
-	
-	// Priority order: Priority Bot -> Random Greedy -> Minimax (Fallback)
-	if (typeof performAIByPriority === 'function') {
-		return performAIByPriority(GAME);
-	} else if (typeof performAIByRandom === 'function') {
-		return performAIByRandom(GAME);
-	} else if (typeof performAIByMinimax === 'function') {
-		return performAIByMinimax(GAME);
-	} else {
-		console.error("No AI strategies loaded!");
-	}
 }
 
 const performAI = performAIByWeight;

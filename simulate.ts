@@ -20,11 +20,11 @@ import { ensureDir } from "https://deno.land/std@0.208.0/fs/ensure_dir.ts";
 
 // AI type mapping
 const AI_TYPES: Record<string, string> = {
-    random: "performAIByRandom",
-    heuristic: "performAIByHeuristic",
-    minimax: "performAIByMinimax",
-    priority: "performAIByPriority",
-    greedy: "performAIByRandom",
+    random: "heuristic",
+    heuristic: "heuristic",
+    minimax: "heuristic",
+    priority: "heuristic",
+    greedy: "heuristic",
 };
 
 // CLI Arguments
@@ -212,11 +212,8 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
 
     let gameCode = await Deno.readTextFile("./game.js");
     const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
-    const aiRandomCode = await Deno.readTextFile("./ai/ai-random.js");
     const aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
     const aiHeuristicProfiles = await Deno.readTextFile("./ai/heuristic-profiles.js");
-    const aiMinimaxCode = await Deno.readTextFile("./ai/ai-minimax.js");
-    const aiPriorityCode = await Deno.readTextFile("./ai/ai-priority.js");
     const campaignManagerCode = await Deno.readTextFile("./campaign/campaign-manager.js");
 
     // Replace const random with var for override capability
@@ -237,19 +234,13 @@ async function loadGameEngine(playerCount: number = 2): Promise<any> {
         ${campaignManagerCode}
         ${gameCode}
         ${aiCoreCode}
-        ${aiRandomCode}
         ${aiHeuristicProfiles}
         ${aiHeuristicCode}
-        ${aiMinimaxCode}
-        ${aiPriorityCode}
 
         // Return exports object
         return {
             createGame: alpineHexDiceTacticGame,
-            performAIByRandom: typeof performAIByRandom !== 'undefined' ? performAIByRandom : null,
             performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
-            performAIByMinimax: typeof performAIByMinimax !== 'undefined' ? performAIByMinimax : null,
-            performAIByPriority: typeof performAIByPriority !== 'undefined' ? performAIByPriority : null,
             generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
             applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
             boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
@@ -306,10 +297,10 @@ async function runGame(
     
     // Override AI turn to use specified AI type per player
     const aiFunctions = {
-        random: engine.performAIByRandom,
+        random: engine.performAIByHeuristic,
         heuristic: engine.performAIByHeuristic,
-        minimax: engine.performAIByMinimax,
-        priority: engine.performAIByPriority,
+        minimax: engine.performAIByHeuristic,
+        priority: engine.performAIByHeuristic,
     };
 
     // Store original endTurn to call after override
@@ -330,7 +321,7 @@ async function runGame(
     game.performAITurn = function() {
         const currentPlayerIdx = this.currentPlayerIndex;
         const aiType = aiTypes[currentPlayerIdx];
-        const aiFunc = aiFunctions[aiType as keyof typeof aiFunctions] || engine.performAIByRandom;
+        const aiFunc = aiFunctions[aiType as keyof typeof aiFunctions] || engine.performAIByHeuristic;
 
         logger.log(`P${currentPlayerIdx + 1} (${aiType}) thinking...`, "ai");
 

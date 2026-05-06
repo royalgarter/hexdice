@@ -26,8 +26,6 @@ A strategic hexagonal board game played with dice as soldiers. HexDice blends ta
 A modular AI system with multiple strategies:
 - `ai-heuristic.js`: Primary AI using weight-based evaluation and state simulation.
 - `heuristic-profiles.js`: Personality profiles (Aggressive, Balanced, Defensive, Chaos).
-- `ai-minimax.js`: Deep search strategy (Legacy).
-- `ai-random.js`: Basic greedy/random behaviors.
 
 ### Campaign & World Building (`/campaign`)
 - `campaign-manager.js`: Handles level progression, RMI (Resource Management Interface) map loading, and player runes.

@@ -1,9 +1,6 @@
 [
   "/",
   "/ai/ai-heuristic.js",
-  "/ai/ai-minimax.js",
-  "/ai/ai-priority.js",
-  "/ai/ai-random.js",
   "/ai/ai.js",
   "/ai/heuristic-profiles.js",
   "/assets/alpine.min.js",

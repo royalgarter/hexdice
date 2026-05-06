@@ -1,8 +1,9 @@
 /**
- * Random-Greedy AI Strategy for Hex Dice
- * Picks a random unit that can act, then picks its most greedy move.
+ * DEPRECATED: Random-Greedy AI Strategy for Hex Dice
+ * This AI engine is no longer in use. Please use ai-heuristic.js instead.
  */
 
+/*
 function performAIByRandom(GAME) {
     if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) {
         console.log("AI stupid. Ending turn.");
@@ -143,3 +144,4 @@ function performAIByRandom(GAME) {
     console.log("AI Random Greedy selected unit at", unit.hexId, "and move:", bestMove);
     applyMove(GAME, bestMove);
 }
+*/

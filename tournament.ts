@@ -149,24 +149,18 @@ class SimulationLogger {
 async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<string, string>): Promise<any> {
     const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
 
-    let gameCode: string, aiCoreCode: string, aiRandomCode: string, aiHeuristicCode: string, aiPriorityCode: string, aiMinimaxCode: string, heuristicProfilesCode: string, campaignManagerCode: string;
+    let gameCode: string, aiCoreCode: string, aiHeuristicCode: string, heuristicProfilesCode: string, campaignManagerCode: string;
 
     if (engineCodes) {
         gameCode = engineCodes.gameCode;
         aiCoreCode = engineCodes.aiCoreCode;
-        aiRandomCode = engineCodes.aiRandomCode;
         aiHeuristicCode = engineCodes.aiHeuristicCode;
-        aiPriorityCode = engineCodes.aiPriorityCode;
-        aiMinimaxCode = engineCodes.aiMinimaxCode;
         heuristicProfilesCode = engineCodes.heuristicProfilesCode;
         campaignManagerCode = engineCodes.campaignManagerCode;
     } else {
         gameCode = await Deno.readTextFile("./game.js");
         aiCoreCode = await Deno.readTextFile("./ai/ai.js");
-        aiRandomCode = await Deno.readTextFile("./ai/ai-random.js");
         aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
-        aiPriorityCode = await Deno.readTextFile("./ai/ai-priority.js");
-        aiMinimaxCode = await Deno.readTextFile("./ai/ai-minimax.js");
         heuristicProfilesCode = await Deno.readTextFile("./ai/heuristic-profiles.js");
         campaignManagerCode = await Deno.readTextFile("./campaign/campaign-manager.js");
     }
@@ -189,19 +183,13 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
             ${campaignManagerCode}
             ${heuristicProfilesCode}
             ${aiCoreCode}
-            ${aiRandomCode}
             ${aiHeuristicCode}
-            ${aiMinimaxCode}
-            ${aiPriorityCode}
 
             return {
                 createGame: alpineHexDiceTacticGame,
                 setRandomSeed: setRandomSeed,
                 random: () => _internalRandom(),
                 performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
-                performAIByRandom: typeof performAIByRandom !== 'undefined' ? performAIByRandom : null,
-                performAIByPriority: typeof performAIByPriority !== 'undefined' ? performAIByPriority : null,
-                performAIByMinimax: typeof performAIByMinimax !== 'undefined' ? performAIByMinimax : null,
                 generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
                 applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
                 boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
@@ -468,10 +456,7 @@ async function runTournament(args: any) {
     const engineCodes = {
         gameCode: await Deno.readTextFile("./game.js"),
         aiCoreCode: await Deno.readTextFile("./ai/ai.js"),
-        aiRandomCode: await Deno.readTextFile("./ai/ai-random.js"),
         aiHeuristicCode: await Deno.readTextFile("./ai/ai-heuristic.js"),
-        aiPriorityCode: await Deno.readTextFile("./ai/ai-priority.js"),
-        aiMinimaxCode: await Deno.readTextFile("./ai/ai-minimax.js"),
         heuristicProfilesCode: await Deno.readTextFile("./ai/heuristic-profiles.js"),
         campaignManagerCode: await Deno.readTextFile("./campaign/campaign-manager.js"),
     };

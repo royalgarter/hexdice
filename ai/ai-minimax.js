@@ -1,3 +1,9 @@
+/**
+ * DEPRECATED: Minimax AI Strategy for Hex Dice
+ * This AI engine is no longer in use. Please use ai-heuristic.js instead.
+ */
+
+/*
 const AI_PRESET_EVALUATION_WEIGHTS = {
 	GREEDY: {
 		note: '1. Greed is good',
@@ -509,3 +515,4 @@ function specialHexBonuses(GAME, hex, unit, state) {
 
 	return score
 }
+*/

@@ -1,7 +1,9 @@
-// ------------------------------------------------------------------------------------------------
-// NEW AI STRATEGY: PRIORITY-BASED AI (v1.3 Fog of War Compatible)
-// ------------------------------------------------------------------------------------------------
+/**
+ * DEPRECATED: Priority-Based AI Strategy for Hex Dice
+ * This AI engine is no longer in use. Please use ai-heuristic.js instead.
+ */
 
+/*
 function performAIByPriority(GAME) {
     if (GAME.phase !== 'PLAYER_TURN' || !GAME.players[GAME.currentPlayerIndex].isAI) return;
 
@@ -11,7 +13,7 @@ function performAIByPriority(GAME) {
     const aiPlayerIndex = state.currentPlayerIndex;
 
     // 1. Calculate AI Visibility (Fog of War)
-    const visibleHexes = new Set(GAME.hexes.map(x => x.id)) /*Disable Fog of War for testing*/ || calculateVisibility(GAME, state, aiPlayerIndex);
+    const visibleHexes = new Set(GAME.hexes.map(x => x.id)) // Disable Fog of War for testing || calculateVisibility(GAME, state, aiPlayerIndex);
 
     // 2. Identify AI Units that can act
     const availableUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
@@ -398,3 +400,4 @@ function hasLineOfSight(GAME, startHex, endHex, state) {
     }
     return true;
 }
+*/
