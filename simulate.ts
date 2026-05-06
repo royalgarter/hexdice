@@ -85,11 +85,14 @@ class SimulationLogger {
         this.verbose = verbose;
     }
 
-    log(message: string, type: LogType = "game") {
+    log(message: string, type: LogType = "game", fromHex?: number, toHex?: number, unitValue?: number) {
         const entry: GameLogEntry = {
             timestamp: Date.now(),
             type,
             message,
+            fromHex,
+            toHex,
+            unitValue,
         };
         this.logs.push(entry);
         
@@ -114,6 +117,9 @@ interface GameLogEntry {
     timestamp: number;
     type: LogType;
     message: string;
+    fromHex?: number;
+    toHex?: number;
+    unitValue?: number;
 }
 
 interface ReplayData {
@@ -149,6 +155,9 @@ interface MoveRecord {
     actionType: string;
     logMessage: string;
     stateHash: string;
+    fromHex?: number;
+    toHex?: number;
+    unitValue?: number;
 }
 
 // Stub browser APIs for headless execution
@@ -384,6 +393,75 @@ async function runGame(
         }
     };
 
+    // Hook into game.addLog to capture internal logs in our logger
+    const originalAddLog = game.addLog.bind(game);
+    game.addLog = function(msg: string, state: any) {
+        let type: LogType = "game";
+        let fromHex: number | undefined;
+        let toHex: number | undefined;
+        let unitValue: number | undefined;
+
+        if (msg.includes("moved")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]->\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+                toHex = parseInt(match[3]);
+            }
+        } else if (msg.includes("deployed")) {
+            type = "move";
+            const match = msg.match(/deployed #(\d+) to \[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                toHex = parseInt(match[2]);
+            }
+        } else if (msg.includes("attacked")) {
+            type = "combat";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]->\[(\d+)\]/); // Melee
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+                toHex = parseInt(match[3]);
+            } else {
+                const rangedMatch = msg.match(/D(\d+).*?\[(\d+)\]/); // Ranged
+                if (rangedMatch) {
+                    unitValue = parseInt(rangedMatch[1]);
+                    fromHex = parseInt(rangedMatch[2]);
+                }
+            }
+        } else if (msg.includes("sacrificed") || msg.includes("eliminated") || msg.includes("removed")) {
+            type = "combat";
+        } else if (msg.includes("rerolled")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+            }
+        } else if (msg.includes("guarded")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+            }
+        } else if (msg.includes("merged")) {
+            type = "move";
+            const match = msg.match(/D(\d+).*?\[(\d+)\]->\[(\d+)\]/);
+            if (match) {
+                unitValue = parseInt(match[1]);
+                fromHex = parseInt(match[2]);
+                toHex = parseInt(match[3]);
+            }
+        } else if (msg.includes("cast")) {
+            type = "move";
+        }
+
+        logger.log(msg, type, fromHex, toHex, unitValue);
+        originalAddLog(msg, state);
+    };
+
     // Initialize game and run setup
     await game.init();
     game.handleSetupPhase();
@@ -434,7 +512,9 @@ async function runGame(
 
         // Record move if any action happened
         const newLogs = logger.getLogs().slice(lastLogCount);
-        const actionLog = newLogs.find(l => l.type === "move" || l.type === "combat" || l.type === "ai");
+        const actionLog = newLogs.find(l => l.type === "combat") || 
+                          newLogs.find(l => l.type === "move") || 
+                          newLogs.find(l => l.type === "ai");
 
         moves.push({
             turn: turnCount,
@@ -443,6 +523,9 @@ async function runGame(
             actionType: actionLog?.type || "unknown",
             logMessage: newLogs.map(l => l.message).join("; "),
             stateHash: stateBeforeHash,
+            fromHex: actionLog?.fromHex,
+            toHex: actionLog?.toHex,
+            unitValue: actionLog?.unitValue,
         });
 
         turnCount++;
