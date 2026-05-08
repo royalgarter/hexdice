@@ -190,6 +190,30 @@
 			font-size: 0.6rem;
 		}
 
+		/* Dice Animation Styles */
+		.scene { width: 60px; height: 60px; perspective: 400px; position: fixed; top: 10px; left: 10px; z-index: 50; scale: 0.8; cursor: pointer;}
+		.cube {
+			width: 100%; height: 100%; position: relative;
+			transform-style: preserve-3d;
+			transform: rotateX(15deg) rotateY(15deg);
+			transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+		}
+		.face {
+			position: absolute; width: 100%; height: 100%;
+			background: linear-gradient(135deg, #f4e4bc, #e2d1a3);
+			border: 2px solid #8b5a2b; border-radius: 4px;
+			display: flex; align-items: center; justify-content: center;
+			font-size: 24px; font-weight: bold; color: #4a3728; font-family: 'Georgia', serif;
+			box-shadow: inset 0 0 10px rgba(139, 90, 43, 0.3), 1px 1px 3px rgba(0,0,0,0.5);
+		}
+		.face.front { color: #8b0000; }
+		.front  { transform: rotateY(  0deg) translateZ(30px); }
+		.right  { transform: rotateY( 90deg) translateZ(30px); }
+		.back   { transform: rotateY(180deg) translateZ(30px); }
+		.left   { transform: rotateY(-90deg) translateZ(30px); }
+		.top    { transform: rotateX( 90deg) translateZ(30px); }
+		.bottom { transform: rotateX(-90deg) translateZ(30px); }
+
 		/* Responsive Grid Scaling */
 		/*@media (max-width: 1280px) {
 			.hex-grid-container.radius-5 {
@@ -304,12 +328,22 @@
 </head>
 
 <body class="text-black min-h-screen flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
-	<!-- <h1 class="text-xl font-bold mb-2">Hex Dice v1.0 Prototype</h1> -->
+	<!-- Dice Container -->
+	<div class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="gameplayVersion === 2" @click="window.rollDiceAnimation(Math.floor(Math.random() * 5 + 1))">
+		<div class="cube" id="cube">
+			<div class="face front">1</div>
+			<div class="face right">2</div>
+			<div class="face back">3</div>
+			<div class="face left">4</div>
+			<div class="face top">5</div>
+			<div class="face bottom">6</div>
+		</div>
+	</div>
 
 	<!-- Romance Mode Banner -->
 	<div style="display: none;" x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'"
 		class="w-full bg-yellow-100 border-y-2 border-yellow-600 py-2 text-center font-bold text-yellow-800 text-lg">
-		👑 Romance of the Dice Kingdoms in Progress 👑
+		👑 Romance of the Dice Kingdoms 👑
 	</div>
 
 	<!-- Hex Grid Container -->
@@ -390,7 +424,7 @@
 				</g>
 			</svg>
 
-			<div class="hex-unitstat fixed left-2 top-2 text-xs text-gray-600 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div>
+			<!-- <div class="hex-unitstat fixed left-2 top-2 text-xs text-gray-600 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div> -->
 		</div>
 	</div>
 
@@ -408,8 +442,8 @@
 				</div>
 				<div class="mb-4">
 					<span class="mr-2 font-bold text-sm uppercase">Version:</span>
-					<a :href="updateUrlParam('version', 1)" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">V1: Decisive</a>
-					<a :href="updateUrlParam('version', 2)" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">V2: Destiny</a>
+					<a :href="updateUrlParam('version', 1)" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">v1: Decisive</a>
+					<a :href="updateUrlParam('version', 2)" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">v2: Destiny</a>
 				</div>
 				<div class="mt-2 flex flex-wrap justify-center gap-4" x-show="spriteSets.length > 0 && players.length > 0">
 					<template x-for="(player, idx) in players" :key="idx">
@@ -577,7 +611,7 @@
 			</p>
 			<p class="text-xs text-gray-500 italic mt-1">
 				Mode: <span x-text="gameplayVersion === 2 ? 'Destiny Dice (v2)' : 'Decisive Dice (v1)'"></span>
-				<span x-show="gameplayVersion === 2 && turnPhase" x-text="' - Phase: ' + turnPhase.replace('_', ' ')"></span>
+				<span x-show="gameplayVersion === 2 && turnPhase" x-text="' - Phase: ' + (turnPhase ? turnPhase.replace('_', ' ') : '')"></span>
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="location.href='/'" x-show="isCampaign">Home</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
@@ -591,8 +625,31 @@
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>
 	</div>
-
 	<script>
+		// Global Dice Logic
+		window.currentX = 15;
+		window.currentY = 15;
+		window.rollDiceAnimation = function(targetNumber) {
+			const cube = document.getElementById('cube');
+			if (!cube) return;
+
+			const rotations = [
+				[0, 0],      // 1
+				[0, -90],    // 2
+				[0, 180],    // 3
+				[0, 90],     // 4
+				[-90, 0],    // 5
+				[90, 0]      // 6
+			];
+
+			const [targetX, targetY] = rotations[targetNumber - 1];
+
+			currentX += 360 * (Math.floor(Math.random() * 3) + 2) + targetX - (currentX % 360);
+			currentY += 360 * (Math.floor(Math.random() * 3) + 2) + targetY - (currentY % 360);
+
+			cube.style.transform = `rotateX(${currentX+6}deg) rotateY(${currentY+13}deg)`;
+		};
+
 		// Register the service worker
 		if ('serviceWorker' in navigator) {
 			window.addEventListener('load', () => {

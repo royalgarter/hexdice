@@ -1230,17 +1230,30 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	startFatesCall() {
+		console.log(`P${this.currentPlayerIndex+1} startFatesCall`);
+
 		this.turnPhase = 'FATE_CALL';
 		this.fateRoll = Math.floor(random() * 6) + 1;
-		this.addLog(`Phase 1: Fate's Call! Roll: D${this.fateRoll}`);
 		
+
+		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
+			setTimeout(() => window.rollDiceAnimation(this.fateRoll), 1e3);
+			setTimeout(() => this.actFatesCall(), 3e3);
+		} else {
+			this.actFatesCall();
+		}
+	},
+	actFatesCall() {
+		console.log(`P${this.currentPlayerIndex+1} actFatesCall`);
+
+		this.addLog(`P${this.currentPlayerIndex+1} Phase 1: Fate's Call! Roll: D${this.fateRoll}`);
+
 		const matchingUnits = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.value === this.fateRoll);
-		
 		if (matchingUnits.length === 0) {
-			this.addLog("No matching units. Moving to Tactical Command.");
+			this.addLog(`P${this.currentPlayerIndex+1} No matching units. Moving to Tactical Command.`);
 			this.startTacticalCommand();
 		} else {
-			this.addLog(`${matchingUnits.length} units can perform a free Move action.`);
+			this.addLog(`P${this.currentPlayerIndex+1} ${matchingUnits.length} units can perform a free Move action.`);
 			// In Fate's Call, matching units can move. We don't mark them as having acted yet?
 			// The rules say "immediately perform a free Move action".
 			// "Phase 2: Choose exactly one friendly unit (even one that moved in Phase 1) to perform any standard action"
@@ -1256,8 +1269,10 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	startTacticalCommand() {
+		console.log(`P${this.currentPlayerIndex+1} startTacticalCommand`);
+
 		this.turnPhase = 'TACTICAL_COMMAND';
-		this.addLog("Phase 2: Tactical Command. Choose one unit to act.");
+		this.addLog(`P${this.currentPlayerIndex+1} Phase 2: Tactical Command. Choose one unit to act.`);
 		
 		// Reset move flags from Phase 1
 		this.players[this.currentPlayerIndex].dice.forEach(d => d.canMoveInFatePhase = false);
@@ -1269,7 +1284,7 @@ function alpineHexDiceTacticGame() { return {
 				if (roll === 1 || roll === 4) this.oracleSelectedSpell = 'SHIELD';
 				else if (roll === 2 || roll === 5) this.oracleSelectedSpell = 'SWAP';
 				else this.oracleSelectedSpell = 'SKIRMISH';
-				this.addLog(`[AI] Oracle channeled: ${this.oracleSelectedSpell}`);
+				this.addLog(`[AI] P${this.currentPlayerIndex+1} Oracle channeled: ${this.oracleSelectedSpell}`);
 			}
 			this.performAITurn();
 		} else if (this.debug?.autoPlay) {
@@ -1277,7 +1292,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	performAIFateMoves() {
-		this.addLog("[AI] Phase 1: Planning Fate moves...");
+		this.addLog(`[AI] P${this.currentPlayerIndex+1} Phase 1: Planning Fate moves...`);
 		
 		try {
 			if (this.mode === 'headless') {
@@ -1288,23 +1303,13 @@ function alpineHexDiceTacticGame() { return {
 				performAIByHeuristic(this);
 				
 				// If still in FATE_CALL, it means the AI performed one move but more matching units remain
-				if (this.turnPhase === 'FATE_CALL') {
-					// Safety break for stuck loops
-					this._fateMoveCount = (this._fateMoveCount || 0) + 1;
-					if (this._fateMoveCount > 20) {
-						this.addLog("[AI] Warning: Phase 1 taking too many steps. Forcing transition.");
-						this.startTacticalCommand();
-						this._fateMoveCount = 0;
-						return;
-					}
+				if (this.turnPhase === 'FATE_CALL' && this.players[this.currentPlayerIndex].dice.find(d => d.canMoveInFatePhase == false)) {
 					setTimeout(() => this.performAIFateMoves(), 500);
-				} else {
-					this._fateMoveCount = 0;
 				}
 			}
 		} catch (e) {
 			console.error("AI Error in Phase 1:", e);
-			this.addLog(`[AI] Error in Phase 1: ${e.message}`);
+			this.addLog(`[AI] P${this.currentPlayerIndex+1} Error in Phase 1: ${e.message}`);
 			if (this.turnPhase === 'FATE_CALL') this.startTacticalCommand();
 		}
 	},
