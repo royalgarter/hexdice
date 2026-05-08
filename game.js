@@ -121,6 +121,7 @@ function alpineHexDiceTacticGame() { return {
 	logCounter: 0,
 	winnerMessage: "",
 	winnerPlayerId: null,
+	rollingDice: false,
 	campaignData: null,
 	isCampaign: false,
 	nextCampaignMap: null,
@@ -173,7 +174,7 @@ function alpineHexDiceTacticGame() { return {
 
 		const isTerrain = (type !== 'PLAIN');
 		if (isTerrain) {
-			const fileTerrain = `${type.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}`;
+			const fileTerrain = `${type.toLowerCase()}_${this.isCampaign ? 'ro' : 'wc2'}`;
 			hex.terrainStyle = [
 				`background-color: unset;`,
 				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
@@ -346,7 +347,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("Generating Roulette Terrain...");
 		this.hexes.forEach(x => this.setTerrainType(x, 'PLAIN'));
 
-		const terrainDiceRolls = Array.from({ length: 6 }, () => Math.floor(random() * 6) + 1);
+		const terrainDiceRolls = Array.from({ length: 6 }, () => this.rollDice());
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
 		this.addLog(`Roulette dice rolls: ${terrainDiceRolls.join(', ')}. Total terrain cells: ${totalTerrainCells}.`);
 
@@ -399,7 +400,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("Generating R=8 Terrain...");
 		this.hexes.forEach(x => this.setTerrainType(x, 'PLAIN'));
 
-		const terrainDiceRolls = Array.from({ length: 6 }, () => Math.floor(random() * 6) + 1);
+		const terrainDiceRolls = Array.from({ length: 6 }, () => this.rollDice());
 		const totalTerrainCells = terrainDiceRolls.reduce((sum, roll) => sum + roll, 0);
 		this.addLog(`R=8 Terrain dice rolls: ${terrainDiceRolls.join(', ')}. Total terrain cells: ${totalTerrainCells}.`);
 
@@ -415,10 +416,10 @@ function alpineHexDiceTacticGame() { return {
 		const centerHex = this.getHexByQR(0, 0);
 
 		for (let i = 0; i < totalTerrainCells; i++) {
-			const roll1Direction = Math.floor(random() * 6) + 1; // 1-6
-			const roll2Distance = Math.floor(random() * 6) + 1; // 1-6
-			const roll3Scatter = Math.floor(random() * 6) + 1; // 1-6
-			const roll4Terrain = Math.floor(random() * 6) + 1; // 1-6
+			const roll1Direction = this.rollDice(); // 1-6
+			const roll2Distance = this.rollDice(); // 1-6
+			const roll3Scatter = this.rollDice(); // 1-6
+			const roll4Terrain = this.rollDice(); // 1-6
 
 			this.addLog(`Rolls for terrain #${i+1}: Direction ${roll1Direction}, Distance ${roll2Distance}, Scatter ${roll3Scatter}, Terrain ${roll4Terrain}.`);
 
@@ -1038,7 +1039,7 @@ function alpineHexDiceTacticGame() { return {
 		const preset = this.preset && EPIC_PRESETS[this.preset];
 
 		for (let i = 0; i < this.rules.dicePerPlayer; i++) {
-			const roll = (preset && preset.dice) ? preset.dice[i] : (Math.floor(random() * 6) + 1);
+			const roll = (preset && preset.dice) ? preset.dice[i] : (this.rollDice());
 			const die = {
 				id: `${playerId}_${i}`, // Unique ID for the die unit
 				originalIndex: i, // to link back to player.dice array
@@ -1111,7 +1112,7 @@ function alpineHexDiceTacticGame() { return {
 		const player = this.players[this.currentPlayerIndex];
 		let rerolledValues = [];
 		this.diceToReroll.forEach(diceIndex => {
-			const newRoll = Math.floor(random() * 6) + 1;
+			const newRoll = this.rollDice();
 			player.dice[diceIndex].value = newRoll;
 			// Update stats based on new roll
 			Object.assign(player.dice[diceIndex], UNIT_STATS[newRoll]);
@@ -1235,12 +1236,12 @@ function alpineHexDiceTacticGame() { return {
 		console.log(`P${this.currentPlayerIndex+1} startFatesCall`);
 
 		this.turnPhase = 'FATE_CALL';
-		this.fateRoll = Math.floor(random() * 6) + 1;
-		
+		this.fateRoll = this.rollDice();
 
 		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
-			setTimeout(() => window.rollDiceAnimation(this.fateRoll), 1e3);
-			setTimeout(() => this.actFatesCall(), 3e3);
+			let delay = this.players[this.currentPlayerIndex].isAI ? 0 : 1e3;
+			setTimeout(() => window.rollDiceAnimation(this.fateRoll), 1e3 + delay);
+			setTimeout(() => this.actFatesCall(), 3e3 + delay);
 		} else {
 			this.actFatesCall();
 		}
@@ -1248,7 +1249,7 @@ function alpineHexDiceTacticGame() { return {
 	actFatesCall() {
 		console.log(`P${this.currentPlayerIndex+1} actFatesCall`);
 
-		this.addLog(`P${this.currentPlayerIndex+1} Phase 1: Fate's Call! Roll: D${this.fateRoll}`);
+		this.addLog(`🎲 P${this.currentPlayerIndex+1} Phase 1: Fate's Call! Roll: D${this.fateRoll}`);
 
 		const matchingUnits = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.value === this.fateRoll);
 		if (matchingUnits.length === 0) {
@@ -1282,10 +1283,16 @@ function alpineHexDiceTacticGame() { return {
 		if (this.players[this.currentPlayerIndex].isAI) {
 			// For Version 2 AI: Pre-roll Oracle spell so it can plan
 			if (this.gameplayVersion === 2) {
-				const roll = Math.floor(random() * 6) + 1;
+				const roll = this.rollDice();
+
+				if (typeof window !== 'undefined' && window.rollDiceAnimation) {
+					window.rollDiceAnimation(roll);
+				}
+
 				if (roll === 1 || roll === 4) this.oracleSelectedSpell = 'SHIELD';
 				else if (roll === 2 || roll === 5) this.oracleSelectedSpell = 'SWAP';
 				else this.oracleSelectedSpell = 'SKIRMISH';
+				
 				this.addLog(`[AI] P${this.currentPlayerIndex+1} Oracle channeled: ${this.oracleSelectedSpell}`);
 			}
 			this.performAITurn();
@@ -1294,6 +1301,8 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	performAIFateMoves() {
+		if (!this.players[this.currentPlayerIndex].isAI) return;
+
 		this.addLog(`[AI] P${this.currentPlayerIndex+1} Phase 1: Planning Fate moves...`);
 		
 		try {
@@ -1473,9 +1482,15 @@ function alpineHexDiceTacticGame() { return {
 	 * Asks player to choose between Shield, Swap, Skirmish spells, or cancel.
 	 */
 	initiateOracleSpellSelection() {
-		if (this.gameplayVersion === 2) {
-			const roll = Math.floor(random() * 6) + 1;
+		if (this.gameplayVersion === 2 && !this.oracleSelectedSpell) {
+			const roll = this.rollDice();
+
+			if (typeof window !== 'undefined' && window.rollDiceAnimation) {
+				window.rollDiceAnimation(roll);
+			}
+
 			let spell = '';
+
 			if (roll === 1 || roll === 4) spell = 'SHIELD';
 			else if (roll === 2 || roll === 5) spell = 'SWAP';
 			else spell = 'SKIRMISH';
@@ -1488,9 +1503,9 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	selectOracleSpell(spell) {
-		this.oracleSelectedSpell = spell;
+		this.oracleSelectedSpell = (this.gameplayVersion === 2 && this.oracleSelectedSpell) ? this.oracleSelectedSpell : spell;
 		this.actionMode = 'SPELLCAST';
-		// this.addLog(`Oracle will cast ${spell}. Select a friendly unit within Range 2.`);
+		this.addLog(`Oracle will cast ${this.oracleSelectedSpell}. Select a friendly unit within Range 2.`);
 	},
 	deselectUnit(state) {
 		state = state || this;
@@ -1878,7 +1893,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		const oldVal = unit.value;
-		const newRoll = Math.floor(random() * 6) + 1;
+		const newRoll = this.rollDice();
 		unit.value = newRoll;
 		Object.assign(unit, UNIT_STATS[newRoll]); // Update stats
 		unit.currentArmor = UNIT_STATS[newRoll].armor;
@@ -3275,7 +3290,12 @@ function alpineHexDiceTacticGame() { return {
 		};
 
 		if (this.gameplayVersion === 2) {
-			const combatRoll = Math.floor(random() * 6) + 1;
+			const combatRoll = this.rollDice();
+			
+			if (typeof window !== 'undefined' && window.rollDiceAnimation) {
+				window.rollDiceAnimation(combatRoll);
+			}
+
 			let attackMod = 0;
 			if (isSkirmishing) attackMod -= 1;
 			if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
@@ -3283,7 +3303,7 @@ function alpineHexDiceTacticGame() { return {
 			const totalAtk = Math.ceil((attackerUnit.attack + attackMod + combatRoll) / 2);
 			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 
-			this.addLog(`${this.logUnit(attackerUnit)} rolls D${combatRoll} for attack! Total ATK: ${totalAtk} vs Armor: ${defenderEffectiveArmor}`);
+			this.addLog(`🎲 ${this.logUnit(attackerUnit)} rolls D${combatRoll} for combat! Attack: ${totalAtk} vs Armor: ${defenderEffectiveArmor}`);
 
 			if (totalAtk > defenderEffectiveArmor) {
 				// Success
@@ -3297,7 +3317,7 @@ function alpineHexDiceTacticGame() { return {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
 			}
- else {
+			else {
 				// Deflected
 				this.addLog(`Attack deflected!`);
 				if (combatRoll === 1) {
@@ -3689,6 +3709,18 @@ function alpineHexDiceTacticGame() { return {
 		const otherFlags = `${noRerollFlag}${annihilationModeFlag}${mergeModeFlag}`;
 
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
+	},
+
+	rollDice() {
+		this.rollingDice = true;
+		const roll = Math.floor(random() * 6) + 1;
+
+		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
+			window.rollDiceAnimation(roll);
+			setTimeout(() => {this.rollingDice = false;}, 1e3);
+		}
+
+		return roll;
 	},
 
 };}
