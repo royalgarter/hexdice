@@ -84,10 +84,29 @@ const RMI_TERRAIN_PALETTE = {
 };
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
-const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
+let _seed = Math.floor(Math.random() * 1e9);
+const setSeed = (s) => { _seed = s; console.log("Seed set to:", s); };
+const random = () => {
+	_seed = (_seed * 1664525 + 1013904223) % 4294967296;
+	return _seed / 4294967296;
+};
+// const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
 
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
+	auth: {
+		clientId: '547832701518-ai09ubbqs2i3m5gebpmkt8ccfkmk58ru.apps.googleusercontent.com',
+		user: null,
+		token: null,
+	},
+	online: {
+		roomId: null,
+		isHost: false,
+		status: 'OFFLINE', // OFFLINE, LOBBY, PLAYING
+		opponent: null,
+		mqttClient: null,
+		playerIndex: null, // 0 for host, 1 for guest
+	},
 	rules: {
 		dicePerPlayer: 12,
 	},
@@ -471,6 +490,255 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog(`Placed ${terrainType} at (${potentialTerrainHex.q}, ${potentialTerrainHex.r}).`);
 			} else {
 				this.addLog(`Skipped terrain #${i+1}: Invalid or out-of-bounds hex generated.`);
+			}
+		}
+	},
+
+	/* --- AUTH METHODS --- */
+	async initAuth() {
+		try {
+			const res = await fetch('/api/config');
+			const config = await res.json();
+			this.auth.clientId = config.GOOGLE_CLIENT_ID;
+
+			// Debug Bypass: Check URL Params (e.g., ?auth_user=royalgarter&auth_token=123456)
+			const urlParams = new URLSearchParams(window.location.search);
+			const debugUser = urlParams.get('auth_user');
+			const debugToken = urlParams.get('auth_token');
+
+			if (debugUser && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+				this.auth.user = {
+					_key: debugUser,
+					name: debugUser,
+					email: `${debugUser}@localhost`,
+					picture: `https://ui-avatars.com/api/?name=${debugUser}`
+				};
+				this.auth.token = debugToken || 'debug-token';
+				this.addLog(`Debug mode: Logged in as ${debugUser}`);
+				return;
+			}
+
+			// Check if already logged in (local storage)
+			const savedUser = localStorage.getItem('hexdice_user');
+			const savedToken = localStorage.getItem('hexdice_token');
+			if (savedUser && savedToken) {
+				this.auth.user = JSON.parse(savedUser);
+				this.auth.token = savedToken;
+			}
+		} catch (e) {
+			console.error("Auth init failed", e);
+		}
+
+		window.handleCredentialResponse = (response) => {
+			this.handleGoogleAuth(response);
+		};
+	},
+
+	async handleGoogleAuth(response) {
+		this.addLog("Authenticating with Google...");
+		try {
+			const res = await fetch('/api/auth/google', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ credential: response.credential })
+			});
+			const data = await res.json();
+			if (data.user) {
+				this.auth.user = data.user;
+				this.auth.token = data.token;
+				localStorage.setItem('hexdice_user', JSON.stringify(data.user));
+				localStorage.setItem('hexdice_token', data.token);
+				this.addLog(`Welcome, ${data.user.name}!`);
+			} else {
+				this.addLog("Login failed.");
+			}
+		} catch (e) {
+			this.addLog("Auth error: " + e.message);
+		}
+	},
+
+	logout() {
+		this.auth.user = null;
+		this.auth.token = null;
+		localStorage.removeItem('hexdice_user');
+		localStorage.removeItem('hexdice_token');
+		this.addLog("Logged out.");
+		location.reload(); // Refresh to clear Google state
+	},
+
+	/* --- ONLINE METHODS --- */
+	leaveRoom() {
+		if (this.online.mqttClient) {
+			this.online.mqttClient.end();
+		}
+		this.online.roomId = null;
+		this.online.status = 'OFFLINE';
+		this.online.mqttClient = null;
+		this.online.opponent = null;
+		this.online.playerIndex = null;
+		this.addLog("Left online room.");
+		location.reload();
+	},
+
+	async createRoom() {
+		if (!this.auth.user) {
+			this.addLog("Please login first.");
+			return;
+		}
+		try {
+			const res = await fetch('/api/rooms/create', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ userId: this.auth.user._key, name: this.auth.user.name })
+			});
+			const room = await res.json();
+			this.online.roomId = room._key;
+			this.online.isHost = true;
+			this.online.status = 'LOBBY';
+			this.online.playerIndex = 0;
+			this.addLog(`Room created: ${room._key}. Waiting for opponent...`);
+			this.connectMQTT();
+		} catch (e) {
+			this.addLog("Error creating room: " + e.message);
+		}
+	},
+
+	async joinRoom(roomId) {
+		if (!this.auth.user) {
+			this.addLog("Please login first.");
+			return;
+		}
+		const id = roomId || prompt("Enter Room ID:");
+		if (!id) return;
+
+		try {
+			const res = await fetch('/api/rooms/join', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ roomId: id.toUpperCase(), userId: this.auth.user._key, name: this.auth.user.name })
+			});
+			const room = await res.json();
+			if (room.error) {
+				this.addLog("Join failed: " + room.error);
+				return;
+			}
+			this.online.roomId = room._key;
+			this.online.isHost = false;
+			this.online.status = 'PLAYING';
+			this.online.playerIndex = 1;
+			this.online.opponent = room.players.find(p => p.id !== this.auth.user._key);
+			this.addLog(`Joined room: ${room._key}. Opponent: ${this.online.opponent.name}`);
+			
+			this.connectMQTT();
+		} catch (e) {
+			this.addLog("Error joining room: " + e.message);
+		}
+	},
+
+	connectMQTT() {
+		const broker = 'wss://broker.emqx.io:8084/mqtt';
+		this.addLog("Connecting to MQTT...");
+		this.online.mqttClient = mqtt.connect(broker);
+
+		this.online.mqttClient.on('connect', () => {
+			const topic = `hexdice/rooms/${this.online.roomId}`;
+			this.online.mqttClient.subscribe(topic);
+			this.addLog("Connected to MQTT.");
+
+			if (!this.online.isHost) {
+				this.publishAction('GUEST_JOINED', { name: this.auth.user.name });
+			}
+		});
+
+		this.online.mqttClient.on('message', (topic, message) => {
+			try {
+				const payload = JSON.parse(message.toString());
+				this.handleMQTTMessage(payload);
+			} catch (e) {
+				console.error("MQTT parse error", e);
+			}
+		});
+	},
+
+	publishAction(type, data) {
+		if (!this.online.mqttClient) return;
+		const topic = `hexdice/rooms/${this.online.roomId}`;
+		const payload = { type, data, sender: this.auth.user._key };
+		this.online.mqttClient.publish(topic, JSON.stringify(payload));
+	},
+
+	handleMQTTMessage(payload) {
+		if (payload.sender === this.auth.user._key) return;
+
+		const { type, data } = payload;
+		console.log(`MQTT RECV [${this.auth.user.name}]:`, type, data);
+
+		switch (type) {
+			case 'GUEST_JOINED':
+				if (this.online.isHost) {
+					this.online.status = 'PLAYING';
+					this.online.opponent = { name: data.name };
+					this.addLog(`Opponent joined: ${data.name}`);
+					
+					const seed = Math.floor(Math.random() * 1e9);
+					setSeed(seed);
+					this.publishAction('START_GAME', { seed, hostName: this.auth.user.name });
+					this.initOnlineGame();
+				}
+				break;
+			case 'START_GAME':
+				setSeed(data.seed);
+				this.online.opponent = { name: data.hostName };
+				this.initOnlineGame();
+				break;
+			case 'GAME_ACTION':
+				this.applyRemoteAction(data);
+				break;
+		}
+	},
+
+	initOnlineGame() {
+		this.addLog("Initializing online game...");
+		this.isCampaign = false;
+		this.playerCount = 2;
+		
+		const prevStatus = this.online.status;
+		this.online.status = 'SYNCING'; // Prevent MQTT noise during auto-setup
+		
+		this.resetGame({ isCampaign: false });
+		this.players.forEach(p => p.isAI = false);
+
+		// Assign names
+		if (this.online.isHost) {
+			this.players[0].name = this.auth.user.name;
+			this.players[1].name = this.online.opponent?.name;
+		} else {
+			this.players[0].name = this.online.opponent?.name;
+			this.players[1].name = this.auth.user.name;
+		}
+
+		this.randomStart();
+		this.phase = 'PLAYER_TURN'; // Explicitly set phase
+		
+		this.online.status = prevStatus;
+		this.addLog("Online game ready! Turn: P1");
+	},
+
+	applyRemoteAction(data) {
+		const { action, args } = data;
+		console.log(`Applying remote action [${this.auth.user.name}]:`, action, args);
+		
+		if (action === 'HEX_CLICK') {
+			this._handleHexClick(...args);
+		} else if (action === 'ROLL_DICE') {
+			this._rollDice(...args);
+		} else if (action === 'END_TURN') {
+			// Only apply END_TURN if the turn hasn't already changed locally
+			// (e.g. via a HEX_CLICK that triggered an automatic endTurn)
+			if (this.currentPlayerIndex !== this.online.playerIndex) {
+				this._endTurn();
+			} else {
+				console.log("Ignoring redundant END_TURN");
 			}
 		}
 	},
@@ -1407,6 +1675,17 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- GAMEPLAY --- */
 	handleHexClick(hexId) {
+		if (this.online.status === 'PLAYING') {
+			if (this.currentPlayerIndex !== this.online.playerIndex) {
+				this.addLog("Wait for opponent's turn.");
+				console.log("Turn block: current", this.currentPlayerIndex, "me", this.online.playerIndex);
+				return;
+			}
+			this.publishAction('GAME_ACTION', { action: 'HEX_CLICK', args: [hexId] });
+		}
+		this._handleHexClick(hexId);
+	},
+	_handleHexClick(hexId) {
 		if (this.phase === 'SETUP_DEPLOY') {
 			this.deployUnit(hexId);
 			return;
@@ -1432,6 +1711,8 @@ function alpineHexDiceTacticGame() { return {
 				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
 				this.hoverHex(hexId);
 			}
+			// In online mode, force an endTurn check if unit moved
+			// Note: performMove already calls endTurn in most cases
 		} else { // Normal selection mode
 			if (unitOnClickedHex) {
 				this.unitstat = unitOnClickedHex ? hexId : null;
@@ -3458,8 +3739,16 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- TURN --- */
 	endTurn(state) {
+		if (!state && this.online.status === 'PLAYING' && this.currentPlayerIndex === this.online.playerIndex) {
+			this.publishAction('GAME_ACTION', { action: 'END_TURN', args: [] });
+		}
+		this._endTurn(state);
+	},
+	_endTurn(state) {
 		let isState = !!state;
 		state = state || this;
+
+		console.log(`P${state.currentPlayerIndex + 1} turn ending...`);
 
 		state.hovering = {};
 		state.actionMode = null;
@@ -3489,6 +3778,7 @@ function alpineHexDiceTacticGame() { return {
 
 		state.currentPlayerIndex = nextPlayerIndex;
 		state.turnCount++;
+		console.log(`Next player: P${state.currentPlayerIndex + 1}`);
 		this.resetTurnActionsForPlayer(state.currentPlayerIndex, state);
 
 		this.checkWinConditions(state);
@@ -3507,10 +3797,10 @@ function alpineHexDiceTacticGame() { return {
 	resetTurnActionsForPlayer(playerId, state) {
 		const player = (state || this).players[playerId];
 		player.dice.forEach(die => {
+			die.hasMovedOrAttackedThisTurn = false;
+			die.actionsTakenThisTurn = 0;
+			die.isRerolled = false;
 			if(die.isDeployed) {
-				die.hasMovedOrAttackedThisTurn = false;
-				die.actionsTakenThisTurn = 0;
-				die.isRerolled = false; // Penalty expires when turn starts
 				this.calcDefenderEffectiveArmor(die.hexId, state);
 				// Decrement skirmish buff
 				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
@@ -3719,6 +4009,13 @@ function alpineHexDiceTacticGame() { return {
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
 	},
 	rollDice(max=6, delay=0) {
+		if (this.online.status === 'PLAYING') {
+			if (this.currentPlayerIndex !== this.online.playerIndex) return;
+			this.publishAction('GAME_ACTION', { action: 'ROLL_DICE', args: [max, delay] });
+		}
+		return this._rollDice(max, delay);
+	},
+	_rollDice(max=6, delay=0) {
 		this.rollingDice = true;
 		const roll = Math.floor(random() * max) + 1;
 
