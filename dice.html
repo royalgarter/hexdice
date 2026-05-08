@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimal 3D Dice</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; margin: 0; background: #1a1a2e; font-family: system-ui, sans-serif; gap: 50px;
+    }
+    
+    /* 3D Scene Setup */
+    .scene { width: 100px; height: 100px; perspective: 600px; }
+    .cube {
+      width: 100%; height: 100%; position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(15deg) rotateY(15deg); /* Initial slight tilt */
+      transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Adds a bounce effect */
+    }
+    
+    /* Dice Faces */
+    .face {
+      position: absolute; width: 100%; height: 100%; background: #fff;
+      border: 2px solid #ddd; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 45px; font-weight: bold; color: #333;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+    }
+    .face.front { color: #e94560; } /* Casino red '1' */
+    
+    .front  { transform: rotateY(  0deg) translateZ(50px); }
+    .right  { transform: rotateY( 90deg) translateZ(50px); }
+    .back   { transform: rotateY(180deg) translateZ(50px); }
+    .left   { transform: rotateY(-90deg) translateZ(50px); }
+    .top    { transform: rotateX( 90deg) translateZ(50px); }
+    .bottom { transform: rotateX(-90deg) translateZ(50px); }
+    
+    /* Button Styling */
+    button {
+      padding: 12px 30px; font-size: 16px; font-weight: bold; cursor: pointer;
+      background: #e94560; color: #fff; border: none; border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.1s, background 0.2s;
+    }
+    button:hover { background: #d03c53; }
+    button:active { transform: translateY(2px); }
+  </style>
+</head>
+<body>
+
+  <!-- Dice Container -->
+  <div class="scene">
+    <div class="cube" id="cube">
+      <div class="face front">1</div>
+      <div class="face right">2</div>
+      <div class="face back">3</div>
+      <div class="face left">4</div>
+      <div class="face top">5</div>
+      <div class="face bottom">6</div>
+    </div>
+  </div>
+
+  <button onclick="roll()">ROLL DICE</button>
+
+  <script>
+    // Keep track of current rotations so the dice accumulates spins continuously 
+    // rather than resetting and spinning backwards
+    let currentX = 15;
+    let currentY = 15;
+
+    function roll() {
+      const cube = document.getElementById('cube');
+      
+      // X and Y angles required to show each number 1 to 6
+      const rotations = [
+        [0, 0],      // 1
+        [0, -90],    // 2
+        [0, 180],    // 3
+        [0, 90],     // 4
+        [-90, 0],    // 5
+        [90, 0]      // 6
+      ];
+      
+      const [targetX, targetY] = rotations[Math.floor(Math.random() * 6)];
+      
+      // Accumulate 2 to 4 random full spins (360s) + snap exactly to target rotation
+      currentX += 360 * (Math.floor(Math.random() * 3) + 2) + targetX - (currentX % 360);
+      currentY += 360 * (Math.floor(Math.random() * 3) + 2) + targetY - (currentY % 360);
+      
+      // Apply the transformation via CSS
+      cube.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
+    }
+  </script>
+
+</body>
+</html>

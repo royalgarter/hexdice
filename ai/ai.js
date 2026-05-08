@@ -15,7 +15,18 @@ const performAI = performAIByWeight;
 function generateAllPossibleMoves(GAME, state) {
 	const moves = [];
 	const currentPlayer = state.players[state.currentPlayerIndex];
-	const unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+	
+	let unitsThatCanAct = [];
+	
+	if (GAME.gameplayVersion === 2) {
+		if (GAME.turnPhase === 'FATE_CALL') {
+			unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && d.canMoveInFatePhase);
+		} else {
+			unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+		}
+	} else {
+		unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+	}
 
 	if (unitsThatCanAct.length === 0) {
 		moves.push({ actionType: 'END_TURN' });
@@ -32,6 +43,9 @@ function generateAllPossibleMoves(GAME, state) {
 			moves.push({ actionType: 'MOVE', unitHexId, targetHexId });
 		});
 
+		// Skip complex actions during Fate's Call
+		if (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') return;
+
 		// 2. Ranged Attack (Dice 2)
 		if (unitValue === 2) {
 			const validRangedTargets = GAME.calcValidRangedTargets(unitHexId, state);
@@ -42,21 +56,28 @@ function generateAllPossibleMoves(GAME, state) {
 
 		// 3. Spellcast (Dice 6 Oracle)
 		if (unitValue === 6) {
-			const validSpellTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
-			validSpellTargets.forEach(targetHexId => {
-				// Generate moves for each spell type
-				const targetUnit = GAME.getUnitOnHex(targetHexId, state);
-				if (targetUnit && targetUnit.playerId === unit.playerId) {
-
-					// Shield: Use if target is threatened or in combat
-					moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
-
-					// Swap: Use if Oracle is threatened or to reposition key unit
-					moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
-
-					// moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
+			if (GAME.gameplayVersion === 2) {
+				// In V2, spell is already selected
+				if (GAME.oracleSelectedSpell) {
+					const validSpellTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
+					validSpellTargets.forEach(targetHexId => {
+						const targetUnit = GAME.getUnitOnHex(targetHexId, state);
+						if (targetUnit && targetUnit.playerId === unit.playerId) {
+							moves.push({ actionType: `SPELLCAST_${GAME.oracleSelectedSpell}`, unitHexId, targetHexId });
+						}
+					});
 				}
-			});
+			} else {
+				const validSpellTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
+				validSpellTargets.forEach(targetHexId => {
+					const targetUnit = GAME.getUnitOnHex(targetHexId, state);
+					if (targetUnit && targetUnit.playerId === unit.playerId) {
+						moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
+						moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
+						moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
+					}
+				});
+			}
 
 			// Oracle Sacrifice: Check if this is the last unit and can sacrifice
 			if (GAME.canPerformAction(unitHexId, 'SPELLCAST_SACRIFICE', state)) {
@@ -88,6 +109,10 @@ function applyMove(GAME, move, state) {
 	switch (move.actionType) {
 		case 'MOVE':
 			GAME.performMove(move.unitHexId, move.targetHexId, applyState);
+			if (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') {
+				const unit = GAME.getUnitOnHex(move.targetHexId, applyState || undefined);
+				if (unit) unit.canMoveInFatePhase = false;
+			}
 			break;
 		case 'RANGED_ATTACK':
 			GAME.performRangedAttack(move.unitHexId, move.targetHexId, applyState);
@@ -131,14 +156,24 @@ function applyMove(GAME, move, state) {
 					}
 				});
 			} else {
-				GAME.endTurn();
+				if (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') {
+					GAME.startTacticalCommand();
+				} else {
+					GAME.endTurn();
+				}
 			}
 			return applyState; // Already handled endTurn
 	}
 
 	// For all other actions (MOVE, ATTACK, etc.), if we are executing on real GAME, end the turn
 	if (!state) {
-		GAME.endTurn();
+		if (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') {
+			// Phase 1 moves don't end the turn
+		} else if (GAME.actionMode === 'SKIRMISH_POST_MOVE') {
+			// Skirmish post-move doesn't end the turn yet
+		} else {
+			GAME.endTurn();
+		}
 	}
 
 	if (applyState) {

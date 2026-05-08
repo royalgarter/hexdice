@@ -166,11 +166,18 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     const predictedThreats = predictEnemyThreats(GAME, state, state.currentPlayerIndex);
 
     // Identify AI Units that can act
-    const availableUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+    const availableUnits = (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL')
+        ? currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && d.canMoveInFatePhase)
+        : currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
 
     if (availableUnits.length === 0) {
-        GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No units to act. Ending turn.`);
-        applyMove(GAME, { actionType: 'END_TURN' });
+        if (verbose) GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No units to act. Ending phase/turn.`);
+        
+        if (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') {
+            GAME.startTacticalCommand();
+        } else {
+            applyMove(GAME, { actionType: 'END_TURN' });
+        }
         return;
     }
 
@@ -256,7 +263,13 @@ function predictEnemyThreats(GAME, state, myPlayerIndex) {
             const targetUnit = GAME.getUnitOnHex(neighbor.id, state);
             if (targetUnit && targetUnit.playerId === myPlayerIndex) {
                 const defenderArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, state);
-                const canKill = enemy.attack >= defenderArmor;
+                let canKill = false;
+                if (GAME.gameplayVersion === 2) {
+                    const { winProb } = calculateV2CombatSuccessProbability(enemy.attack, defenderArmor);
+                    canKill = winProb > 0.5;
+                } else {
+                    canKill = enemy.attack >= defenderArmor;
+                }
                 threats.push({
                     attacker: enemy,
                     target: targetUnit,
@@ -275,11 +288,18 @@ function predictEnemyThreats(GAME, state, myPlayerIndex) {
                 const targetUnit = GAME.getUnitOnHex(targetHexId, state);
                 if (targetUnit && targetUnit.playerId === myPlayerIndex) {
                     const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, state);
+                    let canKill = false;
+                    if (GAME.gameplayVersion === 2) {
+                        const { winProb } = calculateV2CombatSuccessProbability(enemy.attack, defenderArmor);
+                        canKill = winProb > 0.5;
+                    } else {
+                        canKill = enemy.attack >= defenderArmor;
+                    }
                     threats.push({
                         attacker: enemy,
                         target: targetUnit,
                         targetHexId,
-                        canKill: enemy.attack >= defenderArmor,
+                        canKill,
                         attackValue: enemy.attack,
                         defenderArmor,
                         isRanged: true
@@ -661,7 +681,17 @@ function orderMoves(GAME, state, moves, myPlayerIndex) {
         if (targetUnit && targetUnit.playerId !== myPlayerIndex) {
             const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
             const unit = state.players[myPlayerIndex].dice.find(d => d.hexId === move.unitHexId);
-            if (unit && unit.attack >= defenderArmor) {
+            let canKill = false;
+            if (unit) {
+                if (GAME.gameplayVersion === 2) {
+                    const { winProb } = calculateV2CombatSuccessProbability(unit.attack, defenderArmor);
+                    canKill = winProb > 0.5;
+                } else {
+                    canKill = unit.attack >= defenderArmor;
+                }
+            }
+
+            if (canKill) {
                 priority += 5000 + targetUnit.value * 100;
             } else {
                 priority += 1000 + targetUnit.value * 10;
@@ -733,6 +763,29 @@ function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIn
         transpositionTable.set(stateKey, { score: minEval, depth });
         return minEval;
     }
+}
+
+/**
+ * Calculate the probability of a successful attack in Version 2 (Destiny Dice).
+ * Total ATK = ceil((Base ATK + Roll) / 2)
+ * Success if Total ATK > Defender Armor
+ */
+function calculateV2CombatSuccessProbability(baseAtk, defenderArmor) {
+    let successes = 0;
+    let fumbles = 0;
+    for (let roll = 1; roll <= 6; roll++) {
+        const totalAtk = Math.ceil((baseAtk + roll) / 2);
+        if (totalAtk > defenderArmor) {
+            successes++;
+        } else if (roll === 1) {
+            fumbles++;
+        }
+    }
+    return {
+        winProb: successes / 6,
+        fumbleProb: fumbles / 6,
+        failProb: (6 - successes - fumbles) / 6
+    };
 }
 
 /**
@@ -822,11 +875,31 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.targetArmor = defenderArmor;
         analysis.isTargetThreat = predictedThreats.some(t => t.attacker.id === targetUnit.id);
 
-        if (attackValue >= defenderArmor) {
-            analysis.canKillEnemy = true;
-            analysis.score += w.killBonus + targetUnit.value;
+        const isSkirmishing = !!unit.skirmishBuff;
+
+        if (GAME.gameplayVersion === 2) {
+            const { winProb, fumbleProb } = calculateV2CombatSuccessProbability(attackValue, defenderArmor);
+            
+            // In Skirmish V2, any failure results in elimination (not just fumble)
+            let riskProb = fumbleProb;
+            if (isSkirmishing) riskProb = 1 - winProb;
+
+            // Expected Value scoring
+            // Bonus for winning * target value
+            // Penalty for risking self-destruction
+            const winValue = (w.killBonus + targetUnit.value * 15) * winProb;
+            const lossPenalty = (unit.value * 25) * riskProb;
+            
+            analysis.score += (winValue - lossPenalty);
+            
+            if (winProb > 0.5) analysis.canKillEnemy = true; // Heuristic "can kill" if >50%
         } else {
-            analysis.score += w.attackBonus + targetUnit.value;
+            if (attackValue >= defenderArmor) {
+                analysis.canKillEnemy = true;
+                analysis.score += w.killBonus + targetUnit.value;
+            } else {
+                analysis.score += w.attackBonus + targetUnit.value;
+            }
         }
     }
 
@@ -844,9 +917,23 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                 const defenderArmor = GAME.calcDefenderEffectiveArmor(aiUnitNext.hexId, nextState);
                 const oppAttack = opp.attack;
 
-                if (oppAttack >= defenderArmor) {
-                    canBeKilledByAny = true;
-                    break;
+                if (GAME.gameplayVersion === 2) {
+                    const { winProb, fumbleProb } = calculateV2CombatSuccessProbability(oppAttack, defenderArmor);
+                    
+                    // Penalty for enemy winning
+                    // Bonus for enemy fumbling (making this spot safer)
+                    analysis.score -= winProb * (unit.value * 20 + Math.abs(w.threatPenalty));
+                    analysis.score += fumbleProb * (opp.value * 10);
+                    
+                    if (winProb > 0.5) {
+                        canBeKilledByAny = true;
+                        break;
+                    }
+                } else {
+                    if (oppAttack >= defenderArmor) {
+                        canBeKilledByAny = true;
+                        break;
+                    }
                 }
             }
         }

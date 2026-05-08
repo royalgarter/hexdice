@@ -29,7 +29,7 @@ const AI_TYPES: Record<string, string> = {
 
 // CLI Arguments
 const args = parse(Deno.args, {
-    string: ["games", "type", "output", "depth", "players"],
+    string: ["games", "type", "output", "depth", "players", "version"],
     boolean: ["verbose", "help"],
     alias: {
         g: "games",
@@ -39,14 +39,16 @@ const args = parse(Deno.args, {
         v: "verbose",
         h: "help",
         pl: "players",
+        ver: "version",
     },
     default: {
         games: 1,
-        type: "random,heuristic",
+        type: "heuristic,heuristic",
         output: "simulations",
         depth: 3,
         verbose: false,
         players: 2,
+        version: 1,
     },
 });
 
@@ -161,12 +163,12 @@ interface MoveRecord {
 }
 
 // Stub browser APIs for headless execution
-function stubBrowserAPIs(playerCount: number = 2) {
+function stubBrowserAPIs(playerCount: number = 2, version: number = 1) {
 	// Stub location
 	const locationStub = {
-		search: `?mode=headless&players=${playerCount}`,
-		href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
-		toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
+		search: `?mode=headless&players=${playerCount}&version=${version}`,
+		href: `https://hexdice.local/?mode=headless&players=${playerCount}&version=${version}`,
+		toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}&version=${version}`
 	};
 	
 	// Stub document
@@ -207,8 +209,8 @@ function createSimulationGame(logger: SimulationLogger, aiType: string, engine: 
 }
 
 // Load all game and AI code
-async function loadGameEngine(playerCount: number = 2): Promise<any> {
-    const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
+async function loadGameEngine(playerCount: number = 2, version: number = 1): Promise<any> {
+    const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount, version);
 
     let gameCode = await Deno.readTextFile("./game.js");
     const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
@@ -455,6 +457,7 @@ async function runGame(
 
     // Initialize game and run setup
     await game.init();
+    game.gameplayVersion = parseInt(args.version);
     game.handleSetupPhase();
     
     // NOW set up AI players
@@ -575,7 +578,7 @@ async function runSimulation() {
     
     // Load game engine
     console.log("Loading game engine...");
-    const engine = await loadGameEngine(playerCount);
+    const engine = await loadGameEngine(playerCount, parseInt(args.version));
     console.log("Engine loaded.");
     console.log("");
     

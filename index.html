@@ -406,6 +406,11 @@
 					<a href="?players=4" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">4</a>
 					<a href="?players=6" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">6</a>
 				</div>
+				<div class="mb-4">
+					<span class="mr-2 font-bold text-sm uppercase">Version:</span>
+					<a :href="updateUrlParam('version', 1)" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">V1: Decisive</a>
+					<a :href="updateUrlParam('version', 2)" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">V2: Destiny</a>
+				</div>
 				<div class="mt-2 flex flex-wrap justify-center gap-4" x-show="spriteSets.length > 0 && players.length > 0">
 					<template x-for="(player, idx) in players" :key="idx">
 						<div class="py-2 text-sm" x-show="!player.isAI">
@@ -569,6 +574,10 @@
 			<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
 				Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+			</p>
+			<p class="text-xs text-gray-500 italic mt-1">
+				Mode: <span x-text="gameplayVersion === 2 ? 'Destiny Dice (v2)' : 'Decisive Dice (v1)'"></span>
+				<span x-show="gameplayVersion === 2 && turnPhase" x-text="' - Phase: ' + turnPhase.replace('_', ' ')"></span>
 			</p>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="location.href='/'" x-show="isCampaign">Home</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>

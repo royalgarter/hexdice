@@ -15,7 +15,7 @@
   ],
   "theme_color": "#c3a471",
   "background_color": "#ffffff",
-  "display": "minimal-ui",
+  "display": "standalone",
   "name": "HexDice",
   "short_name": "HexDice",
   "description": "Tactical hexagon board game where players command armies of dice, using their values to determine their abilities.",

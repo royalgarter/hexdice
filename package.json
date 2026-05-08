@@ -4,6 +4,7 @@
     "sprites:gen": "node -e \"require('fs').writeFileSync('./assets/sets.json',JSON.stringify(require('fs').readdirSync('./assets/sprites/sets/',{withFileTypes:true }).filter(d => d.isDirectory()).map(d => d.name),null,'\\t'));\"",
     "manifest:gen": "node generate-assets-manifest.js",
     "simulate": "deno run --allow-all simulate.ts",
+    "simulate:v2": "deno run --allow-all simulate.ts --version=2 -g=1",
     "tournament": "deno run --allow-all tournament.ts",
     "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",
     "tournament:full": "deno run --allow-all tournament.ts -g=20",

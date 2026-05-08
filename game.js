@@ -91,6 +91,9 @@ function alpineHexDiceTacticGame() { return {
 	rules: {
 		dicePerPlayer: 12,
 	},
+	gameplayVersion: 1, // 1: Decisive Dice, 2: Destiny Dice
+	turnPhase: null, // For Version 2: 'FATE_CALL', 'TACTICAL_COMMAND'
+	fateRoll: null,
 	options: '', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
 	hexGrid: {},
 	hexes: [],
@@ -135,6 +138,12 @@ function alpineHexDiceTacticGame() { return {
 		skipReroll: new URLSearchParams(location.search).get('mode')?.includes('debug'),
 		skipDeploy: new URLSearchParams(location.search).get('mode')?.includes('debug'),
 		autoPlay: new URLSearchParams(location.search).get('mode')?.includes('auto'),
+	},
+
+	updateUrlParam(key, value) {
+		const url = new URL(window.location.href);
+		url.searchParams.set(key, value);
+		return url.search + url.hash;
 	},
 
 	// --- SETUP TERRAIN METHODS ---
@@ -477,6 +486,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		const campaignMapParam = new URLSearchParams(location.search).get('map');
+		this.gameplayVersion = parseInt(new URLSearchParams(location.search).get('version')) || 1;
 		let campaignData = null;
 		if (campaignMapParam) {
 			try {
@@ -489,6 +499,7 @@ function alpineHexDiceTacticGame() { return {
 
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
 		this.preset = new URLSearchParams(location.search).get('preset');
+		this.mode = new URLSearchParams(location.search).get('mode') || 'gui';
 		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
 
 		// Map size modifier
@@ -1207,11 +1218,94 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("---");
 		this.addLog("P1 turn.");
 
+		if (this.gameplayVersion === 2) {
+			this.startFatesCall();
+		} else {
+			if (this.players[this.currentPlayerIndex].isAI) {
+				this.addLog("[AI] P2 turn.");
+				this.performAITurn();
+			} else if (this.debug?.autoPlay) {
+				this.autoPlay();
+			}
+		}
+	},
+	startFatesCall() {
+		this.turnPhase = 'FATE_CALL';
+		this.fateRoll = Math.floor(random() * 6) + 1;
+		this.addLog(`Phase 1: Fate's Call! Roll: D${this.fateRoll}`);
+		
+		const matchingUnits = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.value === this.fateRoll);
+		
+		if (matchingUnits.length === 0) {
+			this.addLog("No matching units. Moving to Tactical Command.");
+			this.startTacticalCommand();
+		} else {
+			this.addLog(`${matchingUnits.length} units can perform a free Move action.`);
+			// In Fate's Call, matching units can move. We don't mark them as having acted yet?
+			// The rules say "immediately perform a free Move action".
+			// "Phase 2: Choose exactly one friendly unit (even one that moved in Phase 1) to perform any standard action"
+			// So Phase 1 moves don't count towards Phase 2's single action.
+			
+			// We need to manage who has moved in Phase 1.
+			matchingUnits.forEach(u => u.canMoveInFatePhase = true);
+			
+			if (this.players[this.currentPlayerIndex].isAI) {
+				// AI should move its matching units
+				this.performAIFateMoves();
+			}
+		}
+	},
+	startTacticalCommand() {
+		this.turnPhase = 'TACTICAL_COMMAND';
+		this.addLog("Phase 2: Tactical Command. Choose one unit to act.");
+		
+		// Reset move flags from Phase 1
+		this.players[this.currentPlayerIndex].dice.forEach(d => d.canMoveInFatePhase = false);
+
 		if (this.players[this.currentPlayerIndex].isAI) {
-			this.addLog("[AI] P2 turn.");
+			// For Version 2 AI: Pre-roll Oracle spell so it can plan
+			if (this.gameplayVersion === 2) {
+				const roll = Math.floor(random() * 6) + 1;
+				if (roll === 1 || roll === 4) this.oracleSelectedSpell = 'SHIELD';
+				else if (roll === 2 || roll === 5) this.oracleSelectedSpell = 'SWAP';
+				else this.oracleSelectedSpell = 'SKIRMISH';
+				this.addLog(`[AI] Oracle channeled: ${this.oracleSelectedSpell}`);
+			}
 			this.performAITurn();
 		} else if (this.debug?.autoPlay) {
 			this.autoPlay();
+		}
+	},
+	performAIFateMoves() {
+		this.addLog("[AI] Phase 1: Planning Fate moves...");
+		
+		try {
+			if (this.mode === 'headless') {
+				while (this.turnPhase === 'FATE_CALL') {
+					performAIByHeuristic(this);
+				}
+			} else {
+				performAIByHeuristic(this);
+				
+				// If still in FATE_CALL, it means the AI performed one move but more matching units remain
+				if (this.turnPhase === 'FATE_CALL') {
+					// Safety break for stuck loops
+					this._fateMoveCount = (this._fateMoveCount || 0) + 1;
+					if (this._fateMoveCount > 20) {
+						this.addLog("[AI] Warning: Phase 1 taking too many steps. Forcing transition.");
+						this.startTacticalCommand();
+						this._fateMoveCount = 0;
+						return;
+					}
+					setTimeout(() => this.performAIFateMoves(), 500);
+				} else {
+					this._fateMoveCount = 0;
+				}
+			}
+		} catch (e) {
+			console.error("AI Error in Phase 1:", e);
+			this.addLog(`[AI] Error in Phase 1: ${e.message}`);
+			if (this.turnPhase === 'FATE_CALL') this.startTacticalCommand();
 		}
 	},
 	randomStart() {
@@ -1317,11 +1411,33 @@ function alpineHexDiceTacticGame() { return {
 		if (state) return;
 		const unit = this.getUnitOnHex(hexId);
 
-		if (!unit || unit.playerId !== this.currentPlayerIndex || unit.hasMovedOrAttackedThisTurn) {
-			if(unit && unit.hasMovedOrAttackedThisTurn) this.addLog("This unit has already acted this turn.");
+		if (!unit || unit.playerId !== this.currentPlayerIndex) {
 			this.deselectUnit();
 			return;
 		}
+
+		if (this.gameplayVersion === 2) {
+			if (this.turnPhase === 'FATE_CALL') {
+				if (unit.value !== this.fateRoll || !unit.canMoveInFatePhase) {
+					this.addLog(`Only units with value ${this.fateRoll} can move in Phase 1.`);
+					this.deselectUnit();
+					return;
+				}
+			} else if (this.turnPhase === 'TACTICAL_COMMAND') {
+				if (unit.hasMovedOrAttackedThisTurn) {
+					this.addLog("This unit has already acted this turn.");
+					this.deselectUnit();
+					return;
+				}
+			}
+		} else {
+			if (unit.hasMovedOrAttackedThisTurn) {
+				this.addLog("This unit has already acted this turn.");
+				this.deselectUnit();
+				return;
+			}
+		}
+
 		this.selectedUnitHexId = hexId;
 		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
 		this.validTargets = []; // Will be calculated if attack action is chosen
@@ -1350,8 +1466,19 @@ function alpineHexDiceTacticGame() { return {
 	 * Asks player to choose between Shield, Swap, Skirmish spells, or cancel.
 	 */
 	initiateOracleSpellSelection() {
-		this.actionMode = 'ORACLE_SPELL_SELECT';
-		// this.addLog("Oracle Spell - Choose a spell from the control panel.");
+		if (this.gameplayVersion === 2) {
+			const roll = Math.floor(random() * 6) + 1;
+			let spell = '';
+			if (roll === 1 || roll === 4) spell = 'SHIELD';
+			else if (roll === 2 || roll === 5) spell = 'SWAP';
+			else spell = 'SKIRMISH';
+			
+			this.addLog(`Oracle channeled... Roll: D${roll}. Granted: ${spell}!`);
+			this.selectOracleSpell(spell);
+		} else {
+			this.actionMode = 'ORACLE_SPELL_SELECT';
+			// this.addLog("Oracle Spell - Choose a spell from the control panel.");
+		}
 	},
 	selectOracleSpell(spell) {
 		this.oracleSelectedSpell = spell;
@@ -1509,7 +1636,21 @@ function alpineHexDiceTacticGame() { return {
 					this.addLog("Archers cannot perform melee attacks. Move to an empty hex only.");
 					return;
 				}
+
 				this.performMove(this.selectedUnitHexId, targetHexId);
+
+				if (this.gameplayVersion === 2 && this.turnPhase === 'FATE_CALL') {
+					unit.canMoveInFatePhase = false;
+					unit.hasMovedOrAttackedThisTurn = false; // It's a "free" move
+					this.deselectUnit();
+
+					// Check if any more units can move in Phase 1
+					const remaining = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.canMoveInFatePhase);
+					if (remaining.length === 0) {
+						this.startTacticalCommand();
+					}
+					return;
+				}
 
 				if (action == 'BRAVE_CHARGE') {
 					this.actionMode = 'BRAVE_CHARGE_TARGET';
@@ -1524,7 +1665,8 @@ function alpineHexDiceTacticGame() { return {
 			}
 
 			return;
-		} else if (action === 'SKIRMISH_POST_MOVE' && this.validMoves.includes(targetHexId)) {
+		}
+ else if (action === 'SKIRMISH_POST_MOVE' && this.validMoves.includes(targetHexId)) {
 			this.performSkirmishPostMove(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
@@ -1682,14 +1824,13 @@ function alpineHexDiceTacticGame() { return {
 				`[${defenderHex.id}].`
 			].join(''), state);
 			this.move(attackerUnit, attackerHex, defenderHex, state);
-			// attackerHex.unit = null;
-			// attackerHex.unitId = null;
-			// defenderHex.unit = attackerUnit;
-			// defenderHex.unitId = attackerUnit.id;
-			// attackerUnit.hexId = targetHexId;
 
-			attackerUnit.hasMovedOrAttackedThisTurn = true;
-			attackerUnit.actionsTakenThisTurn++;
+			if (this.gameplayVersion === 2 && this.turnPhase === 'FATE_CALL') {
+				attackerUnit.hasMovedOrAttackedThisTurn = false;
+			} else {
+				attackerUnit.hasMovedOrAttackedThisTurn = true;
+				attackerUnit.actionsTakenThisTurn++;
+			}
 			this.deselectUnit(state); // Action complete
 		}
 		this.checkWinConditions(state);
@@ -2805,7 +2946,7 @@ function alpineHexDiceTacticGame() { return {
 
 		let effectiveArmor = defenderUnit.currentArmor;
 		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
-		effectiveArmor -= defenderUnit.armorReduction;
+		if (this.gameplayVersion !== 2) effectiveArmor -= defenderUnit.armorReduction;
 
 		if (defenderUnit.isScarred) effectiveArmor -= 1;
 
@@ -3117,110 +3258,135 @@ function alpineHexDiceTacticGame() { return {
 
 		const isSkirmishing = !!attackerUnit.skirmishBuff;
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
-		let attackMod = 0;
-		if (isSkirmishing) attackMod -= 1;
-
-		// Archer (Dice 2) damage for range 3 attack is reduced by 1
-		if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
-
-		const effectiveAttack = Math.max(1, attackerUnit.attack + attackMod);
-
-		const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
-		const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
-
-		// Attacker wins if armor is depleted OR attack beats effective armor
-		const isArmorDepleted = defenderUnit.armorReduction >= defenderBaseArmor;
-		const attackWins = defenderUnit.isGuarding ? (effectiveAttack > defenderEffectiveArmor) : (effectiveAttack >= defenderEffectiveArmor);
-		const attackerWins = isArmorDepleted || attackWins;
 
 		// Set combat trail for visual feedback (all combats)
 		this.trailAttack = {
 			fromHex: attackerHex,
 			toHex: defenderHex,
 			unit: attackerUnit,
-			dist: this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r),
+			dist: distance,
 		};
 
-		if (attackerWins) {
-			// Remove defender
-			this.removeUnit(defenderHexId, state);
-			defenderHex.unitId = null;
+		if (this.gameplayVersion === 2) {
+			const combatRoll = Math.floor(random() * 6) + 1;
+			let attackMod = 0;
+			if (isSkirmishing) attackMod -= 1;
+			if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
 
-			if (isSkirmishing) {
-				this.addLog(`${this.logUnit(attackerUnit)} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+			const totalAtk = Math.ceil((attackerUnit.attack + attackMod + combatRoll) / 2);
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 
-				if (!state) {
-					// Switch to post-skirmish move mode
-					this.actionMode = 'SKIRMISH_POST_MOVE';
-					this.selectedUnitHexId = attackerHexId;
+			this.addLog(`${this.logUnit(attackerUnit)} rolls D${combatRoll} for attack! Total ATK: ${totalAtk} vs Armor: ${defenderEffectiveArmor}`);
 
-					// Valid moves are the target hex itself PLUS adjacent hexes to the target that are empty (OR the current attacker hex)
-					const neighbors = this.getNeighbors(defenderHex);
-					this.validMoves = neighbors
-						.filter(n => !this.getUnitOnHex(n.id) || n.id === attackerHexId)
-						.map(n => n.id);
+			if (totalAtk > defenderEffectiveArmor) {
+				// Success
+				this.removeUnit(defenderHexId, state);
+				this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
 
-					// Add the target hex and ensure current hex is included as valid options
-					if (!this.validMoves.includes(defenderHexId)) this.validMoves.push(defenderHexId);
-					if (!this.validMoves.includes(attackerHexId)) this.validMoves.push(attackerHexId);
-
-					return; // Wait for user to click a hex
+				if (isSkirmishing) {
+					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
+				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
-			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
-				// Attacker moves into vacated hex (melee or command & conquer)
-				this.move(attackerUnit, attackerHex, defenderHex, state);
-				this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
-			} else {
-				this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
 			}
-			// For Ranged, attacker stays. For Special, attacker moves if successful.
-			this.trailAttack = {};
-		} else { // Attacker fails
-			if (isSkirmishing) {
-				if (combatType !== 'RANGED_ATTACK') {
-					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} has been eliminated.`, state);
+ else {
+				// Deflected
+				this.addLog(`Attack deflected!`);
+				if (combatRoll === 1) {
+					this.addLog(`FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
 					this.removeUnit(attackerHexId, state);
-				} else {
-					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} s armor exhausted.`, state);
-					this.applyDamage(attackerHexId, 1, state, false);
+				} else if (isSkirmishing) {
+					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} eliminated.`);
+					this.removeUnit(attackerHexId, state);
 				}
-			} else {
-				this.addLog(`${this.logUnit(attackerUnit)} attacked ${this.logUnit(defenderUnit)} failed.`, state);
+			}
+		} else {
+			// Version 1 logic (Decisive Dice)
+			let attackMod = 0;
+			if (isSkirmishing) attackMod -= 1;
+			if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
 
-				if (combatType !== 'RANGED_ATTACK') {
-					if (attackerUnit.isGuarding <= 1) {
-						this.addLog(`Attack failed! Attacker's Armor reduced by 1.`, state);
+			const effectiveAttack = Math.max(1, attackerUnit.attack + attackMod);
+			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
+			const defenderBaseArmor = UNIT_STATS[defenderUnit.value].armor;
+
+			const isArmorDepleted = defenderUnit.armorReduction >= defenderBaseArmor;
+			const attackWins = defenderUnit.isGuarding ? (effectiveAttack > defenderEffectiveArmor) : (effectiveAttack >= defenderEffectiveArmor);
+			const attackerWins = isArmorDepleted || attackWins;
+
+			if (attackerWins) {
+				this.removeUnit(defenderHexId, state);
+				if (isSkirmishing) {
+					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
+				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+					this.move(attackerUnit, attackerHex, defenderHex, state);
+					this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
+				} else {
+					this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
+				}
+			}
+ else {
+				// Failed
+				if (isSkirmishing) {
+					if (combatType !== 'RANGED_ATTACK') {
+						this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} has been eliminated.`, state);
+						this.removeUnit(attackerHexId, state);
+					} else {
+						this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} s armor exhausted.`, state);
 						this.applyDamage(attackerHexId, 1, state, false);
 					}
-
-					if (defenderUnit.value == 5 && defenderUnit.isGuarding > 0) {
-						const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
-						if (attackerEffectiveArmor <= 0) {
-							this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
-							this.removeUnit(attackerHexId, state);
+				} else {
+					this.addLog(`${this.logUnit(attackerUnit)} attacked ${this.logUnit(defenderUnit)} failed.`, state);
+					if (combatType !== 'RANGED_ATTACK') {
+						if (attackerUnit.isGuarding <= 1) {
+							this.addLog(`Attack failed! Attacker's Armor reduced by 1.`, state);
+							this.applyDamage(attackerHexId, 1, state, false);
+						}
+						if (defenderUnit.value == 5 && defenderUnit.isGuarding > 0) {
+							const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
+							if (attackerEffectiveArmor <= 0) {
+								this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
+								this.removeUnit(attackerHexId, state);
+							}
 						}
 					}
-				}
-
-				this.addLog(`Attack failed! Defender's Armor damaged by 1.`, state);
-				if (defenderUnit.value != 5 && defenderUnit.isGuarding <= 1) {
-					this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding > 0 ? false : true);
-				}
-
-				if (defenderUnit.value == 5 && defenderUnit.isGuarding <= 0) {
-					this.applyDamage(defenderHexId, 1, state, false);
+					this.addLog(`Attack failed! Defender's Armor damaged by 1.`, state);
+					if (defenderUnit.value != 5 && defenderUnit.isGuarding <= 1) {
+						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding > 0 ? false : true);
+					}
+					if (defenderUnit.value == 5 && defenderUnit.isGuarding <= 0) {
+						this.applyDamage(defenderHexId, 1, state, false);
+					}
 				}
 			}
 		}
 
-		attackerUnit.skirmishBuff = 0; // Clear buff after combat
-
-		attackerUnit.hasMovedOrAttackedThisTurn = true; // Failed attack still counts as action
+		attackerUnit.skirmishBuff = 0;
+		attackerUnit.hasMovedOrAttackedThisTurn = true;
 		attackerUnit.actionsTakenThisTurn++;
 
-		defenderUnit.isGuarding = 0;
-		// Deselect after combat resolution
+		if (defenderUnit && !defenderUnit.isDeath) defenderUnit.isGuarding = 0;
 		this.deselectUnit();
+	},
+	handleSkirmishSuccess(attackerHexId, defenderHexId, state) {
+		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
+		const defenderHex = this.getHex(defenderHexId, state);
+		const attackerHex = this.getHex(attackerHexId, state);
+
+		this.addLog(`${this.logUnit(attackerUnit)} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+
+		if (!state) {
+			this.actionMode = 'SKIRMISH_POST_MOVE';
+			this.selectedUnitHexId = attackerHexId;
+			const neighbors = this.getNeighbors(defenderHex);
+			this.validMoves = neighbors
+				.filter(n => !this.getUnitOnHex(n.id) || n.id === attackerHexId)
+				.map(n => n.id);
+			if (!this.validMoves.includes(defenderHexId)) this.validMoves.push(defenderHexId);
+			if (!this.validMoves.includes(attackerHexId)) this.validMoves.push(attackerHexId);
+		}
 	},
 	/**
 	 * Remove a unit from the board (mark as death and clear hex).
@@ -3289,17 +3455,17 @@ function alpineHexDiceTacticGame() { return {
 		state.turnCount++;
 		this.resetTurnActionsForPlayer(state.currentPlayerIndex, state);
 
-		// state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
-		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1} turn started (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
-
-		this.checkWinConditions(state); // Check at start of turn too (e.g. if opponent was eliminated on their own turn by some effect)
-
+		this.checkWinConditions(state);
 		if (isState) return;
 
-		if (state.phase === 'PLAYER_TURN' && state.players[state.currentPlayerIndex].isAI) {
-			setTimeout(() => this.performAITurn(), 500);
-		} else if (this.debug?.autoPlay) {
-			this.autoPlay();
+		if (this.gameplayVersion === 2) {
+			this.startFatesCall();
+		} else {
+			if (state.phase === 'PLAYER_TURN' && state.players[state.currentPlayerIndex].isAI) {
+				setTimeout(() => this.performAITurn(), 500);
+			} else if (this.debug?.autoPlay) {
+				this.autoPlay();
+			}
 		}
 	},
 	resetTurnActionsForPlayer(playerId, state) {
