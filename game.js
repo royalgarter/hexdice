@@ -1030,7 +1030,6 @@ function alpineHexDiceTacticGame() { return {
 			? `/assets/sprites/sets/default/${value}.png`
 			: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
 	},
-
 	rollInitialDice(playerId) {
 		if (this.players[playerId].initialRollDone) return;
 		const player = this.players[playerId];
@@ -1232,6 +1231,61 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 	},
+	randomStart() {
+		// Roll initial dice for all players
+		this.players.forEach((p, i) => this.rollInitialDice(i));
+		
+		// Deploy all dice randomly for all players
+		this.players.forEach((player, playerIdx) => {
+			player.dice.forEach((dice, diceIdx) => {
+				const validHexes = this.calcValidDeploymentHexes(playerIdx);
+				if (validHexes.length > 0) {
+					this.selectedDieToDeploy = diceIdx;
+					this.deployUnit(validHexes.random());
+				}
+			});
+		});
+		
+		this.addLog(`Random start completed! Player 1's turn.`);
+	},
+	startRomanceMode() {
+		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
+
+		// Set all players as AI
+		this.players.forEach(p => p.isAI = true);
+
+		// Roll initial dice for all players
+		this.players.forEach((p, i) => this.rollInitialDice(i));
+
+		// Deploy all dice randomly for all players
+		this.players.forEach((player, playerIdx) => {
+			player.dice.forEach((dice, diceIdx) => {
+				const validHexes = this.calcValidDeploymentHexes(playerIdx);
+				if (validHexes.length > 0) {
+					this.selectedDieToDeploy = diceIdx;
+					this.deployUnit(validHexes.random());
+				}
+			});
+		});
+
+		this.addLog(`👑 All kingdoms ready for battle! Watching AI play...`);
+
+		// Start autoplay
+		this.autoPlay();
+	},
+	autoPlay() {
+		setTimeout(() => this.performAITurn(), 1e3);
+	},
+	refreshValidDeploymentHexes() {
+		if (this.phase !== 'SETUP_DEPLOY') {
+			this.validDeploymentHexesSet?.clear();
+			return;
+		}
+		const hexIds = this.calcValidDeploymentHexes(this.currentPlayerIndex);
+		this.validDeploymentHexesSet = new Set(hexIds);
+	},
+
+	/* --- DESTINY --- */
 	startFatesCall() {
 		console.log(`P${this.currentPlayerIndex+1} startFatesCall`);
 
@@ -1271,11 +1325,29 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 	},
+	checkFinishFatesCall(unit) {
+		if (this.gameplayVersion != 2 || this.turnPhase != 'FATE_CALL') return false;
+
+		unit.canMoveInFatePhase = false;
+		unit.hasMovedOrAttackedThisTurn = false; // It's a "free" move
+
+		this.deselectUnit();
+
+		// Check if any more units can move in Phase 1
+		const remaining = this.players[this.currentPlayerIndex].dice
+			.filter(d => d.isDeployed && !d.isDeath && d.canMoveInFatePhase);
+
+		if (remaining.length === 0) {
+			this.startTacticalCommand();
+		}
+
+		return true;
+	},
 	startTacticalCommand() {
 		console.log(`P${this.currentPlayerIndex+1} startTacticalCommand`);
 
 		this.turnPhase = 'TACTICAL_COMMAND';
-		this.addLog(`P${this.currentPlayerIndex+1} Phase 2: Tactical Command. Choose one unit to act.`);
+		this.addLog(`🎲 P${this.currentPlayerIndex+1} Phase 2: Tactical Command. Choose one unit to act.`);
 		
 		// Reset move flags from Phase 1
 		this.players[this.currentPlayerIndex].dice.forEach(d => d.canMoveInFatePhase = false);
@@ -1319,63 +1391,6 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`[AI] P${this.currentPlayerIndex+1} Error in Phase 1: ${e.message}`);
 			if (this.turnPhase === 'FATE_CALL') this.startTacticalCommand();
 		}
-	},
-	randomStart() {
-		// Roll initial dice for all players
-		this.players.forEach((p, i) => this.rollInitialDice(i));
-		
-		// Deploy all dice randomly for all players
-		this.players.forEach((player, playerIdx) => {
-			player.dice.forEach((dice, diceIdx) => {
-				const validHexes = this.calcValidDeploymentHexes(playerIdx);
-				if (validHexes.length > 0) {
-					this.selectedDieToDeploy = diceIdx;
-					this.deployUnit(validHexes.random());
-				}
-			});
-		});
-		
-		this.addLog(`Random start completed! Player 1's turn.`);
-	},
-	/**
-	 * Start "Romance of the Dice Kingdoms" mode - all players are AI and play automatically
-	 */
-	startRomanceMode() {
-		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
-
-		// Set all players as AI
-		this.players.forEach(p => p.isAI = true);
-
-		// Roll initial dice for all players
-		this.players.forEach((p, i) => this.rollInitialDice(i));
-
-		// Deploy all dice randomly for all players
-		this.players.forEach((player, playerIdx) => {
-			player.dice.forEach((dice, diceIdx) => {
-				const validHexes = this.calcValidDeploymentHexes(playerIdx);
-				if (validHexes.length > 0) {
-					this.selectedDieToDeploy = diceIdx;
-					this.deployUnit(validHexes.random());
-				}
-			});
-		});
-
-		this.addLog(`👑 All kingdoms ready for battle! Watching AI play...`);
-
-		// Start autoplay
-		this.autoPlay();
-	},
-	autoPlay() {
-		setTimeout(() => this.performAITurn(), 1e3);
-	},
-
-	refreshValidDeploymentHexes() {
-		if (this.phase !== 'SETUP_DEPLOY') {
-			this.validDeploymentHexesSet?.clear();
-			return;
-		}
-		const hexIds = this.calcValidDeploymentHexes(this.currentPlayerIndex);
-		this.validDeploymentHexesSet = new Set(hexIds);
 	},
 
 	/* --- GAMEPLAY --- */
@@ -1653,18 +1668,7 @@ function alpineHexDiceTacticGame() { return {
 
 				this.performMove(this.selectedUnitHexId, targetHexId);
 
-				if (this.gameplayVersion === 2 && this.turnPhase === 'FATE_CALL') {
-					unit.canMoveInFatePhase = false;
-					unit.hasMovedOrAttackedThisTurn = false; // It's a "free" move
-					this.deselectUnit();
-
-					// Check if any more units can move in Phase 1
-					const remaining = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.canMoveInFatePhase);
-					if (remaining.length === 0) {
-						this.startTacticalCommand();
-					}
-					return;
-				}
+				if (this.checkFinishFatesCall(unit)) return;
 
 				if (action == 'BRAVE_CHARGE') {
 					this.actionMode = 'BRAVE_CHARGE_TARGET';
@@ -1679,8 +1683,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 
 			return;
-		}
- else if (action === 'SKIRMISH_POST_MOVE' && this.validMoves.includes(targetHexId)) {
+		} else if (action === 'SKIRMISH_POST_MOVE' && this.validMoves.includes(targetHexId)) {
 			this.performSkirmishPostMove(this.selectedUnitHexId, targetHexId);
 			this.endTurn();
 			return;
@@ -1688,6 +1691,8 @@ function alpineHexDiceTacticGame() { return {
 			this.endTurn();
 			return;
 		}
+
+		this.checkFinishFatesCall(unit);
 
 		// Deselect unit after action attempt, regardless of success, unless it's a failed move
 		// If move failed, unit stays selected. If combat failed, unit stays.
@@ -3341,8 +3346,7 @@ function alpineHexDiceTacticGame() { return {
 				} else {
 					this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
 				}
-			}
- else {
+			} else {
 				// Failed
 				if (isSkirmishing) {
 					if (combatType !== 'RANGED_ATTACK') {
@@ -3452,6 +3456,11 @@ function alpineHexDiceTacticGame() { return {
 		state.validTargets = [];
 
 		if (state.phase !== 'PLAYER_TURN') return;
+
+		if (this.gameplayVersion === 2) {
+			this.addLog(`P${state.currentPlayerIndex + 1}' turn ended`);
+			this.addLog(`---`);
+		}
 
 		// state.players[state.currentPlayerIndex].evaluation = boardEvaluation(this, state);
 		// this.addLog(`${state.players[state.currentPlayerIndex].isAI ? '[AI] ' : ''}P${state.currentPlayerIndex + 1}' turn ended (eval: ${state.players[state.currentPlayerIndex].evaluation}).`, isState ? state : undefined);
@@ -3609,7 +3618,6 @@ function alpineHexDiceTacticGame() { return {
 			if (logContainer) logContainer.scrollTop = 0;
 		});
 	},
-
 	generateHDFEN(state = null) {
 		const target = state || this;
 		
@@ -3698,7 +3706,6 @@ function alpineHexDiceTacticGame() { return {
 
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
 	},
-
 	rollDice(max=6, delay=0) {
 		this.rollingDice = true;
 		const roll = Math.floor(random() * max) + 1;
@@ -3711,7 +3718,6 @@ function alpineHexDiceTacticGame() { return {
 
 		return roll;
 	},
-
 };}
 
 const BOARD_DOT = [

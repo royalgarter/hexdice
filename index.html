@@ -96,7 +96,7 @@
 		}
 		.bg-hexmerge {
 			/*background-color: #2bcbba;*/
-			filter: drop-shadow(2px 4px 6px #a55eea);
+			filter: saturate(0.5);
 		}
 		.bg-hextarget {
 			/*background-color: #fed330;*/
@@ -329,7 +329,7 @@
 
 <body class="text-black min-h-screen flex flex-col items-center bg-white font-mono" x-data="alpineHexDiceTacticGame()">
 	<!-- Dice Container -->
-	<div class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="rollingDice || (gameplayVersion === 2)" @click="window.rollDiceAnimation(Math.floor(Math.random() * 5 + 1))">
+	<div class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="rollingDice || gameplayVersion === 2" @click="rollDice()">
 		<div class="cube" id="cube">
 			<div class="face front">1</div>
 			<div class="face right">2</div>
