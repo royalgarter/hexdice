@@ -2,14 +2,14 @@ import {serve} from "https://deno.land/std/http/server.ts";
 import {exists} from "https://deno.land/std/fs/mod.ts";
 import {extname} from "https://deno.land/std/path/mod.ts";
 import {load} from "https://deno.land/std/dotenv/mod.ts";
-import { Database } from "npm:arangojs";
+import { Database } from "https://cdn.jsdelivr.net/npm/arangojs/esm/index.js?+esm";
 
 await load({export: true});
 
-const ARANGO_URL = Deno.env.get("ARANGODB_URI") || "http://localhost:8529";
-const ARANGO_DB = Deno.env.get("ARANGODB_DATABASE") || "hexdice";
-const ARANGO_USER = Deno.env.get("ARANGODB_USER") || "root";
-const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD") || "";
+const ARANGO_URL = Deno.env.get("ARANGODB_URI");
+const ARANGO_DB = Deno.env.get("ARANGODB_DATABASE");
+const ARANGO_USER = Deno.env.get("ARANGODB_USER");
+const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD");
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
 
 // console.log(ARANGO_URL, ARANGO_DB, ARANGO_PASS)
@@ -23,34 +23,6 @@ const db = new Database({
 const head_json = {
 	"Content-Type": "application/json; charset=utf-8"
 };
-
-// Initialize ArangoDB
-async function initArango() {
-	try {
-		const sysDb = new Database({ url: ARANGO_URL, auth: { username: ARANGO_USER, password: ARANGO_PASS } });
-		
-		// const dbs = await sysDb.listDatabases();
-		// if (!dbs.includes(ARANGO_DB)) {
-		// 	await sysDb.createDatabase(ARANGO_DB);
-		// 	console.log(`Database ${ARANGO_DB} created.`);
-		// }
-
-		// const usersColl = db.collection("users");
-		// if (!(await usersColl.exists())) {
-		// 	await usersColl.create();
-		// 	console.log("Collection 'users' created.");
-		// }
-
-		// const roomsColl = db.collection("rooms");
-		// if (!(await roomsColl.exists())) {
-		// 	await roomsColl.create();
-		// 	console.log("Collection 'rooms' created.");
-		// }
-	} catch (e) {
-		console.error("ArangoDB init error:", e.message);
-	}
-}
-initArango();
 
 async function handleRequest(req: Request) {
 	const {pathname, searchParams} = new URL(req.url);
