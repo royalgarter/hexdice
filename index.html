@@ -196,7 +196,7 @@
 			width: 100%; height: 100%; position: relative;
 			transform-style: preserve-3d;
 			transform: rotateX(15deg) rotateY(15deg);
-			transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+			transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 		}
 		.face {
 			position: absolute; width: 100%; height: 100%;
@@ -600,6 +600,10 @@
 					x-show="actionMode !== null"
 					@click="cancelAction()"
 				>[CANCEL]</button>
+				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+					@click="startTacticalCommand()"
+					x-show="gameplayVersion == 2 && turnPhase == 'FATE_CALL'"
+				>[END FATE]</button>
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					@click="endTurn()"
 				>[END TURN]</button>

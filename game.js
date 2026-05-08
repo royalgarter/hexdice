@@ -905,11 +905,11 @@ function alpineHexDiceTacticGame() { return {
 			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
 		}
 
-		if (state.selectedUnitHexId === hex.id) cls += ' bg-hexselect';
-		if (state.validMovesSet?.has(hex.id)) cls += ' bg-hexmove';
-		if (state.validMergesSet?.has(hex.id)) cls += ' bg-hexmerge';
-		if (state.validTargetsSet?.has(hex.id)) cls += ' bg-hextarget';
-		if (state.dangerHexes?.[hex.id]) cls += ' bg-hexdanger';
+		// if (state.selectedUnitHexId === hex.id) cls += ' bg-hexselect';
+		// if (state.validMovesSet?.has(hex.id)) cls += ' bg-hexmove';
+		// if (state.validMergesSet?.has(hex.id)) cls += ' bg-hexmerge';
+		// if (state.validTargetsSet?.has(hex.id)) cls += ' bg-hextarget';
+		// if (state.dangerHexes?.[hex.id]) cls += ' bg-hexdanger';
 
 		if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
 			cls = 'bg-hexdeploy';
@@ -929,6 +929,16 @@ function alpineHexDiceTacticGame() { return {
 
 		const unit = hex.unit || this.getUnitOnHex(hex.id);
 		const terrainStyle = hex.terrainStyle;
+
+		let filter = ``;
+
+		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
+		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
+		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
+		if (this.validTargetsSet?.has(hex.id)) filter += ' blur(1px)';
+		// if (this.dangerHexes?.[hex.id]) filter += ' contrast(0.5)';
+
+		if (filter?.length) style.push(`filter: ${filter};`);
 
 		if (unit) {
 			const unitUrl = unit.spriteUrl;
@@ -1328,8 +1338,10 @@ function alpineHexDiceTacticGame() { return {
 	checkFinishFatesCall(unit) {
 		if (this.gameplayVersion != 2 || this.turnPhase != 'FATE_CALL') return false;
 
-		unit.canMoveInFatePhase = false;
-		unit.hasMovedOrAttackedThisTurn = false; // It's a "free" move
+		if (unit) {
+			unit.canMoveInFatePhase = false;
+			unit.hasMovedOrAttackedThisTurn = false; // It's a "free" move
+		}
 
 		this.deselectUnit();
 
