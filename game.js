@@ -1235,12 +1235,12 @@ function alpineHexDiceTacticGame() { return {
 	startFatesCall() {
 		console.log(`P${this.currentPlayerIndex+1} startFatesCall`);
 
+		let delay = this.players[this.currentPlayerIndex].isAI ? 0 : 1e3;
+
 		this.turnPhase = 'FATE_CALL';
-		this.fateRoll = this.rollDice();
+		this.fateRoll = this.rollDice(6, 1e3 + delay);
 
 		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
-			let delay = this.players[this.currentPlayerIndex].isAI ? 0 : 1e3;
-			setTimeout(() => window.rollDiceAnimation(this.fateRoll), 1e3 + delay);
 			setTimeout(() => this.actFatesCall(), 3e3 + delay);
 		} else {
 			this.actFatesCall();
@@ -1284,10 +1284,6 @@ function alpineHexDiceTacticGame() { return {
 			// For Version 2 AI: Pre-roll Oracle spell so it can plan
 			if (this.gameplayVersion === 2) {
 				const roll = this.rollDice();
-
-				if (typeof window !== 'undefined' && window.rollDiceAnimation) {
-					window.rollDiceAnimation(roll);
-				}
 
 				if (roll === 1 || roll === 4) this.oracleSelectedSpell = 'SHIELD';
 				else if (roll === 2 || roll === 5) this.oracleSelectedSpell = 'SWAP';
@@ -1484,10 +1480,6 @@ function alpineHexDiceTacticGame() { return {
 	initiateOracleSpellSelection() {
 		if (this.gameplayVersion === 2 && !this.oracleSelectedSpell) {
 			const roll = this.rollDice();
-
-			if (typeof window !== 'undefined' && window.rollDiceAnimation) {
-				window.rollDiceAnimation(roll);
-			}
 
 			let spell = '';
 
@@ -3292,10 +3284,6 @@ function alpineHexDiceTacticGame() { return {
 		if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
 			
-			if (typeof window !== 'undefined' && window.rollDiceAnimation) {
-				window.rollDiceAnimation(combatRoll);
-			}
-
 			let attackMod = 0;
 			if (isSkirmishing) attackMod -= 1;
 			if (attackerUnit.value === 2 && distance === 3) attackMod -= 1;
@@ -3711,12 +3699,13 @@ function alpineHexDiceTacticGame() { return {
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
 	},
 
-	rollDice() {
+	rollDice(max=6, delay=0) {
 		this.rollingDice = true;
-		const roll = Math.floor(random() * 6) + 1;
+		const roll = Math.floor(random() * max) + 1;
 
 		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
-			window.rollDiceAnimation(roll);
+			if (delay) setTimeout(() => window.rollDiceAnimation(roll), delay);
+			else window.rollDiceAnimation(roll);
 			setTimeout(() => {this.rollingDice = false;}, 1e3);
 		}
 
