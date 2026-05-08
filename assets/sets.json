@@ -1,4 +1,13 @@
 [
+	"aw_static_blue",
+	"aw_static_green",
+	"aw_static_red",
+	"aw_static_white",
+	"aw_static_yellow",
+	"chrono_mix",
+	"default",
+	"fft_mix",
+	"ffta_mix",
 	"gen1_blue",
 	"gen1_green",
 	"gen1_purple",
@@ -77,5 +86,7 @@
 	"ro_white_k9_dun",
 	"ro_woe",
 	"ro_xmas",
-	"tos_mix"
+	"seiken_mix",
+	"tos_mix",
+	"warcraft2"
 ]

@@ -1025,7 +1025,9 @@ function alpineHexDiceTacticGame() { return {
 			return `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`;
 		}
 
-		return `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
+		return (false && this.players[1].isAI) 
+			? `/assets/sprites/sets/default/${value}.png`
+			: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
 	},
 
 	rollInitialDice(playerId) {
