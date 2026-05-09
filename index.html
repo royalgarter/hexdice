@@ -493,14 +493,14 @@
 					<a href="?players=2&preset=E_15" class="border px-2 py-1 mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">Grand 15</a>
 				</div>
 				<div class="mt-2">
-					<button class="cursor-pointer border px-2 py-1 hover:text-white" @click="createRoom()" x-show="auth.user && online.status === 'OFFLINE'">Create Room</button>
-					<button class="cursor-pointer border px-2 py-1 hover:text-white" @click="joinRoom()" x-show="auth.user && online.status === 'OFFLINE'">Join Room</button>
-					<button class="hover:underline" x-show="online.status !== 'OFFLINE' && !online.opponent" @click="leaveRoom()">Cancel Room</button>
+					<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="createRoom()" x-show="auth.user && online.status === 'OFFLINE'">Create Room</button>
+					<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="joinRoom()" x-show="auth.user && online.status === 'OFFLINE'">Join Room</button>
+					
 				</div>
 
 				<!-- Online Status -->
 				<div class="mt-4 p-2 text-sm border-2 border-dashed relative" x-show="online.status !== 'OFFLINE'" x-cloak>
-					<div>ROOM: <span x-text="online.roomId" class="font-bold select-all"></span>, <span class="" x-show="online.status === 'LOBBY'">waiting ...</span></div>
+					<div>Open Room: <span x-text="online.roomId" class="font-bold select-all"></span>, <span class="" x-show="online.status === 'LOBBY'">waiting ...</span></div>
 					
 					<div class="flex items-center justify-center space-x-4 mt-2">
 						<div class="">
@@ -510,6 +510,7 @@
 									<span x-show="currentPlayerIndex === online.playerIndex">YOUR TURN</span>
 									<span x-show="currentPlayerIndex !== online.playerIndex">OPPONENT'S TURN</span>
 								</span>
+								<span class="text-xs bg-gray-200 px-1.5 py-0.5 rounded font-bold" x-text="online.turnTimer + 's'"></span>
 							</div>
 						</div>
 					</div>
@@ -518,6 +519,7 @@
 						<div>Opponent: <span class="font-bold" x-text="online.opponent?.name"></span></div>
 						<button class="text-red-500 hover:underline" @click="leaveRoom()">Leave</button>
 					</div>
+					<button class="hover:underline" x-show="!online.opponent" @click="leaveRoom()">[Cancel Room]</button>
 				</div>
 
 

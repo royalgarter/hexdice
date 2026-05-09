@@ -84,6 +84,7 @@ const RMI_TERRAIN_PALETTE = {
 };
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
+Array.prototype.cosmic_random = function () { return this[Math.floor((Math.random() * this.length))]; }
 let _seed = Math.floor(Math.random() * 1e9);
 const setSeed = (s) => { _seed = s; console.log("Seed set to:", s); };
 const random = () => {
@@ -95,7 +96,7 @@ const random = () => {
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
 	auth: {
-		clientId: '547832701518-ai09ubbqs2i3m5gebpmkt8ccfkmk58ru.apps.googleusercontent.com',
+		clientId: '991959010002-1f1535un3p06qjv4pao4ti3evdbu0hc5.apps.googleusercontent.com',
 		user: null,
 		token: null,
 	},
@@ -106,6 +107,10 @@ function alpineHexDiceTacticGame() { return {
 		opponent: null,
 		mqttClient: null,
 		playerIndex: null, // 0 for host, 1 for guest
+		nextSentSeq: 1,
+		lastRecvSeq: 0,
+		turnTimer: 60,
+		timerInterval: null,
 	},
 	rules: {
 		dicePerPlayer: 12,
@@ -638,11 +643,27 @@ function alpineHexDiceTacticGame() { return {
 	connectMQTT() {
 		const broker = 'wss://broker.emqx.io:8084/mqtt';
 		this.addLog("Connecting to MQTT...");
-		this.online.mqttClient = mqtt.connect(broker);
+		
+		const statusTopic = `hexdice/rooms/${this.online.roomId}/status`;
+		const options = {
+			will: {
+				topic: statusTopic,
+				payload: JSON.stringify({ userId: this.auth.user._key, status: 'OFFLINE' }),
+				qos: 1,
+				retain: true
+			}
+		};
+
+		this.online.mqttClient = mqtt.connect(broker, options);
 
 		this.online.mqttClient.on('connect', () => {
 			const topic = `hexdice/rooms/${this.online.roomId}`;
-			this.online.mqttClient.subscribe(topic);
+			this.online.mqttClient.subscribe(topic, { qos: 1 });
+			this.online.mqttClient.subscribe(statusTopic, { qos: 1 });
+			
+			// Mark as online
+			this.online.mqttClient.publish(statusTopic, JSON.stringify({ userId: this.auth.user._key, status: 'ONLINE' }), { qos: 1, retain: true });
+			
 			this.addLog("Connected to MQTT.");
 
 			if (!this.online.isHost) {
@@ -653,25 +674,85 @@ function alpineHexDiceTacticGame() { return {
 		this.online.mqttClient.on('message', (topic, message) => {
 			try {
 				const payload = JSON.parse(message.toString());
-				this.handleMQTTMessage(payload);
+				if (topic.endsWith('/status')) {
+					this.handleStatusMessage(payload);
+				} else {
+					this.handleMQTTMessage(payload);
+				}
 			} catch (e) {
 				console.error("MQTT parse error", e);
 			}
 		});
 	},
 
+	handleStatusMessage(payload) {
+		if (payload.userId === this.auth.user._key) return;
+		if (payload.status === 'OFFLINE') {
+			this.addLog(`⚠️ Opponent ${this.online.opponent?.name || ''} disconnected.`);
+		} else if (payload.status === 'ONLINE' && this.online.status === 'PLAYING') {
+			this.addLog(`Opponent ${this.online.opponent?.name || ''} is back.`);
+		}
+	},
+
+	getStateChecksum(returnRaw = false) {
+		// Create a simple string representation of the critical game state
+		const unitState = this.hexes
+			.filter(h => h.unit && !h.unit.isDeath)
+			.map(h => `${h.id}:${h.unit.id}:${h.unit.value}:${h.unit.currentArmor}:${h.unit.armorReduction}`)
+			.sort() // Ensure order doesn't matter
+			.join('|');
+		const stateStr = `${this.currentPlayerIndex}:${unitState}`;
+		
+		if (returnRaw) return stateStr;
+
+		// Simple hash function (djb2)
+		let hash = 5381;
+		for (let i = 0; i < stateStr.length; i++) {
+			hash = (hash * 33) ^ stateStr.charCodeAt(i);
+		}
+		return (hash >>> 0).toString(16);
+	},
+
 	publishAction(type, data) {
 		if (!this.online.mqttClient) return;
 		const topic = `hexdice/rooms/${this.online.roomId}`;
-		const payload = { type, data, sender: this.auth.user._key };
-		this.online.mqttClient.publish(topic, JSON.stringify(payload));
+		const payload = { 
+			type, 
+			data, 
+			sender: this.auth.user._key,
+			seq: this.online.nextSentSeq++,
+			checksum: this.getStateChecksum() // This now captures the state at publication time
+		};
+		this.online.mqttClient.publish(topic, JSON.stringify(payload), { qos: 1 });
 	},
 
 	handleMQTTMessage(payload) {
 		if (payload.sender === this.auth.user._key) return;
 
-		const { type, data } = payload;
+		// Sequence check
+		if (payload.seq) {
+			if (payload.seq <= this.online.lastRecvSeq) {
+				console.log("Ignoring out-of-order or duplicate message:", payload.seq);
+				return;
+			}
+			this.online.lastRecvSeq = payload.seq;
+		}
+
+		const { type, data, checksum } = payload;
 		console.log(`MQTT RECV [${this.auth.user.name}]:`, type, data);
+
+		// Post-action checksum verify
+		const verifyChecksum = () => {
+			if (checksum && type === 'GAME_ACTION') {
+				const localChecksum = this.getStateChecksum();
+				if (localChecksum !== checksum) {
+					console.error(`DESYNC DETECTED! Local: ${localChecksum}, Remote: ${checksum}`);
+					// Diagnostic logging
+					console.log("Local critical state:", this.getStateChecksum(true));
+					this.addLog("⚠️ Desync detected! Check console for details.");
+				}
+			}
+		};
 
 		switch (type) {
 			case 'GUEST_JOINED':
@@ -693,11 +774,33 @@ function alpineHexDiceTacticGame() { return {
 				break;
 			case 'GAME_ACTION':
 				this.applyRemoteAction(data);
+				verifyChecksum();
 				break;
 		}
 	},
 
-	initOnlineGame() {
+	startOnlineTimer() {
+		if (this.online.timerInterval) clearInterval(this.online.timerInterval);
+		this.online.turnTimer = 60;
+		
+		this.online.timerInterval = setInterval(() => {
+			if (this.online.status !== 'PLAYING') {
+				clearInterval(this.online.timerInterval);
+				return;
+			}
+			
+			this.online.turnTimer--;
+			if (this.online.turnTimer <= 0) {
+				this.addLog("Time's up!");
+				if (this.currentPlayerIndex === this.online.playerIndex) {
+					this._endTurn();
+				}
+				this.online.turnTimer = 60; // Reset
+			}
+		}, 1000);
+	},
+
+	async initOnlineGame() {
 		this.addLog("Initializing online game...");
 		this.isCampaign = false;
 		this.playerCount = 2;
@@ -705,16 +808,16 @@ function alpineHexDiceTacticGame() { return {
 		const prevStatus = this.online.status;
 		this.online.status = 'SYNCING'; // Prevent MQTT noise during auto-setup
 		
-		this.resetGame({ isCampaign: false });
+		await this.resetGame({ isCampaign: false });
 		this.players.forEach(p => p.isAI = false);
 
 		// Assign names
 		if (this.online.isHost) {
-			this.players[0].name = this.auth.user.name;
-			this.players[1].name = this.online.opponent?.name;
+			if (this.players[0]) this.players[0].name = this.auth.user.name;
+			if (this.players[1]) this.players[1].name = this.online.opponent?.name;
 		} else {
-			this.players[0].name = this.online.opponent?.name;
-			this.players[1].name = this.auth.user.name;
+			if (this.players[0]) this.players[0].name = this.online.opponent?.name;
+			if (this.players[1]) this.players[1].name = this.auth.user.name;
 		}
 
 		this.randomStart();
@@ -722,6 +825,7 @@ function alpineHexDiceTacticGame() { return {
 		
 		this.online.status = prevStatus;
 		this.addLog("Online game ready! Turn: P1");
+		this.startOnlineTimer();
 	},
 
 	applyRemoteAction(data) {
@@ -733,8 +837,6 @@ function alpineHexDiceTacticGame() { return {
 		} else if (action === 'ROLL_DICE') {
 			this._rollDice(...args);
 		} else if (action === 'END_TURN') {
-			// Only apply END_TURN if the turn hasn't already changed locally
-			// (e.g. via a HEX_CLICK that triggered an automatic endTurn)
 			if (this.currentPlayerIndex !== this.online.playerIndex) {
 				this._endTurn();
 			} else {
@@ -786,7 +888,7 @@ function alpineHexDiceTacticGame() { return {
 	async resetGame(opts) {
 		const campaignData = opts?.campaignData;
 		this.campaignData = campaignData;
-		this.isCampaign = CampaignManager.state.isCampaignActive || !!campaignData;
+		this.isCampaign = opts?.isCampaign ?? (CampaignManager.state.isCampaignActive || !!campaignData);
 		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || 4) : 99;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];
@@ -817,11 +919,10 @@ function alpineHexDiceTacticGame() { return {
 							? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
 							: [];
 
-						selectedSkin = ro_rmi_skins?.length ? ro_rmi_skins.random() : availableSkins.random();
-					} else {
-						selectedSkin = availableSkins.random();
-					}
-
+						selectedSkin = ro_rmi_skins?.length ? ro_rmi_skins.cosmic_random() : availableSkins.cosmic_random();
+						} else {
+						selectedSkin = availableSkins.cosmic_random();
+						}
 					usedSkins.add(selectedSkin);
 				}
 			}
@@ -975,7 +1076,7 @@ function alpineHexDiceTacticGame() { return {
 				.then(json => {
 					player.selectedSpriteMix = json;
 					player.dice.forEach(die => {
-						const sprite = json.filter(x => x.includes(`${die.value}_`)).random();
+						const sprite = json.filter(x => x.includes(`${die.value}_`)).cosmic_random();
 						if (sprite) {
 							player.sprites = player.sprites || [];
 							player.sprites[die.value] = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
@@ -1515,6 +1616,7 @@ function alpineHexDiceTacticGame() { return {
 		
 		// Deploy all dice randomly for all players
 		this.players.forEach((player, playerIdx) => {
+			this.currentPlayerIndex = playerIdx; // FIX: Ensure current player index matches loop
 			player.dice.forEach((dice, diceIdx) => {
 				const validHexes = this.calcValidDeploymentHexes(playerIdx);
 				if (validHexes.length > 0) {
@@ -1524,6 +1626,7 @@ function alpineHexDiceTacticGame() { return {
 			});
 		});
 		
+		this.currentPlayerIndex = 0; // Reset to P1 turn
 		this.addLog(`Random start completed! Player 1's turn.`);
 	},
 	startRomanceMode() {
@@ -1681,9 +1784,11 @@ function alpineHexDiceTacticGame() { return {
 				console.log("Turn block: current", this.currentPlayerIndex, "me", this.online.playerIndex);
 				return;
 			}
-			this.publishAction('GAME_ACTION', { action: 'HEX_CLICK', args: [hexId] });
 		}
 		this._handleHexClick(hexId);
+		if (this.online.status === 'PLAYING' && this.online.status !== 'SYNCING') {
+			this.publishAction('GAME_ACTION', { action: 'HEX_CLICK', args: [hexId] });
+		}
 	},
 	_handleHexClick(hexId) {
 		if (this.phase === 'SETUP_DEPLOY') {
@@ -1896,7 +2001,7 @@ function alpineHexDiceTacticGame() { return {
 		this.validMerges = [];
 		this.validTargets = [];
 
-		if (this.debug?.autoPlay) this.endTurn();
+		if (this.debug?.autoPlay) this._endTurn();
 	},
 	completeAction(targetHexId) {
 		if (!this.actionMode) return;
@@ -1908,14 +2013,14 @@ function alpineHexDiceTacticGame() { return {
 
 		if (action == 'BRAVE_CHARGE_TARGET') {
 			this.performBraveCharge(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
+			this._endTurn();
 			return;
 		}
 
 		// Oracle Transmute
 		if (action === 'SPELLCAST_SACRIFICE' && this.validTargets.includes(targetHexId)) {
 			this.performOracleTransmute(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
+			this._endTurn();
 			return;
 		}
 
@@ -1929,14 +2034,14 @@ function alpineHexDiceTacticGame() { return {
 			if (this.oracleSelectedSpell && target && target.playerId === unit.playerId) {
 				this.performSpellCast(this.selectedUnitHexId, targetHexId, this.oracleSelectedSpell);
 				this.oracleSelectedSpell = null;
-				this.endTurn();
+				this._endTurn();
 				return;
 			}
 		}
 
 		if (unit.value == 2 && this.validTargets.includes(targetHexId)) {
 			this.performRangedAttack(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
+			this._endTurn();
 			return;
 		} else if (unit.value == 6 && this.validTargets.includes(targetHexId)) {
 			// Legacy: only if no spell was selected (Oracle can still move if spell cancelled)
@@ -1971,17 +2076,17 @@ function alpineHexDiceTacticGame() { return {
 				} else if (this.actionMode === 'SKIRMISH_POST_MOVE') {
 					// Don't end turn yet! Let user pick reposition hex.
 				} else {
-					this.endTurn();
+					this._endTurn();
 				}
 			}
 
 			return;
 		} else if (action === 'SKIRMISH_POST_MOVE' && this.validMoves.includes(targetHexId)) {
 			this.performSkirmishPostMove(this.selectedUnitHexId, targetHexId);
-			this.endTurn();
+			this._endTurn();
 			return;
 		} else if (this.validMerges.includes(targetHexId)){
-			this.endTurn();
+			this._endTurn();
 			return;
 		}
 
@@ -2040,7 +2145,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 		// `initiateAction` handles MOVE, RANGED_ATTACK, SPECIAL_ATTACK, MERGE
 
-		this.endTurn();
+		this._endTurn();
 	},
 
 	/* --- ACTIONS --- */
@@ -2310,7 +2415,7 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`New Dice ${newUnit.value} selected. Choose an action.`, state);
 			// if (isAI) this.performAITurn();
 		} else {
-			this.endTurn(state);
+			this._endTurn(state);
 		}
 		this.checkWinConditions(state);
 	},
@@ -2667,7 +2772,7 @@ function alpineHexDiceTacticGame() { return {
 		// Effect: Reduce target enemy unit's armor by 6
 		this.applyDamage(targetHexId, 6, state, true); // Apply 6 damage, handle unit removal if armor <= 0
 
-		this.endTurn(state); // End the player's turn after the charge
+		this._endTurn(state); // End the player's turn after the charge
 	},
 	performAITurn() {
 		// let choice = ['Simple', 'Analyze', 'Random', 'Minimax', 'Greedy'].random();
@@ -2681,7 +2786,7 @@ function alpineHexDiceTacticGame() { return {
 
 		// this.addLog('currentPlayerIndex' + this.currentPlayerIndex);
 
-		// this.endTurn();
+		// this._endTurn();
 		// console.timeEnd('performAITurn')
 	},
 
@@ -3739,10 +3844,11 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- TURN --- */
 	endTurn(state) {
-		if (!state && this.online.status === 'PLAYING' && this.currentPlayerIndex === this.online.playerIndex) {
+		this._endTurn(state);
+		if (!state && this.online.status === 'PLAYING' && this.currentPlayerIndex !== this.online.playerIndex) {
+			// Note: index was flipped by _endTurn, so we check if it's NOT our turn anymore
 			this.publishAction('GAME_ACTION', { action: 'END_TURN', args: [] });
 		}
-		this._endTurn(state);
 	},
 	_endTurn(state) {
 		let isState = !!state;
@@ -3783,6 +3889,10 @@ function alpineHexDiceTacticGame() { return {
 
 		this.checkWinConditions(state);
 		if (isState) return;
+
+		if (this.online.status === 'PLAYING') {
+			this.startOnlineTimer();
+		}
 
 		if (this.gameplayVersion === 2) {
 			this.startFatesCall();
@@ -4009,11 +4119,11 @@ function alpineHexDiceTacticGame() { return {
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
 	},
 	rollDice(max=6, delay=0) {
-		if (this.online.status === 'PLAYING') {
-			if (this.currentPlayerIndex !== this.online.playerIndex) return;
+		const roll = this._rollDice(max, delay);
+		if (this.online.status === 'PLAYING' && this.currentPlayerIndex === this.online.playerIndex) {
 			this.publishAction('GAME_ACTION', { action: 'ROLL_DICE', args: [max, delay] });
 		}
-		return this._rollDice(max, delay);
+		return roll;
 	},
 	_rollDice(max=6, delay=0) {
 		this.rollingDice = true;
