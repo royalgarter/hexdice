@@ -343,7 +343,9 @@
 
 	<!-- User Profile Header -->
 	<div class="fixed top-2 right-2 z-50 flex items-center space-x-2 bg-white/80 p-1 rounded-lg border shadow-sm" x-show="auth.user" x-cloak>
-		<img :src="auth.user?.picture" class="w-8 h-8 rounded-full border" x-show="auth.user?.picture">
+		<img :src="auth.user?.picture" class="w-8 h-8 rounded-full border" x-show="auth.user?.picture"
+			onerror="this.src = '/assets/images/favicon-32x32.png';"
+		>
 		<div class="text-xs">
 			<div class="font-bold" x-text="auth?.user?.name"></div>
 			<button class="text-blue-600 hover:underline" @click="logout()">Logout</button>
@@ -707,6 +709,10 @@
 			currentY += 360 * (Math.floor(Math.random() * 3) + 2) + targetY - (currentY % 360);
 
 			cube.style.transform = `rotateX(${currentX+6}deg) rotateY(${currentY+13}deg)`;
+		};
+
+		window.handleCredentialResponse = (response) => {
+			Alpine.$data(document.querySelector('body'))?.handleGoogleAuth?.(response);
 		};
 
 		// Register the service worker

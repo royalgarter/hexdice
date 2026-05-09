@@ -534,9 +534,7 @@ function alpineHexDiceTacticGame() { return {
 			console.error("Auth init failed", e);
 		}
 
-		window.handleCredentialResponse = (response) => {
-			this.handleGoogleAuth(response);
-		};
+		
 	},
 
 	async handleGoogleAuth(response) {
