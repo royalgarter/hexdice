@@ -1,4 +1,3 @@
-import {serve} from "https://deno.land/std/http/server.ts";
 import {exists} from "https://deno.land/std/fs/mod.ts";
 import {extname} from "https://deno.land/std/path/mod.ts";
 import {load} from "https://deno.land/std/dotenv/mod.ts";
@@ -154,5 +153,5 @@ async function handleRequest(req: Request) {
 	return response(JSON.stringify({error: 'E404'}), {status: 404});
 }
 
-let port = 1166;try {port = process.env.PORT || port} catch{}
-serve(handleRequest, {port});
+const PORT = Number(Deno.env.get('PORT')) || 1166;
+Deno.serve({ port: PORT }, handleRequest);
