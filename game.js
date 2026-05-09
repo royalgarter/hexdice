@@ -192,17 +192,20 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 
+	terrainByType(type) {
+		return `${type.toLowerCase()}_${this.isCampaign ? 'ro' : 'wc2'}`;
+	},
+
 	setTerrainType(hex, type) {
 		hex.terrainType = type;
 		hex.terrainClass = TERRAIN_CONFIG[type]?.bg || 'bg-hexplain';
 
 		const isTerrain = (type !== 'PLAIN');
 		if (isTerrain) {
-			const fileTerrain = `${type.toLowerCase()}_${this.isCampaign ? 'ro' : 'wc2'}`;
 			hex.terrainStyle = [
 				`background-color: unset;`,
 				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
-				`background-image: url("/assets/sprites/terrain/${fileTerrain}.png");`
+				`background-image: url("/assets/sprites/terrain/${this.terrainByType(type)}.png");`
 			].join(' ');
 		} else {
 			hex.terrainStyle = '';
@@ -1315,7 +1318,7 @@ function alpineHexDiceTacticGame() { return {
 				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
 					${terrainStyle
-						? `, url("/assets/sprites/terrain/${hex.terrainType.toLowerCase()}_${this.isCampaign ? 'ro' : '01'}.png")`
+						? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
 						: ``
 					};`
 			);
