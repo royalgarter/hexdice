@@ -4,7 +4,7 @@ const CORE_ASSETS = [
 	'/index.html',
 	'/rules.html',
 	'/game.js',
-	// '/assets/assets-manifest.json'
+	'/assets/assets-manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
