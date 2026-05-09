@@ -1,5 +1,6 @@
 [
 	"chrono_mix",
+	"clay",
 	"default",
 	"fft_mix",
 	"ffta_mix",
@@ -83,5 +84,6 @@
 	"ro_xmas",
 	"seiken_mix",
 	"tos_mix",
-	"warcraft2"
+	"warcraft2",
+	"wc2"
 ]
