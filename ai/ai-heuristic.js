@@ -107,9 +107,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         return;
     }
 
-    // Point 5 Fix: Respect profileName argument over random fallback
     GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
-        || profileName
         || Object.keys(heuristicProfiles).random();
 
     profileName = GAME.players[GAME.currentPlayerIndex].profileName;

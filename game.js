@@ -130,9 +130,16 @@ function alpineHexDiceTacticGame() { return {
 	selectedUnitHexId: null,
 	selectedDieToDeploy: null, // index in player's dice array
 	hovering: {},
-	unitstat: null,
+	unitstat: null, // Pinned hex id for the unit info panel (set on click).
+	hoverUnitHexId: null, // Hex id under hover-with-delay; preview source when no pin.
+	hoverUnitHexIdImmediate: null, // Hex id set immediately on mouseenter for instant highlight.
+	_unitPanelHoverTimer: null,
 	trail: {fromHex: null, toHex: null, unit: null, path: []},
 	trailAttack: {fromHex: null, toHex: null, unit: null},
+	trailSpell: {},
+	cursorX: 0,
+	cursorY: 0,
+	cursorSprite: null,
 	validMoves: [], // array of hex IDs
 	validMerges: [], // array of hex IDs
 	validTargets: [], // array of hex IDs for attacks/merges
@@ -205,7 +212,12 @@ function alpineHexDiceTacticGame() { return {
 			hex.terrainStyle = [
 				`background-color: unset;`,
 				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
-				`background-image: url("/assets/sprites/terrain/${this.terrainByType(type)}.png");`
+				`background-image:
+					${Number.isFinite(hex.basePlayerId)
+						? `url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif'), `
+						: ``
+					}
+					url("/assets/sprites/terrain/${this.terrainByType(type)}.png");`
 			].join(' ');
 		} else {
 			hex.terrainStyle = '';
@@ -937,7 +949,8 @@ function alpineHexDiceTacticGame() { return {
 				isEliminated: false,
 				selectedSpriteMix: null,
 				selectedSpriteSet: selectedSkin,
-				isAI: isAI
+				isAI: isAI,
+				profileName: Object.keys(heuristicProfiles).random()
 			});
 		}
 
@@ -1051,12 +1064,17 @@ function alpineHexDiceTacticGame() { return {
 		this.messageLog = [];
 
 		if (this.debug?.autoPlay) {
-			this.players.forEach(p => p.isAI = true);
+			this.players.forEach(this.setPlayerAI);
 			this.addLog(`Autoplay game started`);
 		}
 
 		this.addLog(`New game started with ${this.playerCount} players.`);
 		this.players.forEach((_, i) => this.initPlayerSkins(i));
+	},
+
+	setPlayerAI(player, flag=true) {
+		player.isAI = flag;
+		player.profileName = player.profileName || Object.keys(heuristicProfiles).random();
 	},
 
 	initPlayerSkins(playerId) {
@@ -1152,17 +1170,27 @@ function alpineHexDiceTacticGame() { return {
 		let gridWidth = maxX - minX + ADJUSTED_WIDTH;
 		let gridHeight = maxY - minY + ADJUSTED_HEIGHT; // Approx
 
-		if (typeof window !== 'undefined' && window.screen && !ratio) {
-			if (gridWidth > window.screen.width) {
-				return this.generateHexGrid(radius, padding, window.screen.width / gridWidth);
-			}
+		if (typeof window !== 'undefined' && !ratio) {
+			const viewWidth = window.innerWidth || (window.screen && window.screen.width);
+			const viewHeight = window.innerHeight || (window.screen && window.screen.height);
 
-			if (document.querySelectorAll('[id^="game-"]').length) {
-				let paddingHeight = [...document.querySelectorAll('[id^="game-"]')].reduce((a, v) => a + v.clientHeight, 0);
-				paddingHeight *= 2;
+			if (viewWidth && viewHeight) {
+				// Mobile/Portrait view: expand width to ~97%
+				if (viewHeight > viewWidth) {
+					return this.generateHexGrid(radius, padding, (viewWidth * 0.97) / gridWidth);
+				}
 
-				if (gridHeight < (window.screen.height - paddingHeight)) {
-					return this.generateHexGrid(radius, padding, (window.screen.height - paddingHeight) / gridHeight);
+				if (gridWidth > viewWidth) {
+					return this.generateHexGrid(radius, padding, viewWidth / gridWidth);
+				}
+
+				if (document.querySelectorAll('[id^="game-"]').length) {
+					let paddingHeight = [...document.querySelectorAll('[id^="game-"]')].reduce((a, v) => a + v.clientHeight, 0);
+					paddingHeight *= 2;
+
+					if (gridHeight < (viewHeight - paddingHeight)) {
+						return this.generateHexGrid(radius, padding, (viewHeight - paddingHeight) / gridHeight);
+					}
 				}
 			}
 		}
@@ -1281,9 +1309,9 @@ function alpineHexDiceTacticGame() { return {
 		// if (state.validTargetsSet?.has(hex.id)) cls += ' bg-hextarget';
 		// if (state.dangerHexes?.[hex.id]) cls += ' bg-hexdanger';
 
-		if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
-			cls = 'bg-hexdeploy';
-		}
+		// if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
+		// 	cls = 'bg-hexdeploy';
+		// }
 
 		let hovering = state.hovering;
 		if (hovering.hexId && (state.selectedUnitHexId != hovering.hexId)) {
@@ -1302,11 +1330,16 @@ function alpineHexDiceTacticGame() { return {
 
 		let filter = ``;
 
+		if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
 		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
 		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
 		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
 		if (this.validTargetsSet?.has(hex.id)) filter += ' blur(1px)';
 		// if (this.dangerHexes?.[hex.id]) filter += ' contrast(0.5)';
+
+		if (this.phase === 'SETUP_DEPLOY' && this.validDeploymentHexesSet?.has(hex.id)) {
+			filter += ' sepia(1)';
+		}
 
 		if (filter?.length) style.push(`filter: ${filter};`);
 
@@ -1317,6 +1350,10 @@ function alpineHexDiceTacticGame() { return {
 				`background-color: unset;`,
 				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
+					${Number.isFinite(hex.basePlayerId)
+						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
+						: ``
+					}
 					${terrainStyle
 						? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
 						: ``
@@ -1327,6 +1364,27 @@ function alpineHexDiceTacticGame() { return {
 		}
 		return style.join(' ');
 	},
+	hexCursor(hex) {
+		return 'pointer';
+	},
+	hexCursorSprite(hex) {
+		if (!this.selectedUnitHexId || hex.id === this.selectedUnitHexId) return null;
+		const selectedUnit = this.getUnitOnHex(this.selectedUnitHexId);
+		if (!selectedUnit) return null;
+		const hoveredUnit = hex.unit;
+		if (!hoveredUnit) {
+			return this.validMovesSet?.has(hex.id) ? '/assets/cursors/cursor_move.png' : null;
+		}
+		if (hoveredUnit.playerId !== selectedUnit.playerId) {
+			// Enemy hex: ranged/oracle use validTargetsSet, melee use validMovesSet
+			const isRanged = this.actionMode === 'RANGED_ATTACK' || selectedUnit.value === 2;
+			if (isRanged) return this.validTargetsSet?.has(hex.id) ? '/assets/cursors/cursor_arrow.png' : null;
+			return this.validMovesSet?.has(hex.id) ? '/assets/cursors/cursor_attack.png' : null;
+		}
+		// Friendly hex: spell only, and only after a spell has been chosen
+		if (this.actionMode === 'SPELLCAST' && this.oracleSelectedSpell && this.validTargetsSet?.has(hex.id)) return '/assets/cursors/cursor_spell.png';
+		return null;
+	},
 	hoverHex(hexId) {
 		if (this.phase !== 'PLAYER_TURN') return;
 
@@ -1335,7 +1393,7 @@ function alpineHexDiceTacticGame() { return {
 		this.hovering.hexId = hexId;
 		this.hovering.unit = this.getUnitOnHex(hexId);
 
-		if (this.hovering.unit) {
+		if (this.hovering.unit && this.hovering.unit.playerId === this.currentPlayerIndex) {
 			this.hovering.validMoves = this.calcValidMoves(hexId);
 			this.hovering.validMovesSet = new Set(this.hovering.validMoves);
 			this.hovering.validMerges = this.calcValidMoves(hexId, 'MERGE');
@@ -1595,6 +1653,7 @@ function alpineHexDiceTacticGame() { return {
 		this.phase = 'PLAYER_TURN';
 		this.currentPlayerIndex = 0; // Player 1 starts the game
 		this.trail = {fromHex: null, toHex: null, unit: null, path: []};
+		this.trailSpell = {};
 
 		this.resetTurnActionsForPlayer(this.currentPlayerIndex);
 		this.addLog("---");
@@ -1634,7 +1693,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
 
 		// Set all players as AI
-		this.players.forEach(p => p.isAI = true);
+		this.players.forEach(this.setPlayerAI);
 
 		// Roll initial dice for all players
 		this.players.forEach((p, i) => this.rollInitialDice(i));
@@ -1821,7 +1880,6 @@ function alpineHexDiceTacticGame() { return {
 			// Note: performMove already calls endTurn in most cases
 		} else { // Normal selection mode
 			if (unitOnClickedHex) {
-				this.unitstat = unitOnClickedHex ? hexId : null;
 				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
 				this.hoverHex(hexId);
 			} else if (this.selectedUnitHexId !== null) { // Clicked on empty or enemy hex while a unit is selected (implies move/attack intent)
@@ -1832,6 +1890,9 @@ function alpineHexDiceTacticGame() { return {
 				this.deselectUnit();
 			}
 		}
+
+		// Update unit info panel pin: any click on a unit pins it; click on empty hex clears.
+		this.unitstat = this.getUnitOnHex(hexId) ? hexId : null;
 	},
 	selectUnit(hexId, state) {
 		if (state) return;
@@ -1865,15 +1926,17 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.selectedUnitHexId = hexId;
-		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
+		this.validMoves = this.calcValidMoves(hexId);
+		this.validMovesSet = new Set(this.validMoves);
 		this.validTargets = []; // Will be calculated if attack action is chosen
-		this.validMovesSet?.clear();
-		this.validTargetsSet?.clear();
+		this.validTargetsSet = new Set();
 		this.validMerges = this.options.includes('m') ? this.calcValidMoves(this.selectedUnitHexId, 'MERGE') : [];
 		this.validMergesSet = new Set(this.validMerges);
 		this.dangerHexes = this.calcDangerHex(this.currentPlayerIndex, state);
 
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
+
+		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 
 		if (unit.value == 2) {
 			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
@@ -1884,8 +1947,6 @@ function alpineHexDiceTacticGame() { return {
 			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 			this.validTargetsSet = new Set(this.validTargets);
 		}
-
-		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 	},
 	/**
 	 * Initiate Oracle spell selection UI prompt.
@@ -1919,11 +1980,11 @@ function alpineHexDiceTacticGame() { return {
 		state.hovering = {}
 		state.selectedUnitHexId = null;
 		state.validMoves = [];
-		state.validMovesSet?.clear?.();
+		state.validMovesSet = new Set();
 		state.validTargets = [];
-		state.validTargetsSet?.clear?.();
+		state.validTargetsSet = new Set();
 		state.validMerges = [];
-		state.validMergesSet?.clear?.();
+		state.validMergesSet = new Set();
 		state.actionMode = null;
 		state.dangerHexes = {};
 	},
@@ -1937,9 +1998,9 @@ function alpineHexDiceTacticGame() { return {
 
 		this.actionMode = actionType;
 		this.validMoves = [];
-		this.validMovesSet?.clear?.();
+		this.validMovesSet = new Set();
 		this.validTargets = [];
-		this.validTargetsSet?.clear?.();
+		this.validTargetsSet = new Set();
 		// this.validMerges = [];
 		// this.validTargets = [];
 
@@ -2205,6 +2266,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.trailAttack?.unit && (this.trailAttack.unit != fromHex.unit)) {
 			this.trailAttack = {};
 		}
+		this.trailSpell = {};
 	},
 	performMove(unitHexId, targetHexId, state) {
 		if (unitHexId == targetHexId) {
@@ -2502,6 +2564,10 @@ function alpineHexDiceTacticGame() { return {
 				return;
 		}
 
+		if (!state) {
+			this.trailSpell = {fromHex: oracleHex, toHex: targetHex, spellType};
+			this.trailAttack = {};
+		}
 		oracleUnit.hasMovedOrAttackedThisTurn = true;
 		oracleUnit.actionsTakenThisTurn++;
 		this.deselectUnit(state);
@@ -2621,14 +2687,6 @@ function alpineHexDiceTacticGame() { return {
 
 		this.calcDefenderEffectiveArmor(oracleHexId, state);
 		this.calcDefenderEffectiveArmor(targetHexId, state);
-
-		if (!state) {
-			this.trail.fromHex = oracleHex;
-			this.trail.toHex = targetHex;
-			this.trail.unit = oracleUnit;
-			this.trail.path = [];
-			this.trail.dist = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
-		}
 
 		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} [${oracleHex.id}]<->[${targetHex.id}].`, state);
 	},
@@ -3462,29 +3520,155 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {object} state - Optional game state for simulation
 	 * @returns {string} HTML-formatted unit stats
 	 */
-	calcUIDiceStat(hexId, state) {
-		// const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
-		const FIELDS = {
-			id: 'ID',
-			name: 'Name',
-			attack: 'Attack',
-			armor: 'Armor',
-			armorReduction: 'Armor Reduction',
-			effectiveArmor: 'Effectice Armor',
-			distance: 'Movement',
-			range: 'Range',
+	// DEPRECATED: replaced by unit info panel (unitPanelData / unitPanelBreakdown / movementDescription).
+	// calcUIDiceStat(hexId, state) { ... }
+
+	/* --- UNIT INFO PANEL --- */
+	unitPanelHexId() {
+		return (this.unitstat != null) ? this.unitstat : this.hoverUnitHexId;
+	},
+	unitPanelHoverEnter(hexId) {
+		clearTimeout(this._unitPanelHoverTimer);
+		this.hoverUnitHexIdImmediate = hexId;
+		this._unitPanelHoverTimer = setTimeout(() => {
+			this.hoverUnitHexId = hexId;
+		}, 150);
+	},
+	unitPanelHoverLeave(hexId) {
+		clearTimeout(this._unitPanelHoverTimer);
+		if (this.hoverUnitHexIdImmediate === hexId) this.hoverUnitHexIdImmediate = null;
+		if (this.hoverUnitHexId === hexId) this.hoverUnitHexId = null;
+	},
+	unitPanelBreakdown(unit, hex) {
+		// Mirrors calcDefenderEffectiveArmor (game.js:3356) but returns components for display.
+		// Does NOT mutate unit.effectiveArmor.
+		if (!unit || !hex) return null;
+		if (unit.isRerolled) {
+			return { base: unit.currentArmor, parts: [], total: 0, rerolled: true };
+		}
+		const parts = [];
+		let total = unit.currentArmor;
+		if (unit.isGuarding) {
+			parts.push({ label: unit.isGuarding == 2 ? 'shield' : 'guard', value: unit.isGuarding });
+			total += unit.isGuarding;
+		}
+		if (this.gameplayVersion !== 2 && unit.armorReduction) {
+			parts.push({ label: 'reduction', value: -unit.armorReduction });
+			total -= unit.armorReduction;
+		}
+		if (unit.isScarred) {
+			parts.push({ label: 'scarred', value: -1 });
+			total -= 1;
+		}
+		if (hex.terrainType === 'FOREST' || hex.terrainType === 'TOWER' || hex.terrainType === 'MOUNTAIN') {
+			parts.push({ label: hex.terrainType.toLowerCase(), value: +1 });
+			total += 1;
+		}
+		if (this.players[unit.playerId]?.baseHexId === hex.id) {
+			parts.push({ label: 'on base', value: +2 });
+			total += 2;
+		}
+		return { base: unit.currentArmor, parts, total: Math.max(0, total), rerolled: false };
+	},
+	unitMovementText(unit) {
+		if (!unit) return '';
+		const d = unit.distance;
+		switch (unit.movement) {
+			case '*': return d === 1
+				? 'Up to 1 hex, any direction.'
+				: `Up to ${d} hexes, any direction (BFS).`;
+			case 'L': return 'L-jump (2 straight + 1 offset). Can leap over units.';
+			case 'X': return `Up to ${d} hexes along six diagonals. Blocked by units.`;
+			default: return `Distance ${d}.`;
+		}
+	},
+	unitBlurb(unit) {
+		if (!unit) return '';
+		switch (unit.value) {
+			case 1: return 'Balanced melee all-rounder.';
+			case 2: return 'Ranged. Cannot shoot adjacent enemies (unless on Tower/Mountain). Long-range −1 atk.';
+			case 3: return 'Fast L-jumper. Leaps over units.';
+			case 4: return 'Diagonal striker. Movement blocked by units in path.';
+			case 5: return 'Heavy armor. V1: reflects melee when attacker is depleted while guarding.';
+			case 6: return 'Caster. Shield / Swap / Skirmish on friendlies in range 2. Cannot cast while engaged.';
+			default: return '';
+		}
+	},
+	unitStatusFlags(unit, hex) {
+		if (!unit || !hex) return [];
+		const flags = [];
+		if (unit.isRerolled) flags.push({ icon: 'R', label: 'Rerolled — 0 armor until next turn', tone: 'warn' });
+		if (unit.isGuarding == 2) flags.push({ icon: '⛨', label: 'Shielded (+2)', tone: 'good' });
+		else if (unit.isGuarding == 1) flags.push({ icon: '⛉', label: 'Guarding (+1)', tone: 'good' });
+		if (unit.skirmishBuff) flags.push({ icon: '⚔', label: 'Skirmish: −1 atk on next attack (range +1 for Archer)', tone: 'info' });
+		if (unit.isScarred) flags.push({ icon: '✗', label: 'Scarred (−1 armor)', tone: 'warn' });
+		if (this.isUnitEngaged(hex.id)) {
+			let label = 'Engaged with adjacent enemy';
+			if (unit.value === 2 && hex.terrainType !== 'TOWER' && hex.terrainType !== 'MOUNTAIN') label += ' — cannot ranged attack';
+			if (unit.value === 6 && hex.terrainType !== 'TOWER' && hex.terrainType !== 'MOUNTAIN') label += ' — cannot cast spells';
+			flags.push({ icon: '⚠', label, tone: 'warn' });
+		}
+		return flags;
+	},
+	unitActions(unit, hex) {
+		if (!unit || !hex) return [];
+		const actions = [];
+
+		actions.push({
+			name: 'Move',
+			desc: this.unitMovementText(unit) + ' Moving onto an enemy initiates melee combat.',
+		});
+
+		actions.push({
+			name: 'Guard',
+			desc: 'Gain 1 Shield Charge (+1 effective armor). Absorbs one incoming attack without taking armor reduction, then expires.',
+		});
+
+		if (this.players[unit.playerId]?.baseHexId === hex.id) {
+			actions.push({
+				name: 'Reroll',
+				desc: 'Reroll this die for a new unit type. Penalty: 0 effective armor until your next turn.',
+			});
+		}
+
+		if (unit.value === 2) {
+			actions.push({
+				name: 'Ranged Attack',
+				desc: 'Target an enemy 2 hexes away (requires line of sight). Cannot fire if engaged unless on Tower/Mountain. Range 3 with Skirmish/Mountain at −1 attack.',
+			});
+		}
+
+		if (unit.value === 6) {
+			actions.push({
+				name: 'Spell · Shield',
+				desc: 'Target friendly within range 2 gains 2 Guard Charges (+2 effective armor).',
+			});
+			actions.push({
+				name: 'Spell · Swap',
+				desc: 'Exchange positions with a friendly unit within range 2.',
+			});
+			actions.push({
+				name: 'Spell · Skirmish',
+				desc: 'Target friendly within range 2 gains Hit & Run on its next attack: −1 attack, win removes target and attacker picks any adjacent empty hex; tie/loss eliminates the attacker. Archer also gains +1 range.',
+			});
+			actions.push({
+				name: 'Transmute (last Oracle only)',
+				desc: 'Sacrifice this Oracle to convert an adjacent enemy. The new unit is rerolled and cannot act this turn.',
+			});
+		}
+
+		return actions;
+	},
+	unitTerrainText(hex) {
+		if (!hex) return { name: '', effect: '' };
+		const map = {
+			PLAIN: 'Open ground. No effect.',
+			FOREST: '+1 armor. Blocks line of sight.',
+			LAKE: 'Impassable.',
+			TOWER: '+1 armor. Archer can attack adjacent. Blocks LoS.',
+			MOUNTAIN: '+1 armor. Archer range extended (1–3). Movement cost ×2 (except Tanker). Blocks LoS.',
 		};
-
-		const unit = this.getUnitOnHex(hexId, state);
-
-		if (!unit || unit.isDeath) return '';
-
-		unit.effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state);
-
-		return Object.entries(unit)
-			.filter(([k ,v]) => Object.keys(FIELDS).includes(k))
-			.map(([k ,v]) => `${FIELDS[k]}: ${v}`)
-			.join('<br>');
+		return { name: hex.terrainType || 'PLAIN', effect: map[hex.terrainType] || map.PLAIN };
 	},
 	/**
 	 * Check if an attacker unit can attack a target unit.
@@ -3683,7 +3867,9 @@ function alpineHexDiceTacticGame() { return {
 			toHex: defenderHex,
 			unit: attackerUnit,
 			dist: distance,
+			combatType,
 		};
+		this.trailSpell = {};
 
 		if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
@@ -3999,6 +4185,7 @@ function alpineHexDiceTacticGame() { return {
 		let data = JSON.parse(JSON.stringify((game || this).$data));
 
 		delete data.trail;
+		delete data.trailSpell;
 		delete data.messageLog;
 
 		return data;
