@@ -136,6 +136,10 @@ function alpineHexDiceTacticGame() { return {
 	_unitPanelHoverTimer: null,
 	trail: {fromHex: null, toHex: null, unit: null, path: []},
 	trailAttack: {fromHex: null, toHex: null, unit: null},
+	trailSpell: {},
+	cursorX: 0,
+	cursorY: 0,
+	cursorSprite: null,
 	validMoves: [], // array of hex IDs
 	validMerges: [], // array of hex IDs
 	validTargets: [], // array of hex IDs for attacks/merges
@@ -1331,6 +1335,27 @@ function alpineHexDiceTacticGame() { return {
 		}
 		return style.join(' ');
 	},
+	hexCursor(hex) {
+		return 'pointer';
+	},
+	hexCursorSprite(hex) {
+		if (!this.selectedUnitHexId || hex.id === this.selectedUnitHexId) return null;
+		const selectedUnit = this.getUnitOnHex(this.selectedUnitHexId);
+		if (!selectedUnit) return null;
+		const hoveredUnit = hex.unit;
+		if (!hoveredUnit) {
+			return this.validMovesSet?.has(hex.id) ? '/assets/cursors/cursor_move.png' : null;
+		}
+		if (hoveredUnit.playerId !== selectedUnit.playerId) {
+			// Enemy hex: ranged/oracle use validTargetsSet, melee use validMovesSet
+			const isRanged = this.actionMode === 'RANGED_ATTACK' || selectedUnit.value === 2;
+			if (isRanged) return this.validTargetsSet?.has(hex.id) ? '/assets/cursors/cursor_arrow.png' : null;
+			return this.validMovesSet?.has(hex.id) ? '/assets/cursors/cursor_attack.png' : null;
+		}
+		// Friendly hex: spell only, and only after a spell has been chosen
+		if (this.actionMode === 'SPELLCAST' && this.oracleSelectedSpell && this.validTargetsSet?.has(hex.id)) return '/assets/cursors/cursor_spell.png';
+		return null;
+	},
 	hoverHex(hexId) {
 		if (this.phase !== 'PLAYER_TURN') return;
 
@@ -1339,7 +1364,7 @@ function alpineHexDiceTacticGame() { return {
 		this.hovering.hexId = hexId;
 		this.hovering.unit = this.getUnitOnHex(hexId);
 
-		if (this.hovering.unit) {
+		if (this.hovering.unit && this.hovering.unit.playerId === this.currentPlayerIndex) {
 			this.hovering.validMoves = this.calcValidMoves(hexId);
 			this.hovering.validMovesSet = new Set(this.hovering.validMoves);
 			this.hovering.validMerges = this.calcValidMoves(hexId, 'MERGE');
@@ -1599,6 +1624,7 @@ function alpineHexDiceTacticGame() { return {
 		this.phase = 'PLAYER_TURN';
 		this.currentPlayerIndex = 0; // Player 1 starts the game
 		this.trail = {fromHex: null, toHex: null, unit: null, path: []};
+		this.trailSpell = {};
 
 		this.resetTurnActionsForPlayer(this.currentPlayerIndex);
 		this.addLog("---");
@@ -1871,15 +1897,17 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.selectedUnitHexId = hexId;
-		this.validMoves = []; // Will be calculated if 'MOVE' action is chosen
+		this.validMoves = this.calcValidMoves(hexId);
+		this.validMovesSet = new Set(this.validMoves);
 		this.validTargets = []; // Will be calculated if attack action is chosen
-		this.validMovesSet?.clear();
-		this.validTargetsSet?.clear();
+		this.validTargetsSet = new Set();
 		this.validMerges = this.options.includes('m') ? this.calcValidMoves(this.selectedUnitHexId, 'MERGE') : [];
 		this.validMergesSet = new Set(this.validMerges);
 		this.dangerHexes = this.calcDangerHex(this.currentPlayerIndex, state);
 
 		// this.addLog(`Selected Unit: Dice ${unit.value} [${unit.range}] at (${this.getHex(hexId).q}, ${this.getHex(hexId).r})`);
+
+		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 
 		if (unit.value == 2) {
 			this.validTargets = this.calcValidRangedTargets(this.selectedUnitHexId);
@@ -1890,8 +1918,6 @@ function alpineHexDiceTacticGame() { return {
 			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
 			this.validTargetsSet = new Set(this.validTargets);
 		}
-
-		if (this.canPerformAction(this.selectedUnitHexId, 'MOVE')) this.initiateAction('MOVE');
 	},
 	/**
 	 * Initiate Oracle spell selection UI prompt.
@@ -1925,11 +1951,11 @@ function alpineHexDiceTacticGame() { return {
 		state.hovering = {}
 		state.selectedUnitHexId = null;
 		state.validMoves = [];
-		state.validMovesSet?.clear?.();
+		state.validMovesSet = new Set();
 		state.validTargets = [];
-		state.validTargetsSet?.clear?.();
+		state.validTargetsSet = new Set();
 		state.validMerges = [];
-		state.validMergesSet?.clear?.();
+		state.validMergesSet = new Set();
 		state.actionMode = null;
 		state.dangerHexes = {};
 	},
@@ -1943,9 +1969,9 @@ function alpineHexDiceTacticGame() { return {
 
 		this.actionMode = actionType;
 		this.validMoves = [];
-		this.validMovesSet?.clear?.();
+		this.validMovesSet = new Set();
 		this.validTargets = [];
-		this.validTargetsSet?.clear?.();
+		this.validTargetsSet = new Set();
 		// this.validMerges = [];
 		// this.validTargets = [];
 
@@ -2211,6 +2237,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.trailAttack?.unit && (this.trailAttack.unit != fromHex.unit)) {
 			this.trailAttack = {};
 		}
+		this.trailSpell = {};
 	},
 	performMove(unitHexId, targetHexId, state) {
 		if (unitHexId == targetHexId) {
@@ -2508,6 +2535,10 @@ function alpineHexDiceTacticGame() { return {
 				return;
 		}
 
+		if (!state) {
+			this.trailSpell = {fromHex: oracleHex, toHex: targetHex, spellType};
+			this.trailAttack = {};
+		}
 		oracleUnit.hasMovedOrAttackedThisTurn = true;
 		oracleUnit.actionsTakenThisTurn++;
 		this.deselectUnit(state);
@@ -2627,14 +2658,6 @@ function alpineHexDiceTacticGame() { return {
 
 		this.calcDefenderEffectiveArmor(oracleHexId, state);
 		this.calcDefenderEffectiveArmor(targetHexId, state);
-
-		if (!state) {
-			this.trail.fromHex = oracleHex;
-			this.trail.toHex = targetHex;
-			this.trail.unit = oracleUnit;
-			this.trail.path = [];
-			this.trail.dist = this.axialDistance(oracleHex.q, oracleHex.r, targetHex.q, targetHex.r);
-		}
 
 		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} [${oracleHex.id}]<->[${targetHex.id}].`, state);
 	},
@@ -3815,7 +3838,9 @@ function alpineHexDiceTacticGame() { return {
 			toHex: defenderHex,
 			unit: attackerUnit,
 			dist: distance,
+			combatType,
 		};
+		this.trailSpell = {};
 
 		if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
@@ -4131,6 +4156,7 @@ function alpineHexDiceTacticGame() { return {
 		let data = JSON.parse(JSON.stringify((game || this).$data));
 
 		delete data.trail;
+		delete data.trailSpell;
 		delete data.messageLog;
 
 		return data;

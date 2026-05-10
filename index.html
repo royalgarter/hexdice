@@ -378,7 +378,7 @@
 	<script type="text/javascript" src="/ai/ai.js"></script>
 </head>
 
-<body class="text-black min-h-screen flex flex-col items-center font-mono" x-data="alpineHexDiceTacticGame()" x-init="initAuth()">
+<body class="text-black min-h-screen flex flex-col items-center font-mono" x-data="alpineHexDiceTacticGame()" x-init="initAuth()" @mousemove.window="cursorX = $event.clientX; cursorY = $event.clientY">
 	<!-- Google One Tap -->
 	<div id="g_id_onload"
 		data-type="icon" data-shape="pill" data-theme="outline" data-text="signin" data-size="small" data-logo_alignment="left"
@@ -429,13 +429,13 @@
 		<!-- Hex Grid -->
 		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
-				<div class="hexagon absolute flex items-center justify-center cursor-pointer"
+				<div class="hexagon absolute flex items-center justify-center"
 					:class="hexColor(hex) + ' hex-' + hex.id"
-					:style="hexStyle(hex)"
+					:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
-					@mouseenter="hex.unit && unitPanelHoverEnter(hex.id)"
-					@mouseleave="unitPanelHoverLeave(hex.id)"
+					@mouseenter="hex.unit && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex)"
+					@mouseleave="unitPanelHoverLeave(hex.id); cursorSprite = null"
 				>
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
@@ -486,18 +486,43 @@
 					/>
 				</g>
 
-				<!-- Attack -->
+				<!-- Attack (melee: gray dashed, ranged: orange dashed) -->
 				<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
 					<circle
 						:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
-						r="3" style="fill: gray;"
+						r="3" :style="trailAttack.combatType === 'RANGED_ATTACK' ? 'fill: #f97316;' : 'fill: gray;'"
 					/>
 					<line
 						:x1="trailAttack.fromHex?.trailX || 0"
 						:y1="trailAttack.fromHex?.trailY || 0"
 						:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
 						:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
-						style="stroke-width: 2;stroke: gray;stroke-dasharray: 4;"
+						:style="trailAttack.combatType === 'RANGED_ATTACK' ? 'stroke-width: 2;stroke: #f97316;stroke-dasharray: 6 3;' : 'stroke-width: 2;stroke: gray;stroke-dasharray: 4;'"
+					/>
+				</g>
+
+				<!-- Spell (purple line + label) -->
+				<g x-show="trailSpell && trailSpell.fromHex && trailSpell.toHex">
+					<circle
+						:cx="trailSpell.fromHex?.trailX || 0" :cy="trailSpell.fromHex?.trailY || 0"
+						r="4" style="fill: #a855f7;"
+					/>
+					<line
+						:x1="trailSpell.fromHex?.trailX || 0"
+						:y1="trailSpell.fromHex?.trailY || 0"
+						:x2="trailSpell.toHex?.trailX || 0"
+						:y2="trailSpell.toHex?.trailY || 0"
+						style="stroke-width: 2;stroke: #a855f7;stroke-dasharray: 5 3;"
+					/>
+					<circle
+						:cx="trailSpell.toHex?.trailX || 0" :cy="trailSpell.toHex?.trailY || 0"
+						r="6" style="fill: none;stroke: #a855f7;stroke-width: 2;"
+					/>
+					<text
+						:x="((trailSpell.fromHex?.trailX || 0) + (trailSpell.toHex?.trailX || 0)) / 2"
+						:y="((trailSpell.fromHex?.trailY || 0) + (trailSpell.toHex?.trailY || 0)) / 2 - 6"
+						style="fill: #a855f7;font-size: 9px;font-weight: bold;text-anchor: middle;paint-order: stroke;stroke: white;stroke-width: 3;"
+						x-text="trailSpell.spellType"
 					/>
 				</g>
 			</svg>
@@ -892,6 +917,15 @@
 			});
 		}
 	</script>
+
+	<!-- Cursor sprite follower -->
+	<template x-if="cursorSprite">
+		<img
+			:src="cursorSprite"
+			class="fixed pointer-events-none z-[9999]"
+			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 32px; height: 32px;`"
+		>
+	</template>
 </body>
 
 </html>
