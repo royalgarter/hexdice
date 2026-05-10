@@ -132,6 +132,7 @@ function alpineHexDiceTacticGame() { return {
 	hovering: {},
 	unitstat: null, // Pinned hex id for the unit info panel (set on click).
 	hoverUnitHexId: null, // Hex id under hover-with-delay; preview source when no pin.
+	hoverUnitHexIdImmediate: null, // Hex id set immediately on mouseenter for instant highlight.
 	_unitPanelHoverTimer: null,
 	trail: {fromHex: null, toHex: null, unit: null, path: []},
 	trailAttack: {fromHex: null, toHex: null, unit: null},
@@ -1304,6 +1305,7 @@ function alpineHexDiceTacticGame() { return {
 
 		let filter = ``;
 
+		if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
 		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
 		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
 		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
@@ -3475,12 +3477,14 @@ function alpineHexDiceTacticGame() { return {
 	},
 	unitPanelHoverEnter(hexId) {
 		clearTimeout(this._unitPanelHoverTimer);
+		this.hoverUnitHexIdImmediate = hexId;
 		this._unitPanelHoverTimer = setTimeout(() => {
 			this.hoverUnitHexId = hexId;
 		}, 150);
 	},
 	unitPanelHoverLeave(hexId) {
 		clearTimeout(this._unitPanelHoverTimer);
+		if (this.hoverUnitHexIdImmediate === hexId) this.hoverUnitHexIdImmediate = null;
 		if (this.hoverUnitHexId === hexId) this.hoverUnitHexId = null;
 	},
 	unitPanelBreakdown(unit, hex) {
