@@ -949,7 +949,8 @@ function alpineHexDiceTacticGame() { return {
 				isEliminated: false,
 				selectedSpriteMix: null,
 				selectedSpriteSet: selectedSkin,
-				isAI: isAI
+				isAI: isAI,
+				profileName: Object.keys(heuristicProfiles).random()
 			});
 		}
 
@@ -1063,12 +1064,17 @@ function alpineHexDiceTacticGame() { return {
 		this.messageLog = [];
 
 		if (this.debug?.autoPlay) {
-			this.players.forEach(p => p.isAI = true);
+			this.players.forEach(this.setPlayerAI);
 			this.addLog(`Autoplay game started`);
 		}
 
 		this.addLog(`New game started with ${this.playerCount} players.`);
 		this.players.forEach((_, i) => this.initPlayerSkins(i));
+	},
+
+	setPlayerAI(player, flag=true) {
+		player.isAI = flag;
+		player.profileName = player.profileName || Object.keys(heuristicProfiles).random();
 	},
 
 	initPlayerSkins(playerId) {
@@ -1344,7 +1350,7 @@ function alpineHexDiceTacticGame() { return {
 				`background-color: unset;`,
 				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
-					${hex.basePlayerId
+					${Number.isFinite(hex.basePlayerId)
 						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
 						: ``
 					}
@@ -1687,7 +1693,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
 
 		// Set all players as AI
-		this.players.forEach(p => p.isAI = true);
+		this.players.forEach(this.setPlayerAI);
 
 		// Roll initial dice for all players
 		this.players.forEach((p, i) => this.rollInitialDice(i));
