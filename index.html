@@ -748,8 +748,10 @@
 									(players[currentPlayerIndex]?.dice[index]?.fatigueStatus === 'SCARRED') ? 'border-red-500 text-red-700' : '',
 								].join(' ')
 							"
-							@click="selectDieToDeploy(index)">
-							D<span x-text="players[currentPlayerIndex]?.dice[index]?.value"></span>
+							@click="selectDieToDeploy(index)"
+						>
+							<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
+							<!-- D<span x-text="players[currentPlayerIndex]?.dice[index]?.value"></span> -->
 							<div class="text-[8px]" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
 						</div>
 					</template>
@@ -810,11 +812,15 @@
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 					@click="performAction('REROLL', selectedUnitHexId)"
-				>[REROLL]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/reroll.png" alt="[REROLL]" title="REROLL" width="24" height="24">
+				</button>
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 					@click="performAction('GUARD', selectedUnitHexId)"
-				>[GUARD]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/guard.png" alt="[GUARD]" title="GUARD" width="24" height="24">
+				</button>
 				<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 					@click="initiateAction('RANGED_ATTACK')"
@@ -822,34 +828,52 @@
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 					@click="initiateAction('SPECIAL_ATTACK')"
-					x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? '[SPELLS]' : '[SPL ATK]'"
-				></button>
+					--x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? '[SPELLS]' : '[SPL ATK]'"
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/spell.png" alt="[SPELLS]" title="SPELLS" width="24" height="24">
+				</button>
 
 				<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">
-					<button class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">[SHIELD]</button>
-					<button class="cursor-pointer p-1" @click="selectOracleSpell('SWAP')">[SWAP]</button>
-					<button class="cursor-pointer p-1" @click="selectOracleSpell('SKIRMISH')">[SKIRMISH]</button>
+					<button class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">
+						<img class="inline h-6 w-6" src="/assets/sprites/icons/shield.png" alt="[SHIELD]" title="SHIELD" width="24" height="24">
+					</button>
+					<button class="cursor-pointer p-1" @click="selectOracleSpell('SWAP')">
+						<img class="inline h-6 w-6" src="/assets/sprites/icons/swap.png" alt="[SWAP]" title="SWAP" width="24" height="24">
+					</button>
+					<button class="cursor-pointer p-1" @click="selectOracleSpell('SKIRMISH')">
+						<img class="inline h-6 w-6" src="/assets/sprites/icons/skirmish.png" alt="[SKIRMISH]" title="SKIRMISH" width="24" height="24">
+					</button>
 				</div>
 
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 					@click="initiateAction('MERGE')"
-				>[MERGE]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/merge.png" alt="[MERGE]" title="MERGE" width="24" height="24">
+				</button>
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white font-bold bg-red-100"
 					x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
 					@click="initiateAction('SPELLCAST_SACRIFICE')"
-				>[TRANSMUTE]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/transmute.png" alt="[TRANSMUTE]" title="TRANSMUTE" width="24" height="24">
+				</button>
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					x-show="actionMode !== null"
 					@click="cancelAction()"
-				>[CANCEL]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/cancel.png" alt="[CANCEL]" title="CANCEL" width="24" height="24">
+				</button>
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					@click="startTacticalCommand()"
 					x-show="gameplayVersion == 2 && turnPhase == 'FATE_CALL'"
-				>[END FATE]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/fate.png" alt="[END FATE]" title="END FATE" width="24" height="24">
+				</button>
 				<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
 					@click="endTurn()"
-				>[END TURN]</button>
+				>
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/escape.png" alt="[END TURN]" title="END TURN" width="24" height="24">
+				</button>
 			</div>
 
 			<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">

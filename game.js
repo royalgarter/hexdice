@@ -3,7 +3,6 @@ const R = 5; // Map size radius
 const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
-
 const EPIC_PRESETS = {
 	'E_21': {
 		name: 'Standard 21 Dices',
@@ -17,7 +16,6 @@ const EPIC_PRESETS = {
 		 4,1,2,1,4,
 		1,1,5,5,1,1
 		],
-
 	},
 	'E_15': {
 		name: 'Quick Mode 15 Dices',
@@ -348,7 +346,10 @@ function alpineHexDiceTacticGame() { return {
 	classifyTerrain(rgb, hex) {
 		const [h, s, v] = this.rgbToHsv(rgb[0], rgb[1], rgb[2]);
 
-		// Desaturated or very dark colors default to PLAIN or MOUNTAIN
+		// console.log('classifyTerrain', hex?.id, 'h:', h, 's:', s, 'v:', v)
+
+		if (h == 0 && v == 0 && s == 0) return 'MOUNTAIN';
+		if (h < 1 && v < 0.3) return 'PLAIN';
 		if (s < 0.1 && s < 0.3) return 'TOWER';
 		if (s < 0.15) return 'PLAIN';
 		if (v < 0.35) return 'MOUNTAIN';
@@ -1330,7 +1331,8 @@ function alpineHexDiceTacticGame() { return {
 
 		let filter = ``;
 
-		if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
+		// if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
+		
 		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
 		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
 		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
@@ -3432,7 +3434,9 @@ function alpineHexDiceTacticGame() { return {
 			case 'MOUNTAIN':
 				effectiveArmor += 1;
 				break;
-			// LAKE is impassable, so units shouldn't be there to defend
+			case 'LAKE':
+				effectiveArmor -= 1;
+				break;
 		}
 
 		if ((state||this).players[defenderUnit.playerId].baseHexId == defenderHexId)
