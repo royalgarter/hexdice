@@ -1332,7 +1332,7 @@ function alpineHexDiceTacticGame() { return {
 		let filter = ``;
 
 		// if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
-		
+
 		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
 		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
 		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
@@ -4198,9 +4198,10 @@ function alpineHexDiceTacticGame() { return {
 		state = state || this;
 		if (!attackerUnit) return '';
 
+		let pl = state.players[attackerUnit.playerId];
 		return [
 			`P${attackerUnit.playerId+1} D${attackerUnit.value}`,
-			state.players[attackerUnit.playerId]?.profileName ? `(${state.players[attackerUnit.playerId]?.profileName})` : '',
+			(pl?.isAI && pl?.profileName) ? `(${pl?.profileName})` : '',
 		].filter(x => x).join(' ');
 	},
 	addLog(message, state) {

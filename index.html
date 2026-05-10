@@ -731,15 +731,15 @@
 			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
 				<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
-					Level: <span x-text="campaignData?.level"></span>, <span class="cursor-pointer underline hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>
+					Level: <span x-text="campaignData?.level"></span>, <span class="underline hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>
 				</p>
 				<!-- <p class="mb-2 text-sm font-bold" x-show="isCampaign && currentPlayerIndex === 0">
 					Units Deployed: <span x-text="players[0]?.dice?.filter(d => d.isDeployed)?.length || '0'"></span> / <span x-text="deploymentLimit"></span>
 				</p> -->
-				<div class="flex justify-center flex-wrap gap-1 mb-2">
+				<div class="flex justify-center flex-wrap gap-2 mb-2">
 					<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
 						<div
-							class="p-1 border text-xs cursor-pointer min-w-16"
+							class="p-1 border text-xs cursor-pointer min-w-16 text-blue-600"
 							:class="
 								[
 									selectedDieToDeploy === index ? 'bg-black text-white font-bold' : '',
