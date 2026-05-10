@@ -311,6 +311,55 @@
 			/*z-index: -1;*/
 			/*filter: contrast(0.1);*/
 		}
+		.unit-info-panel {
+			top: 5rem;
+			left: 1rem;
+			width: 280px;
+			z-index: 40;
+			border-radius: 4px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+		}
+		.unit-info-panel.is-hover { opacity: 0.95; }
+		.unit-info-panel.is-pinned { opacity: 1; }
+		.unit-info-panel-scroll {
+			max-height: min(36rem, calc(100vh - 7rem));
+			overflow-y: auto;
+			overscroll-behavior: contain;
+		}
+		.unit-info-panel-hint {
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 2rem;
+			pointer-events: none;
+			display: flex;
+			align-items: flex-end;
+			justify-content: center;
+			padding-bottom: 0.15rem;
+			margin-bottom: 0.1rem;
+			font-size: 0.85rem;
+			color: #5b3a14;
+			background: linear-gradient(to bottom, rgba(195,164,113,0) 0%, rgba(195,164,113,0.85) 80%);
+			border-radius: 0 0 4px 4px;
+			animation: unitPanelHintBob 1.4s ease-in-out infinite;
+		}
+		@keyframes unitPanelHintBob {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(2px); }
+		}
+		@media (max-width: 900px) {
+			.unit-info-panel {
+				top: 0.25rem;
+				left: 0.25rem;
+				right: 0.25rem;
+				width: auto;
+				font-size: 0.7rem;
+			}
+			.unit-info-panel-scroll {
+				max-height: 40vh;
+			}
+		}
 	</style>
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
@@ -329,7 +378,7 @@
 	<script type="text/javascript" src="/ai/ai.js"></script>
 </head>
 
-<body class="text-black min-h-screen flex flex-col items-center font-mono" x-data="alpineHexDiceTacticGame()" x-init="initAuth()">
+<body class="text-black min-h-screen flex flex-col items-center font-mono" x-data="alpineHexDiceTacticGame()" x-init="initAuth()" @mousemove.window="cursorX = $event.clientX; cursorY = $event.clientY">
 	<!-- Google One Tap -->
 	<div id="g_id_onload"
 		data-type="icon" data-shape="pill" data-theme="outline" data-text="signin" data-size="small" data-logo_alignment="left"
@@ -380,11 +429,13 @@
 		<!-- Hex Grid -->
 		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
-				<div class="hexagon absolute flex items-center justify-center cursor-pointer"
+				<div class="hexagon absolute flex items-center justify-center"
 					:class="hexColor(hex) + ' hex-' + hex.id"
-					:style="hexStyle(hex)"
+					:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 					:data-id="hex.id"
 					@click="handleHexClick(hex.id)"
+					@mouseenter="hex.unit && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex)"
+					@mouseleave="unitPanelHoverLeave(hex.id); cursorSprite = null"
 				>
 					<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 					<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
@@ -435,23 +486,151 @@
 					/>
 				</g>
 
-				<!-- Attack -->
+				<!-- Attack (melee: gray dashed, ranged: orange dashed) -->
 				<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
 					<circle
 						:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
-						r="3" style="fill: gray;"
+						r="3" :style="trailAttack.combatType === 'RANGED_ATTACK' ? 'fill: #f97316;' : 'fill: gray;'"
 					/>
 					<line
 						:x1="trailAttack.fromHex?.trailX || 0"
 						:y1="trailAttack.fromHex?.trailY || 0"
 						:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
 						:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
-						style="stroke-width: 2;stroke: gray;stroke-dasharray: 4;"
+						:style="trailAttack.combatType === 'RANGED_ATTACK' ? 'stroke-width: 2;stroke: #f97316;stroke-dasharray: 6 3;' : 'stroke-width: 2;stroke: gray;stroke-dasharray: 4;'"
+					/>
+				</g>
+
+				<!-- Spell (purple line + label) -->
+				<g x-show="trailSpell && trailSpell.fromHex && trailSpell.toHex">
+					<circle
+						:cx="trailSpell.fromHex?.trailX || 0" :cy="trailSpell.fromHex?.trailY || 0"
+						r="4" style="fill: #a855f7;"
+					/>
+					<line
+						:x1="trailSpell.fromHex?.trailX || 0"
+						:y1="trailSpell.fromHex?.trailY || 0"
+						:x2="trailSpell.toHex?.trailX || 0"
+						:y2="trailSpell.toHex?.trailY || 0"
+						style="stroke-width: 2;stroke: #a855f7;stroke-dasharray: 5 3;"
+					/>
+					<circle
+						:cx="trailSpell.toHex?.trailX || 0" :cy="trailSpell.toHex?.trailY || 0"
+						r="6" style="fill: none;stroke: #a855f7;stroke-width: 2;"
+					/>
+					<text
+						:x="((trailSpell.fromHex?.trailX || 0) + (trailSpell.toHex?.trailX || 0)) / 2"
+						:y="((trailSpell.fromHex?.trailY || 0) + (trailSpell.toHex?.trailY || 0)) / 2 - 6"
+						style="fill: #a855f7;font-size: 9px;font-weight: bold;text-anchor: middle;paint-order: stroke;stroke: white;stroke-width: 3;"
+						x-text="trailSpell.spellType"
 					/>
 				</g>
 			</svg>
 
-			<!-- <div class="hex-unitstat fixed left-2 top-2 text-xs text-gray-600 font-bold" x-show="unitstat" x-html="calcUIDiceStat(unitstat)"></div> -->
+			<!-- Unit Info Panel -->
+			<template x-if="phase === 'PLAYER_TURN' && unitPanelHexId() != null && getUnitOnHex(unitPanelHexId())">
+				<div class="unit-info-panel fixed bg-wood border border-yellow-900 text-xs"
+					 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
+					 x-data="{ overflow: false, atBottom: true }">
+					<div class="unit-info-panel-scroll"
+						 x-init="$nextTick(() => {
+							 const update = () => {
+								 overflow = $el.scrollHeight > $el.clientHeight + 1;
+								 atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2;
+							 };
+							 update();
+							 new ResizeObserver(update).observe($el);
+							 new MutationObserver(update).observe($el, { childList: true, subtree: true, characterData: true });
+						 })"
+						 @scroll.passive="atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2">
+					<template x-if="getUnitOnHex(unitPanelHexId())">
+						<div x-data="{
+							get u() { return getUnitOnHex(unitPanelHexId()); },
+							get h() { return getHex(unitPanelHexId()); },
+							get br() { return unitPanelBreakdown(this.u, this.h); },
+							get flags() { return unitStatusFlags(this.u, this.h); },
+							get terrain() { return unitTerrainText(this.h); },
+							get actions() { return unitActions(this.u, this.h); }
+						}" class="p-2 space-y-2">
+							<!-- Header -->
+							<div class="flex items-center justify-between border-b border-yellow-900 pb-1 gap-2">
+								<span class="text-3xl leading-none" :class="PLAYER_CONFIG[u.playerId]?.logColor"
+									  x-text="'⚀⚁⚂⚃⚄⚅'[u.value-1]"></span>
+								<div class="flex-grow">
+									<div class="text-base font-bold" x-text="u.name"></div>
+									<div :class="PLAYER_CONFIG[u.playerId]?.logColor"
+										 x-text="'P' + (u.playerId + 1) + ' ' + PLAYER_CONFIG[u.playerId]?.color"></div>
+								</div>
+								<span x-show="unitstat != null" class="text-yellow-700" title="Pinned">📌</span>
+							</div>
+
+							<!-- Blurb -->
+							<div class="italic text-gray-700" x-text="unitBlurb(u)"></div>
+
+							<!-- Stats -->
+							<div class="grid grid-cols-2 gap-x-3 gap-y-1">
+								<div>
+									<span class="text-gray-600">Armor</span>
+									<span class="font-bold" x-text="br.total"></span>
+									<span class="text-gray-500"
+										  x-show="br.parts.length > 0 || br.total !== u.currentArmor"
+										  x-text="'(' + u.currentArmor + (br.parts.map(p => (p.value >= 0 ? ' +' : ' ') + p.value + ' ' + p.label).join('')) + ')'"></span>
+									<span class="text-red-700 ml-1" x-show="br.rerolled">[reroll: 0]</span>
+								</div>
+								<div>
+									<span class="text-gray-600">Attack</span>
+									<span class="font-bold" x-text="u.attack"></span>
+								</div>
+								<div x-show="u.range > 0">
+									<span class="text-gray-600">Range</span>
+									<span class="font-bold" x-text="u.range"></span>
+									<span class="text-gray-500" x-show="u.value === 2"> (LoS req.)</span>
+								</div>
+								<div>
+									<span class="text-gray-600">Move</span>
+									<span class="font-bold" x-text="u.distance"></span>
+								</div>
+							</div>
+
+							<!-- Movement pattern -->
+							<div class="text-gray-700" x-text="unitMovementText(u)"></div>
+
+							<!-- Status flags -->
+							<div x-show="flags.length > 0" class="border-t border-yellow-900 pt-1 space-y-1">
+								<template x-for="(f, idx) in flags" :key="idx">
+									<div :class="{'text-red-700': f.tone === 'warn', 'text-blue-800': f.tone === 'good', 'text-gray-700': f.tone === 'info'}">
+										<span x-text="f.icon"></span>
+										<span x-text="f.label"></span>
+									</div>
+								</template>
+							</div>
+
+							<!-- Terrain -->
+							<div class="border-t border-yellow-900 pt-1">
+								<span class="text-gray-600">Terrain:</span>
+								<span class="font-bold" x-text="terrain.name"></span>
+								<div class="text-gray-700" x-text="terrain.effect"></div>
+							</div>
+
+							<!-- Actions -->
+							<div class="border-t border-yellow-900 pt-1">
+								<div class="text-gray-600 mb-1">Actions:</div>
+								<div class="space-y-1">
+									<template x-for="(a, idx) in actions" :key="idx">
+										<div>
+											<span class="font-bold" x-text="a.name"></span>
+											<div class="text-gray-700" x-text="a.desc"></div>
+										</div>
+									</template>
+								</div>
+							</div>
+
+						</div>
+					</template>
+					</div>
+					<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
+				</div>
+			</template>
 		</div>
 	</div>
 
@@ -738,6 +917,15 @@
 			});
 		}
 	</script>
+
+	<!-- Cursor sprite follower -->
+	<template x-if="cursorSprite">
+		<img
+			:src="cursorSprite"
+			class="fixed pointer-events-none z-[9999]"
+			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 32px; height: 32px;`"
+		>
+	</template>
 </body>
 
 </html>
