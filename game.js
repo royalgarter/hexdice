@@ -212,7 +212,12 @@ function alpineHexDiceTacticGame() { return {
 			hex.terrainStyle = [
 				`background-color: unset;`,
 				`background-size: ${this.isCampaign ? 'cover' : '110%'};`,
-				`background-image: url("/assets/sprites/terrain/${this.terrainByType(type)}.png");`
+				`background-image:
+					${Number.isFinite(hex.basePlayerId)
+						? `url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif'), `
+						: ``
+					}
+					url("/assets/sprites/terrain/${this.terrainByType(type)}.png");`
 			].join(' ');
 		} else {
 			hex.terrainStyle = '';
@@ -1159,17 +1164,27 @@ function alpineHexDiceTacticGame() { return {
 		let gridWidth = maxX - minX + ADJUSTED_WIDTH;
 		let gridHeight = maxY - minY + ADJUSTED_HEIGHT; // Approx
 
-		if (typeof window !== 'undefined' && window.screen && !ratio) {
-			if (gridWidth > window.screen.width) {
-				return this.generateHexGrid(radius, padding, window.screen.width / gridWidth);
-			}
+		if (typeof window !== 'undefined' && !ratio) {
+			const viewWidth = window.innerWidth || (window.screen && window.screen.width);
+			const viewHeight = window.innerHeight || (window.screen && window.screen.height);
 
-			if (document.querySelectorAll('[id^="game-"]').length) {
-				let paddingHeight = [...document.querySelectorAll('[id^="game-"]')].reduce((a, v) => a + v.clientHeight, 0);
-				paddingHeight *= 2;
+			if (viewWidth && viewHeight) {
+				// Mobile/Portrait view: expand width to ~97%
+				if (viewHeight > viewWidth) {
+					return this.generateHexGrid(radius, padding, (viewWidth * 0.97) / gridWidth);
+				}
 
-				if (gridHeight < (window.screen.height - paddingHeight)) {
-					return this.generateHexGrid(radius, padding, (window.screen.height - paddingHeight) / gridHeight);
+				if (gridWidth > viewWidth) {
+					return this.generateHexGrid(radius, padding, viewWidth / gridWidth);
+				}
+
+				if (document.querySelectorAll('[id^="game-"]').length) {
+					let paddingHeight = [...document.querySelectorAll('[id^="game-"]')].reduce((a, v) => a + v.clientHeight, 0);
+					paddingHeight *= 2;
+
+					if (gridHeight < (viewHeight - paddingHeight)) {
+						return this.generateHexGrid(radius, padding, (viewHeight - paddingHeight) / gridHeight);
+					}
 				}
 			}
 		}
@@ -1288,9 +1303,9 @@ function alpineHexDiceTacticGame() { return {
 		// if (state.validTargetsSet?.has(hex.id)) cls += ' bg-hextarget';
 		// if (state.dangerHexes?.[hex.id]) cls += ' bg-hexdanger';
 
-		if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
-			cls = 'bg-hexdeploy';
-		}
+		// if (state.phase === 'SETUP_DEPLOY' && state.validDeploymentHexesSet?.has(hex.id)) {
+		// 	cls = 'bg-hexdeploy';
+		// }
 
 		let hovering = state.hovering;
 		if (hovering.hexId && (state.selectedUnitHexId != hovering.hexId)) {
@@ -1316,6 +1331,10 @@ function alpineHexDiceTacticGame() { return {
 		if (this.validTargetsSet?.has(hex.id)) filter += ' blur(1px)';
 		// if (this.dangerHexes?.[hex.id]) filter += ' contrast(0.5)';
 
+		if (this.phase === 'SETUP_DEPLOY' && this.validDeploymentHexesSet?.has(hex.id)) {
+			filter += ' sepia(1)';
+		}
+
 		if (filter?.length) style.push(`filter: ${filter};`);
 
 		if (unit) {
@@ -1325,6 +1344,10 @@ function alpineHexDiceTacticGame() { return {
 				`background-color: unset;`,
 				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, cover;`,
 				`background-image: url("${unitUrl}")
+					${hex.basePlayerId
+						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
+						: ``
+					}
 					${terrainStyle
 						? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
 						: ``
