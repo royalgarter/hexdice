@@ -130,7 +130,9 @@ function alpineHexDiceTacticGame() { return {
 	selectedUnitHexId: null,
 	selectedDieToDeploy: null, // index in player's dice array
 	hovering: {},
-	unitstat: null,
+	unitstat: null, // Pinned hex id for the unit info panel (set on click).
+	hoverUnitHexId: null, // Hex id under hover-with-delay; preview source when no pin.
+	_unitPanelHoverTimer: null,
 	trail: {fromHex: null, toHex: null, unit: null, path: []},
 	trailAttack: {fromHex: null, toHex: null, unit: null},
 	validMoves: [], // array of hex IDs
@@ -1821,7 +1823,6 @@ function alpineHexDiceTacticGame() { return {
 			// Note: performMove already calls endTurn in most cases
 		} else { // Normal selection mode
 			if (unitOnClickedHex) {
-				this.unitstat = unitOnClickedHex ? hexId : null;
 				if (unitOnClickedHex.playerId === this.currentPlayerIndex) this.selectUnit(hexId);
 				this.hoverHex(hexId);
 			} else if (this.selectedUnitHexId !== null) { // Clicked on empty or enemy hex while a unit is selected (implies move/attack intent)
@@ -1832,6 +1833,9 @@ function alpineHexDiceTacticGame() { return {
 				this.deselectUnit();
 			}
 		}
+
+		// Update unit info panel pin: any click on a unit pins it; click on empty hex clears.
+		this.unitstat = this.getUnitOnHex(hexId) ? hexId : null;
 	},
 	selectUnit(hexId, state) {
 		if (state) return;
@@ -3462,29 +3466,153 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {object} state - Optional game state for simulation
 	 * @returns {string} HTML-formatted unit stats
 	 */
-	calcUIDiceStat(hexId, state) {
-		// const FIELDS = 'id,name,armor,attack,range,distance,movement,armorReduction,effectiveArmor';
-		const FIELDS = {
-			id: 'ID',
-			name: 'Name',
-			attack: 'Attack',
-			armor: 'Armor',
-			armorReduction: 'Armor Reduction',
-			effectiveArmor: 'Effectice Armor',
-			distance: 'Movement',
-			range: 'Range',
+	// DEPRECATED: replaced by unit info panel (unitPanelData / unitPanelBreakdown / movementDescription).
+	// calcUIDiceStat(hexId, state) { ... }
+
+	/* --- UNIT INFO PANEL --- */
+	unitPanelHexId() {
+		return (this.unitstat != null) ? this.unitstat : this.hoverUnitHexId;
+	},
+	unitPanelHoverEnter(hexId) {
+		clearTimeout(this._unitPanelHoverTimer);
+		this._unitPanelHoverTimer = setTimeout(() => {
+			this.hoverUnitHexId = hexId;
+		}, 150);
+	},
+	unitPanelHoverLeave(hexId) {
+		clearTimeout(this._unitPanelHoverTimer);
+		if (this.hoverUnitHexId === hexId) this.hoverUnitHexId = null;
+	},
+	unitPanelBreakdown(unit, hex) {
+		// Mirrors calcDefenderEffectiveArmor (game.js:3356) but returns components for display.
+		// Does NOT mutate unit.effectiveArmor.
+		if (!unit || !hex) return null;
+		if (unit.isRerolled) {
+			return { base: unit.currentArmor, parts: [], total: 0, rerolled: true };
+		}
+		const parts = [];
+		let total = unit.currentArmor;
+		if (unit.isGuarding) {
+			parts.push({ label: unit.isGuarding == 2 ? 'shield' : 'guard', value: unit.isGuarding });
+			total += unit.isGuarding;
+		}
+		if (this.gameplayVersion !== 2 && unit.armorReduction) {
+			parts.push({ label: 'reduction', value: -unit.armorReduction });
+			total -= unit.armorReduction;
+		}
+		if (unit.isScarred) {
+			parts.push({ label: 'scarred', value: -1 });
+			total -= 1;
+		}
+		if (hex.terrainType === 'FOREST' || hex.terrainType === 'TOWER' || hex.terrainType === 'MOUNTAIN') {
+			parts.push({ label: hex.terrainType.toLowerCase(), value: +1 });
+			total += 1;
+		}
+		if (this.players[unit.playerId]?.baseHexId === hex.id) {
+			parts.push({ label: 'on base', value: +2 });
+			total += 2;
+		}
+		return { base: unit.currentArmor, parts, total: Math.max(0, total), rerolled: false };
+	},
+	unitMovementText(unit) {
+		if (!unit) return '';
+		const d = unit.distance;
+		switch (unit.movement) {
+			case '*': return d === 1
+				? 'Up to 1 hex, any direction.'
+				: `Up to ${d} hexes, any direction (BFS).`;
+			case 'L': return 'L-jump (2 straight + 1 offset). Can leap over units.';
+			case 'X': return `Up to ${d} hexes along six diagonals. Blocked by units.`;
+			default: return `Distance ${d}.`;
+		}
+	},
+	unitBlurb(unit) {
+		if (!unit) return '';
+		switch (unit.value) {
+			case 1: return 'Balanced melee all-rounder.';
+			case 2: return 'Ranged. Cannot shoot adjacent enemies (unless on Tower/Mountain). Long-range −1 atk.';
+			case 3: return 'Fast L-jumper. Leaps over units.';
+			case 4: return 'Diagonal striker. Movement blocked by units in path.';
+			case 5: return 'Heavy armor. V1: reflects melee when attacker is depleted while guarding.';
+			case 6: return 'Caster. Shield / Swap / Skirmish on friendlies in range 2. Cannot cast while engaged.';
+			default: return '';
+		}
+	},
+	unitStatusFlags(unit, hex) {
+		if (!unit || !hex) return [];
+		const flags = [];
+		if (unit.isRerolled) flags.push({ icon: 'R', label: 'Rerolled — 0 armor until next turn', tone: 'warn' });
+		if (unit.isGuarding == 2) flags.push({ icon: '⛨', label: 'Shielded (+2)', tone: 'good' });
+		else if (unit.isGuarding == 1) flags.push({ icon: '⛉', label: 'Guarding (+1)', tone: 'good' });
+		if (unit.skirmishBuff) flags.push({ icon: '⚔', label: 'Skirmish: −1 atk on next attack (range +1 for Archer)', tone: 'info' });
+		if (unit.isScarred) flags.push({ icon: '✗', label: 'Scarred (−1 armor)', tone: 'warn' });
+		if (this.isUnitEngaged(hex.id)) {
+			let label = 'Engaged with adjacent enemy';
+			if (unit.value === 2 && hex.terrainType !== 'TOWER' && hex.terrainType !== 'MOUNTAIN') label += ' — cannot ranged attack';
+			if (unit.value === 6 && hex.terrainType !== 'TOWER' && hex.terrainType !== 'MOUNTAIN') label += ' — cannot cast spells';
+			flags.push({ icon: '⚠', label, tone: 'warn' });
+		}
+		return flags;
+	},
+	unitActions(unit, hex) {
+		if (!unit || !hex) return [];
+		const actions = [];
+
+		actions.push({
+			name: 'Move',
+			desc: this.unitMovementText(unit) + ' Moving onto an enemy initiates melee combat.',
+		});
+
+		actions.push({
+			name: 'Guard',
+			desc: 'Gain 1 Shield Charge (+1 effective armor). Absorbs one incoming attack without taking armor reduction, then expires.',
+		});
+
+		if (this.players[unit.playerId]?.baseHexId === hex.id) {
+			actions.push({
+				name: 'Reroll',
+				desc: 'Reroll this die for a new unit type. Penalty: 0 effective armor until your next turn.',
+			});
+		}
+
+		if (unit.value === 2) {
+			actions.push({
+				name: 'Ranged Attack',
+				desc: 'Target an enemy 2 hexes away (requires line of sight). Cannot fire if engaged unless on Tower/Mountain. Range 3 with Skirmish/Mountain at −1 attack.',
+			});
+		}
+
+		if (unit.value === 6) {
+			actions.push({
+				name: 'Spell · Shield',
+				desc: 'Target friendly within range 2 gains 2 Guard Charges (+2 effective armor).',
+			});
+			actions.push({
+				name: 'Spell · Swap',
+				desc: 'Exchange positions with a friendly unit within range 2.',
+			});
+			actions.push({
+				name: 'Spell · Skirmish',
+				desc: 'Target friendly within range 2 gains Hit & Run on its next attack: −1 attack, win removes target and attacker picks any adjacent empty hex; tie/loss eliminates the attacker. Archer also gains +1 range.',
+			});
+			actions.push({
+				name: 'Transmute (last Oracle only)',
+				desc: 'Sacrifice this Oracle to convert an adjacent enemy. The new unit is rerolled and cannot act this turn.',
+			});
+		}
+
+		return actions;
+	},
+	unitTerrainText(hex) {
+		if (!hex) return { name: '', effect: '' };
+		const map = {
+			PLAIN: 'Open ground. No effect.',
+			FOREST: '+1 armor. Blocks line of sight.',
+			LAKE: 'Impassable.',
+			TOWER: '+1 armor. Archer can attack adjacent. Blocks LoS.',
+			MOUNTAIN: '+1 armor. Archer range extended (1–3). Movement cost ×2 (except Tanker). Blocks LoS.',
 		};
-
-		const unit = this.getUnitOnHex(hexId, state);
-
-		if (!unit || unit.isDeath) return '';
-
-		unit.effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state);
-
-		return Object.entries(unit)
-			.filter(([k ,v]) => Object.keys(FIELDS).includes(k))
-			.map(([k ,v]) => `${FIELDS[k]}: ${v}`)
-			.join('<br>');
+		return { name: hex.terrainType || 'PLAIN', effect: map[hex.terrainType] || map.PLAIN };
 	},
 	/**
 	 * Check if an attacker unit can attack a target unit.
