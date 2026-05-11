@@ -904,7 +904,15 @@ function alpineHexDiceTacticGame() { return {
 		const campaignData = opts?.campaignData;
 		this.campaignData = campaignData;
 		this.isCampaign = opts?.isCampaign ?? (CampaignManager.state.isCampaignActive || !!campaignData);
-		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || 4) : 99;
+		
+		// Crucible Scaling: Every 10 levels, enemy deployment limit increases by 1
+		let crucibleBonus = 0;
+		if (this.isCampaign) {
+			const currentLevel = CampaignManager.state.currentLevel;
+			crucibleBonus = Math.floor(currentLevel / 10);
+		}
+		
+		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || (3 + crucibleBonus)) : 99;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];
 		if (preset) {
@@ -985,6 +993,12 @@ function alpineHexDiceTacticGame() { return {
 					isDeath: false,
 					actionsTakenThisTurn: 0
 				};
+
+				// Tanker Tier 3 [A] Behemoth: Max HP is permanently doubled
+				if (val === 5 && upgrades.perks.tier3 === 'A') {
+					die.maxHP *= 2;
+				}
+
 				die.currentHP = die.maxHP;
 				die.currentArmor = die.armor;
 				die.armorReduction = 0;
@@ -2725,6 +2739,13 @@ function alpineHexDiceTacticGame() { return {
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
+		
+		// Oracle Potency: +5 DEF to Shield spell per devotion point in Offensive Path
+		if (this.isCampaign) {
+			const upgrades = CampaignManager.state.upgrades[6];
+			targetUnit.shieldBonus = upgrades.atk;
+		}
+
 		this.calcDefenderEffectiveArmor(targetHexId, state);
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
 	},
@@ -2775,6 +2796,13 @@ function alpineHexDiceTacticGame() { return {
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
+		
+		// Oracle Potency: +5 ATK to Skirmish buff per devotion point in Offensive Path
+		if (this.isCampaign) {
+			const upgrades = CampaignManager.state.upgrades[6];
+			targetUnit.potencyBonus = upgrades.atk;
+		}
+
 		this.calcDefenderEffectiveArmor(targetHexId, state);
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
