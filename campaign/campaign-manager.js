@@ -4,9 +4,14 @@
  */
 const CampaignManager = {
 	state: {
-		unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Consecutive uses
-		recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Level when unit becomes available again
-		// runes: { aegis: 2, pegasus: 1, forge: 1 },       // Inventory
+		activeSlot: 1,
+		slots: {
+			1: { name: 'Campaign 1', data: null },
+			2: null,
+			3: null
+		},
+		unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+		recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 		devotionPoints: 0,
 		upgrades: {
 			1: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
@@ -21,6 +26,40 @@ const CampaignManager = {
 	},
 
 	STORAGE_KEY: 'hexdice_campaign_state',
+
+	/**
+	 * Select an active save slot and load its data.
+	 */
+	selectSlot(slotId) {
+		this.state.activeSlot = slotId;
+		const slot = this.state.slots[slotId];
+		if (slot && slot.data) {
+			this.state = { ...this.state, ...slot.data };
+		} else {
+			// Initialize new slot if empty
+			this.resetCampaign();
+		}
+		this.save();
+	},
+
+	/**
+	 * Rename a campaign save slot.
+	 */
+	renameSlot(slotId, newName) {
+		if (this.state.slots[slotId]) {
+			this.state.slots[slotId].name = newName;
+			this.save();
+		}
+	},
+
+	/**
+	 * Delete a campaign save slot.
+	 */
+	deleteSlot(slotId) {
+		this.state.slots[slotId] = null;
+		this.save();
+	},
+
 
 	PERK_DESCRIPTIONS: {
 		1: {
@@ -153,6 +192,15 @@ const CampaignManager = {
 	 * Save the current campaign state to localStorage.
 	 */
 	save() {
+		// Update current slot with active state
+		if (this.state.activeSlot) {
+			const slotData = { ...this.state };
+			delete slotData.slots; // Prevent nested storage
+			this.state.slots[this.state.activeSlot] = {
+				name: this.state.slots[this.state.activeSlot]?.name || `Campaign ${this.state.activeSlot}`,
+				data: slotData
+			};
+		}
 		localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
 	},
 
