@@ -1087,7 +1087,7 @@ function alpineHexDiceTacticGame() { return {
 		this.messageLog = [];
 
 		if (this.debug?.autoPlay) {
-			this.players.forEach(this.setPlayerAI);
+			this.players.forEach(p => this.setPlayerAI(p));
 			this.addLog(`Autoplay game started`);
 		}
 
@@ -1686,7 +1686,7 @@ function alpineHexDiceTacticGame() { return {
 			this.startFatesCall();
 		} else {
 			if (this.players[this.currentPlayerIndex].isAI) {
-				this.addLog("[AI] P2 turn.");
+				this.addLog(`[AI] P${this.currentPlayerIndex + 1} turn.`);
 				this.performAITurn();
 			} else if (this.debug?.autoPlay) {
 				this.autoPlay();
@@ -1716,13 +1716,14 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
 
 		// Set all players as AI
-		this.players.forEach(this.setPlayerAI);
+		this.players.forEach(p => this.setPlayerAI(p));
 
 		// Roll initial dice for all players
 		this.players.forEach((p, i) => this.rollInitialDice(i));
 
 		// Deploy all dice randomly for all players
 		this.players.forEach((player, playerIdx) => {
+			this.currentPlayerIndex = playerIdx; // FIX: Ensure current player index matches loop
 			player.dice.forEach((dice, diceIdx) => {
 				const validHexes = this.calcValidDeploymentHexes(playerIdx);
 				if (validHexes.length > 0) {

@@ -171,6 +171,11 @@ const CampaignManager = {
 				}
 				if (this.state.devotionPoints === undefined) this.state.devotionPoints = 0;
 
+				// Ensure runes exist
+				if (!this.state.runes) {
+					this.state.runes = { aegis: 2, pegasus: 1, forge: 1 };
+				}
+
 				// Ensure recoveryLevels exists for backward compatibility
 				if (!this.state.recoveryLevels) {
 					this.state.recoveryLevels = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -284,10 +289,20 @@ const CampaignManager = {
 		this.save();
 	},
 
-	/*
-	// DEPRECATED: Use a rune from the inventory.
+	/**
+	 * Advance the campaign level and grant rewards.
+	 */
+	advanceLevel() {
+		this.state.currentLevel++;
+		this.state.devotionPoints++; // Grant 1 point per level
+		this.save();
+	},
+
+	/**
+	 * Use a rune from the inventory.
+	 */
 	consumeRune(runeType) {
-		if (this.state.runes[runeType] > 0) {
+		if (this.state.runes && this.state.runes[runeType] > 0) {
 			this.state.runes[runeType]--;
 			this.save();
 			return true;
@@ -295,15 +310,17 @@ const CampaignManager = {
 		return false;
 	},
 
-	// DEPRECATED: Grant rewards (runes) to the player's inventory.
+	/**
+	 * Grant rewards (runes) to the player's inventory.
+	 */
 	grantRewards(rewards) {
 		if (!rewards) return;
+		if (!this.state.runes) this.state.runes = { aegis: 0, pegasus: 0, forge: 0 };
 		for (const [type, count] of Object.entries(rewards)) {
 			this.state.runes[type] = (this.state.runes[type] || 0) + count;
 		}
 		this.save();
 	},
-	*/
 
 	/**
 	 * Perform campaign-specific combat calculations.
@@ -441,7 +458,7 @@ const CampaignManager = {
 	 * Reset the entire campaign (for "New Game" in campaign mode).
 	 */
 	resetCampaign() {
-		this.state = {
+		const newCampaignData = {
 			unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			runes: { aegis: 2, pegasus: 1, forge: 1 },
@@ -457,6 +474,13 @@ const CampaignManager = {
 			currentLevel: 1,
 			isCampaignActive: true
 		};
+
+		// Preserve slots and activeSlot
+		this.state = {
+			...this.state,
+			...newCampaignData
+		};
+
 		this.save();
 	},
 
