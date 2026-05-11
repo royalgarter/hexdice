@@ -471,6 +471,14 @@
 						<span style="top:0.25rem;right:0.8rem;" class="absolute text-red-900 font-bold"
 							x-show="hex.unit?.skirmishBuff">⚔
 						</span>
+
+						<!-- Campaign HP Bar -->
+						<div x-show="isCampaign && hex.unit" class="absolute left-1/2 -translate-x-1/2 bottom-1 w-8 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+							<div class="h-full bg-green-500 transition-all duration-300" 
+								:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
+								:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
+							</div>
+						</div>
 					</div>
 				</div>
 			</template>
@@ -572,6 +580,20 @@
 
 							<!-- Blurb -->
 							<div class="italic text-gray-700" x-text="unitBlurb(u)"></div>
+
+							<!-- HP for Campaign -->
+							<div x-show="isCampaign" class="border-t border-yellow-900 pt-1">
+								<div class="flex justify-between items-center mb-1">
+									<span class="text-gray-600 font-bold">HIT POINTS</span>
+									<span class="font-bold"><span x-text="u.currentHP"></span> / <span x-text="u.maxHP"></span></span>
+								</div>
+								<div class="w-full h-2 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+									<div class="h-full bg-green-500 transition-all duration-300" 
+										:style="'width: ' + (u.currentHP / u.maxHP * 100) + '%'"
+										:class="{'bg-yellow-500': u.currentHP / u.maxHP < 0.5, 'bg-red-500': u.currentHP / u.maxHP < 0.25}">
+									</div>
+								</div>
+							</div>
 
 							<!-- Stats -->
 							<div class="grid grid-cols-2 gap-x-3 gap-y-1">
@@ -737,6 +759,7 @@
 				<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
 					Level: <span x-text="campaignData?.level"></span>, <span class="cursor-none underline hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>
 				</p>
+				<button x-show="isCampaign && currentPlayerIndex === 0" @click="showCamp = true" class="mb-3 bg-amber-700 text-white px-3 py-1 rounded text-sm font-bold border-2 border-amber-900 shadow hover:bg-amber-800 uppercase tracking-tighter">Visit Camp (Upgrades)</button>
 				<!-- <p class="mb-2 text-sm font-bold" x-show="isCampaign && currentPlayerIndex === 0">
 					Units Deployed: <span x-text="players[0]?.dice?.filter(d => d.isDeployed)?.length || '0'"></span> / <span x-text="deploymentLimit"></span>
 				</p> -->
@@ -958,6 +981,89 @@
 			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 32px; height: 32px;`"
 		>
 	</template>
+
+	<!-- Devotion Menu (The Camp) -->
+	<div x-show="showCamp" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+		<div class="bg-wood border-4 border-amber-900 w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 relative rounded-lg shadow-2xl">
+			<button @click="showCamp = false" class="absolute top-4 right-4 text-2xl font-bold hover:text-red-700">✕</button>
+			
+			<div class="text-center mb-6">
+				<h2 class="text-3xl font-bold text-amber-950 uppercase tracking-widest">The Crucible Camp</h2>
+				<p class="text-amber-900 italic">"Steel and spirit, forged in devotions."</p>
+				<div class="mt-4 bg-amber-200 inline-block px-4 py-2 border-2 border-amber-900 rounded-full font-bold">
+					DEVOTION POINTS: <span x-text="CampaignManager.state.devotionPoints" class="text-2xl text-red-700"></span>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<template x-for="val in [1, 2, 3, 4, 5, 6]" :key="val">
+					<div class="bg-amber-100/50 border-2 border-amber-900 p-4 rounded flex flex-col shadow-inner">
+						<div class="flex items-center gap-3 mb-3 border-b border-amber-900 pb-2">
+							<span class="text-4xl" x-text="'⚀⚁⚂⚃⚄⚅'[val-1]"></span>
+							<div class="font-bold text-lg uppercase" x-text="UNIT_STATS[val].name"></div>
+						</div>
+
+						<!-- Stats -->
+						<div class="space-y-2 mb-4 text-sm">
+							<div class="flex justify-between items-center">
+								<span>Attack:</span>
+								<div class="flex items-center gap-2">
+									<span class="font-bold text-red-700" x-text="'+' + CampaignManager.state.upgrades[val].atk"></span>
+									<button @click="CampaignManager.spendDevotionPoint(val, 'atk')" class="bg-red-700 text-white px-2 py-0.5 rounded hover:bg-red-800 disabled:opacity-50 text-xs font-bold" :disabled="CampaignManager.state.devotionPoints <= 0 || CampaignManager.state.upgrades[val].points >= 15">+5</button>
+								</div>
+							</div>
+							<div class="flex justify-between items-center">
+								<span>Defense:</span>
+								<div class="flex items-center gap-2">
+									<span class="font-bold text-blue-700" x-text="'+' + CampaignManager.state.upgrades[val].def"></span>
+									<button @click="CampaignManager.spendDevotionPoint(val, 'def')" class="bg-blue-700 text-white px-2 py-0.5 rounded hover:bg-blue-800 disabled:opacity-50 text-xs font-bold" :disabled="CampaignManager.state.devotionPoints <= 0 || CampaignManager.state.upgrades[val].points >= 15">+5</button>
+								</div>
+							</div>
+							<div class="flex justify-between items-center">
+								<span>Max HP:</span>
+								<div class="flex items-center gap-2">
+									<span class="font-bold text-green-700" x-text="'+' + CampaignManager.state.upgrades[val].hp"></span>
+									<button @click="CampaignManager.spendDevotionPoint(val, 'hp')" class="bg-green-700 text-white px-2 py-0.5 rounded hover:bg-green-800 disabled:opacity-50 text-xs font-bold" :disabled="CampaignManager.state.devotionPoints <= 0 || CampaignManager.state.upgrades[val].points >= 15">+20</button>
+								</div>
+							</div>
+							<div class="text-center mt-2 font-bold bg-amber-900/10 rounded py-1">
+								INVESTED: <span x-text="CampaignManager.state.upgrades[val].points"></span> / 15
+							</div>
+						</div>
+
+						<!-- Perks -->
+						<div class="space-y-3 mt-auto pt-4 border-t border-amber-900/30">
+							<template x-for="tier in ['tier1', 'tier2', 'tier3']" :key="tier">
+								<div class="text-xs">
+									<div class="font-bold uppercase opacity-60" x-text="tier.replace('tier', 'Tier ')"></div>
+									<div class="flex gap-2 mt-1" x-show="CampaignManager.state.upgrades[val].points >= (tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)">
+										<template x-if="!CampaignManager.state.upgrades[val].perks[tier]">
+											<div class="flex w-full gap-2">
+												<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border border-amber-900 hover:bg-amber-900 hover:text-white p-1 rounded font-bold">PATH A</button>
+												<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border border-amber-900 hover:bg-amber-900 hover:text-white p-1 rounded font-bold">PATH B</button>
+											</div>
+										</template>
+										<template x-if="CampaignManager.state.upgrades[val].perks[tier]">
+											<div class="font-bold text-white bg-amber-900 w-full text-center py-1 rounded uppercase tracking-wider">
+												ACTIVE: <span x-text="CampaignManager.state.upgrades[val].perks[tier]"></span>
+											</div>
+										</template>
+									</div>
+									<div class="italic opacity-40 text-center" x-show="CampaignManager.state.upgrades[val].points < (tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)">
+										Locked (needs <span x-text="(tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)"></span> pts)
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
+				</template>
+			</div>
+
+			<div class="mt-8 text-center">
+				<button @click="showCamp = false" class="bg-amber-900 text-white px-10 py-4 rounded font-bold hover:bg-amber-800 uppercase tracking-widest shadow-xl transition-transform hover:scale-105 active:scale-95">Return to Journey</button>
+			</div>
+		</div>
+	</div>
 </body>
 
 </html>
