@@ -6,7 +6,7 @@ const CampaignManager = {
 	state: {
 		unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Consecutive uses
 		recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Level when unit becomes available again
-		runes: { aegis: 2, pegasus: 1, forge: 1 },       // Inventory
+		// runes: { aegis: 2, pegasus: 1, forge: 1 },       // Inventory
 		devotionPoints: 0,
 		upgrades: {
 			1: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
@@ -236,11 +236,8 @@ const CampaignManager = {
 		this.save();
 	},
 
-	/**
-	 * Use a rune from the inventory.
-	 * @param {string} runeType - 'aegis', 'pegasus', 'forge'.
-	 * @returns {boolean} True if the rune was successfully used.
-	 */
+	/*
+	// DEPRECATED: Use a rune from the inventory.
 	consumeRune(runeType) {
 		if (this.state.runes[runeType] > 0) {
 			this.state.runes[runeType]--;
@@ -250,10 +247,7 @@ const CampaignManager = {
 		return false;
 	},
 
-	/**
-	 * Grant rewards (runes) to the player's inventory.
-	 * @param {object} rewards - e.g., { aegis: 1, pegasus: 1 }.
-	 */
+	// DEPRECATED: Grant rewards (runes) to the player's inventory.
 	grantRewards(rewards) {
 		if (!rewards) return;
 		for (const [type, count] of Object.entries(rewards)) {
@@ -261,6 +255,7 @@ const CampaignManager = {
 		}
 		this.save();
 	},
+	*/
 
 	/**
 	 * Advance the current level in the campaign.

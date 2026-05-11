@@ -2992,6 +2992,23 @@ function alpineHexDiceTacticGame() { return {
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
 	},
+	performBraveCharge(attackerHexId, targetHexId, state) {
+		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
+		const defenderUnit = this.getUnitOnHex(targetHexId, state);
+		const attackerHex = this.getHex(attackerHexId, state);
+		const defenderHex = this.getHex(targetHexId, state);
+
+		if (!attackerUnit || !defenderUnit || !attackerHex || !defenderHex) {
+			this.addLog("Brave Charge failed: Invalid units or hexes.", state);
+			this.deselectUnit(state);
+			return;
+		}
+
+		if (attackerUnit.value !== 1) {
+			this.addLog("Brave Charge failed: Only Dice 1 units can perform this action.", state);
+			this.deselectUnit(state);
+			return;
+		}
 
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
 		if (distance !== 1) {
@@ -3333,7 +3350,6 @@ function alpineHexDiceTacticGame() { return {
 		tankerUnit.actionsTakenThisTurn++;
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
-	},
 	},
 	/**
 	 * Calculate valid moves for a unit.
@@ -4243,7 +4259,7 @@ function alpineHexDiceTacticGame() { return {
 				});
 			}
 
-			const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
+			// const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
 			if (defenderStillAlive) {
 				// Fencer Tier 2 [A] Riposte
 				if (combatType === 'MELEE' && defenderStillAlive.value === 1 && this.hasPerk(defenderStillAlive, 'tier2', 'A')) {
