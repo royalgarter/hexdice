@@ -258,17 +258,93 @@ const CampaignManager = {
 	*/
 
 	/**
-	 * Advance the current level in the campaign.
+	 * Perform campaign-specific combat calculations.
 	 */
-	advanceLevel() {
-		this.state.currentLevel++;
-		this.save();
+	performCampaignCombat(attacker, defender, distance, combatType, gameInstance, state) {
+		let attackMod = 0;
+		if (!!attacker.skirmishBuff) attackMod -= 10;
+		
+		// Archer Tier 1 [A] High Ground
+		if (attacker.value === 2 && distance === 3 && !gameInstance.hasPerk(attacker, 'tier1', 'A')) attackMod -= 10;
+		
+		// Hussar Tier 1 [A] Momentum
+		if (attacker.value === 3 && gameInstance.hasPerk(attacker, 'tier1', 'A') && distance === 3) attackMod += 20;
+
+		// Knight Tier 1 [A] Pincer Strike
+		if (attacker.value === 4 && gameInstance.hasPerk(attacker, 'tier1', 'A')) {
+			const defenderHex = gameInstance.getHex(defender.hexId, state);
+			const attackerHex = gameInstance.getHex(attacker.hexId, state);
+			const oppQ = defenderHex.q + (defenderHex.q - attackerHex.q);
+			const oppR = defenderHex.r + (defenderHex.r - attackerHex.r);
+			const oppHex = gameInstance.getHexByQR(oppQ, oppR, state);
+			const friend = oppHex ? gameInstance.getUnitOnHex(oppHex.id, state) : null;
+			if (friend && friend.playerId === attacker.playerId) {
+				attackMod += 20;
+				gameInstance.addLog(`⚔️ Pincer Strike! +20 damage.`);
+			}
+		}
+
+		// Fencer Tier 1 [B] Lunge
+		if (gameInstance.hasPerk(attacker, 'tier1', 'B') && defender.currentHP >= defender.maxHP) {
+			attackMod += 15;
+		}
+
+		// Archer Tier 3 [A] Sniper (Stay still bonus)
+		if (attacker.value === 2 && gameInstance.hasPerk(attacker, 'tier3', 'A') && attacker.actionsTakenThisTurn === 0) {
+			attackMod += 30;
+		}
+
+		const attackerAtk = attacker.attack + attackMod;
+		let defenderDef = gameInstance.calcDefenderEffectiveArmor(defender.hexId, state);
+		
+		// Archer Tier 2 [A] Piercing Arrow
+		if (attacker.value === 2 && gameInstance.hasPerk(attacker, 'tier2', 'A')) {
+			defenderDef = Math.floor(defenderDef * 0.7);
+		}
+
+		let damage = 40 + (attackerAtk - defenderDef);
+		
+		// Fencer Tier 2 [B] Flurry
+		const minDamage = (attacker.value === 1 && gameInstance.hasPerk(attacker, 'tier2', 'B')) ? 25 : 10;
+		damage = Math.max(minDamage, damage);
+
+		gameInstance.addLog(`⚔️ ${gameInstance.logUnit(attacker)} deals ${damage} damage to ${gameInstance.logUnit(defender)}!`);
+		gameInstance.applyDamage(defender.hexId, damage, state);
+		return damage;
 	},
 
 	/**
-	 * Get the map filename for the current or next level.
-	 * @returns {string} e.g., 'level1.json'.
+	 * Get the campaign deployment limit based on current level and crucible bonuses.
 	 */
+	getDeploymentLimit(baseLimit) {
+		if (!this.state.isCampaignActive) return 99;
+		const crucibleBonus = Math.floor((this.state.currentLevel - 1) / 10);
+		return (baseLimit || 3) + crucibleBonus;
+	},
+
+	/**
+	 * Check if a player index should be AI based on current campaign state.
+	 */
+	isAIPlayer(playerIndex, opts, campaignData) {
+		return playerIndex > 0 && (opts?.isCampaign || this.state.isCampaignActive || campaignData?.config?.p2AI);
+	},
+
+	/**
+	 * Check if a player needs an initial roll.
+	 */
+	isAIPlayer(playerIndex, opts, campaignData) {
+		return playerIndex > 0 && (opts?.isCampaign || this.state.isCampaignActive || campaignData?.config?.p2AI);
+	},
+
+	needsInitialRoll(playerIndex, campaignData) {
+		if (!this.state.isCampaignActive) return false;
+		return (playerIndex === 0) || (playerIndex === 1 && !!campaignData);
+	},
+
+	canTraverseLake() {
+		return !!this.state.isCampaignActive;
+	},
+	
 	getCurrentMapName() {
 		return `level${this.state.currentLevel}.json`;
 	},

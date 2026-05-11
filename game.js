@@ -906,16 +906,9 @@ function alpineHexDiceTacticGame() { return {
 		this.isCampaign = opts?.isCampaign ?? (CampaignManager.state.isCampaignActive || !!campaignData);
 		
 		// Crucible Scaling: Every 10 levels, enemy deployment limit increases by 1
-		let crucibleBonus = 0;
-		if (this.isCampaign) {
-			const currentLevel = CampaignManager.state.currentLevel;
-			crucibleBonus = Math.floor(currentLevel / 10);
-		}
-		
-		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || (3 + crucibleBonus)) : 99;
+		this.deploymentLimit = CampaignManager.getDeploymentLimit(campaignData?.deploymentLimit || opts?.deploymentLimit);
 
-		const preset = this.preset && EPIC_PRESETS[this.preset];
-		if (preset) {
+		const preset = this.preset && EPIC_PRESETS[this.preset];		if (preset) {
 			this.rules.dicePerPlayer = preset.dice.length;
 			this.rules.noReroll = preset.noReroll;
 			this.addLog(`Applying preset: ${preset.name}`);
@@ -928,7 +921,7 @@ function alpineHexDiceTacticGame() { return {
 		const usedSkins = new Set();
 
 		for (let i = 0; i < this.playerCount; i++) {
-			const isAI = (i > 0 && (opts?.isCampaign || this.isCampaign || campaignData?.config?.p2AI));
+			const isAI = CampaignManager.isAIPlayer(i, opts, campaignData);
 			let selectedSkin = '';
 
 			if (isAI && this.spriteSets.length > 0) {
@@ -936,7 +929,7 @@ function alpineHexDiceTacticGame() { return {
 				if (availableSkins.length > 0) {
 					let ro_skins = availableSkins.filter(x => x.includes('ro_'));
 
-					if (this.isCampaign && campaignData?.rmi) {
+					if (CampaignManager.state.isCampaignActive && campaignData?.rmi) {
 						let words = campaignData.rmi.split('.')?.[0]?.replace(/\d/g, '')?.split('_');
 						let ro_rmi_skins = words?.length
 							? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
@@ -953,7 +946,7 @@ function alpineHexDiceTacticGame() { return {
 			this.players.push({
 				...PLAYER_CONFIG[i],
 				dice: [],
-				initialRollDone: (i === 0 && this.isCampaign) || (i === 1 && !!campaignData), // P1 is pre-rolled in campaign, P2 is too if JSON
+				initialRollDone: CampaignManager.needsInitialRoll(i, campaignData), // P1 is pre-rolled in campaign, P2 is too if JSON
 				baseHexId: null,
 				rerollsUsed: 0,
 				isEliminated: false,
@@ -3523,7 +3516,7 @@ function alpineHexDiceTacticGame() { return {
 
 		// In Campaign Mode, LAKE is temporarily considered passable with movement cost = 2
 		possibleMoves = [...new Set(possibleMoves.filter(x => x))];
-		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || this.isCampaign);
+		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || CampaignManager.canTraverseLake());
 
 		// Filter based on target: empty or enemy (for move), or friendly (for merge)
 		return possibleMoves.filter(hexId => {
@@ -4157,53 +4150,7 @@ function alpineHexDiceTacticGame() { return {
 		this.trailSpell = {};
 
 		if (this.isCampaign) {
-			let attackMod = 0;
-			if (isSkirmishing) attackMod -= 10;
-			
-			// Archer Tier 1 [A] High Ground
-			if (attackerUnit.value === 2 && distance === 3 && !this.hasPerk(attackerUnit, 'tier1', 'A')) attackMod -= 10;
-			
-			// Hussar Tier 1 [A] Momentum
-			if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier1', 'A') && distance === 3) attackMod += 20;
-
-			// Knight Tier 1 [A] Pincer Strike
-			if (attackerUnit.value === 4 && this.hasPerk(attackerUnit, 'tier1', 'A')) {
-				const oppQ = defenderHex.q + (defenderHex.q - attackerHex.q);
-				const oppR = defenderHex.r + (defenderHex.r - attackerHex.r);
-				const oppHex = this.getHexByQR(oppQ, oppR, state);
-				const friend = oppHex ? this.getUnitOnHex(oppHex.id, state) : null;
-				if (friend && friend.playerId === attackerUnit.playerId) {
-					attackMod += 20;
-					this.addLog(`⚔️ Pincer Strike! +20 damage.`);
-				}
-			}
-
-			// Fencer Tier 1 [B] Lunge
-			if (this.hasPerk(attackerUnit, 'tier1', 'B') && defenderUnit.currentHP >= defenderUnit.maxHP) {
-				attackMod += 15;
-			}
-
-			// Archer Tier 3 [A] Sniper (Stay still bonus)
-			if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier3', 'A') && attackerUnit.actionsTakenThisTurn === 0) {
-				attackMod += 30;
-			}
-
-			const attackerAtk = attackerUnit.attack + attackMod;
-			let defenderDef = this.calcDefenderEffectiveArmor(defenderHexId, state);
-			
-			// Archer Tier 2 [A] Piercing Arrow
-			if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier2', 'A')) {
-				defenderDef = Math.floor(defenderDef * 0.7);
-			}
-
-			let damage = 40 + (attackerAtk - defenderDef);
-			
-			// Fencer Tier 2 [B] Flurry
-			const minDamage = (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier2', 'B')) ? 25 : 10;
-			damage = Math.max(minDamage, damage);
-
-			this.addLog(`⚔️ ${this.logUnit(attackerUnit)} deals ${damage} damage to ${this.logUnit(defenderUnit)}!`);
-			this.applyDamage(defenderHexId, damage, state);
+			const damage = CampaignManager.performCampaignCombat(attackerUnit, defenderUnit, distance, combatType, this, state);
 
 			const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
 
