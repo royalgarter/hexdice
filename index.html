@@ -1039,13 +1039,22 @@
 									<div class="flex gap-2 mt-1" x-show="CampaignManager.state.upgrades[val].points >= (tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)">
 										<template x-if="!CampaignManager.state.upgrades[val].perks[tier]">
 											<div class="flex w-full gap-2">
-												<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border border-amber-900 hover:bg-amber-900 hover:text-white p-1 rounded font-bold">PATH A</button>
-												<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border border-amber-900 hover:bg-amber-900 hover:text-white p-1 rounded font-bold">PATH B</button>
+												<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border border-amber-900 hover:bg-amber-900 hover:text-white p-1 rounded group relative">
+													<div class="font-bold">PATH A</div>
+													<div class="text-[10px] leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
+													<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 rounded text-[10px] w-40 -top-16 left-1/2 -translate-x-1/2 shadow-xl border border-white/20" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
+												</button>
+												<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border border-amber-900 hover:bg-amber-900 hover:text-white p-1 rounded group relative">
+													<div class="font-bold">PATH B</div>
+													<div class="text-[10px] leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
+													<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 rounded text-[10px] w-40 -top-16 left-1/2 -translate-x-1/2 shadow-xl border border-white/20" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
+												</button>
 											</div>
 										</template>
 										<template x-if="CampaignManager.state.upgrades[val].perks[tier]">
-											<div class="font-bold text-white bg-amber-900 w-full text-center py-1 rounded uppercase tracking-wider">
-												ACTIVE: <span x-text="CampaignManager.state.upgrades[val].perks[tier]"></span>
+											<div class="bg-amber-900 text-white p-1 rounded w-full text-center">
+												<div class="font-bold uppercase tracking-wider text-[10px]" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].name"></div>
+												<div class="text-[9px] leading-tight opacity-90" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].desc"></div>
 											</div>
 										</template>
 									</div>

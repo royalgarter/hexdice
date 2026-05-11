@@ -2109,6 +2109,13 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
+		// Tanker Magnetic Pull
+		if (action === 'MAGNETIC_PULL_TARGET') {
+			this.performMagneticPull(this.selectedUnitHexId, targetHexId);
+			this._endTurn();
+			return;
+		}
+
 		// Oracle Transmute
 		if (action === 'SPELLCAST_SACRIFICE' && this.validTargets.includes(targetHexId)) {
 			this.performOracleTransmute(this.selectedUnitHexId, targetHexId);
@@ -2211,6 +2218,8 @@ function alpineHexDiceTacticGame() { return {
 			case 'RANGED_ATTACK': return unit.value === 2;
 			case 'SPECIAL_ATTACK': return unit.value === 6;
 			case 'BRAVE_CHARGE': return unit.value === 1;
+			case 'MAGNETIC_PULL': return unit.value === 5 && this.hasPerk(unit, 'tier1', 'B');
+			case 'DREADNOUGHT_OVERLOAD': return unit.value === 5 && this.hasPerk(unit, 'tier3', 'B');
 			case 'MERGE': return this.options.includes('m');
 			case 'SPELLCAST_SACRIFICE':
 				// Oracle can transmute any adjacent enemy unit
@@ -2233,9 +2242,15 @@ function alpineHexDiceTacticGame() { return {
 			case 'GUARD':
 				this.performGuard(unitHexId);
 				break;
+			case 'MAGNETIC_PULL':
+				// Handled by `initiateAction` through target selection
+				break;
+			case 'DREADNOUGHT_OVERLOAD':
+				this.performDreadnoughtOverload(unitHexId);
+				break;
 			// Other actions are initiated via `initiateAction`
 		}
-		// `initiateAction` handles MOVE, RANGED_ATTACK, SPECIAL_ATTACK, MERGE
+		// `initiateAction` handles MOVE, RANGED_ATTACK, SPECIAL_ATTACK, MERGE, MAGNETIC_PULL
 
 		this._endTurn();
 	},
@@ -2286,6 +2301,17 @@ function alpineHexDiceTacticGame() { return {
 			unit.hexId = toHex.id;
 			this.trail.toHex = state ? null : toHex;
 			this.calcDefenderEffectiveArmor(toHex.id, state);
+
+			// Hussar Tier 3 [A] Dragoon: Impact Landing
+			if (unit.value === 3 && this.hasPerk(unit, 'tier3', 'A') && unit.stepsMoved === 3) {
+				this.getNeighbors(toHex, state).forEach(neighbor => {
+					const target = this.getUnitOnHex(neighbor.id, state);
+					if (target && target.playerId !== unit.playerId) {
+						this.addLog(`💥 Dragoon! ${this.logUnit(unit)} deals 20 impact damage to ${this.logUnit(target)}.`);
+						this.applyDamage(neighbor.id, 20, state);
+					}
+				});
+			}
 		}
 
 		if (state) return;
@@ -2548,12 +2574,19 @@ function alpineHexDiceTacticGame() { return {
 		this.checkWinConditions(state);
 	},
 	performRangedAttack(attackerHexId, targetHexId, state) {
-		// this.addLog(`Dice 5 at (${this.getHex(attackerHexId, state).q},${this.getHex(attackerHexId, state).r}) performs Ranged Attack on unit at (${this.getHex(targetHexId, state).q},${this.getHex(targetHexId, state).r}).`, state);
+		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
+
+		// Tanker Tier 2 [B] Heavy Ordinance
+		if (attackerUnit && attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier2', 'B')) {
+			attackerUnit.currentHP = Math.max(1, attackerUnit.currentHP - 10);
+			this.addLog(`💣 Heavy Ordinance! ${this.logUnit(attackerUnit)} fires at the cost of 10 HP.`);
+		}
+
 		this.handleCombat(attackerHexId, targetHexId, 'RANGED_ATTACK', state);
-		const attackerUnit = this.getUnitOnHex(attackerHexId, state); // Attacker stays on its hex for ranged
-		if (attackerUnit) {
-			attackerUnit.hasMovedOrAttackedThisTurn = true;
-			attackerUnit.actionsTakenThisTurn++;
+		const attackerUnitRef = this.getUnitOnHex(attackerHexId, state); // Attacker stays on its hex for ranged
+		if (attackerUnitRef) {
+			attackerUnitRef.hasMovedOrAttackedThisTurn = true;
+			attackerUnitRef.actionsTakenThisTurn++;
 		}
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
@@ -2812,6 +2845,12 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {number} targetHexId - Hex ID of the enemy unit to transmute
 	 * @param {object} state - Optional game state for simulation
 	 */
+	/**
+	 * Perform Oracle Transmute action - Oracle sacrifices itself to convert an adjacent enemy unit.
+	 * @param {number} oracleHexId - Hex ID of the sacrificing Oracle
+	 * @param {number} targetHexId - Hex ID of the enemy unit to transmute
+	 * @param {object} state - Optional game state for simulation
+	 */
 	performOracleTransmute(oracleHexId, targetHexId, state) {
 		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
 		const targetUnit = this.getUnitOnHex(targetHexId, state);
@@ -2834,22 +2873,35 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		// Both units are removed
-		oracleUnit.isDeath = true;
-		targetUnit.isDeath = true;
-		oracleHex.unit = null;
-		oracleHex.unitId = null;
-		targetHex.unit = null;
-		targetHex.unitId = null;
-
-		this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to transmute P${targetUnit.playerId+1} D${targetUnit.value}!`, state);
+		// Oracle T3 [B] Warlock: Does not kill Oracle, costs 80 HP
+		const isWarlock = this.hasPerk(oracleUnit, 'tier3', 'B');
+		if (isWarlock) {
+			if (oracleUnit.currentHP <= 80) {
+				this.addLog("Transmute failed: Not enough HP for Warlock spell.");
+				return;
+			}
+			oracleUnit.currentHP -= 80;
+			targetUnit.isDeath = true;
+			targetHex.unit = null;
+			targetHex.unitId = null;
+			this.addLog(`🧪 Warlock! ${this.logUnit(oracleUnit)} spends 80 HP to transmute enemy.`);
+		} else {
+			// Standard sacrifice
+			oracleUnit.isDeath = true;
+			oracleHex.unit = null;
+			oracleHex.unitId = null;
+			targetUnit.isDeath = true;
+			targetHex.unit = null;
+			targetHex.unitId = null;
+			this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to transmute P${targetUnit.playerId+1} D${targetUnit.value}!`, state);
+		}
 
 		// Try to find a reserve die for the player (prefer unused, then dead)
 		const player = (state || this).players[oracleUnit.playerId];
 		let reserveDie = player.dice.find(d => !d.isDeployed && !d.isDeath);
 
 		if (!reserveDie) {
-			reserveDie = player.dice.find(d => d.isDeath);
+			reserveDie = player.dice.find(d => d.isDeath && d.value !== 6);
 		}
 
 		if (reserveDie) {
@@ -2861,7 +2913,6 @@ function alpineHexDiceTacticGame() { return {
 			targetHex.unitId = reserveDie.id;
 
 			// Reroll the new unit
-			const oldVal = reserveDie.value;
 			const newRoll = Math.floor(Math.random() * 6) + 1;
 			reserveDie.value = newRoll;
 
@@ -2878,9 +2929,15 @@ function alpineHexDiceTacticGame() { return {
 			reserveDie.hasMovedOrAttackedThisTurn = true; // Cannot act this turn
 			reserveDie.spriteUrl = this.getUnitSpriteUrl(reserveDie);
 
-			this.addLog(`Transmutation complete! P${oracleUnit.playerId+1} sacrificed Oracle to convert enemy. New P${oracleUnit.playerId+1} D${newRoll} created at [${targetHexId}].`, state);
+			// Warlock perk: melts in 3 turns
+			if (isWarlock) {
+				reserveDie.isMelting = 3;
+				this.addLog(`🔥 Converted unit melts in 3 turns.`);
+			}
+
+			this.addLog(`Transmutation complete! New P${oracleUnit.playerId+1} D${newRoll} created at [${targetHexId}].`, state);
 		} else {
-			this.addLog(`Transmutation failed: No dice available for P${oracleUnit.playerId+1} to inhabit.`, state);
+			this.addLog(`Transmutation failed: No dice available.`, state);
 		}
 
 		oracleUnit.hasMovedOrAttackedThisTurn = true;
@@ -2888,23 +2945,53 @@ function alpineHexDiceTacticGame() { return {
 		this.deselectUnit(state);
 		this.checkWinConditions(state);
 	},
-	performBraveCharge(attackerHexId, targetHexId, state) {
-		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
-		const defenderUnit = this.getUnitOnHex(targetHexId, state);
-		const attackerHex = this.getHex(attackerHexId, state);
-		const defenderHex = this.getHex(targetHexId, state);
 
-		if (!attackerUnit || !defenderUnit || !attackerHex || !defenderHex) {
-			this.addLog("Brave Charge failed: Invalid units or hexes.", state);
-			this.deselectUnit(state);
-			return;
-		}
+	/**
+	 * Perform Oracle Resurrection action.
+	 */
+	performOracleResurrection(oracleHexId, targetHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+		if (!oracleUnit || !targetHex || targetHex.unitId) return;
 
-		if (attackerUnit.value !== 1) {
-			this.addLog("Brave Charge failed: Only Dice 1 units can perform this action.", state);
-			this.deselectUnit(state);
-			return;
+		// Once per game
+		if (oracleUnit.resurrectUsed) return;
+		oracleUnit.resurrectUsed = true;
+
+		const player = (state || this).players[oracleUnit.playerId];
+		let deadDie = player.dice.find(d => d.isDeath && d.value !== 6);
+
+		if (deadDie) {
+			deadDie.isDeath = false;
+			deadDie.isDeployed = true;
+			deadDie.hexId = targetHexId;
+			deadDie.currentHP = Math.floor(deadDie.maxHP * 0.5);
+			targetHex.unit = deadDie;
+			targetHex.unitId = deadDie.id;
+			this.addLog(`✨ Resurrection! ${this.logUnit(deadDie)} is revived at ${targetHexId}.`);
 		}
+	},
+	/**
+	 * Perform Dreadnought Overload (Self-destruct AOE).
+	 */
+	performDreadnoughtOverload(unitHexId, state) {
+		const unit = this.getUnitOnHex(unitHexId, state);
+		const hex = this.getHex(unitHexId, state);
+		if (!unit || !hex) return;
+
+		const damage = unit.currentHP;
+		this.addLog(`☢️ Dreadnought Overload! ${this.logUnit(unit)} self-destructs for ${damage} damage!`);
+
+		this.getNeighbors(hex, state).forEach(n => {
+			if (n && n.unitId) {
+				this.applyDamage(n.id, damage, state);
+			}
+		});
+
+		this.removeUnit(unitHexId, state);
+		this.deselectUnit(state);
+		this.checkWinConditions(state);
+	},
 
 		const distance = this.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
 		if (distance !== 1) {
@@ -2977,6 +3064,11 @@ function alpineHexDiceTacticGame() { return {
 		// Archer Tier 3 [A] Sniper: Range increases to 3
 		if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
 			maxRange = 3;
+		}
+
+		// Tanker Tier 2 [B] Heavy Ordinance: Range 2 attack
+		if (attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier2', 'B')) {
+			maxRange = 2;
 		}
 
 		// Ensure Archer max range does not exceed 3
@@ -3082,6 +3174,10 @@ function alpineHexDiceTacticGame() { return {
 
 			const intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
 			if (intermediateUnit && !intermediateUnit.isDeath) {
+				// Behemoth (Tanker Tier 3A) blocks LoS
+				if (intermediateUnit.value === 5 && this.hasPerk(intermediateUnit, 'tier3', 'A')) {
+					return false;
+				}
 				return false; // Blocked by unit
 			}
 		}
@@ -3181,23 +3277,63 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {object} state - Optional game state for simulation
 	 * @returns {number[]} Array of valid target hex IDs
 	 */
-	calcValidSacrificeTargets(oracleHexId, state) {
-		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
-		const oracleHex = this.getHex(oracleHexId, state);
-
-		if (!oracleUnit || oracleUnit.value !== 6 || !oracleHex) return [];
+	/**
+	 * Calculate valid targets for Magnetic Pull.
+	 */
+	calcValidMagneticTargets(tankerHexId, state) {
+		const unit = this.getUnitOnHex(tankerHexId, state);
+		const hex = this.getHex(tankerHexId, state);
+		if (!unit || unit.value !== 5 || !hex) return [];
 
 		let targets = [];
-		this.getNeighbors(oracleHex, state).forEach(neighborHex => {
-			if (!neighborHex) return;
+		(state || this).hexes.forEach(h => {
+			if (!h || h.id === tankerHexId) return;
+			const dist = this.axialDistance(hex.q, hex.r, h.q, h.r);
+			if (dist <= 2) {
+				const target = this.getUnitOnHex(h.id, state);
+				if (target && target.playerId !== unit.playerId) {
+					targets.push(h.id);
+				}
+			}
+		});
+		return targets;
+	},
 
-			const targetUnit = this.getUnitOnHex(neighborHex.id, state);
-			if (targetUnit && targetUnit.playerId !== oracleUnit.playerId) {
-				targets.push(neighborHex.id);
+	/**
+	 * Perform Magnetic Pull.
+	 */
+	performMagneticPull(tankerHexId, targetHexId, state) {
+		const tankerUnit = this.getUnitOnHex(tankerHexId, state);
+		const targetUnit = this.getUnitOnHex(targetHexId, state);
+		const tankerHex = this.getHex(tankerHexId, state);
+		const targetHex = this.getHex(targetHexId, state);
+
+		if (!tankerUnit || !targetUnit || !tankerHex || !targetHex) return;
+
+		// Find adjacent hex closest to tanker
+		let bestHex = null;
+		let minDistance = 99;
+		this.getNeighbors(tankerHex, state).forEach(n => {
+			if (!n || this.getUnitOnHex(n.id, state)) return;
+			const dist = this.axialDistance(n.q, n.r, targetHex.q, targetHex.r);
+			if (dist < minDistance) {
+				minDistance = dist;
+				bestHex = n;
 			}
 		});
 
-		return targets;
+		if (bestHex) {
+			this.move(targetUnit, targetHex, bestHex, state);
+			this.addLog(`🧲 ${this.logUnit(tankerUnit)} pulled ${this.logUnit(targetUnit)}!`);
+		} else {
+			this.addLog(`🧲 Pull failed: No adjacent empty hexes.`);
+		}
+
+		tankerUnit.hasMovedOrAttackedThisTurn = true;
+		tankerUnit.actionsTakenThisTurn++;
+		this.deselectUnit(state);
+		this.checkWinConditions(state);
+	},
 	},
 	/**
 	 * Calculate valid moves for a unit.
@@ -4173,8 +4309,13 @@ function alpineHexDiceTacticGame() { return {
 				// Deflected
 				this.addLog(`Attack deflected!`);
 				if (combatRoll === 1) {
-					this.addLog(`FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
-					this.removeUnit(attackerHexId, state);
+					// Behemoth (Tanker Tier 3A) immunity to fumbles
+					if (attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
+						this.addLog(`🛡️ Behemoth! Immune to Fumble.`);
+					} else {
+						this.addLog(`FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
+						this.removeUnit(attackerHexId, state);
+					}
 				} else if (isSkirmishing) {
 					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} eliminated.`);
 					this.removeUnit(attackerHexId, state);
@@ -4404,6 +4545,17 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog(`🐍 ${this.logUnit(die)} takes 10 venom damage.`);
 				this.applyDamage(die.hexId, 10, state);
 				die.venomDuration--;
+			}
+
+			// Warlock perk: melting converted units
+			if (die.isMelting && die.isMelting > 0) {
+				die.isMelting--;
+				if (die.isMelting === 0) {
+					this.addLog(`🔥 ${this.logUnit(die)} melted away.`);
+					this.removeUnit(die.hexId, state);
+				} else {
+					this.addLog(`🔥 ${this.logUnit(die)} is melting! (${die.isMelting} turns left)`);
+				}
 			}
 
 			if(die.isDeployed && !die.isDeath) {

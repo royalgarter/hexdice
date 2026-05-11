@@ -22,6 +22,93 @@ const CampaignManager = {
 
 	STORAGE_KEY: 'hexdice_campaign_state',
 
+	PERK_DESCRIPTIONS: {
+		1: {
+			tier1: {
+				A: { name: "Parry", desc: "Negates the first 15 damage taken each round." },
+				B: { name: "Lunge", desc: "Deals +15 damage if attacking an enemy currently at full HP." }
+			},
+			tier2: {
+				A: { name: "Riposte", desc: "After surviving a melee hit, instantly deals 50% of its ATK back to the attacker." },
+				B: { name: "Flurry", desc: "Minimum chip damage increased from 10 to 25." }
+			},
+			tier3: {
+				A: { name: "Paladin", desc: "Heals all adjacent friendly units for 20 HP whenever it deals damage." },
+				B: { name: "Blademaster", desc: "Max move +1. Can move 1 step after attacking." }
+			}
+		},
+		2: {
+			tier1: {
+				A: { name: "High Ground", desc: "Ignores the extra-range attack penalty." },
+				B: { name: "Point Blank", desc: "Can shoot even if an enemy is adjacent." }
+			},
+			tier2: {
+				A: { name: "Piercing Arrow", desc: "Ranged attacks ignore 30% of target DEF." },
+				B: { name: "Venom Tipped", desc: "Targets hit lose 10 HP at the start of their next 2 turns." }
+			},
+			tier3: {
+				A: { name: "Sniper", desc: "Base Range +1. If it doesn't move before attacking, deals +30 damage." },
+				B: { name: "Ranger", desc: "Run & Gun: Can move 1 step, shoot, and move 1 step again." }
+			}
+		},
+		3: {
+			tier1: {
+				A: { name: "Momentum", desc: "Gains +20 ATK if it moves its maximum (3 steps) before attacking." },
+				B: { name: "Evasion", desc: "Takes 50% less damage from Ranged attacks." }
+			},
+			tier2: {
+				A: { name: "Hit & Run", desc: "After a kill, may immediately jump 1 step in any direction." },
+				B: { name: "Trample", desc: "Moving through an enemy deals 15 flat damage to them." }
+			},
+			tier3: {
+				A: { name: "Dragoon", desc: "Impact Landing: All adjacent enemies take 20 damage when landing a jump." },
+				B: { name: "Windrider", desc: "Refunds action once per turn after a kill." }
+			}
+		},
+		4: {
+			tier1: {
+				A: { name: "Pincer Strike", desc: "+20 Damage if a friendly unit is on the opposite hex of target." },
+				B: { name: "Joust", desc: "Pushes enemy 1 hex back. Deals +15 damage if push is blocked." }
+			},
+			tier2: {
+				A: { name: "Bulwark", desc: "Gains +20 DEF for the round after moving 2+ steps." },
+				B: { name: "Vanguard", desc: "Adjacent enemies have -10 ATK against other targets." }
+			},
+			tier3: {
+				A: { name: "Templar", desc: "Aura: Allies in the Knight's 6-diagonal path gain +15 DEF." },
+				B: { name: "Dark Knight", desc: "Lifesteal: Heals for 50% of damage dealt." }
+			}
+		},
+		5: {
+			tier1: {
+				A: { name: "Spiked Armor", desc: "Reflected damage penalty deals an extra 15 flat damage." },
+				B: { name: "Magnetic", desc: "Action: Pull an enemy within Range 2 into an adjacent hex." }
+			},
+			tier2: {
+				A: { name: "Entrench", desc: "Heals 20 HP and gains +15 DEF if it Guards without moving." },
+				B: { name: "Heavy Ordinance", desc: "Gains Range 2 attack, but costs the Tanker 10 HP to use." }
+			},
+			tier3: {
+				A: { name: "Behemoth", desc: "Blocks Line of Sight. Immune to crits. Max HP is doubled." },
+				B: { name: "Dreadnought", desc: "Overload: Self-destruct for remaining HP as area damage." }
+			}
+		},
+		6: {
+			tier1: {
+				A: { name: "Blessed Aura", desc: "Heals adjacent allies for 10 HP at the start of its turn." },
+				B: { name: "Hex", desc: "Adjacent enemies permanently lose 10 DEF at start of turn." }
+			},
+			tier2: {
+				A: { name: "Swift Cast", desc: "Can cast spells even when engaged in melee." },
+				B: { name: "Twin Cast", desc: "Shield and Skirmish affect target and one nearby ally." }
+			},
+			tier3: {
+				A: { name: "High Priest", desc: "Resurrection: Revive a destroyed unit with 50% HP once per game." },
+				B: { name: "Warlock", desc: "Transmute (Sacrifice) costs 80 HP and doesn't kill Oracle. Target melts in 3 turns." }
+			}
+		}
+	},
+
 	/**
 	 * Initialize the campaign state by loading from localStorage.
 	 */
