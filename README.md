@@ -2,8 +2,10 @@
 
 A strategic hexagonal board game played with dice as soldiers. HexDice blends tactical movement, resource management (dice), and unique class abilities into a fast-paced strategy experience.
 
-- **Play:** [HexDice Web App](https://hexdice.pages.dev)
-- **Rules:** [Deep Rules](./rules/RULES.md) | [V2.0 Manual](./rules/v2.0.md)
+- **Play:**
+  - [Static Web / For single, campaign / Beta Release](https://hexdice.newsrss.org/)
+  - [Online MMO Available / Play with other players / Alpha Release](https://hexdice.phamthanh.me/)
+- **Rules:** [Rules](./rules/RULES.md) | [v2.0 Manual](./rules/v2.0.md)
 - **Devlog:** [Development Blog](./blog/)
 
 ## 🎲 Core Gameplay

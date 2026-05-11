@@ -7,6 +7,15 @@ const CampaignManager = {
 		unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Consecutive uses
 		recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }, // Level when unit becomes available again
 		runes: { aegis: 2, pegasus: 1, forge: 1 },       // Inventory
+		devotionPoints: 0,
+		upgrades: {
+			1: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+			2: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+			3: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+			4: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+			5: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+			6: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+		},
 		currentLevel: 1,
 		isCampaignActive: new URLSearchParams(location.search).get('campaign') === 'true'
 	},
@@ -20,7 +29,22 @@ const CampaignManager = {
 		const savedState = localStorage.getItem(this.STORAGE_KEY);
 		if (savedState) {
 			try {
-				this.state = { ...this.state, ...JSON.parse(savedState) };
+				const parsed = JSON.parse(savedState);
+				this.state = { ...this.state, ...parsed };
+				
+				// Ensure upgrades exist for backward compatibility
+				if (!this.state.upgrades) {
+					this.state.upgrades = {
+						1: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+						2: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+						3: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+						4: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+						5: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+						6: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+					};
+				}
+				if (this.state.devotionPoints === undefined) this.state.devotionPoints = 0;
+
 				// Ensure recoveryLevels exists for backward compatibility
 				if (!this.state.recoveryLevels) {
 					this.state.recoveryLevels = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -168,6 +192,46 @@ const CampaignManager = {
 	},
 
 	/**
+	 * Spend a devotion point on a stat path for a specific dice class.
+	 * @param {number} classId - 1-6.
+	 * @param {string} path - 'atk', 'def', 'hp'.
+	 */
+	spendDevotionPoint(classId, path) {
+		if (this.state.devotionPoints <= 0) return false;
+		const upgrade = this.state.upgrades[classId];
+		if (!upgrade || upgrade.points >= 15) return false;
+
+		if (path === 'atk') upgrade.atk += 5;
+		else if (path === 'def') upgrade.def += 5;
+		else if (path === 'hp') upgrade.hp += 20;
+		else return false;
+
+		upgrade.points++;
+		this.state.devotionPoints--;
+		this.save();
+		return true;
+	},
+
+	/**
+	 * Select a mutually exclusive perk for a class.
+	 * @param {number} classId - 1-6.
+	 * @param {string} tier - 'tier1', 'tier2', 'tier3'.
+	 * @param {string} option - 'A' or 'B'.
+	 */
+	selectPerk(classId, tier, option) {
+		const upgrade = this.state.upgrades[classId];
+		if (!upgrade) return false;
+
+		const pointsNeeded = { 'tier1': 5, 'tier2': 10, 'tier3': 15 };
+		if (upgrade.points < pointsNeeded[tier]) return false;
+		if (upgrade.perks[tier]) return false; // Already selected
+
+		upgrade.perks[tier] = option;
+		this.save();
+		return true;
+	},
+
+	/**
 	 * Reset the entire campaign (for "New Game" in campaign mode).
 	 */
 	resetCampaign() {
@@ -175,6 +239,15 @@ const CampaignManager = {
 			unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			runes: { aegis: 2, pegasus: 1, forge: 1 },
+			devotionPoints: 0,
+			upgrades: {
+				1: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+				2: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+				3: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+				4: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+				5: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+				6: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
+			},
 			currentLevel: 1,
 			isCampaignActive: true
 		};

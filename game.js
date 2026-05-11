@@ -159,6 +159,7 @@ function alpineHexDiceTacticGame() { return {
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
 	showMinimap: true,
+	showCamp: false,
 	preset: null,
 	spriteSets: [],
 	selectedSpriteSet: '', // DEPRECATED: use player.selectedSpriteSet instead
@@ -903,7 +904,15 @@ function alpineHexDiceTacticGame() { return {
 		const campaignData = opts?.campaignData;
 		this.campaignData = campaignData;
 		this.isCampaign = opts?.isCampaign ?? (CampaignManager.state.isCampaignActive || !!campaignData);
-		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || 4) : 99;
+		
+		// Crucible Scaling: Every 10 levels, enemy deployment limit increases by 1
+		let crucibleBonus = 0;
+		if (this.isCampaign) {
+			const currentLevel = CampaignManager.state.currentLevel;
+			crucibleBonus = Math.floor(currentLevel / 10);
+		}
+		
+		this.deploymentLimit = this.isCampaign ? (campaignData?.deploymentLimit || opts?.deploymentLimit || (3 + crucibleBonus)) : 99;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];
 		if (preset) {
@@ -964,14 +973,18 @@ function alpineHexDiceTacticGame() { return {
 			diceToLoad = diceToLoad.filter(val => CampaignManager.isUnitAvailable(val));
 
 			diceToLoad.forEach((val, idx) => {
+				const upgrades = CampaignManager.state.upgrades[val] || { atk: 0, def: 0, hp: 0 };
+				const baseStats = UNIT_STATS[val];
+				
 				const die = {
 					id: `0_${idx}`,
 					originalIndex: idx,
 					playerId: 0,
 					value: val,
-					...UNIT_STATS[val],
-					currentArmor: UNIT_STATS[val].armor,
-					armorReduction: 0,
+					...baseStats,
+					attack: (baseStats.attack * 10) + upgrades.atk,
+					armor: (baseStats.armor * 10) + upgrades.def,
+					maxHP: 100 + upgrades.hp,
 					isDeployed: false,
 					hexId: null,
 					hasMovedOrAttackedThisTurn: false,
@@ -980,6 +993,16 @@ function alpineHexDiceTacticGame() { return {
 					isDeath: false,
 					actionsTakenThisTurn: 0
 				};
+
+				// Tanker Tier 3 [A] Behemoth: Max HP is permanently doubled
+				if (val === 5 && upgrades.perks.tier3 === 'A') {
+					die.maxHP *= 2;
+				}
+
+				die.currentHP = die.maxHP;
+				die.currentArmor = die.armor;
+				die.armorReduction = 0;
+				
 				CampaignManager.applyFatigueDebuffs(die);
 				die.effectiveArmor = die.armor;
 				die.spriteUrl = this.getUnitSpriteUrl(die);
@@ -990,14 +1013,16 @@ function alpineHexDiceTacticGame() { return {
 				// Load Enemy Dice
 				const p2 = this.players[1];
 				(campaignData.enemyDice || []).forEach((val, idx) => {
+					const baseStats = UNIT_STATS[val];
 					const die = {
 						id: `1_${idx}`,
 						originalIndex: idx,
 						playerId: 1,
 						value: val,
-						...UNIT_STATS[val],
-						currentArmor: UNIT_STATS[val].armor,
-						armorReduction: 0,
+						...baseStats,
+						attack: baseStats.attack * 10,
+						armor: baseStats.armor * 10,
+						maxHP: 100,
 						isDeployed: false,
 						hexId: null,
 						hasMovedOrAttackedThisTurn: false,
@@ -1006,6 +1031,10 @@ function alpineHexDiceTacticGame() { return {
 						isDeath: false,
 						actionsTakenThisTurn: 0
 					};
+					die.currentHP = die.maxHP;
+					die.currentArmor = die.armor;
+					die.armorReduction = 0;
+					
 					die.effectiveArmor = die.armor;
 					die.spriteUrl = this.getUnitSpriteUrl(die);
 					p2.dice.push(die);
@@ -1176,9 +1205,8 @@ function alpineHexDiceTacticGame() { return {
 			const viewHeight = window.innerHeight || (window.screen && window.screen.height);
 
 			if (viewWidth && viewHeight) {
-				// Mobile/Portrait view: expand width to ~97%
 				if (viewHeight > viewWidth) {
-					return this.generateHexGrid(radius, padding, (viewWidth * 0.97) / gridWidth);
+					return this.generateHexGrid(radius, padding, (viewWidth * 0.99) / gridWidth);
 				}
 
 				if (gridWidth > viewWidth) {
@@ -1333,10 +1361,10 @@ function alpineHexDiceTacticGame() { return {
 
 		// if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
 
-		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
+		if (this.selectedUnitHexId === hex.id) filter += ' sepia(0.5)';
 		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
 		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
-		if (this.validTargetsSet?.has(hex.id)) filter += ' blur(1px)';
+		if (this.validTargetsSet?.has(hex.id)) filter += ' sepia(1)';
 		// if (this.dangerHexes?.[hex.id]) filter += ' contrast(0.5)';
 
 		if (this.phase === 'SETUP_DEPLOY' && this.validDeploymentHexesSet?.has(hex.id)) {
@@ -2221,6 +2249,35 @@ function alpineHexDiceTacticGame() { return {
 			fromHex.unit = null;
 			fromHex.unitId = null;
 			this.trail.fromHex = state ? null : fromHex;
+
+			// Track distance moved for perks
+			unit.stepsMoved = this.axialDistance(fromHex.q, fromHex.r, toHex.q, toHex.r);
+
+			// Hussar Tier 2 [B] Trample
+			if (unit.value === 3 && this.hasPerk(unit, 'tier2', 'B')) {
+				const dq = toHex.q - fromHex.q;
+				const dr = toHex.r - fromHex.r;
+				const pathHexes = [];
+				if (unit.stepsMoved === 3) {
+					const kneeQ = fromHex.q + Math.round(dq * 0.66);
+					const kneeR = fromHex.r + Math.round(dr * 0.66);
+					const knee = this.getHexByQR(kneeQ, kneeR, state);
+					if (knee) pathHexes.push(knee);
+					
+					const firstQ = fromHex.q + Math.round(dq * 0.33);
+					const firstR = fromHex.r + Math.round(dr * 0.33);
+					const first = this.getHexByQR(firstQ, firstR, state);
+					if (first) pathHexes.push(first);
+				}
+
+				pathHexes.forEach(h => {
+					const target = this.getUnitOnHex(h.id, state);
+					if (target && target.playerId !== unit.playerId) {
+						this.addLog(`🏇 Trample! ${this.logUnit(unit)} deals 15 damage to ${this.logUnit(target)}.`);
+						this.applyDamage(h.id, 15, state);
+					}
+				});
+			}
 		}
 
 		if (toHex) {
@@ -2378,6 +2435,12 @@ function alpineHexDiceTacticGame() { return {
 		unit.wasGuarding = false; // Reset fade timer when guarding
 
 		unit.skirmishBuff = 0;
+
+		// Tanker Tier 2 [A] Entrench
+		if (unit.value === 5 && this.hasPerk(unit, 'tier2', 'A') && unit.stepsMoved === 0) {
+			unit.currentHP = Math.min(unit.maxHP, unit.currentHP + 20);
+			this.addLog(`🛡️ Entrench! ${this.logUnit(unit)} heals 20 HP.`);
+		}
 
 		// Actual armor buff is applied during combat calculation
 		unit.hasMovedOrAttackedThisTurn = true;
@@ -2566,6 +2629,23 @@ function alpineHexDiceTacticGame() { return {
 				return;
 		}
 
+		// Oracle Tier 2 [B] Twin Cast
+		if (this.hasPerk(oracleUnit, 'tier2', 'B') && ['SHIELD', 'SKIRMISH'].includes(spellType)) {
+			const alliesInRange = (state || this).hexes.filter(h => {
+				const unit = this.getUnitOnHex(h.id, state);
+				if (!unit || unit.playerId !== oracleUnit.playerId || unit.id === targetUnit.id || unit.id === oracleUnit.id) return false;
+				const dist = this.axialDistance(oracleHex.q, oracleHex.r, h.q, h.r);
+				return dist <= 2;
+			});
+			
+			if (alliesInRange.length > 0) {
+				const randomAllyHex = alliesInRange[Math.floor(random() * alliesInRange.length)];
+				this.addLog(`✨ Twin Cast! Spell also affects ${this.logUnit(this.getUnitOnHex(randomAllyHex.id, state))}.`);
+				if (spellType === 'SHIELD') this.performShieldSpell(oracleHexId, randomAllyHex.id, state);
+				else if (spellType === 'SKIRMISH') this.performSkirmishSpell(oracleHexId, randomAllyHex.id, state);
+			}
+		}
+
 		if (!state) {
 			this.trailSpell = {fromHex: oracleHex, toHex: targetHex, spellType};
 			this.trailAttack = {};
@@ -2659,6 +2739,13 @@ function alpineHexDiceTacticGame() { return {
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
+		
+		// Oracle Potency: +5 DEF to Shield spell per devotion point in Offensive Path
+		if (this.isCampaign) {
+			const upgrades = CampaignManager.state.upgrades[6];
+			targetUnit.shieldBonus = upgrades.atk;
+		}
+
 		this.calcDefenderEffectiveArmor(targetHexId, state);
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
 	},
@@ -2709,6 +2796,13 @@ function alpineHexDiceTacticGame() { return {
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
+		
+		// Oracle Potency: +5 ATK to Skirmish buff per devotion point in Offensive Path
+		if (this.isCampaign) {
+			const upgrades = CampaignManager.state.upgrades[6];
+			targetUnit.potencyBonus = upgrades.atk;
+		}
+
 		this.calcDefenderEffectiveArmor(targetHexId, state);
 		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
@@ -2880,8 +2974,13 @@ function alpineHexDiceTacticGame() { return {
 			maxRange += 1;
 		}
 
+		// Archer Tier 3 [A] Sniper: Range increases to 3
+		if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
+			maxRange = 3;
+		}
+
 		// Ensure Archer max range does not exceed 3
-		if (attackerUnit.value === 2) {
+		if (attackerUnit.value === 2 && !this.hasPerk(attackerUnit, 'tier3', 'A')) {
 			maxRange = Math.min(maxRange, 3);
 		}
 
@@ -2898,8 +2997,12 @@ function alpineHexDiceTacticGame() { return {
 				}
 			}
 		}
+		
+		// Archer Tier 1 [B] Point Blank: Removes engaged restriction
+		const isPointBlank = attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier1', 'B');
+
 		// Archer & Oracle will not be limited by adjacent enemy unit restriction when stand in Tower or Mountain
-		if (isEnemyAdjacent && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) return [];
+		if (isEnemyAdjacent && !isPointBlank && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) return [];
 
 		(state || this).hexes.forEach(potentialTargetHex => {
 			if (!potentialTargetHex || potentialTargetHex.id === attackerHexId) return;
@@ -3025,7 +3128,9 @@ function alpineHexDiceTacticGame() { return {
 
 			// Engaged Spell Disablement: Oracle cannot cast spells when enemy is adjacent
 			const isEngaged = this.isUnitEngaged(attackerHexId, state);
-			if (isEngaged && !isHovering && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) {
+			const canSwiftCast = this.hasPerk(attackerUnit, 'tier2', 'A');
+
+			if (isEngaged && !isHovering && !canSwiftCast && !(attackerHex.terrainType === 'TOWER' || attackerHex.terrainType === 'MOUNTAIN')) {
 				return []; // Cannot cast spells while engaged unless on Tower or Mountain
 			}
 
@@ -3423,7 +3528,31 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		let effectiveArmor = defenderUnit.currentArmor;
-		if (defenderUnit.isGuarding) effectiveArmor += defenderUnit.isGuarding;
+
+		// Knight Tier 2 [A] Bulwark
+		if (defenderUnit.value === 4 && this.hasPerk(defenderUnit, 'tier2', 'A') && defenderUnit.stepsMoved >= 2) {
+			effectiveArmor += 20;
+		}
+
+		// Knight Tier 3 [A] Templar (Aura DEF)
+		const currentPlayers = (state||this).players;
+		if (currentPlayers[defenderUnit.playerId]) {
+			currentPlayers[defenderUnit.playerId].dice.forEach(d => {
+				if (d.value === 4 && !d.isDeath && d.isDeployed && this.hasPerk(d, 'tier3', 'A')) {
+					const tHex = (state||this).getHex(d.hexId, state);
+					if (tHex && (tHex.q === defenderHex.q || tHex.r === defenderHex.r || tHex.s === defenderHex.s)) {
+						effectiveArmor += 15;
+					}
+				}
+			});
+		}
+
+		// Tanker Tier 2 [A] Entrench
+		if (defenderUnit.value === 5 && this.hasPerk(defenderUnit, 'tier2', 'A') && defenderUnit.isGuarding && defenderUnit.stepsMoved === 0) {
+			effectiveArmor += 15;
+		}
+
+		if (defenderUnit.isGuarding) effectiveArmor += (this.isCampaign ? 10 : defenderUnit.isGuarding);
 		if (this.gameplayVersion !== 2) effectiveArmor -= defenderUnit.armorReduction;
 
 		if (defenderUnit.isScarred) effectiveArmor -= 1;
@@ -3432,15 +3561,15 @@ function alpineHexDiceTacticGame() { return {
 			case 'FOREST':
 			case 'TOWER':
 			case 'MOUNTAIN':
-				effectiveArmor += 1;
+				effectiveArmor += (this.isCampaign ? 10 : 1);
 				break;
 			case 'LAKE':
-				effectiveArmor -= 1;
+				effectiveArmor -= (this.isCampaign ? 10 : 1);
 				break;
 		}
 
 		if ((state||this).players[defenderUnit.playerId].baseHexId == defenderHexId)
-			effectiveArmor += 2;
+			effectiveArmor += (this.isCampaign ? 20 : 2);
 
 		const result = Math.max(0, effectiveArmor);
 		if (!state) defenderUnit.effectiveArmor = result;
@@ -3875,7 +4004,148 @@ function alpineHexDiceTacticGame() { return {
 		};
 		this.trailSpell = {};
 
-		if (this.gameplayVersion === 2) {
+		if (this.isCampaign) {
+			let attackMod = 0;
+			if (isSkirmishing) attackMod -= 10;
+			
+			// Archer Tier 1 [A] High Ground
+			if (attackerUnit.value === 2 && distance === 3 && !this.hasPerk(attackerUnit, 'tier1', 'A')) attackMod -= 10;
+			
+			// Hussar Tier 1 [A] Momentum
+			if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier1', 'A') && distance === 3) attackMod += 20;
+
+			// Knight Tier 1 [A] Pincer Strike
+			if (attackerUnit.value === 4 && this.hasPerk(attackerUnit, 'tier1', 'A')) {
+				const oppQ = defenderHex.q + (defenderHex.q - attackerHex.q);
+				const oppR = defenderHex.r + (defenderHex.r - attackerHex.r);
+				const oppHex = this.getHexByQR(oppQ, oppR, state);
+				const friend = oppHex ? this.getUnitOnHex(oppHex.id, state) : null;
+				if (friend && friend.playerId === attackerUnit.playerId) {
+					attackMod += 20;
+					this.addLog(`⚔️ Pincer Strike! +20 damage.`);
+				}
+			}
+
+			// Fencer Tier 1 [B] Lunge
+			if (this.hasPerk(attackerUnit, 'tier1', 'B') && defenderUnit.currentHP >= defenderUnit.maxHP) {
+				attackMod += 15;
+			}
+
+			// Archer Tier 3 [A] Sniper (Stay still bonus)
+			if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier3', 'A') && attackerUnit.actionsTakenThisTurn === 0) {
+				attackMod += 30;
+			}
+
+			const attackerAtk = attackerUnit.attack + attackMod;
+			let defenderDef = this.calcDefenderEffectiveArmor(defenderHexId, state);
+			
+			// Archer Tier 2 [A] Piercing Arrow
+			if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier2', 'A')) {
+				defenderDef = Math.floor(defenderDef * 0.7);
+			}
+
+			let damage = 40 + (attackerAtk - defenderDef);
+			
+			// Fencer Tier 2 [B] Flurry
+			const minDamage = (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier2', 'B')) ? 25 : 10;
+			damage = Math.max(minDamage, damage);
+
+			this.addLog(`⚔️ ${this.logUnit(attackerUnit)} deals ${damage} damage to ${this.logUnit(defenderUnit)}!`);
+			this.applyDamage(defenderHexId, damage, state);
+
+			const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
+
+			// Knight Tier 1 [B] Joust (Push back)
+			if (attackerUnit.value === 4 && this.hasPerk(attackerUnit, 'tier1', 'B')) {
+				const dq = defenderHex.q - attackerHex.q;
+				const dr = defenderHex.r - attackerHex.r;
+				const backQ = defenderHex.q + dq;
+				const backR = defenderHex.r + dr;
+				const backHex = this.getHexByQR(backQ, backR, state);
+				const blocker = backHex ? this.getUnitOnHex(backHex.id, state) : null;
+				
+				if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
+					this.addLog(`🛡️ Joust blocked! +15 bonus damage.`);
+					this.applyDamage(defenderHexId, 15, state);
+				} else if (defenderStillAlive) {
+					this.addLog(`🛡️ Joust! ${this.logUnit(defenderStillAlive)} is pushed back.`);
+					this.move(defenderStillAlive, defenderHex, backHex, state);
+				}
+			}
+
+			// Tanker Tier 1 [A] Spiked Armor (Reflect)
+			if (defenderUnit.value === 5 && defenderUnit.isGuarding) {
+				if (damage < 30) {
+					let reflect = 10;
+					if (this.hasPerk(defenderUnit, 'tier1', 'A')) reflect += 15;
+					this.addLog(`💥 Spiked Armor! ${this.logUnit(attackerUnit)} takes ${reflect} reflect damage.`);
+					this.applyDamage(attackerHexId, reflect, state);
+				}
+			}
+
+			// Knight Tier 3 [B] Dark Knight (Lifesteal)
+			if (attackerUnit.value === 4 && this.hasPerk(attackerUnit, 'tier3', 'B')) {
+				const heal = Math.floor(damage * 0.5);
+				attackerUnit.currentHP = Math.min(attackerUnit.maxHP, attackerUnit.currentHP + heal);
+				this.addLog(`🧛 Dark Knight lifesteal! Healed ${heal} HP.`);
+			}
+
+			// Archer Tier 2 [B] Venom Tipped
+			if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier2', 'B')) {
+				defenderUnit.venomDuration = 2;
+				this.addLog(`🐍 Venom! ${this.logUnit(defenderUnit)} is poisoned for 2 turns.`);
+			}
+
+			// Fencer Tier 3 [A] Paladin (Heal on hit)
+			if (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
+				this.getNeighbors(attackerHex, state).forEach(n => {
+					const friend = this.getUnitOnHex(n.id, state);
+					if (friend && friend.playerId === attackerUnit.playerId) {
+						const heal = 20;
+						friend.currentHP = Math.min(friend.maxHP, friend.currentHP + heal);
+					}
+				});
+			}
+
+			const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
+			if (defenderStillAlive) {
+				// Fencer Tier 2 [A] Riposte
+				if (combatType === 'MELEE' && defenderStillAlive.value === 1 && this.hasPerk(defenderStillAlive, 'tier2', 'A')) {
+					const counterDamage = Math.floor(defenderStillAlive.attack * 0.5);
+					this.addLog(`↩️ Riposte! ${this.logUnit(defenderStillAlive)} counters for ${counterDamage} damage!`);
+					this.applyDamage(attackerHexId, counterDamage, state);
+				}
+			} else {
+				this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
+				
+				// Hussar Tier 3 [B] Windrider (Action Refund)
+				if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier3', 'B') && !attackerUnit.windriderUsed) {
+					attackerUnit.windriderUsed = true;
+					attackerUnit.hasMovedOrAttackedThisTurn = false;
+					attackerUnit.actionsTakenThisTurn = 0;
+					this.addLog(`🌪️ Windrider! Action refunded.`);
+				}
+
+				if (isSkirmishing) {
+					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
+				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+					this.move(attackerUnit, attackerHex, defenderHex, state);
+				}
+				
+				// Fencer Tier 3 [B] Blademaster (Hit & Run)
+				if (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier3', 'B') && combatType === 'MELEE') {
+					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+					if (this.actionMode === 'SKIRMISH_POST_MOVE') return;
+				}
+
+				// Hussar Tier 2 [A] Hit & Run
+				if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier2', 'A')) {
+					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+					if (this.actionMode === 'SKIRMISH_POST_MOVE') return;
+				}
+			}
+		} else if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
 			
 			let attackMod = 0;
@@ -4023,6 +4293,33 @@ function alpineHexDiceTacticGame() { return {
 	applyDamage(hexId, damage=1, state, isKillOnZero) {
 		const unit = this.getUnitOnHex(hexId, state);
 		if (!unit) return;
+
+		if (this.isCampaign) {
+			// Fencer Tier 1 [A] Parry
+			if (unit.value === 1 && this.hasPerk(unit, 'tier1', 'A')) {
+				const parryAvailable = 15 - (unit.roundDamageNegated || 0);
+				if (parryAvailable > 0) {
+					const negated = Math.min(damage, parryAvailable);
+					damage -= negated;
+					unit.roundDamageNegated = (unit.roundDamageNegated || 0) + negated;
+					if (negated > 0) this.addLog(`🛡️ Parry! ${this.logUnit(unit)} negates ${negated} damage.`);
+				}
+			}
+
+			// Hussar Tier 1 [B] Evasion
+			if (unit.value === 3 && this.hasPerk(unit, 'tier1', 'B') && this.trailAttack?.combatType === 'RANGED_ATTACK') {
+				damage = Math.floor(damage * 0.5);
+				this.addLog(`💨 Evasion! ${this.logUnit(unit)} takes half damage from ranged attack.`);
+			}
+
+			unit.currentHP -= damage;
+			if (unit.currentHP <= 0) {
+				unit.currentHP = 0;
+				this.removeUnit(hexId, state);
+			}
+			return;
+		}
+
 		unit.armorReduction += damage;
 		const effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
 
@@ -4101,7 +4398,38 @@ function alpineHexDiceTacticGame() { return {
 			die.hasMovedOrAttackedThisTurn = false;
 			die.actionsTakenThisTurn = 0;
 			die.isRerolled = false;
-			if(die.isDeployed) {
+			die.roundDamageNegated = 0;
+
+			if (die.venomDuration && die.venomDuration > 0) {
+				this.addLog(`🐍 ${this.logUnit(die)} takes 10 venom damage.`);
+				this.applyDamage(die.hexId, 10, state);
+				die.venomDuration--;
+			}
+
+			if(die.isDeployed && !die.isDeath) {
+				const hex = this.getHex(die.hexId, state);
+
+				// Oracle Tier 1 [A] Blessed Aura
+				if (die.value === 6 && this.hasPerk(die, 'tier1', 'A')) {
+					this.getNeighbors(hex, state).forEach(n => {
+						const friend = this.getUnitOnHex(n.id, state);
+						if (friend && friend.playerId === die.playerId) {
+							friend.currentHP = Math.min(friend.maxHP, friend.currentHP + 10);
+						}
+					});
+				}
+
+				// Oracle Tier 1 [B] Hex
+				if (die.value === 6 && this.hasPerk(die, 'tier1', 'B')) {
+					this.getNeighbors(hex, state).forEach(n => {
+						const enemy = this.getUnitOnHex(n.id, state);
+						if (enemy && enemy.playerId !== die.playerId) {
+							enemy.armorReduction += 10;
+							this.addLog(`🔮 Hex! ${this.logUnit(enemy)} DEF reduced by 10.`);
+						}
+					});
+				}
+
 				this.calcDefenderEffectiveArmor(die.hexId, state);
 				// Decrement skirmish buff
 				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
@@ -4193,6 +4521,11 @@ function alpineHexDiceTacticGame() { return {
 		delete data.messageLog;
 
 		return data;
+	},
+	hasPerk(unit, tier, option) {
+		if (!this.isCampaign || unit.playerId !== 0) return false;
+		const upgrades = CampaignManager.state.upgrades[unit.value];
+		return upgrades?.perks[tier] === option;
 	},
 	logUnit(attackerUnit, state) {
 		state = state || this;
