@@ -1176,9 +1176,8 @@ function alpineHexDiceTacticGame() { return {
 			const viewHeight = window.innerHeight || (window.screen && window.screen.height);
 
 			if (viewWidth && viewHeight) {
-				// Mobile/Portrait view: expand width to ~97%
 				if (viewHeight > viewWidth) {
-					return this.generateHexGrid(radius, padding, (viewWidth * 0.97) / gridWidth);
+					return this.generateHexGrid(radius, padding, (viewWidth * 0.99) / gridWidth);
 				}
 
 				if (gridWidth > viewWidth) {
