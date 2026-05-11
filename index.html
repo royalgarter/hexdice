@@ -882,7 +882,7 @@
 
 			<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 				<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
-				Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + players[currentPlayerIndex].name : '') + (players[currentPlayerIndex]?.isAI ? ' [AI] ' :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+				Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + players[currentPlayerIndex].name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
 			</p>
 
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="location.href='/'" x-show="isCampaign">Home</a>
