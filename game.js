@@ -1332,10 +1332,10 @@ function alpineHexDiceTacticGame() { return {
 
 		// if (this.hoverUnitHexIdImmediate === hex.id && this.selectedUnitHexId !== hex.id) filter += ' brightness(1.35) drop-shadow(0 0 6px white)';
 
-		if (this.selectedUnitHexId === hex.id) filter += ' sepia(1)';
+		if (this.selectedUnitHexId === hex.id) filter += ' sepia(0.5)';
 		if (this.validMovesSet?.has(hex.id)) filter += ' brightness(0.5)';
 		if (this.validMergesSet?.has(hex.id)) filter += ' saturate(0.5)';
-		if (this.validTargetsSet?.has(hex.id)) filter += ' blur(1px)';
+		if (this.validTargetsSet?.has(hex.id)) filter += ' sepia(1)';
 		// if (this.dangerHexes?.[hex.id]) filter += ' contrast(0.5)';
 
 		if (this.phase === 'SETUP_DEPLOY' && this.validDeploymentHexesSet?.has(hex.id)) {
