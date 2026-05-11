@@ -976,14 +976,14 @@
 	<template x-if="cursorSprite">
 		<img
 			:src="cursorSprite"
-			class="fixed pointer-events-none z-[9999]"
+			class="fixed pointer-events-none z-90"
 			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 32px; height: 32px;`"
 		>
 	</template>
 
 	<!-- Devotion Menu (The Camp) -->
-	<div x-show="showCamp" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-		<div class="bg-wood border-4 border-amber-900 w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 relative rounded-lg shadow-2xl">
+	<div x-show="showCamp" x-cloak class="fixed inset-0 z-60 flex items-center justify-center p-4">
+		<div class="border-4 border-amber-900 w-full max-w-4xl max-h-full overflow-y-auto p-6 relative" style="background-color: #c3a471;">
 			<button @click="showCamp = false" class="absolute top-4 right-4 text-2xl font-bold hover:text-red-700">✕</button>
 			
 			<div class="text-center mb-6">
