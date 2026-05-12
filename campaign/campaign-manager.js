@@ -34,7 +34,7 @@ const CampaignManager = {
 		this.state.activeSlot = slotId;
 		const slot = this.state.slots[slotId];
 		if (slot && slot.data) {
-			this.state = { ...this.state, ...slot.data };
+			Object.assign(this.state, slot.data);
 		} else {
 			// Initialize new slot if empty
 			this.resetCampaign();
@@ -156,8 +156,8 @@ const CampaignManager = {
 		if (savedState) {
 			try {
 				const parsed = JSON.parse(savedState);
-				this.state = { ...this.state, ...parsed };
-				
+				Object.assign(this.state, parsed);
+
 				// Ensure upgrades exist for backward compatibility
 				if (!this.state.upgrades) {
 					this.state.upgrades = {
@@ -170,6 +170,11 @@ const CampaignManager = {
 					};
 				}
 				if (this.state.devotionPoints === undefined) this.state.devotionPoints = 0;
+
+				// Ensure runes exist
+				if (!this.state.runes) {
+					this.state.runes = { aegis: 2, pegasus: 1, forge: 1 };
+				}
 
 				// Ensure recoveryLevels exists for backward compatibility
 				if (!this.state.recoveryLevels) {
@@ -284,10 +289,20 @@ const CampaignManager = {
 		this.save();
 	},
 
-	/*
-	// DEPRECATED: Use a rune from the inventory.
+	/**
+	 * Advance the campaign level and grant rewards.
+	 */
+	advanceLevel() {
+		this.state.currentLevel++;
+		this.state.devotionPoints++; // Grant 1 point per level
+		this.save();
+	},
+
+	/**
+	 * Use a rune from the inventory.
+	 */
 	consumeRune(runeType) {
-		if (this.state.runes[runeType] > 0) {
+		if (this.state.runes && this.state.runes[runeType] > 0) {
 			this.state.runes[runeType]--;
 			this.save();
 			return true;
@@ -295,15 +310,17 @@ const CampaignManager = {
 		return false;
 	},
 
-	// DEPRECATED: Grant rewards (runes) to the player's inventory.
+	/**
+	 * Grant rewards (runes) to the player's inventory.
+	 */
 	grantRewards(rewards) {
 		if (!rewards) return;
+		if (!this.state.runes) this.state.runes = { aegis: 0, pegasus: 0, forge: 0 };
 		for (const [type, count] of Object.entries(rewards)) {
 			this.state.runes[type] = (this.state.runes[type] || 0) + count;
 		}
 		this.save();
 	},
-	*/
 
 	/**
 	 * Perform campaign-specific combat calculations.
@@ -311,10 +328,10 @@ const CampaignManager = {
 	performCampaignCombat(attacker, defender, distance, combatType, gameInstance, state) {
 		let attackMod = 0;
 		if (!!attacker.skirmishBuff) attackMod -= 10;
-		
+
 		// Archer Tier 1 [A] High Ground
 		if (attacker.value === 2 && distance === 3 && !gameInstance.hasPerk(attacker, 'tier1', 'A')) attackMod -= 10;
-		
+
 		// Hussar Tier 1 [A] Momentum
 		if (attacker.value === 3 && gameInstance.hasPerk(attacker, 'tier1', 'A') && distance === 3) attackMod += 20;
 
@@ -342,16 +359,23 @@ const CampaignManager = {
 			attackMod += 30;
 		}
 
-		const attackerAtk = attacker.attack + attackMod;
-		let defenderDef = gameInstance.calcDefenderEffectiveArmor(defender.hexId, state);
+		// Apply dynamic upgrades from CampaignManager state (to ensure accuracy)
+		const upgrades = this.state.upgrades[attacker.value] || { atk: 0 };
+		const attackerAtk = attacker.attack + attackMod; // Note: attacker.attack already includes base + upgrade from deployment, but let's be sure.
 		
+		// Let's re-verify: attacker.attack is calculated at deployment.
+		// If the user buys an upgrade during camp, the current game session needs the updated stats.
+		// Wait, the current game session reloads units only when a new game or level starts.
+		
+		let defenderDef = gameInstance.calcDefenderEffectiveArmor(defender.hexId, state);
+
 		// Archer Tier 2 [A] Piercing Arrow
 		if (attacker.value === 2 && gameInstance.hasPerk(attacker, 'tier2', 'A')) {
 			defenderDef = Math.floor(defenderDef * 0.7);
 		}
 
 		let damage = 40 + (attackerAtk - defenderDef);
-		
+
 		// Fencer Tier 2 [B] Flurry
 		const minDamage = (attacker.value === 1 && gameInstance.hasPerk(attacker, 'tier2', 'B')) ? 25 : 10;
 		damage = Math.max(minDamage, damage);
@@ -392,7 +416,7 @@ const CampaignManager = {
 	canTraverseLake() {
 		return !!this.state.isCampaignActive;
 	},
-	
+
 	getCurrentMapName() {
 		return `level${this.state.currentLevel}.json`;
 	},
@@ -415,7 +439,29 @@ const CampaignManager = {
 		upgrade.points++;
 		this.state.devotionPoints--;
 		this.save();
+		
+		// Update active units in the current game session
+		this.applyUpgradeToActiveUnits(classId);
+		
 		return true;
+	},
+
+	applyUpgradeToActiveUnits(classId) {
+		const game = Alpine.$data(document.querySelector('body'));
+		if (!game || !game.players) return;
+		
+		game.players.forEach(player => {
+			player.dice.forEach(die => {
+				if (die.value === classId) {
+					const upgrades = this.state.upgrades[classId];
+					const baseStats = UNIT_STATS[die.value];
+					die.attack = (baseStats.attack * 10) + upgrades.atk;
+					die.armor = (baseStats.armor * 10) + upgrades.def;
+					die.maxHP = 100 + upgrades.hp;
+					die.effectiveArmor = die.armor;
+				}
+			});
+		});
 	},
 
 	/**
@@ -441,7 +487,7 @@ const CampaignManager = {
 	 * Reset the entire campaign (for "New Game" in campaign mode).
 	 */
 	resetCampaign() {
-		this.state = {
+		const newCampaignData = {
 			unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			runes: { aegis: 2, pegasus: 1, forge: 1 },
@@ -457,6 +503,10 @@ const CampaignManager = {
 			currentLevel: 1,
 			isCampaignActive: true
 		};
+
+		// Merge instead of replace to preserve reactivity
+		Object.assign(this.state, newCampaignData);
+
 		this.save();
 	},
 

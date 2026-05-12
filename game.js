@@ -85,7 +85,7 @@ Array.prototype.random = function () { return this[Math.floor((random() * this.l
 Array.prototype.cosmic_random = function () { return this[Math.floor((Math.random() * this.length))]; }
 let _seed = Math.floor(Math.random() * 1e9);
 const setSeed = (s) => { _seed = s; console.log("Seed set to:", s); };
-const random = () => {
+let random = () => {
 	_seed = (_seed * 1664525 + 1013904223) % 4294967296;
 	return _seed / 4294967296;
 };
@@ -93,6 +93,7 @@ const random = () => {
 
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
+	CampaignManager: CampaignManager,
 	auth: {
 		clientId: '991959010002-1f1535un3p06qjv4pao4ti3evdbu0hc5.apps.googleusercontent.com',
 		user: null,
@@ -862,7 +863,7 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- INITIALIZATION --- */
 	async init() {
-		CampaignManager.init();
+		this.CampaignManager.init();
 
 		try {
 			const response = await fetch('/assets/sets.json');
@@ -876,7 +877,7 @@ function alpineHexDiceTacticGame() { return {
 		let campaignData = null;
 		if (campaignMapParam) {
 			try {
-				campaignData = await CampaignManager.fetchCampaignMap(campaignMapParam);
+				campaignData = await this.CampaignManager.fetchCampaignMap(campaignMapParam);
 				this.addLog(`Loaded Campaign Map: ${campaignData.name}`);
 			} catch (e) {
 				this.addLog(`Error loading campaign map: ${e.message}`);
@@ -903,10 +904,10 @@ function alpineHexDiceTacticGame() { return {
 	async resetGame(opts) {
 		const campaignData = opts?.campaignData;
 		this.campaignData = campaignData;
-		this.isCampaign = opts?.isCampaign ?? (CampaignManager.state.isCampaignActive || !!campaignData);
-		
+		this.isCampaign = opts?.isCampaign ?? (this.CampaignManager.state.isCampaignActive || !!campaignData);
+
 		// Crucible Scaling: Every 10 levels, enemy deployment limit increases by 1
-		this.deploymentLimit = CampaignManager.getDeploymentLimit(campaignData?.deploymentLimit || opts?.deploymentLimit);
+		this.deploymentLimit = this.CampaignManager.getDeploymentLimit(campaignData?.deploymentLimit || opts?.deploymentLimit);
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];		if (preset) {
 			this.rules.dicePerPlayer = preset.dice.length;
@@ -921,7 +922,7 @@ function alpineHexDiceTacticGame() { return {
 		const usedSkins = new Set();
 
 		for (let i = 0; i < this.playerCount; i++) {
-			const isAI = CampaignManager.isAIPlayer(i, opts, campaignData);
+			const isAI = this.CampaignManager.isAIPlayer(i, opts, campaignData);
 			let selectedSkin = '';
 
 			if (isAI && this.spriteSets.length > 0) {
@@ -929,7 +930,7 @@ function alpineHexDiceTacticGame() { return {
 				if (availableSkins.length > 0) {
 					let ro_skins = availableSkins.filter(x => x.includes('ro_'));
 
-					if (CampaignManager.state.isCampaignActive && campaignData?.rmi) {
+					if (this.CampaignManager.state.isCampaignActive && campaignData?.rmi) {
 						let words = campaignData.rmi.split('.')?.[0]?.replace(/\d/g, '')?.split('_');
 						let ro_rmi_skins = words?.length
 							? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
@@ -946,7 +947,7 @@ function alpineHexDiceTacticGame() { return {
 			this.players.push({
 				...PLAYER_CONFIG[i],
 				dice: [],
-				initialRollDone: CampaignManager.needsInitialRoll(i, campaignData), // P1 is pre-rolled in campaign, P2 is too if JSON
+				initialRollDone: this.CampaignManager.needsInitialRoll(i, campaignData), // P1 is pre-rolled in campaign, P2 is too if JSON
 				baseHexId: null,
 				rerollsUsed: 0,
 				isEliminated: false,
@@ -963,12 +964,12 @@ function alpineHexDiceTacticGame() { return {
 			let diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
 
 			// Filter out units that are currently locked out (eliminated in previous level)
-			diceToLoad = diceToLoad.filter(val => CampaignManager.isUnitAvailable(val));
+			diceToLoad = diceToLoad.filter(val => this.CampaignManager.isUnitAvailable(val));
 
 			diceToLoad.forEach((val, idx) => {
-				const upgrades = CampaignManager.state.upgrades[val] || { atk: 0, def: 0, hp: 0 };
+				const upgrades = this.CampaignManager.state.upgrades[val] || { atk: 0, def: 0, hp: 0 };
 				const baseStats = UNIT_STATS[val];
-				
+
 				const die = {
 					id: `0_${idx}`,
 					originalIndex: idx,
@@ -995,8 +996,8 @@ function alpineHexDiceTacticGame() { return {
 				die.currentHP = die.maxHP;
 				die.currentArmor = die.armor;
 				die.armorReduction = 0;
-				
-				CampaignManager.applyFatigueDebuffs(die);
+
+				this.CampaignManager.applyFatigueDebuffs(die);
 				die.effectiveArmor = die.armor;
 				die.spriteUrl = this.getUnitSpriteUrl(die);
 				player.dice.push(die);
@@ -1027,7 +1028,7 @@ function alpineHexDiceTacticGame() { return {
 					die.currentHP = die.maxHP;
 					die.currentArmor = die.armor;
 					die.armorReduction = 0;
-					
+
 					die.effectiveArmor = die.armor;
 					die.spriteUrl = this.getUnitSpriteUrl(die);
 					p2.dice.push(die);
@@ -1087,7 +1088,7 @@ function alpineHexDiceTacticGame() { return {
 		this.messageLog = [];
 
 		if (this.debug?.autoPlay) {
-			this.players.forEach(this.setPlayerAI);
+			this.players.forEach(p => this.setPlayerAI(p));
 			this.addLog(`Autoplay game started`);
 		}
 
@@ -1686,7 +1687,7 @@ function alpineHexDiceTacticGame() { return {
 			this.startFatesCall();
 		} else {
 			if (this.players[this.currentPlayerIndex].isAI) {
-				this.addLog("[AI] P2 turn.");
+				this.addLog(`[AI] P${this.currentPlayerIndex + 1} turn.`);
 				this.performAITurn();
 			} else if (this.debug?.autoPlay) {
 				this.autoPlay();
@@ -1716,13 +1717,14 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("👑 Romance of the Dice Kingdoms - All players are AI!");
 
 		// Set all players as AI
-		this.players.forEach(this.setPlayerAI);
+		this.players.forEach(p => this.setPlayerAI(p));
 
 		// Roll initial dice for all players
 		this.players.forEach((p, i) => this.rollInitialDice(i));
 
 		// Deploy all dice randomly for all players
 		this.players.forEach((player, playerIdx) => {
+			this.currentPlayerIndex = playerIdx; // FIX: Ensure current player index matches loop
 			player.dice.forEach((dice, diceIdx) => {
 				const validHexes = this.calcValidDeploymentHexes(playerIdx);
 				if (validHexes.length > 0) {
@@ -2196,7 +2198,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || unit.hasMovedOrAttackedThisTurn) return false;
 
 		// Campaign Scarred Units cannot use class abilities
-		if (CampaignManager.isAbilityDisabled(unit)) {
+		if (this.CampaignManager.isAbilityDisabled(unit)) {
 			if (['RANGED_ATTACK', 'SPECIAL_ATTACK', 'SPELLCAST_SACRIFICE'].includes(actionType)) {
 				return false;
 			}
@@ -2271,7 +2273,7 @@ function alpineHexDiceTacticGame() { return {
 					const kneeR = fromHex.r + Math.round(dr * 0.66);
 					const knee = this.getHexByQR(kneeQ, kneeR, state);
 					if (knee) pathHexes.push(knee);
-					
+
 					const firstQ = fromHex.q + Math.round(dq * 0.33);
 					const firstR = fromHex.r + Math.round(dr * 0.33);
 					const first = this.getHexByQR(firstQ, firstR, state);
@@ -2663,7 +2665,7 @@ function alpineHexDiceTacticGame() { return {
 				const dist = this.axialDistance(oracleHex.q, oracleHex.r, h.q, h.r);
 				return dist <= 2;
 			});
-			
+
 			if (alliesInRange.length > 0) {
 				const randomAllyHex = alliesInRange[Math.floor(random() * alliesInRange.length)];
 				this.addLog(`✨ Twin Cast! Spell also affects ${this.logUnit(this.getUnitOnHex(randomAllyHex.id, state))}.`);
@@ -2765,10 +2767,10 @@ function alpineHexDiceTacticGame() { return {
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
-		
+
 		// Oracle Potency: +5 DEF to Shield spell per devotion point in Offensive Path
 		if (this.isCampaign) {
-			const upgrades = CampaignManager.state.upgrades[6];
+			const upgrades = this.CampaignManager.state.upgrades[6];
 			targetUnit.shieldBonus = upgrades.atk;
 		}
 
@@ -2822,10 +2824,10 @@ function alpineHexDiceTacticGame() { return {
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
-		
+
 		// Oracle Potency: +5 ATK to Skirmish buff per devotion point in Offensive Path
 		if (this.isCampaign) {
-			const upgrades = CampaignManager.state.upgrades[6];
+			const upgrades = this.CampaignManager.state.upgrades[6];
 			targetUnit.potencyBonus = upgrades.atk;
 		}
 
@@ -3099,7 +3101,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 			}
 		}
-		
+
 		// Archer Tier 1 [B] Point Blank: Removes engaged restriction
 		const isPointBlank = attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier1', 'B');
 
@@ -3122,6 +3124,31 @@ function alpineHexDiceTacticGame() { return {
 					}
 					targets.push(potentialTargetHex.id);
 				}
+			}
+		});
+
+		return targets;
+	},
+	/**
+	 * Calculate valid targets for Oracle Sacrifice action.
+	 * Shows adjacent enemy Oracles that can be eliminated by sacrifice.
+	 * @param {number} oracleHexId - Hex ID of the Oracle unit
+	 * @param {object} state - Optional game state for simulation
+	 * @returns {number[]} Array of valid target hex IDs
+	 */
+	calcValidSacrificeTargets(oracleHexId, state) {
+		const oracleUnit = this.getUnitOnHex(oracleHexId, state);
+		const oracleHex = this.getHex(oracleHexId, state);
+
+		if (!oracleUnit || oracleUnit.value !== 6 || !oracleHex) return [];
+
+		let targets = [];
+		this.getNeighbors(oracleHex, state).forEach(neighborHex => {
+			if (!neighborHex) return;
+
+			const targetUnit = this.getUnitOnHex(neighborHex.id, state);
+			if (targetUnit && targetUnit.playerId !== oracleUnit.playerId) {
+				targets.push(neighborHex.id);
 			}
 		});
 
@@ -3173,13 +3200,10 @@ function alpineHexDiceTacticGame() { return {
 			if (!intermediateHex || intermediateHex.id === attackerHexId || intermediateHex.id === toHex.id) continue;
 
 			switch (intermediateHex.terrainType) {
-				case 'FOREST':
-				case 'TOWER':
-				case 'MOUNTAIN':
-					return false; // Blocked by terrain
-				case 'LAKE':
-					// LAKE remains transparent, do nothing here
-					break;
+				case 'FOREST': { if (this.isCampaign && fromHex.terrainType == 'MOUNTAIN') break; else return false; }
+				case 'TOWER': { if (this.isCampaign && fromHex.terrainType == 'MOUNTAIN') break; else return false; }
+				case 'MOUNTAIN': return false; // Blocked by terrain
+				case 'LAKE': break; // LAKE remains transparent, do nothing here
 			}
 
 			const intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
@@ -3516,7 +3540,7 @@ function alpineHexDiceTacticGame() { return {
 
 		// In Campaign Mode, LAKE is temporarily considered passable with movement cost = 2
 		possibleMoves = [...new Set(possibleMoves.filter(x => x))];
-		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || CampaignManager.canTraverseLake());
+		possibleMoves = possibleMoves.filter(id => (this.getHex(id, state)?.terrainType != 'LAKE') || this.CampaignManager.canTraverseLake());
 
 		// Filter based on target: empty or enemy (for move), or friendly (for merge)
 		return possibleMoves.filter(hexId => {
@@ -4150,7 +4174,7 @@ function alpineHexDiceTacticGame() { return {
 		this.trailSpell = {};
 
 		if (this.isCampaign) {
-			const damage = CampaignManager.performCampaignCombat(attackerUnit, defenderUnit, distance, combatType, this, state);
+			const damage = this.CampaignManager.performCampaignCombat(attackerUnit, defenderUnit, distance, combatType, this, state);
 
 			const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
 
@@ -4162,7 +4186,7 @@ function alpineHexDiceTacticGame() { return {
 				const backR = defenderHex.r + dr;
 				const backHex = this.getHexByQR(backQ, backR, state);
 				const blocker = backHex ? this.getUnitOnHex(backHex.id, state) : null;
-				
+
 				if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
 					this.addLog(`🛡️ Joust blocked! +15 bonus damage.`);
 					this.applyDamage(defenderHexId, 15, state);
@@ -4216,7 +4240,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 			} else {
 				this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
-				
+
 				// Hussar Tier 3 [B] Windrider (Action Refund)
 				if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier3', 'B') && !attackerUnit.windriderUsed) {
 					attackerUnit.windriderUsed = true;
@@ -4231,7 +4255,7 @@ function alpineHexDiceTacticGame() { return {
 				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
-				
+
 				// Fencer Tier 3 [B] Blademaster (Hit & Run)
 				if (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier3', 'B') && combatType === 'MELEE') {
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
@@ -4606,17 +4630,17 @@ function alpineHexDiceTacticGame() { return {
 				.filter(d => d.isDeployed && d.isDeath)
 				.map(d => d.value);
 
-			CampaignManager.updateAfterBattle(deployedValues, eliminatedValues);
+			this.CampaignManager.updateAfterBattle(deployedValues, eliminatedValues);
 
 			if (winnerPlayerIndex === 0) {
-				CampaignManager.advanceLevel();
+				this.CampaignManager.advanceLevel();
 				if (this.campaignData?.rewards) {
-					CampaignManager.grantRewards(this.campaignData.rewards);
+					this.CampaignManager.grantRewards(this.campaignData.rewards);
 					this.addLog("Rewards Granted: " + Object.entries(this.campaignData.rewards).map(([k,v]) => `${v}x ${k.toUpperCase()}`).join(', '));
 				}
 				this.addLog("Campaign Advanced: New Level Unlocked!");
 			}
-			this.nextCampaignMap = CampaignManager.getCurrentMapName();
+			this.nextCampaignMap = this.CampaignManager.getCurrentMapName();
 		}
 
 		if (winnerPlayerIndex === -1) { // Draw
@@ -4639,7 +4663,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 	hasPerk(unit, tier, option) {
 		if (!this.isCampaign || unit.playerId !== 0) return false;
-		const upgrades = CampaignManager.state.upgrades[unit.value];
+		const upgrades = this.CampaignManager.state.upgrades[unit.value];
 		return upgrades?.perks[tier] === option;
 	},
 	logUnit(attackerUnit, state) {
