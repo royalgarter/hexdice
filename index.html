@@ -775,9 +775,10 @@
 							"
 							@click="selectDieToDeploy(index)"
 						>
+							<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
 							<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
 							<!-- D<span x-text="players[currentPlayerIndex]?.dice[index]?.value"></span> -->
-							<div class="text-[8px]" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
+							<div class="text-xs font-bold" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
 						</div>
 					</template>
 				</div>
