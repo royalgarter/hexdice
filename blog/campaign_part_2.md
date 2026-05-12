@@ -53,7 +53,7 @@ Mirroring the difficulty spikes of high-level dungeon raids, every 10 levels the
 
 ---
 
-## **The Devotion System (Player Progression)**
+## The Devotion System (Player Progression)
 
 Upon completing a level, the player is awarded **1 Devotion Point**. There is no random stat growth; the player takes this point to the "Camp" and allocates it to a specific Dice Class (1 through 6) to buy a block of stats.
 
@@ -71,11 +71,11 @@ Allocating 1 Devotion Point grants the corresponding stat block below. *Note: Sp
 | **4 - Knight** | **Weaponry:** +5 ATK | **Plating:** +5 DEF | **Vigor:** +20 Max HP |
 | **5 - Tanker** | **Weaponry:** +5 ATK | **Plating:** +5 DEF | **Vigor:** +20 Max HP |
 | **6 - Oracle** | **Potency:** +5 to Spell Power | **Warding:** +5 DEF *(Barrier)* | **Vigor:** +20 Max HP |
+
+
 *(Oracle Potency rule: Adds +5 DEF to Shield spell, or +5 ATK to Skirmish buff).*
 
----
-
-## **Class Evolutions (Branching Skill Trees)**
+## Class Evolutions (Branching Skill Trees)
 
 To guarantee endless replayability, perks are not unlocked linearly. For every **5 Devotion Points** invested into a single Dice Class, the player must choose between **Path A** or **Path B**. 
 *This choice is permanent for the current campaign run.* At 15 points, the unit evolves into an Advanced Class.
@@ -145,8 +145,6 @@ To guarantee endless replayability, perks are not unlocked linearly. For every *
 *   **Tier 3 EVOLUTION (15 Pts):**
     *   **[A] High Priest:** Unlocks *Resurrection*. Once per game, target an empty Base hex to revive a destroyed friendly unit with 50% HP.
     *   **[B] Warlock:** Modifies *Transmute (Sacrifice)*. The Oracle no longer dies when casting it. Instead, the spell costs 80 HP, and the newly converted enemy unit lasts only 3 turns before melting.
-
----
 
 ## Conclusion: From Skirmish to Endurance
 
