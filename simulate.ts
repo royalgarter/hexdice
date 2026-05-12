@@ -227,14 +227,16 @@ async function loadGameEngine(playerCount: number = 2, version: number = 1): Pro
     // Combine all code with seeded random
     const fullCode = `
         // Seeded random for reproducibility
-        var _seed = ${Date.now()};
-        var random = () => {
-            _seed = (_seed * 9301 + 49297) % 233280;
-            return _seed / 233280;
-        };
+        const seedValue = ${Date.now()};
 
         ${campaignManagerCode}
         ${gameCode}
+        
+        // Override random to be deterministic
+        if (typeof setSeed === 'function') {
+            setSeed(seedValue);
+        }
+
         ${aiCoreCode}
         ${aiHeuristicProfiles}
         ${aiHeuristicCode}

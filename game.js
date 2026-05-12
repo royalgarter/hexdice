@@ -85,7 +85,7 @@ Array.prototype.random = function () { return this[Math.floor((random() * this.l
 Array.prototype.cosmic_random = function () { return this[Math.floor((Math.random() * this.length))]; }
 let _seed = Math.floor(Math.random() * 1e9);
 const setSeed = (s) => { _seed = s; console.log("Seed set to:", s); };
-const random = () => {
+let random = () => {
 	_seed = (_seed * 1664525 + 1013904223) % 4294967296;
 	return _seed / 4294967296;
 };
@@ -905,7 +905,7 @@ function alpineHexDiceTacticGame() { return {
 		const campaignData = opts?.campaignData;
 		this.campaignData = campaignData;
 		this.isCampaign = opts?.isCampaign ?? (this.CampaignManager.state.isCampaignActive || !!campaignData);
-		
+
 		// Crucible Scaling: Every 10 levels, enemy deployment limit increases by 1
 		this.deploymentLimit = this.CampaignManager.getDeploymentLimit(campaignData?.deploymentLimit || opts?.deploymentLimit);
 
@@ -969,7 +969,7 @@ function alpineHexDiceTacticGame() { return {
 			diceToLoad.forEach((val, idx) => {
 				const upgrades = this.CampaignManager.state.upgrades[val] || { atk: 0, def: 0, hp: 0 };
 				const baseStats = UNIT_STATS[val];
-				
+
 				const die = {
 					id: `0_${idx}`,
 					originalIndex: idx,
@@ -996,7 +996,7 @@ function alpineHexDiceTacticGame() { return {
 				die.currentHP = die.maxHP;
 				die.currentArmor = die.armor;
 				die.armorReduction = 0;
-				
+
 				this.CampaignManager.applyFatigueDebuffs(die);
 				die.effectiveArmor = die.armor;
 				die.spriteUrl = this.getUnitSpriteUrl(die);
@@ -1028,7 +1028,7 @@ function alpineHexDiceTacticGame() { return {
 					die.currentHP = die.maxHP;
 					die.currentArmor = die.armor;
 					die.armorReduction = 0;
-					
+
 					die.effectiveArmor = die.armor;
 					die.spriteUrl = this.getUnitSpriteUrl(die);
 					p2.dice.push(die);
@@ -2273,7 +2273,7 @@ function alpineHexDiceTacticGame() { return {
 					const kneeR = fromHex.r + Math.round(dr * 0.66);
 					const knee = this.getHexByQR(kneeQ, kneeR, state);
 					if (knee) pathHexes.push(knee);
-					
+
 					const firstQ = fromHex.q + Math.round(dq * 0.33);
 					const firstR = fromHex.r + Math.round(dr * 0.33);
 					const first = this.getHexByQR(firstQ, firstR, state);
@@ -2665,7 +2665,7 @@ function alpineHexDiceTacticGame() { return {
 				const dist = this.axialDistance(oracleHex.q, oracleHex.r, h.q, h.r);
 				return dist <= 2;
 			});
-			
+
 			if (alliesInRange.length > 0) {
 				const randomAllyHex = alliesInRange[Math.floor(random() * alliesInRange.length)];
 				this.addLog(`✨ Twin Cast! Spell also affects ${this.logUnit(this.getUnitOnHex(randomAllyHex.id, state))}.`);
@@ -2767,7 +2767,7 @@ function alpineHexDiceTacticGame() { return {
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
-		
+
 		// Oracle Potency: +5 DEF to Shield spell per devotion point in Offensive Path
 		if (this.isCampaign) {
 			const upgrades = this.CampaignManager.state.upgrades[6];
@@ -2824,7 +2824,7 @@ function alpineHexDiceTacticGame() { return {
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
-		
+
 		// Oracle Potency: +5 ATK to Skirmish buff per devotion point in Offensive Path
 		if (this.isCampaign) {
 			const upgrades = this.CampaignManager.state.upgrades[6];
@@ -3101,7 +3101,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 			}
 		}
-		
+
 		// Archer Tier 1 [B] Point Blank: Removes engaged restriction
 		const isPointBlank = attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier1', 'B');
 
@@ -3200,13 +3200,10 @@ function alpineHexDiceTacticGame() { return {
 			if (!intermediateHex || intermediateHex.id === attackerHexId || intermediateHex.id === toHex.id) continue;
 
 			switch (intermediateHex.terrainType) {
-				case 'FOREST':
-				case 'TOWER':
-				case 'MOUNTAIN':
-					return false; // Blocked by terrain
-				case 'LAKE':
-					// LAKE remains transparent, do nothing here
-					break;
+				case 'FOREST': { if (this.isCampaign && fromHex.terrainType == 'MOUNTAIN') break; else return false; }
+				case 'TOWER': { if (this.isCampaign && fromHex.terrainType == 'MOUNTAIN') break; else return false; }
+				case 'MOUNTAIN': return false; // Blocked by terrain
+				case 'LAKE': break; // LAKE remains transparent, do nothing here
 			}
 
 			const intermediateUnit = this.getUnitOnHex(intermediateHex.id, state);
@@ -4189,7 +4186,7 @@ function alpineHexDiceTacticGame() { return {
 				const backR = defenderHex.r + dr;
 				const backHex = this.getHexByQR(backQ, backR, state);
 				const blocker = backHex ? this.getUnitOnHex(backHex.id, state) : null;
-				
+
 				if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
 					this.addLog(`🛡️ Joust blocked! +15 bonus damage.`);
 					this.applyDamage(defenderHexId, 15, state);
@@ -4243,7 +4240,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 			} else {
 				this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
-				
+
 				// Hussar Tier 3 [B] Windrider (Action Refund)
 				if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier3', 'B') && !attackerUnit.windriderUsed) {
 					attackerUnit.windriderUsed = true;
@@ -4258,7 +4255,7 @@ function alpineHexDiceTacticGame() { return {
 				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
-				
+
 				// Fencer Tier 3 [B] Blademaster (Hit & Run)
 				if (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier3', 'B') && combatType === 'MELEE') {
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);

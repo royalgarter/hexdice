@@ -983,8 +983,7 @@
 			<button @click="showCamp = false" class="absolute top-4 right-4 text-lg font-bold cursor-pointer">✕</button>
 
 			<div class="text-center mb-2">
-				<!-- <h2 class="text-xl font-bold uppercase tracking-widest">The Crucible Camp</h2> -->
-				<div class="inline-block px-4 py-2 font-bold">
+				<div class="mt-4 inline-block px-4 py-2 font-bold">
 					POINTS: <span x-text="CampaignManager.state.devotionPoints" class="text-lg text-red-700"></span>
 				</div>
 			</div>
@@ -1063,6 +1062,16 @@
 			</div>
 
 			<div class="p-2 text-center">
+				<div class="mt-4 flex justify-center gap-2">
+					<template x-for="slotId in [1, 2, 3]" :key="slotId">
+						<button
+							@click="CampaignManager.selectSlot(slotId)"
+							:class="CampaignManager.state.activeSlot === slotId ? 'bg-black text-white' : 'bg-transparent border-black'"
+							class="border px-3 py-1 text-sm font-bold uppercase transition-colors"
+							x-text="CampaignManager.state.slots[slotId]?.name || 'Slot ' + slotId"
+						></button>
+					</template>
+				</div>
 				<button @click="showCamp = false" class="cursor-pointer p-2 font-bold uppercase tracking-widest transition-transform ">[Return to Journey]</button>
 			</div>
 		</div>
