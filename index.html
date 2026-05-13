@@ -671,7 +671,7 @@
 		</div>
 	</div>
 
-	<div id="game-controller" class="w-full flex flex-col items-center mb-16 md:mb-0">
+	<div id="game-controller" class="w-full flex flex-col items-center mb-20 md:mb-0">
 		<!-- Game Setup -->
 		<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
 			<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
@@ -765,7 +765,7 @@
 				<button @click="skipReroll()" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Skip Reroll</button>
 				<button @click="skipReroll();randomStart();" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Random Deploy</button>
 			</div>
-			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;">
+			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;" class="mb-4">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
 				<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
 					Level: <span x-text="campaignData?.level"></span>, <span class="hover:bg-gray-500 cursor-pointer select-none" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>, <span class="hover:bg-gray-500 cursor-pointer select-none" x-show="isCampaign && currentPlayerIndex === 0" @click="showCamp = true" x-text="'⛺ CAMPING ['+(CampaignManager?.state?.devotionPoints||0)+']🔥'"></span>
