@@ -20,6 +20,7 @@
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
 	<link rel="manifest" href="/assets/manifest.json">
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
+	<link rel="stylesheet" type="text/css" href="/assets/style.css?v=20260513" />
 
 	<script src="//accounts.google.com/gsi/client" async defer></script>
 	<script src="//unpkg.com/mqtt/dist/mqtt.min.js" async defer></script>
@@ -39,260 +40,6 @@
 	<!-- <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" defer async></script> -->
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
 
-	<style>
-		.hex-grid-campaign-background {
-			scale: 1.03;
-			/*filter: contrast(0.6) opacity(0.8);*/
-			filter: contrast(0.8);
-			clip-path: polygon(1% 1%, 99% 1%, 99% 99%, 1% 99%);
-			/*clip-path: polygon(50% -2%, 150% 50%, 50% 102%, -50% 50%);*/
-		}
-		.hex-grid-container {
-			transform-origin: center center;
-			max-width: 100%;
-			/*transition: zoom 0.3s ease;*/
-			/*background-image: url(/assets/ro_maps/alberta.gif);*/
-			/*background-position: center;*/
-			/*background-size: 120%;*/
-		}
-		.v0-hexagon { /* Solid  */
-			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
-			/*scale: 101% 102%;*/
-			background-repeat: no-repeat;
-			background-position: center;
-			background-color: #896648ee;
-		}
-		.hexagon {
-			--border-width: 6%;   /* Control your border thickness here (can be px, rem, or %) */
-			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); /* Explicit 6-point hexagon (visually identical to your clipped 4-point one) */
-			background-color: #33333366;   /* Control opacity */
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.hexagon::before {
-			content: "";
-			position: absolute;
-			inset: 0;
-			background-color: #666666;
-			pointer-events: none; /* Allows clicking through the border */
-			/*The Magic: Draws a full box, then cuts out the inner hexagon shape. The outer box is drawn clockwise, the inner hole is drawn counter-clockwise.*/
-			clip-path: polygon(
-				/* Outer bounding box */
-				0 0, 100% 0, 100% 100%, 0 100%, 0 0,
-				/* Inner hexagon hole */
-				calc(25% + var(--border-width) / 2) var(--border-width),              /* Top-Left */
-				var(--border-width) 50%,                                              /* Left */
-				calc(25% + var(--border-width) / 2) calc(100% - var(--border-width)), /* Bottom-Left */
-				calc(75% - var(--border-width) / 2) calc(100% - var(--border-width)), /* Bottom-Right */
-				calc(100% - var(--border-width)) 50%,                                 /* Right */
-				calc(75% - var(--border-width) / 2) var(--border-width),              /* Top-Right */
-				calc(25% + var(--border-width) / 2) var(--border-width)               /* Close Top-Left */
-			);
-		}
-		.v2-hexagon {
-			/* 1. Clip the element to the exact hexagon shape */
-			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-			/* 2. Draw the border and transparent center using an inline SVG */
-			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
-			/* 3. Ensure the background stretches to fit the element perfectly */
-			background-size: 100% 100%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-wood {
-			background-color: #c3a471aa;
-		}
-		.bg-hexdefault {
-		}
-		.bg-hexselect {
-			/*background-color: #f4ecd8;*/
-			/*filter: contrast(0.5);*/
-		}
-		.bg-hexmove {
-			/*background-color: #bd9b6b;*/
-			filter: brightness(0.5);
-			/*filter: drop-shadow(2px 4px 6px #3867d6);*/
-		}
-		.bg-hexmerge {
-			/*background-color: #2bcbba;*/
-			filter: saturate(0.5);
-		}
-		.bg-hextarget {
-			/*background-color: #fed330;*/
-			filter: sepia(1);
-			/*filter: drop-shadow(2px 4px 6px #c8a00a);*/
-		}
-		.bg-hexdanger {
-			/*background-color: #705030;*/
-			filter: contrast(0.5);
-		}
-		.bg-hexdeploy {
-			/*background-color: #f7b73166;*/
-			background-color: #f8f8f8aa;
-		}
-		.bg-hexred {
-			background-color: #eb3b5a33;
-			background-image: url('/assets/sprites/terrain/base_ro_red.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexblue {
-			background-color: #3867d633;
-			background-image: url('/assets/sprites/terrain/base_ro_blue.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexgreen {
-			background-color: #19ad6233;
-			background-image: url('/assets/sprites/terrain/base_ro_green.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexpurple {
-			background-color: #a55eea33;
-			background-image: url('/assets/sprites/terrain/base_ro_purple.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexyellow {
-			background-color: #c8a00a33;
-			background-image: url('/assets/sprites/terrain/base_ro_yellow.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexwhite {
-			background-color: #f8f8f833;
-			background-image: url('/assets/sprites/terrain/base_ro_black.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-
-		/* Terrain Colors */
-		.bg-hexplain {
-			background-color: #89664811;
-		}
-		.bg-hexforest {
-			background-color: #228b2266;
-			background-image: url('/assets/sprites/terrain/forest_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexlake {
-			background-color: #4169e166;
-			background-image: url('/assets/sprites/terrain/lake_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hextower {
-			background-color: #40404066;
-			background-image: url('/assets/sprites/terrain/tower_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexmountain {
-			background-color: #8b451366;
-			background-image: url('/assets/sprites/terrain/mountain_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.text-xxs {
-			font-size: 0.6rem;
-		}
-
-		/* Dice Animation Styles */
-		.scene { width: 60px; height: 60px; perspective: 400px; position: fixed; top: 10px; left: 10px; z-index: 50; scale: 0.8; cursor: pointer;}
-		.cube {
-			width: 100%; height: 100%; position: relative;
-			transform-style: preserve-3d;
-			transform: rotateX(15deg) rotateY(15deg);
-			transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-		}
-		.face {
-			position: absolute; width: 100%; height: 100%;
-			background: linear-gradient(135deg, #f4e4bc, #e2d1a3);
-			border: 2px solid #8b5a2b; border-radius: 4px;
-			display: flex; align-items: center; justify-content: center;
-			font-size: 24px; font-weight: bold; color: #4a3728; font-family: 'Georgia', serif;
-			box-shadow: inset 0 0 10px rgba(139, 90, 43, 0.3), 1px 1px 3px rgba(0,0,0,0.5);
-		}
-		.face.front { color: #8b0000; }
-		.front  { transform: rotateY(  0deg) translateZ(30px); }
-		.right  { transform: rotateY( 90deg) translateZ(30px); }
-		.back   { transform: rotateY(180deg) translateZ(30px); }
-		.left   { transform: rotateY(-90deg) translateZ(30px); }
-		.top    { transform: rotateX( 90deg) translateZ(30px); }
-		.bottom { transform: rotateX(-90deg) translateZ(30px); }
-
-		/* Responsive Grid Scaling */
-		/*@media (max-width: 1280px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1.2;
-			}
-		}
-		@media (max-width: 1024px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1.1;
-			}
-		}
-		@media (max-width: 768px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1.05;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 1.0;
-			}
-		}
-		@media (max-width: 640px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.9;
-			}
-		}
-		@media (max-width: 540px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.90;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.80;
-			}
-		}
-		@media (max-width: 480px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.80;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.70;
-			}
-		}
-		@media (max-width: 400px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.75;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.65;
-			}
-		}
-		@media (max-width: 360px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.70;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.6;
-			}
-		}*/
-	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
 
@@ -307,86 +54,6 @@
 			--color-hexblue: var(--color-blue-700);
 			--color-hexgreen: var(--color-emerald-600);
 			--color-hexpurple: var(--color-purple-700);
-		}
-	</style>
-	<style>
-		html {
-			overscroll-behavior: none;
-		}
-
-		body {
-			overscroll-behavior-y: contain;
-			-webkit-overflow-scrolling: touch;
-
-			content: '';
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-
-			background-image: url('/assets/infographics/hexdice_background.jpg');
-			background-size: cover;
-			background-position: center;
-			background-repeat: no-repeat;
-			/* Optional: keeps image fixed while scrolling */
-			background-attachment: fixed;
-
-			/*background: url('/assets/infographics/hexdice_background.jpg') center/cover no-repeat;*/
-			/*opacity: 0.5;*/
-			/*z-index: -1;*/
-			/*filter: contrast(0.1);*/
-		}
-		.unit-info-panel {
-			top: 8rem;
-			left: 0.25rem;
-			width: 15rem;
-			z-index: 40;
-			/*border-radius: 4px;*/
-			/*box-shadow: 0 2px 8px rgba(0,0,0,0.25);*/
-		}
-		.unit-info-panel.is-hover { opacity: 0.95; }
-		.unit-info-panel.is-pinned { opacity: 1; }
-		.unit-info-panel-scroll {
-			max-height: min(36rem, calc(100vh - 7rem));
-			overflow-y: auto;
-			overscroll-behavior: contain;
-		}
-		.unit-info-panel-hint {
-			position: absolute;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			height: 2rem;
-			pointer-events: none;
-			display: flex;
-			align-items: flex-end;
-			justify-content: center;
-			padding-bottom: 0.15rem;
-			margin-bottom: 0.1rem;
-			font-size: 0.85rem;
-			color: #5b3a14;
-			background: linear-gradient(to bottom, rgba(195,164,113,0) 0%, rgba(195,164,113,0.85) 80%);
-			border-radius: 0 0 4px 4px;
-			animation: unitPanelHintBob 1.4s ease-in-out infinite;
-		}
-		@keyframes unitPanelHintBob {
-			0%, 100% { transform: translateY(0); }
-			50% { transform: translateY(2px); }
-		}
-		@media (max-width: 900px) {
-			.unit-info-panel {
-				display: none;
-				top: unset;
-				bottom: 0.25rem;
-				left: 0.25rem;
-				right: 0.25rem;
-				width: auto;
-				font-size: 0.7rem;
-			}
-			.unit-info-panel-scroll {
-				max-height: 40vh;
-			}
 		}
 	</style>
 </head>
@@ -671,7 +338,7 @@
 		</div>
 	</div>
 
-	<div id="game-controller" class="w-full flex flex-col items-center mb-20 md:mb-0">
+	<div id="game-controller" class="w-full flex flex-col items-center mb-20 md:mb-2">
 		<!-- Game Setup -->
 		<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
 			<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
@@ -708,7 +375,7 @@
 					<button class="cursor-pointer hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[Random]</button>
 				</div>
-				<div class="">
+				<div class="mt-4">
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=' + CampaignManager.getCurrentMapName()" x-show="!isCampaign">[Campaign]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button>
 					<a href="?players=2&preset=E_21" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">[Epic 21]</a>
@@ -800,6 +467,7 @@
 					</template>
 				</div> -->
 			</div>
+			<a href="#" class="text-sm underline hover:text-blue-700" @click="location.href='/'" x-show="isCampaign">Home</a>
 		</div>
 
 		<!-- Game Over -->
