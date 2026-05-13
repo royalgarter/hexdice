@@ -7,6 +7,33 @@ const CORE_ASSETS = [
 	'/assets/assets-manifest.json'
 ];
 
+async function fetchAssets() {
+	try {
+		const response = await fetch('/assets/assets-manifest.json');
+		const urlsToCache = await response.json();
+		console.log(`Caching ${urlsToCache.length} assets from manifest`);
+
+		// Chunking to handle large manifests and avoid atomicity failure of cache.addAll
+		const CHUNK_SIZE = 20;
+		for (let i = 0; i < urlsToCache.length; i += CHUNK_SIZE) {
+			const chunk = urlsToCache.slice(i, i + CHUNK_SIZE);
+			try {
+				await cache.addAll(chunk);
+			} catch (err) {
+				console.warn('Failed to cache chunk, attempting individual items:', err);
+				// If a chunk fails, try to add individual items so one failure doesn't block the rest
+				await Promise.all(chunk.map(url =>
+					cache.add(url).catch(e => console.error('Failed to cache asset:', url, e))
+				));
+			}
+		}
+		console.log(`Finished caching assets from manifest`);
+		return;
+	} catch (error) {
+		console.error('Failed to load assets manifest:', error);
+	}
+}
+
 self.addEventListener('install', (event) => {
 	console.log('Service Worker installing...');
 	event.waitUntil(
@@ -16,31 +43,7 @@ self.addEventListener('install', (event) => {
 				// First cache core assets
 				await cache.addAll(CORE_ASSETS);
 				
-				// Then try to fetch and cache all other assets from manifest
-				try {
-					const response = await fetch('/assets/assets-manifest.json');
-					const urlsToCache = await response.json();
-					console.log(`Caching ${urlsToCache.length} assets from manifest`);
-					
-					// Chunking to handle large manifests and avoid atomicity failure of cache.addAll
-					const CHUNK_SIZE = 20;
-					for (let i = 0; i < urlsToCache.length; i += CHUNK_SIZE) {
-						const chunk = urlsToCache.slice(i, i + CHUNK_SIZE);
-						try {
-							await cache.addAll(chunk);
-						} catch (err) {
-							console.warn('Failed to cache chunk, attempting individual items:', err);
-							// If a chunk fails, try to add individual items so one failure doesn't block the rest
-							await Promise.all(chunk.map(url => 
-								cache.add(url).catch(e => console.error('Failed to cache asset:', url, e))
-							));
-						}
-					}
-					console.log(`Finished caching assets from manifest`);
-					return;
-				} catch (error) {
-					console.error('Failed to load assets manifest:', error);
-				}
+				// fetchAssets();
 			})
 			.then(() => {
 				console.log('Service Worker installed successfully');

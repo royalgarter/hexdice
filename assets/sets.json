@@ -1,4 +1,10 @@
 [
+	"aw_ani_green",
+	"aw_static_blue",
+	"aw_static_green",
+	"aw_static_red",
+	"aw_static_white",
+	"aw_static_yellow",
 	"chrono_mix",
 	"clay",
 	"clay2",
@@ -74,6 +80,9 @@
 	"ro_skel_pay",
 	"ro_soul_ve",
 	"ro_spider_mjolnir",
+	"ro_static_1",
+	"ro_static_2",
+	"ro_static_22",
 	"ro_stuff_pet",
 	"ro_sword_dun",
 	"ro_thanatos_tha",
@@ -85,6 +94,13 @@
 	"ro_xmas",
 	"seiken_mix",
 	"tos_mix",
-	"warcraft2",
-	"wc2"
+	"travian_gaul",
+	"travian_roman",
+	"travian_teuton",
+	"wc2_human",
+	"wc2_orc",
+	"wc3_human",
+	"wc3_nightelf",
+	"wc3_orc",
+	"wc3_undead"
 ]
