@@ -425,7 +425,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 // Filter out spells that are currently unsafe unless they are escape actions
                 const viableSpells = spellMoves.filter(m => m.isSafe || m.isEscapeAction || profile.riskTolerance > 0.7);
 
-                let hasSacrifice = spells.find(m => m.move.actionType == 'SPELLCAST_SACRIFICE');
+                let hasSacrifice = viableSpells.find(m => m.move.actionType == 'SPELLCAST_SACRIFICE');
 
                 const ratio = hasSacrifice ? 1 : (viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length);
 

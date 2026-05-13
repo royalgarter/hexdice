@@ -928,18 +928,10 @@ function alpineHexDiceTacticGame() { return {
 			if (isAI && this.spriteSets.length > 0) {
 				const availableSkins = this.spriteSets.filter(s => !usedSkins.has(s));
 				if (availableSkins.length > 0) {
-					let ro_skins = availableSkins.filter(x => x.includes('ro_'));
-
-					if (this.CampaignManager.state.isCampaignActive && campaignData?.rmi) {
-						let words = campaignData.rmi.split('.')?.[0]?.replace(/\d/g, '')?.split('_');
-						let ro_rmi_skins = words?.length
-							? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
-							: [];
-
-						selectedSkin = ro_rmi_skins?.length ? ro_rmi_skins.cosmic_random() : availableSkins.cosmic_random();
-						} else {
-						selectedSkin = availableSkins.cosmic_random();
-						}
+					const ro_skins = availableSkins.filter(x => x.includes('ro_'));
+					selectedSkin = this.isCampaign 
+						? this.CampaignManager.getAIPlayerSkin(campaignData, availableSkins, ro_skins)
+						: availableSkins.cosmic_random();
 					usedSkins.add(selectedSkin);
 				}
 			}
@@ -960,79 +952,10 @@ function alpineHexDiceTacticGame() { return {
 
 		// Load Dice from Campaign Data OR Use Legendary Six
 		if (this.isCampaign) {
-			const player = this.players[0];
-			let diceToLoad = campaignData?.player1Dice || [1,2,3,4,5,6]; // Default: Legendary Six
-
-			// Filter out units that are currently locked out (eliminated in previous level)
-			diceToLoad = diceToLoad.filter(val => this.CampaignManager.isUnitAvailable(val));
-
-			diceToLoad.forEach((val, idx) => {
-				const upgrades = this.CampaignManager.state.upgrades[val] || { atk: 0, def: 0, hp: 0 };
-				const baseStats = UNIT_STATS[val];
-
-				const die = {
-					id: `0_${idx}`,
-					originalIndex: idx,
-					playerId: 0,
-					value: val,
-					...baseStats,
-					attack: (baseStats.attack * 10) + upgrades.atk,
-					armor: (baseStats.armor * 10) + upgrades.def,
-					maxHP: 100 + upgrades.hp,
-					isDeployed: false,
-					hexId: null,
-					hasMovedOrAttackedThisTurn: false,
-					isGuarding: 0,
-					skirmishBuff: 0,
-					isDeath: false,
-					actionsTakenThisTurn: 0
-				};
-
-				// Tanker Tier 3 [A] Behemoth: Max HP is permanently doubled
-				if (val === 5 && upgrades.perks.tier3 === 'A') {
-					die.maxHP *= 2;
-				}
-
-				die.currentHP = die.maxHP;
-				die.currentArmor = die.armor;
-				die.armorReduction = 0;
-
-				this.CampaignManager.applyFatigueDebuffs(die);
-				die.effectiveArmor = die.armor;
-				die.spriteUrl = this.getUnitSpriteUrl(die);
-				player.dice.push(die);
-			});
+			this.CampaignManager.initCampaignDice(this, campaignData, this.players[0]);
 
 			if (campaignData) {
-				// Load Enemy Dice
-				const p2 = this.players[1];
-				(campaignData.enemyDice || []).forEach((val, idx) => {
-					const baseStats = UNIT_STATS[val];
-					const die = {
-						id: `1_${idx}`,
-						originalIndex: idx,
-						playerId: 1,
-						value: val,
-						...baseStats,
-						attack: baseStats.attack * 10,
-						armor: baseStats.armor * 10,
-						maxHP: 100,
-						isDeployed: false,
-						hexId: null,
-						hasMovedOrAttackedThisTurn: false,
-						isGuarding: 0,
-						skirmishBuff: 0,
-						isDeath: false,
-						actionsTakenThisTurn: 0
-					};
-					die.currentHP = die.maxHP;
-					die.currentArmor = die.armor;
-					die.armorReduction = 0;
-
-					die.effectiveArmor = die.armor;
-					die.spriteUrl = this.getUnitSpriteUrl(die);
-					p2.dice.push(die);
-				});
+				this.CampaignManager.initEnemyDice(this, campaignData, this.players[1]);
 			} else {
 				this.addLog("Campaign Mode: You command the Legendary Six.");
 			}
@@ -1063,17 +986,7 @@ function alpineHexDiceTacticGame() { return {
 		this.phase = (this.isCampaign && !!campaignData) ? 'SETUP_DEPLOY' : 'SETUP_ROLL';
 		if (this.phase === 'SETUP_DEPLOY') this.refreshValidDeploymentHexes();
 		if (this.isCampaign && campaignData) {
-			// Auto-deploy enemy (P2) randomly
-			const p2 = this.players[1];
-			p2.dice.forEach((die, idx) => {
-				const validHexes = this.calcValidDeploymentHexes(1);
-				if (validHexes.length > 0) {
-					const hexId = validHexes[Math.floor(random() * validHexes.length)];
-					die.isDeployed = true;
-					this.move(die, null, this.getHex(hexId));
-				}
-			});
-			this.addLog("Enemy forces have taken their positions.");
+			this.CampaignManager.autoDeployEnemy(this, campaignData);
 		}
 		this.turnCount = 0;
 		this.currentPlayerIndex = 0;
@@ -1105,12 +1018,8 @@ function alpineHexDiceTacticGame() { return {
 		const player = this.players[playerId];
 		if (!player) return;
 
-		if (playerId === 0 && this.isCampaign) {
-			player.sprites = [];
-			if (this.campaignData?.level < 11) player.selectedSpriteSet = 'ro_novice';
-			else if (this.campaignData?.level < 51) player.selectedSpriteSet = 'ro_job1';
-			else if (this.campaignData?.level > 80) player.selectedSpriteSet = 'ro_job3';
-			else player.selectedSpriteSet = 'tos_mix';
+		if (this.isCampaign) {
+			this.CampaignManager.initPlayerSkins(this, playerId);
 		}
 
 		if (player.selectedSpriteSet?.includes('mix')) {
@@ -4174,100 +4083,7 @@ function alpineHexDiceTacticGame() { return {
 		this.trailSpell = {};
 
 		if (this.isCampaign) {
-			const damage = this.CampaignManager.performCampaignCombat(attackerUnit, defenderUnit, distance, combatType, this, state);
-
-			const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
-
-			// Knight Tier 1 [B] Joust (Push back)
-			if (attackerUnit.value === 4 && this.hasPerk(attackerUnit, 'tier1', 'B')) {
-				const dq = defenderHex.q - attackerHex.q;
-				const dr = defenderHex.r - attackerHex.r;
-				const backQ = defenderHex.q + dq;
-				const backR = defenderHex.r + dr;
-				const backHex = this.getHexByQR(backQ, backR, state);
-				const blocker = backHex ? this.getUnitOnHex(backHex.id, state) : null;
-
-				if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
-					this.addLog(`🛡️ Joust blocked! +15 bonus damage.`);
-					this.applyDamage(defenderHexId, 15, state);
-				} else if (defenderStillAlive) {
-					this.addLog(`🛡️ Joust! ${this.logUnit(defenderStillAlive)} is pushed back.`);
-					this.move(defenderStillAlive, defenderHex, backHex, state);
-				}
-			}
-
-			// Tanker Tier 1 [A] Spiked Armor (Reflect)
-			if (defenderUnit.value === 5 && defenderUnit.isGuarding) {
-				if (damage < 30) {
-					let reflect = 10;
-					if (this.hasPerk(defenderUnit, 'tier1', 'A')) reflect += 15;
-					this.addLog(`💥 Spiked Armor! ${this.logUnit(attackerUnit)} takes ${reflect} reflect damage.`);
-					this.applyDamage(attackerHexId, reflect, state);
-				}
-			}
-
-			// Knight Tier 3 [B] Dark Knight (Lifesteal)
-			if (attackerUnit.value === 4 && this.hasPerk(attackerUnit, 'tier3', 'B')) {
-				const heal = Math.floor(damage * 0.5);
-				attackerUnit.currentHP = Math.min(attackerUnit.maxHP, attackerUnit.currentHP + heal);
-				this.addLog(`🧛 Dark Knight lifesteal! Healed ${heal} HP.`);
-			}
-
-			// Archer Tier 2 [B] Venom Tipped
-			if (attackerUnit.value === 2 && this.hasPerk(attackerUnit, 'tier2', 'B')) {
-				defenderUnit.venomDuration = 2;
-				this.addLog(`🐍 Venom! ${this.logUnit(defenderUnit)} is poisoned for 2 turns.`);
-			}
-
-			// Fencer Tier 3 [A] Paladin (Heal on hit)
-			if (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
-				this.getNeighbors(attackerHex, state).forEach(n => {
-					const friend = this.getUnitOnHex(n.id, state);
-					if (friend && friend.playerId === attackerUnit.playerId) {
-						const heal = 20;
-						friend.currentHP = Math.min(friend.maxHP, friend.currentHP + heal);
-					}
-				});
-			}
-
-			// const defenderStillAlive = this.getUnitOnHex(defenderHexId, state);
-			if (defenderStillAlive) {
-				// Fencer Tier 2 [A] Riposte
-				if (combatType === 'MELEE' && defenderStillAlive.value === 1 && this.hasPerk(defenderStillAlive, 'tier2', 'A')) {
-					const counterDamage = Math.floor(defenderStillAlive.attack * 0.5);
-					this.addLog(`↩️ Riposte! ${this.logUnit(defenderStillAlive)} counters for ${counterDamage} damage!`);
-					this.applyDamage(attackerHexId, counterDamage, state);
-				}
-			} else {
-				this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
-
-				// Hussar Tier 3 [B] Windrider (Action Refund)
-				if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier3', 'B') && !attackerUnit.windriderUsed) {
-					attackerUnit.windriderUsed = true;
-					attackerUnit.hasMovedOrAttackedThisTurn = false;
-					attackerUnit.actionsTakenThisTurn = 0;
-					this.addLog(`🌪️ Windrider! Action refunded.`);
-				}
-
-				if (isSkirmishing) {
-					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
-					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
-				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
-					this.move(attackerUnit, attackerHex, defenderHex, state);
-				}
-
-				// Fencer Tier 3 [B] Blademaster (Hit & Run)
-				if (attackerUnit.value === 1 && this.hasPerk(attackerUnit, 'tier3', 'B') && combatType === 'MELEE') {
-					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
-					if (this.actionMode === 'SKIRMISH_POST_MOVE') return;
-				}
-
-				// Hussar Tier 2 [A] Hit & Run
-				if (attackerUnit.value === 3 && this.hasPerk(attackerUnit, 'tier2', 'A')) {
-					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
-					if (this.actionMode === 'SKIRMISH_POST_MOVE') return;
-				}
-			}
+			if (this.CampaignManager.handleCombat(this, attackerHexId, defenderHexId, combatType, state)) return;
 		} else if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
 			
@@ -4423,29 +4239,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit) return;
 
 		if (this.isCampaign) {
-			// Fencer Tier 1 [A] Parry
-			if (unit.value === 1 && this.hasPerk(unit, 'tier1', 'A')) {
-				const parryAvailable = 15 - (unit.roundDamageNegated || 0);
-				if (parryAvailable > 0) {
-					const negated = Math.min(damage, parryAvailable);
-					damage -= negated;
-					unit.roundDamageNegated = (unit.roundDamageNegated || 0) + negated;
-					if (negated > 0) this.addLog(`🛡️ Parry! ${this.logUnit(unit)} negates ${negated} damage.`);
-				}
-			}
-
-			// Hussar Tier 1 [B] Evasion
-			if (unit.value === 3 && this.hasPerk(unit, 'tier1', 'B') && this.trailAttack?.combatType === 'RANGED_ATTACK') {
-				damage = Math.floor(damage * 0.5);
-				this.addLog(`💨 Evasion! ${this.logUnit(unit)} takes half damage from ranged attack.`);
-			}
-
-			unit.currentHP -= damage;
-			if (unit.currentHP <= 0) {
-				unit.currentHP = 0;
-				this.removeUnit(hexId, state);
-			}
-			return;
+			if (this.CampaignManager.applyDamage(this, hexId, damage, state)) return;
 		}
 
 		unit.armorReduction += damage;
@@ -4623,24 +4417,7 @@ function alpineHexDiceTacticGame() { return {
 		this.winnerPlayerId = winnerPlayerIndex;
 
 		if (this.isCampaign) {
-			const deployedValues = this.players[0].dice
-				.filter(d => d.isDeployed && !d.isDeath)
-				.map(d => d.value);
-			const eliminatedValues = this.players[0].dice
-				.filter(d => d.isDeployed && d.isDeath)
-				.map(d => d.value);
-
-			this.CampaignManager.updateAfterBattle(deployedValues, eliminatedValues);
-
-			if (winnerPlayerIndex === 0) {
-				this.CampaignManager.advanceLevel();
-				if (this.campaignData?.rewards) {
-					this.CampaignManager.grantRewards(this.campaignData.rewards);
-					this.addLog("Rewards Granted: " + Object.entries(this.campaignData.rewards).map(([k,v]) => `${v}x ${k.toUpperCase()}`).join(', '));
-				}
-				this.addLog("Campaign Advanced: New Level Unlocked!");
-			}
-			this.nextCampaignMap = this.CampaignManager.getCurrentMapName();
+			this.CampaignManager.handleGameOver(this, winnerPlayerIndex);
 		}
 
 		if (winnerPlayerIndex === -1) { // Draw
