@@ -173,6 +173,26 @@ function alpineHexDiceTacticGame() { return {
 		autoPlay: new URLSearchParams(location.search).get('mode')?.includes('auto'),
 	},
 
+	get isUnitPanelVisible() {
+		const hexId = this.unitPanelHexId();
+		return (this.phase === 'PLAYER_TURN' && hexId != null && this.getUnitOnHex(hexId)) && 
+               ((window.innerWidth > 768) || this.showUnitInfo);
+	},
+	get unitPanelData() {
+		const hexId = this.unitPanelHexId();
+		const u = this.getUnitOnHex(hexId);
+		const h = this.getHex(hexId);
+		if (!u) return { u: null, h: null, br: { total: 0, parts: [], rerolled: false }, flags: [], terrain: { name: '', effect: '' }, actions: [] };
+		return {
+			u: u,
+			h: h,
+			br: this.unitPanelBreakdown(u, h),
+			flags: this.unitStatusFlags(u, h),
+			terrain: this.unitTerrainText(h),
+			actions: this.unitActions(u, h)
+		};
+	},
+
 	updateUrlParam(key, value) {
 		const url = new URL(window.location.href);
 		url.searchParams.set(key, value);
