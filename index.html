@@ -72,7 +72,7 @@
 	</div>
 
 	<!-- User Profile Header -->
-	<div style="display:none;" class="fixed top-2 right-2 z-50 flex items-center space-x-2 p-2" x-show="auth.user" x-cloak>
+	<div style="display:none;" class="fixed top-2 right-2 z-10 flex items-center space-x-2 p-2" x-show="auth.user" x-cloak>
 		<img :src="auth.user?.picture" class="w-8 h-8 rounded-full border" x-show="auth.user?.picture"
 			onerror="this.src = '/assets/images/favicon-32x32.png';"
 		>
@@ -81,7 +81,7 @@
 			<button class="text-blue-600 hover:underline" @click="logout()">Logout</button>
 		</div>
 	</div>
-	<div style="display:none;" class="fixed top-2 right-2 z-50" x-show="!auth.user" x-cloak>
+	<div style="display:none;" class="fixed top-2 right-2 z-10" x-show="!auth.user" x-cloak>
 		<div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="signin" data-size="small" data-logo_alignment="left"></div>
 	</div>
 
@@ -130,14 +130,14 @@
 						>
 						</span>
 
-						<span style="top:-0.6rem;right:0.8rem;" class="absolute text-red-700"
+						<span style="top:-0.5rem;right:0.6rem;" class="absolute z-10 text-red-700"
 							x-show="hex.unit" x-text="hex.unit?.attack">
 						</span>
-						<span style="top:-0.6rem;right:-0.6rem;" class="absolute text-gray-700"
+						<span style="top:-0.5rem;right:-0.4rem;" class="absolute z-10 text-gray-700"
 							:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
 							x-show="hex.unit" x-text="hex.unit?.effectiveArmor">
 						</span>
-						<span style="top:-0.6rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
+						<span style="top:-0.5rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
 							x-show="hex.unit?.isRerolled">R
 						</span>
 						<span style="top:0.25rem;right:-0.8rem;" class="absolute text-blue-900 font-bold"
@@ -217,124 +217,122 @@
 			</svg>
 
 			<!-- Unit Info Panel -->
-			<template x-if="phase === 'PLAYER_TURN' && unitPanelHexId() != null && getUnitOnHex(unitPanelHexId())">
-				<div class="unit-info-panel fixed bg-wood border border-yellow-900 text-xs"
-					 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
-					 x-data="{ overflow: false, atBottom: true }">
-					<div class="unit-info-panel-scroll"
-						 x-init="$nextTick(() => {
-							 const update = () => {
-								 overflow = $el.scrollHeight > $el.clientHeight + 1;
-								 atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2;
-							 };
-							 update();
-							 new ResizeObserver(update).observe($el);
-							 new MutationObserver(update).observe($el, { childList: true, subtree: true, characterData: true });
-						 })"
-						 @scroll.passive="atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2">
-					<template x-if="getUnitOnHex(unitPanelHexId())">
-						<div x-data="{
-							get u() { return getUnitOnHex(unitPanelHexId()); },
-							get h() { return getHex(unitPanelHexId()); },
-							get br() { return unitPanelBreakdown(this.u, this.h); },
-							get flags() { return unitStatusFlags(this.u, this.h); },
-							get terrain() { return unitTerrainText(this.h); },
-							get actions() { return unitActions(this.u, this.h); }
-						}" class="p-2 space-y-2">
-							<!-- Header -->
-							<div class="flex items-center justify-between border-b border-yellow-900 pb-1 gap-2">
-								<span class="text-3xl leading-none" :class="PLAYER_CONFIG[u.playerId]?.logColor"
-									  x-text="'⚀⚁⚂⚃⚄⚅'[u.value-1]"></span>
-								<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+(u.value)+'.png'" :alt="'D['+(u.value)+']'" :title="'D['+(u.value)+']'" width="16" height="16">
-								<div class="flex-grow">
-									<div class="text-base font-bold" x-text="u.name"></div>
-									<div :class="PLAYER_CONFIG[u.playerId]?.logColor"
-										 x-text="'P' + (u.playerId + 1) + ' ' + PLAYER_CONFIG[u.playerId]?.color"></div>
-								</div>
-								<span x-show="unitstat != null" class="text-yellow-700" title="Pinned">📌</span>
+			<div class="unit-info-panel fixed border border-yellow-900 text-xs" style="background-color: #c3a471;"
+				 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
+				 x-show="(phase === 'PLAYER_TURN' && unitPanelHexId() != null && getUnitOnHex(unitPanelHexId())) && ((window.innerWidth > 768) || showUnitInfo)"
+				 x-data="{ overflow: false, atBottom: true }">
+				<div class="unit-info-panel-scroll"
+					 x-init="$nextTick(() => {
+						 const update = () => {
+							 overflow = $el.scrollHeight > $el.clientHeight + 1;
+							 atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2;
+						 };
+						 update();
+						 new ResizeObserver(update).observe($el);
+						 new MutationObserver(update).observe($el, { childList: true, subtree: true, characterData: true });
+					 })"
+					 @scroll.passive="atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2">
+				<div x-data="{
+						get u() { return getUnitOnHex(unitPanelHexId()); },
+						get h() { return getHex(unitPanelHexId()); },
+						get br() { return this.u ? unitPanelBreakdown(this.u, this.h) : { total: 0, parts: [], rerolled: false }; },
+						get flags() { return this.u ? unitStatusFlags(this.u, this.h) : []; },
+						get terrain() { return this.h ? unitTerrainText(this.h) : { name: '', effect: '' }; },
+						get actions() { return this.u ? unitActions(this.u, this.h) : []; }
+					}" class="p-2 space-y-2">
+						<!-- Header -->
+						<div class="flex items-center justify-between border-b border-yellow-900 pb-1 gap-2">
+							<span class="text-3xl leading-none" :class="PLAYER_CONFIG[u?.playerId]?.logColor"
+								  x-text="'⚀⚁⚂⚃⚄⚅'[u?.value-1]"></span>
+							<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+(u?.value)+'.png'" :alt="'D['+(u?.value)+']'" :title="'D['+(u?.value)+']'" width="16" height="16">
+							<div class="flex-grow">
+								<div class="text-base font-bold" x-text="u?.name"></div>
+								<div :class="PLAYER_CONFIG[u?.playerId]?.logColor"
+									 x-text="u ? ('P' + (u.playerId + 1) + ' ' + PLAYER_CONFIG[u.playerId]?.color) : ''"></div>
 							</div>
+							<span x-show="unitstat != null" class="mr-2" title="Pinned">📌</span>
+							<span x-show="unitstat != null && showUnitInfo" @click="showUnitInfo = false" class="font-bold" title="Close">✕</span>
+						</div>
 
-							<!-- Blurb -->
-							<div class="italic text-gray-700" x-text="unitBlurb(u)"></div>
+						<!-- Blurb -->
+						<div class="italic text-gray-700" x-text="u ? unitBlurb(u) : ''"></div>
 
-							<!-- HP for Campaign -->
-							<div x-show="isCampaign" class="border-t border-yellow-900 pt-1">
-								<div class="flex justify-between items-center mb-1">
-									<span class="text-gray-600 font-bold">HIT POINTS</span>
-									<span class="font-bold"><span x-text="u.currentHP"></span> / <span x-text="u.maxHP"></span></span>
-								</div>
-								<div class="w-full h-2 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
-									<div class="h-full bg-green-500 transition-all duration-300"
-										:style="'width: ' + (u.currentHP / u.maxHP * 100) + '%'"
-										:class="{'bg-yellow-500': u.currentHP / u.maxHP < 0.5, 'bg-red-500': u.currentHP / u.maxHP < 0.25}">
-									</div>
-								</div>
+						<!-- HP for Campaign -->
+						<div x-show="isCampaign && u" class="border-t border-yellow-900 pt-1">
+							<div class="flex justify-between items-center mb-1">
+								<span class="text-gray-600 font-bold">HIT POINTS</span>
+								<span class="font-bold"><span x-text="u?.currentHP"></span> / <span x-text="u?.maxHP"></span></span>
 							</div>
-
-							<!-- Stats -->
-							<div class="grid grid-cols-2 gap-x-3 gap-y-1">
-								<div>
-									<span class="text-gray-600">Armor</span>
-									<span class="font-bold" x-text="br.total"></span>
-									<span class="text-gray-500"
-										  x-show="br.parts.length > 0 || br.total !== u.currentArmor"
-										  x-text="'(' + u.currentArmor + (br.parts.map(p => (p.value >= 0 ? ' +' : ' ') + p.value + ' ' + p.label).join('')) + ')'"></span>
-									<span class="text-red-700 ml-1" x-show="br.rerolled">[reroll: 0]</span>
-								</div>
-								<div>
-									<span class="text-gray-600">Attack</span>
-									<span class="font-bold" x-text="u.attack"></span>
-								</div>
-								<div x-show="u.range > 0">
-									<span class="text-gray-600">Range</span>
-									<span class="font-bold" x-text="u.range"></span>
-									<span class="text-gray-500" x-show="u.value === 2"> (LoS req.)</span>
-								</div>
-								<div>
-									<span class="text-gray-600">Move</span>
-									<span class="font-bold" x-text="u.distance"></span>
+							<div class="w-full h-2 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+								<div class="h-full bg-green-500 transition-all duration-300"
+									:style="'width: ' + (u ? (u.currentHP / u.maxHP * 100) : 0) + '%'"
+									:class="{'bg-yellow-500': u && u.currentHP / u.maxHP < 0.5, 'bg-red-500': u && u.currentHP / u.maxHP < 0.25}">
 								</div>
 							</div>
+						</div>
 
-							<!-- Movement pattern -->
-							<div class="text-gray-700" x-text="unitMovementText(u)"></div>
+						<!-- Stats -->
+						<div class="grid grid-cols-2 gap-x-3 gap-y-1">
+							<div>
+								<span class="text-gray-600">Armor</span>
+								<span class="font-bold" x-text="br?.total"></span>
+								<span class="text-gray-500"
+									  x-show="br?.parts?.length > 0 || br?.total !== u?.currentArmor"
+									  x-text="'(' + u?.currentArmor + (br?.parts?.map(p => (p.value >= 0 ? ' +' : ' ') + p.value + ' ' + p.label).join('')) + ')'"></span>
+								<span class="text-red-700 ml-1" x-show="br?.rerolled">[reroll: 0]</span>
+							</div>
+							<div>
+								<span class="text-gray-600">Attack</span>
+								<span class="font-bold" x-text="u?.attack"></span>
+							</div>
+							<div x-show="u?.range > 0">
+								<span class="text-gray-600">Range</span>
+								<span class="font-bold" x-text="u?.range"></span>
+								<span class="text-gray-500" x-show="u?.value === 2"> (LoS req.)</span>
+							</div>
+							<div>
+								<span class="text-gray-600">Move</span>
+								<span class="font-bold" x-text="u?.distance"></span>
+							</div>
+						</div>
 
-							<!-- Status flags -->
-							<div x-show="flags.length > 0" class="border-t border-yellow-900 pt-1 space-y-1">
-								<template x-for="(f, idx) in flags" :key="idx">
-									<div :class="{'text-red-700': f.tone === 'warn', 'text-blue-800': f.tone === 'good', 'text-gray-700': f.tone === 'info'}">
-										<span x-text="f.icon"></span>
-										<span x-text="f.label"></span>
+						<!-- Movement pattern -->
+						<div class="text-gray-700" x-text="u ? unitMovementText(u) : ''"></div>
+
+						<!-- Status flags -->
+						<div x-show="flags?.length > 0" class="border-t border-yellow-900 pt-1 space-y-1">
+							<template x-for="(f, idx) in flags" :key="idx">
+								<div :class="{'text-red-700': f.tone === 'warn', 'text-blue-800': f.tone === 'good', 'text-gray-700': f.tone === 'info'}">
+									<span x-text="f.icon"></span>
+									<span x-text="f.label"></span>
+								</div>
+							</template>
+						</div>
+
+						<!-- Terrain -->
+						<div class="border-t border-yellow-900 pt-1">
+							<span class="text-gray-600">Terrain:</span>
+							<span class="font-bold" x-text="terrain?.name"></span>
+							<div class="text-gray-700" x-text="terrain?.effect"></div>
+						</div>
+
+						<!-- Actions -->
+						<div class="border-t border-yellow-900 pt-1">
+							<div class="text-gray-600 mb-1">Actions:</div>
+							<div class="space-y-1">
+								<template x-for="(a, idx) in actions" :key="idx">
+									<div>
+										<span class="font-bold" x-text="a.name"></span>
+										<div class="text-gray-700" x-text="a.desc"></div>
 									</div>
 								</template>
 							</div>
-
-							<!-- Terrain -->
-							<div class="border-t border-yellow-900 pt-1">
-								<span class="text-gray-600">Terrain:</span>
-								<span class="font-bold" x-text="terrain.name"></span>
-								<div class="text-gray-700" x-text="terrain.effect"></div>
-							</div>
-
-							<!-- Actions -->
-							<div class="border-t border-yellow-900 pt-1">
-								<div class="text-gray-600 mb-1">Actions:</div>
-								<div class="space-y-1">
-									<template x-for="(a, idx) in actions" :key="idx">
-										<div>
-											<span class="font-bold" x-text="a.name"></span>
-											<div class="text-gray-700" x-text="a.desc"></div>
-										</div>
-									</template>
-								</div>
-							</div>
-
 						</div>
-					</template>
+
 					</div>
-					<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
 				</div>
-			</template>
+				<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
+			</div>
 		</div>
 	</div>
 
@@ -586,6 +584,7 @@
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="location.href='/'" x-show="isCampaign">Home</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showMinimap = !showMinimap">Minimap</a>
+			<a href="#" class="text-sm font-bold hover:text-blue-700 ml-2" @click="showUnitInfo = !showUnitInfo" x-show="unitstat || hoverUnitHexId">Help❔</a>
 		</div>
 	</div>
 

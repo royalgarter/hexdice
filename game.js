@@ -160,6 +160,7 @@ function alpineHexDiceTacticGame() { return {
 	oracleSelectedSpell: null, // 'SHIELD', 'SWAP', 'SKIRMISH'
 	showLog: true,
 	showMinimap: true,
+	showUnitInfo: false,
 	showCamp: false,
 	preset: null,
 	spriteSets: [],
