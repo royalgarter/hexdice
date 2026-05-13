@@ -81,9 +81,17 @@ function calculatePressureMap(GAME, state, myPlayerIndex) {
             if (!unitHex) continue;
 
             // Pressure radius: Base radius + Range
-            // Dice 2 (Archer) has Range 2, Dice 6 (Legate) has Range 1
+            // Dice 2 (Archer) has Range 2, Dice 6 (Oracle) has Range 2
             const baseRadius = 2; // Immediate area of influence
-            const totalRadius = baseRadius + (unit.range || 0);
+
+            // Get actual range considering terrain
+            let actualRange = (unit.range || 0);
+            if (unit.value === 2 || unit.value === 6) {
+                if (unitHex.terrainType === 'TOWER') actualRange = 2;
+                else if (unitHex.terrainType === 'MOUNTAIN') actualRange = 3;
+            }
+
+            const totalRadius = baseRadius + actualRange;
 
             // Iterate through hexes in radius to apply pressure
             for (const hex of state.hexes) {
@@ -417,7 +425,9 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 // Filter out spells that are currently unsafe unless they are escape actions
                 const viableSpells = spellMoves.filter(m => m.isSafe || m.isEscapeAction || profile.riskTolerance > 0.7);
 
-                const ratio = viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length; 
+                let hasSacrifice = spells.find(m => m.move.actionType == 'SPELLCAST_SACRIFICE');
+
+                const ratio = hasSacrifice ? 1 : (viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length);
 
                 if (viableSpells.length > 0 && (random() < ratio)) {
                     if (verbose) console.log('Spellcast Ratio:', ratio);
@@ -1221,22 +1231,30 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
             
-            if (targetUnit && oracleUnit) {
+            // Explicitly check calcValidSacrificeTargets as requested
+            const validSacrificeTargets = GAME.calcValidSacrificeTargets(move.unitHexId, state);
+            const isValidSacrifice = validSacrificeTargets.includes(move.targetHexId);
+
+            if (targetUnit && oracleUnit && isValidSacrifice) {
                 const player = state.players[state.currentPlayerIndex];
                 const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
                 const hasReserve = player.dice.some(d => !d.isDeployed && !d.isDeath);
 
-                // Base score for removal
-                analysis.score += (targetUnit.value * 20);
-                if (hasReserve) analysis.score += 50;
+                // Substantially increased score to prioritize Transmute
+                analysis.score += (targetUnit.value * 200);
+                if (hasReserve) analysis.score += 300;
+
+                // Mark as kill so it gets prioritized by the kill loop
+                analysis.canKillEnemy = true;
+                analysis.targetValue = targetUnit.value;
 
                 // Stalemate break bonus
                 if (targetUnit.value === 6 && activeUnits.length === 1) {
                     const enemyPlayer = state.players[targetUnit.playerId];
                     const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-                    analysis.score += 100;
-                    if (enemyActiveUnits.length > 1) analysis.score += 50;
-                    if (enemyActiveUnits.length === 1) analysis.score += 500;
+                    analysis.score += 500;
+                    if (enemyActiveUnits.length > 1) analysis.score += 200;
+                    if (enemyActiveUnits.length === 1) analysis.score += 2000;
                 }
                 analysis.isSupportAction = true;
             }
