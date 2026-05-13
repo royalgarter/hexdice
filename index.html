@@ -149,7 +149,7 @@
 							</span>
 
 							<!-- Campaign HP Bar -->
-							<div x-show="isCampaign" style="left:-0.45rem" class="absolute bottom-0 w-6 h-1 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+							<div x-show="isCampaign" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
 								<div class="h-full bg-green-500 transition-all duration-300"
 									:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
 									:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
