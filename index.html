@@ -29,17 +29,17 @@
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
 	<link rel="manifest" href="/assets/manifest.json">
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
-	<link rel="stylesheet" type="text/css" href="/assets/style.css?v=20260513" />
+	<link rel="stylesheet" type="text/css" href="/assets/style.css?v=___VERSION___" />
 
 	<script src="//accounts.google.com/gsi/client" async defer></script>
 	<script src="//unpkg.com/mqtt/dist/mqtt.min.js" async defer></script>
 	<script type="text/javascript" src="/assets/alpine.min.js" defer></script>
 
-	<script type="text/javascript" src="/game.js?v=20260513"></script>
-	<script type="text/javascript" src="/campaign/campaign-manager.js?v=20260513"></script>
-	<script type="text/javascript" src="/ai/heuristic-profiles.js?v=20260513"></script>
-	<script type="text/javascript" src="/ai/ai-heuristic.js?v=20260513"></script>
-	<script type="text/javascript" src="/ai/ai.js?v=20260513"></script>
+	<script type="text/javascript" src="/game.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/campaign/campaign-manager.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/ai/heuristic-profiles.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/ai/ai-heuristic.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/ai/ai.js?v=___VERSION___"></script>
 
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
@@ -110,6 +110,11 @@
 	<div style="display: none;" x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'"
 		class="w-full bg-yellow-100 border-y-2 border-yellow-600 py-2 text-center font-bold text-yellow-800 text-lg">
 		👑 Romance of the Dice Kingdoms 👑
+	</div>
+
+	<!-- Welcome Content -->
+	<div x-show="phase === 'SETUP_ROLL' && !isCampaign" class="w-full max-w-2xl p-4 prose">
+		<!--WELCOME_CONTENT-->
 	</div>
 
 	<!-- Hex Grid Container -->

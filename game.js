@@ -95,7 +95,7 @@ function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
 	CampaignManager: CampaignManager,
 	auth: {
-		clientId: '991959010002-1f1535un3p06qjv4pao4ti3evdbu0hc5.apps.googleusercontent.com',
+		clientId: '___GOOGLE_CLIENT_ID___',
 		user: null,
 		token: null,
 	},

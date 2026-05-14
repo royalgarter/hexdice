@@ -2,6 +2,8 @@ import {exists} from "https://deno.land/std/fs/mod.ts";
 import {extname} from "https://deno.land/std/path/mod.ts";
 import {load} from "https://deno.land/std/dotenv/mod.ts";
 import { Database } from "https://cdn.jsdelivr.net/npm/arangojs/esm/index.js?+esm";
+import { crypto } from "https://deno.land/std/crypto/mod.ts";
+import { encodeHex } from "https://deno.land/std/encoding/hex.ts";
 
 await load({export: true});
 
@@ -11,7 +13,50 @@ const ARANGO_USER = Deno.env.get("ARANGODB_USER");
 const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD");
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
 
-// console.log(ARANGO_URL, ARANGO_DB, ARANGO_PASS)
+const getAppVersion = async () => {
+	try {
+		const files = [];
+		for await (const entry of Deno.readDir(".")) {
+			if (entry.isFile && (entry.name.endsWith(".js") || entry.name.endsWith(".html") || entry.name.endsWith(".css"))) {
+				files.push(entry.name);
+			}
+		}
+		files.sort();
+
+		let combinedData = new Uint8Array(0);
+		for (const file of files) {
+			const data = await Deno.readFile(file);
+			const newCombined = new Uint8Array(combinedData.length + data.length);
+			newCombined.set(combinedData);
+			newCombined.set(data, combinedData.length);
+			combinedData = newCombined;
+		}
+
+		const hashBuffer = await crypto.subtle.digest("SHA-1", combinedData);
+		return encodeHex(hashBuffer).slice(0, 7);
+	} catch (error) {
+		console.error('Failed to generate version hash:', error);
+		return 'unknown';
+	}
+};
+
+const appVersion = await getAppVersion();
+console.dir({appVersion})
+
+if (Deno.args.includes('--version')) {
+	console.log(appVersion);
+	Deno.exit(0);
+}
+
+// Pre-calculate processed index.html
+let HTML_INDEX = "";
+try {
+	HTML_INDEX = (await Deno.readTextFile("./index.html"))
+		.replaceAll('___VERSION___', appVersion)
+		.replaceAll('___GOOGLE_CLIENT_ID___', GOOGLE_CLIENT_ID || "")
+} catch (e) {
+	console.error("Failed to prepare HTML_INDEX:", e);
+}
 
 const db = new Database({
 	url: ARANGO_URL,
@@ -117,7 +162,7 @@ async function handleRequest(req: Request) {
 	}
 
 	if (pathname === "/") {
-		return response(await Deno.readTextFile("./index.html"), {
+		return response(HTML_INDEX, {
 			headers: {
 				"Content-Type": "text/html; charset=utf-8",
 				"Cache-Control": "public, max-age=604800",
@@ -130,6 +175,16 @@ async function handleRequest(req: Request) {
 		return response(await Deno.readTextFile("./rules.html"), {
 			headers: {
 				"Content-Type": "text/html; charset=utf-8",
+				"Cache-Control": "public, max-age=604800",
+			}
+		});
+	}
+
+	if (pathname === "/game.js") {
+		const content = await Deno.readTextFile("./game.js");
+		return response(content.replaceAll("___GOOGLE_CLIENT_ID___", GOOGLE_CLIENT_ID || ""), {
+			headers: {
+				"Content-Type": "text/javascript; charset=utf-8",
 				"Cache-Control": "public, max-age=604800",
 			}
 		});
@@ -154,4 +209,6 @@ async function handleRequest(req: Request) {
 }
 
 const PORT = Number(Deno.env.get('PORT')) || 1166;
+console.log(`Server opened: http://localhost:${PORT}`);
+console.log(`Versioning url: http://localhost:${PORT}/?v=${appVersion}`);
 Deno.serve({ port: PORT }, handleRequest);
