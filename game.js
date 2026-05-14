@@ -175,7 +175,7 @@ function alpineHexDiceTacticGame() { return {
 
 	get isUnitPanelVisible() {
 		const hexId = this.unitPanelHexId();
-		return (this.phase === 'PLAYER_TURN' && hexId != null && this.getUnitOnHex(hexId)) && 
+		return (this.phase === 'PLAYER_TURN' && hexId != null && this.getUnitOnHex(hexId)) &&
                ((window.innerWidth > 768) || this.showUnitInfo);
 	},
 	get unitPanelData() {
@@ -1129,20 +1129,28 @@ function alpineHexDiceTacticGame() { return {
 			const viewHeight = window.innerHeight || (window.screen && window.screen.height);
 
 			if (viewWidth && viewHeight) {
-				if (viewHeight > viewWidth) {
+				if ((viewHeight/viewWidth) > (3.99/3)) {
+					// console.log('(viewHeight/viewWidth) > (3.99/3)')
 					return this.generateHexGrid(radius, padding, (viewWidth * 0.99) / gridWidth);
 				}
 
 				if (gridWidth > viewWidth) {
+					// console.log('gridWidth > viewWidth')
 					return this.generateHexGrid(radius, padding, viewWidth / gridWidth);
 				}
+
+				// console.log({gridWidth, viewWidth})
 
 				if (document.querySelectorAll('[id^="game-"]').length) {
 					let paddingHeight = [...document.querySelectorAll('[id^="game-"]')].reduce((a, v) => a + v.clientHeight, 0);
 					paddingHeight *= 2;
 
-					if (gridHeight < (viewHeight - paddingHeight)) {
-						return this.generateHexGrid(radius, padding, (viewHeight - paddingHeight) / gridHeight);
+					let delta = viewHeight - paddingHeight;
+
+					if (gridHeight < delta) {
+						return this.generateHexGrid(radius, padding, delta / gridHeight);
+					} else {
+						return this.generateHexGrid(radius, padding, gridHeight / delta);
 					}
 				}
 			}
