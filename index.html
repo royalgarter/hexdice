@@ -228,7 +228,7 @@
 			</svg>
 
 			<!-- Unit Info Panel -->
-			<div class="unit-info-panel fixed border border-yellow-900 text-xs" style="background-color: #c3a471;"
+			<div class="unit-info-panel fixed border border-yellow-900 text-xs" style="background-color: #c3a471;display: none;"
 				 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
 				 x-show="isUnitPanelVisible"
 				 x-data="{ overflow: false, atBottom: true }">
@@ -254,8 +254,8 @@
 								<div :class="PLAYER_CONFIG[d.u?.playerId]?.logColor"
 									 x-text="d.u ? ('P' + (d.u.playerId + 1) + ' ' + PLAYER_CONFIG[d.u.playerId]?.color) : ''"></div>
 							</div>
-							<span x-show="unitstat != null" class="mr-2" title="Pinned">📌</span>
-							<span x-show="unitstat != null && showUnitInfo" @click="showUnitInfo = false" class="font-bold" title="Close">✕</span>
+							<span x-show="unitstat != null" class="mr-2 cursor-pointer" title="Pinned">📌</span>
+							<span x-show="unitstat != null && showUnitInfo" @click="showUnitInfo = false" class="font-bold cursor-pointer" title="Close">✕</span>
 						</div>
 
 						<!-- Blurb -->
@@ -337,6 +337,7 @@
 				</div>
 				<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
 			</div>
+			<a href="#" class="cursor-pointer absolute rounded-full bg-gray-100 hover:bg-gray-300 bottom-2 right-2 text-sm font-bold hover:text-blue-700 px-2 py-1" @click="showUnitInfo = !showUnitInfo" x-show="unitstat || hoverUnitHexId" style="display: none;">❔</a>
 		</div>
 	</div>
 
@@ -470,6 +471,7 @@
 				</div> -->
 			</div>
 			<a href="#" class="text-sm underline hover:text-blue-700" @click="location.href='/'" x-show="isCampaign">Home</a>
+			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showMinimap = !showMinimap">Minimap</a>
 		</div>
 
 		<!-- Game Over -->
@@ -588,7 +590,6 @@
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="location.href='/'" x-show="isCampaign">Home</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showLog = !showLog">Logs</a>
 			<a href="#" class="text-sm underline hover:text-blue-700 ml-2" @click="showMinimap = !showMinimap">Minimap</a>
-			<a href="#" class="text-sm font-bold hover:text-blue-700 ml-2" @click="showUnitInfo = !showUnitInfo" x-show="unitstat || hoverUnitHexId">Help❔</a>
 		</div>
 	</div>
 
