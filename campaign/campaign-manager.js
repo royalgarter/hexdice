@@ -603,12 +603,11 @@ const CampaignManager = {
 		if (playerId === 0) {
 			player.sprites = [];
 			const level = game.campaignData?.level || this.state.currentLevel;
-			if (level < 11) player.selectedSpriteSet = 'ro_novice';
-			else if (level < 21) player.selectedSpriteSet = 'ro_job1';
-			else if (level < 41) player.selectedSpriteSet = 'ro_job2';
-			else if (level > 61) player.selectedSpriteSet = 'ro_trans';
-			else if (level > 81) player.selectedSpriteSet = 'ro_job3';
-			else if (level > 91) player.selectedSpriteSet = 'ro_job3_2';
+			if (level < 11) player.selectedSpriteSet = 'ro_job1';
+			else if (level < 21) player.selectedSpriteSet = 'ro_job2';
+			else if (level > 41) player.selectedSpriteSet = 'ro_trans';
+			else if (level > 61) player.selectedSpriteSet = 'ro_job3';
+			else if (level > 81) player.selectedSpriteSet = 'ro_job3_2';
 			else player.selectedSpriteSet = 'tos_mix';
 		}
 	},
