@@ -559,21 +559,24 @@ function alpineHexDiceTacticGame() { return {
 				};
 				this.auth.token = debugToken || 'debug-token';
 				this.addLog(`Debug mode: Logged in as ${debugUser}`);
-				return;
+			} else {
+				// Check if already logged in (local storage)
+				const savedUser = localStorage.getItem('hexdice_user');
+				const savedToken = localStorage.getItem('hexdice_token');
+				if (savedUser && savedToken) {
+					this.auth.user = JSON.parse(savedUser);
+					this.auth.token = savedToken;
+				}
 			}
 
-			// Check if already logged in (local storage)
-			const savedUser = localStorage.getItem('hexdice_user');
-			const savedToken = localStorage.getItem('hexdice_token');
-			if (savedUser && savedToken) {
-				this.auth.user = JSON.parse(savedUser);
-				this.auth.token = savedToken;
+			// Auto-rejoin room if room param is present
+			const roomId = urlParams.get('room');
+			if (roomId && this.auth.user) {
+				this.joinRoom(roomId);
 			}
 		} catch (e) {
 			console.error("Auth init failed", e);
 		}
-
-		
 	},
 
 	async handleGoogleAuth(response) {
@@ -618,8 +621,19 @@ function alpineHexDiceTacticGame() { return {
 		this.online.mqttClient = null;
 		this.online.opponent = null;
 		this.online.playerIndex = null;
+		this.updateURLParams();
 		this.addLog("Left online room.");
 		location.reload();
+	},
+
+	updateURLParams() {
+		const url = new URL(window.location.href);
+		if (this.online.roomId) {
+			url.searchParams.set('room', this.online.roomId);
+		} else {
+			url.searchParams.delete('room');
+		}
+		window.history.replaceState({}, '', url);
 	},
 
 	async createRoom() {
@@ -638,6 +652,7 @@ function alpineHexDiceTacticGame() { return {
 			this.online.isHost = true;
 			this.online.status = 'LOBBY';
 			this.online.playerIndex = 0;
+			this.updateURLParams();
 			this.addLog(`Room created: ${room._key}. Waiting for opponent...`);
 			this.connectMQTT();
 		} catch (e) {
@@ -665,13 +680,18 @@ function alpineHexDiceTacticGame() { return {
 				return;
 			}
 			this.online.roomId = room._key;
-			this.online.isHost = false;
-			this.online.status = 'PLAYING';
-			this.online.playerIndex = 1;
+			this.online.isHost = room.creator === this.auth.user._key;
+			this.online.status = room.status === 'WAITING' ? 'LOBBY' : 'PLAYING';
+			this.online.playerIndex = room.players.findIndex(p => p.id === this.auth.user._key);
 			this.online.opponent = room.players.find(p => p.id !== this.auth.user._key);
-			this.addLog(`Joined room: ${room._key}. Opponent: ${this.online.opponent.name}`);
+			
+			this.updateURLParams();
+			this.addLog(`Joined room: ${room._key}. Opponent: ${this.online.opponent?.name || 'Waiting...'}`);
 			
 			this.connectMQTT();
+
+			// If rejoining an active game, we might need a full state sync.
+			// For now, the MQTT buffer/replay and our new state snapshotting should help.
 		} catch (e) {
 			this.addLog("Error joining room: " + e.message);
 		}
@@ -738,7 +758,7 @@ function alpineHexDiceTacticGame() { return {
 			.map(h => `${h.id}:${h.unit.id}:${h.unit.value}:${h.unit.currentArmor}:${h.unit.armorReduction}`)
 			.sort() // Ensure order doesn't matter
 			.join('|');
-		const stateStr = `${this.currentPlayerIndex}:${unitState}`;
+		const stateStr = `${this.currentPlayerIndex}:${unitState}:${_seed}`;
 		
 		if (returnRaw) return stateStr;
 
@@ -775,7 +795,7 @@ function alpineHexDiceTacticGame() { return {
 			this.online.lastRecvSeq = payload.seq;
 		}
 
-		const { type, data, checksum } = payload;
+		const { type, data, checksum, sender } = payload;
 		console.log(`MQTT RECV [${this.auth.user.name}]:`, type, data);
 
 		// Post-action checksum verify
@@ -795,7 +815,7 @@ function alpineHexDiceTacticGame() { return {
 			case 'GUEST_JOINED':
 				if (this.online.isHost) {
 					this.online.status = 'PLAYING';
-					this.online.opponent = { name: data.name };
+					this.online.opponent = { name: data.name, id: sender };
 					this.addLog(`Opponent joined: ${data.name}`);
 					
 					const seed = Math.floor(Math.random() * 1e9);
@@ -806,11 +826,11 @@ function alpineHexDiceTacticGame() { return {
 				break;
 			case 'START_GAME':
 				setSeed(data.seed);
-				this.online.opponent = { name: data.hostName };
+				this.online.opponent = { name: data.hostName, id: sender };
 				this.initOnlineGame();
 				break;
 			case 'GAME_ACTION':
-				this.applyRemoteAction(data);
+				this.applyRemoteAction(data, sender);
 				verifyChecksum();
 				break;
 		}
@@ -848,13 +868,25 @@ function alpineHexDiceTacticGame() { return {
 		await this.resetGame({ isCampaign: false });
 		this.players.forEach(p => p.isAI = false);
 
-		// Assign names
+		// Assign names and IDs
 		if (this.online.isHost) {
-			if (this.players[0]) this.players[0].name = this.auth.user.name;
-			if (this.players[1]) this.players[1].name = this.online.opponent?.name;
+			if (this.players[0]) {
+				this.players[0].name = this.auth.user.name;
+				this.players[0].id = this.auth.user._key;
+			}
+			if (this.players[1]) {
+				this.players[1].name = this.online.opponent?.name;
+				this.players[1].id = this.online.opponent?.id;
+			}
 		} else {
-			if (this.players[0]) this.players[0].name = this.online.opponent?.name;
-			if (this.players[1]) this.players[1].name = this.auth.user.name;
+			if (this.players[0]) {
+				this.players[0].name = this.online.opponent?.name;
+				this.players[0].id = this.online.opponent?.id;
+			}
+			if (this.players[1]) {
+				this.players[1].name = this.auth.user.name;
+				this.players[1].id = this.auth.user._key;
+			}
 		}
 
 		this.randomStart();
@@ -865,20 +897,29 @@ function alpineHexDiceTacticGame() { return {
 		this.startOnlineTimer();
 	},
 
-	applyRemoteAction(data) {
+	applyRemoteAction(data, sender) {
 		const { action, args } = data;
 		console.log(`Applying remote action [${this.auth.user.name}]:`, action, args);
+
+		// Referee Check: Ensure it's the sender's turn
+		if (this.currentPlayerIndex === this.online.playerIndex) {
+			console.warn("Ignoring remote action during local turn:", action);
+			return;
+		}
+
+		// Optional: Strictly verify sender ID matches the current player's ID
+		const expectedSenderId = this.players[this.currentPlayerIndex]?.id;
+		if (expectedSenderId && sender !== expectedSenderId) {
+			console.warn(`SECURITY: Received action from unexpected sender ${sender}. Expected ${expectedSenderId}.`);
+			return;
+		}
 		
 		if (action === 'HEX_CLICK') {
 			this._handleHexClick(...args);
 		} else if (action === 'ROLL_DICE') {
 			this._rollDice(...args);
 		} else if (action === 'END_TURN') {
-			if (this.currentPlayerIndex !== this.online.playerIndex) {
-				this._endTurn();
-			} else {
-				console.log("Ignoring redundant END_TURN");
-			}
+			this._endTurn();
 		}
 	},
 
@@ -4284,9 +4325,45 @@ function alpineHexDiceTacticGame() { return {
 	/* --- TURN --- */
 	endTurn(state) {
 		this._endTurn(state);
-		if (!state && this.online.status === 'PLAYING' && this.currentPlayerIndex !== this.online.playerIndex) {
-			// Note: index was flipped by _endTurn, so we check if it's NOT our turn anymore
-			this.publishAction('GAME_ACTION', { action: 'END_TURN', args: [] });
+		if (!state && this.online.status === 'PLAYING') {
+			if (this.currentPlayerIndex !== this.online.playerIndex) {
+				// Note: index was flipped by _endTurn, so we check if it's NOT our turn anymore
+				this.publishAction('GAME_ACTION', { action: 'END_TURN', args: [] });
+			}
+			// Push state snapshot to server for reconnection support
+			this.pushStateToServer();
+		}
+	},
+	async pushStateToServer() {
+		if (this.online.status !== 'PLAYING' || !this.online.roomId) return;
+		
+		try {
+			const gameState = {
+				hexes: this.hexes.map(h => ({
+					id: h.id,
+					terrainType: h.terrainType,
+					unit: h.unit ? {
+						id: h.unit.id,
+						value: h.unit.value,
+						playerId: h.unit.playerId,
+						currentArmor: h.unit.currentArmor,
+						armorReduction: h.unit.armorReduction,
+						hasMovedOrAttackedThisTurn: h.unit.hasMovedOrAttackedThisTurn
+					} : null
+				})),
+				currentPlayerIndex: this.currentPlayerIndex,
+				seed: _seed,
+				phase: this.phase,
+				turnNumber: this.turnNumber // If added in future
+			};
+
+			await fetch('/api/rooms/state', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ roomId: this.online.roomId, gameState })
+			});
+		} catch (e) {
+			console.error("Failed to push state to server:", e);
 		}
 	},
 	_endTurn(state) {
