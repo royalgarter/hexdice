@@ -182,12 +182,17 @@ function alpineHexDiceTacticGame() { return {
 	autochessPhase: 'PREPARATION', // PREPARATION, COMBAT, RECAP
 
 	initAutochess() {
+
 		this.gameplayVersion = 2;
+		this.options = this.options || '';
+		if (!this.options.includes('a')) this.options += 'a';
+
 		this.autochessRound = 1;
 		this.autochessRerolls = 1;
+
 		this.generateHexGrid(this.getRadius());
 		this.generateAutochessInitialArmy();
-		this.generateAutochessRecruits();
+		// this.generateAutochessRecruits();
 	},
 
 	generateAutochessInitialArmy() {
@@ -221,16 +226,13 @@ function alpineHexDiceTacticGame() { return {
 	createAutochessUnit(value, playerId) {
 		const stats = UNIT_STATS[value];
 		const unit = {
+			...stats,
 			value: value,
-			name: stats.name,
 			playerId: playerId,
 			hp: 100,
 			maxHp: 100,
-			attack: stats.attack,
-			armor: stats.armor,
 			currentArmor: stats.armor,
-			range: stats.range || 1,
-			speed: { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
+			speed: (6 + stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
 			actionGauge: 0,
 			isDeath: false
 		};
@@ -264,7 +266,7 @@ function alpineHexDiceTacticGame() { return {
 		// Player 2 is enemy
 		const p2 = this.players[1];
 		p2.dice = [];
-		const enemyUnitCount = 4 + this.autochessRound;
+		const enemyUnitCount = this.players[0].dice.length;
 		for (let i = 0; i < enemyUnitCount; i++) {
 			p2.dice.push(this.createAutochessUnit(Math.floor(Math.random() * 6) + 1, 1));
 		}
@@ -283,7 +285,9 @@ function alpineHexDiceTacticGame() { return {
 		});
 
 		// Deploy units randomly in valid deployment hexes
-		this.players.forEach((player, playerIdx) => {
+		const playerOrder = [0, 1].sort(() => Math.random() - 0.5);
+		playerOrder.forEach(playerIdx => {
+			const player = this.players[playerIdx];
 			player.dice.forEach((unit) => {
 				const validHexes = this.calcValidDeploymentHexes(playerIdx).filter(hexId => !this.getUnitOnHex(hexId));
 				if (validHexes.length > 0) {
@@ -333,7 +337,7 @@ function alpineHexDiceTacticGame() { return {
 	simulateAutochessStep() {
 		const allUnits = [...this.players[0].dice, ...this.players[1].dice]
 			.filter(u => !u.isDeath)
-			.sort((a, b) => b.actionGauge - a.actionGauge);
+			.sort((a, b) => (b.actionGauge - a.actionGauge) || (Math.random() - 0.5));
 
 		allUnits.forEach(unit => {
 			if (unit.isDeath) return;
@@ -1562,7 +1566,7 @@ function alpineHexDiceTacticGame() { return {
 
 			style.push(
 				`background-color: unset;`,
-				`background-size: auto ${(this.isCampaign || this.autochess) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
+				`background-size: auto ${(this.isCampaign) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
 				`background-image: url("${unitUrl}")
 					${Number.isFinite(hex.basePlayerId)
 						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
@@ -4181,7 +4185,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!attackerHex || !targetHex) return false;
 
 		// Melee attack (implicitly part of move)
-		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, state);
+		const validMeleeMoves = this.calcValidMoves(attackerUnit.hexId, false, state);
 		if (validMeleeMoves.includes(targetHex.id)) return true;
 
 		// Ranged attack (Dice 2)
