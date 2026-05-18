@@ -1,21 +1,18 @@
 /**
  * Heuristic Strategy Profiles for Hex Dice AI
  * 
- * Each profile defines:
- * - priorityOrder: Action priority list (highest to lowest)
- * - weights: Scoring bonuses/penalties for various situations
- * - riskTolerance: 0-1 scale (0 = extremely cautious, 1 = reckless)
- * - targetSelection: How to choose among multiple targets
- * - positioningStyle: General positioning preference
- * - unitSelection: Which unit to prioritize for actions
+ * Target Selections: 'highestValue', 'threatRemoval', 'lowArmor'
+ * Positioning Styles: 'balanced', 'rush', 'turtle', 'flank', 'cluster'
+ * Unit Selections: 'leastMoved', 'highestValue', 'mostThreatened'
  */
 
 const heuristicProfiles = {
     // =========================================================================
-    // BASELINE - Original heuristic behavior
+    // 1. BASELINE - Jack of all trades
     // =========================================================================
     baseline: {
         name: "Baseline",
+        description: "Balanced: Fundamentally sound, values objectives and combat equally.",
         priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
         weights: {
             captureBonus: 10000,
@@ -23,7 +20,7 @@ const heuristicProfiles = {
             attackBonus: 500,
             safeBonus: 400,
             friendlySixBonus: 50,
-            advanceBonus: 500,
+            advanceBonus: 300,
             protectedRangeBonus: 100,
 
             threatPenalty: -400,
@@ -45,7 +42,7 @@ const heuristicProfiles = {
             spells: {
                 SPELLCAST_SHIELD: 0.8,
                 SPELLCAST_SWAP: 0.8,
-                SPELLCAST_SKIRMISH: 1.2,
+                SPELLCAST_SKIRMISH: 1.0,
             }
         },
         riskTolerance: 0.5,
@@ -55,93 +52,145 @@ const heuristicProfiles = {
     },
 
     // =========================================================================
-    // BERSERKER - Aggressive melee-rush strategy
+    // 2. BERSERKER - Suicidal Aggression
     // =========================================================================
     berserker: {
         name: "Berserker",
-        description: "Aggressive Melee: Rushes enemy with high-value attackers; skirmishes aggressively.",
-        priorityOrder: ['kill', 'attack', 'capture', 'position', 'dodge', 'spell'],
+        description: "Bloodthirsty: Rushes forward recklessly. Ignores terrain and safety to kill.",
+        priorityOrder: ['kill', 'attack', 'capture', 'position', 'spell', 'dodge'],
         weights: {
             captureBonus: 2000,
-            killBonus: 3000,
-            attackBonus: 1000,
-            safeBonus: 50,
-            threatPenalty: -10, // Does not fear threats
-            protectedRangeBonus: 10,
-            friendlySixBonus: 20,
-            advanceBonus: 1500, // Strong rush incentive
-            guardPenalty: -5000, // Never guard
+            killBonus: 8000,       // Massive kill incentive
+            attackBonus: 2000,
+            safeBonus: 0,          // Literally does not care about being safe
+            threatPenalty: 0,      // Does not fear enemy attacks
+            protectedRangeBonus: 0,
+            friendlySixBonus: 0,
+            advanceBonus: 2500,    // Extreme rush incentive
+
+            guardPenalty: -5000,   // Hates standing still/guarding
             mergeOver6Penalty: -100,
             backAndForthPenalty: -100,
-            teamPositionWeight: 0.1,
-            pressureWeight: -0.5, // Actually seeks out pressure (negative penalty)
-            terrainWeights: {
+
+            teamPositionWeight: 0.1, // Doesn't care about formation
+            pressureWeight: -0.8,    // Seeks out pressure
+
+            terrainWeights: {      // Blindly ignores terrain tactics
                 defenseBonusWeight: 0,
                 archerTowerBonus: 0,
                 archerMountainBonus: 0,
                 mountainMovePenalty: 0,
                 losBlockBonus: 0
             },
+
             spells: {
                 SPELLCAST_SHIELD: 0.1,
                 SPELLCAST_SWAP: 0.5,
-                SPELLCAST_SKIRMISH: 2.5, // Only useful spell is one that helps attack
+                SPELLCAST_SKIRMISH: 3.0, // Only likes skirmish to deal extra damage
             }
         },
-        riskTolerance: 1.0,
+        riskTolerance: 1.0,        // Maximum recklessness
         targetSelection: 'highestValue',
         positioningStyle: 'rush',
-        unitSelection: 'highestValue'
+        unitSelection: 'highestValue' // Leads the charge with best units
     },
 
     // =========================================================================
-    // TURTLE - Defensive safety-focused strategy
+    // 3. TURTLE - Impenetrable Defense
     // =========================================================================
     turtle: {
         name: "Turtle",
-        description: "Defensive: Safety first, only attacks when safe",
-        priorityOrder: ['capture', 'spell', 'dodge', 'position', 'kill', 'attack'],
+        description: "Defensive: Highly cautious. Clusters tightly, shields constantly, refuses risks.",
+        priorityOrder: ['dodge', 'spell', 'capture', 'position', 'kill', 'attack'],
         weights: {
-            captureBonus: 10000,
-            killBonus: 800,
+            captureBonus: 8000,
+            killBonus: 500,
             attackBonus: 100,
-            safeBonus: 2000,
-            threatPenalty: -600,
-            protectedRangeBonus: 200,
-            friendlySixBonus: 300,
-            advanceBonus: 100,
-            guardPenalty: -100,
-            mergeOver6Penalty: -50,
-            backAndForthPenalty: -300,
-            teamPositionWeight: 0.7,
-            pressureWeight: 0.4,
+            safeBonus: 3000,       // Obsessed with safe hexes
+            threatPenalty: -1500,  // Terrified of ending turns in threat range
+            protectedRangeBonus: 500,
+            friendlySixBonus: 400,
+            advanceBonus: 50,      // Barely advances
+
+            guardPenalty: -50,     // Perfectly happy guarding
+            mergeOver6Penalty: -20,
+            backAndForthPenalty: -100,
+
+            teamPositionWeight: 1.0, // Demands to be adjacent to allies
+            pressureWeight: 0.8,
+
             terrainWeights: {
-                defenseBonusWeight: 300,
-                archerTowerBonus: 150,
-                archerMountainBonus: 200,
-                mountainMovePenalty: -200,
-                losBlockBonus: 400
+                defenseBonusWeight: 500,
+                archerTowerBonus: 100,
+                archerMountainBonus: 150,
+                mountainMovePenalty: -300,
+                losBlockBonus: 600   // Loves hiding behind blockers
             },
+
             spells: {
-                SPELLCAST_SHIELD: 1.5,
-                SPELLCAST_SWAP: 0.8,
-                SPELLCAST_SKIRMISH: 0.5,
+                SPELLCAST_SHIELD: 3.0, // Spams shield
+                SPELLCAST_SWAP: 1.5,   // Swaps to rescue units
+                SPELLCAST_SKIRMISH: 0.2,
             }
         },
-        riskTolerance: 0.1,
-        targetSelection: 'threatRemoval',
+        riskTolerance: 0.05,       // Almost zero risk
+        targetSelection: 'threatRemoval', // Only attacks units breaking its wall
         positioningStyle: 'turtle',
         unitSelection: 'mostThreatened'
     },
 
     // =========================================================================
-    // TACTICIAN - Position-focused strategic play
+    // 4. AGGRESSOR - Ranged Terrain Camper
+    // =========================================================================
+    aggressor: {
+        name: "Aggressor",
+        description: "Artillery: Avoids melee. Fights obsessively for Towers/Mountains to shoot safely.",
+        priorityOrder: ['kill', 'position', 'spell', 'attack', 'capture', 'dodge'],
+        weights: {
+            captureBonus: 4000,
+            killBonus: 2500,
+            attackBonus: 1000,
+            safeBonus: 800,
+            threatPenalty: -800,   // Runs away from close combat
+            protectedRangeBonus: 1500, // Thrives shooting over friendly lines
+            friendlySixBonus: 100,
+            advanceBonus: 100,
+
+            guardPenalty: -200,
+            mergeOver6Penalty: -100,
+            backAndForthPenalty: -200,
+
+            teamPositionWeight: 0.4,
+            pressureWeight: 0.7,
+
+            terrainWeights: {
+                defenseBonusWeight: 200,
+                archerTowerBonus: 3000,    // Absolute obsession with Towers
+                archerMountainBonus: 3000, // Absolute obsession with Mountains
+                mountainMovePenalty: -50,  // Doesn't mind the move penalty to climb
+                losBlockBonus: 400
+            },
+
+            spells: {
+                SPELLCAST_SHIELD: 0.5,
+                SPELLCAST_SWAP: 2.0,       // Uses Swap to steal Tower spots faster
+                SPELLCAST_SKIRMISH: 1.5,
+            }
+        },
+        riskTolerance: 0.3,
+        targetSelection: 'lowArmor', // Snipes the easiest targets
+        positioningStyle: 'flank',
+        unitSelection: 'leastMoved'
+    },
+
+    // =========================================================================
+    // 5. TACTICIAN - Minimax Board Controller
     // =========================================================================
     tactician: {
         name: "Tactician",
-        description: "Strategic: Sets up advantageous positions before engaging",
+        description: "Strategic Thinker: Uses deep calculation (Minimax) to set traps and control the board.",
         priorityOrder: ['capture', 'spell', 'position', 'kill', 'attack', 'dodge'],
-        minimax: true,
+        minimax: true,             // Kept
         minimaxDepth: 2,
         weights: {
             captureBonus: 10000,
@@ -152,11 +201,14 @@ const heuristicProfiles = {
             protectedRangeBonus: 400,
             friendlySixBonus: 300,
             advanceBonus: 300,
+
             guardPenalty: -300,
             mergeOver6Penalty: -400,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.9,
+
+            teamPositionWeight: 0.9, // Values group synergy for multi-turn setups
             pressureWeight: 0.4,
+
             terrainWeights: {
                 defenseBonusWeight: 200,
                 archerTowerBonus: 250,
@@ -164,99 +216,64 @@ const heuristicProfiles = {
                 mountainMovePenalty: -100,
                 losBlockBonus: 250
             },
+
             spells: {
                 SPELLCAST_SHIELD: 1.0,
-                SPELLCAST_SWAP: 1.5,
+                SPELLCAST_SWAP: 2.5,   // Very high Swap weight to allow Minimax to find crazy repositions
                 SPELLCAST_SKIRMISH: 1.0,
             }
         },
-        riskTolerance: 0.4,           // Moderate-low risk
-        targetSelection: 'lowArmor',      // Pick easy fights
-        positioningStyle: 'flank',        // Avoid front lines
-        unitSelection: 'leastMoved'       // Efficient unit usage
+        riskTolerance: 0.4,
+        targetSelection: 'highestValue',
+        positioningStyle: 'balanced',
+        unitSelection: 'leastMoved'
     },
 
     // =========================================================================
-    // ASSASSIN - Precision strike specialist
+    // 6. ASSASSIN - Minimax Precision Striker
     // =========================================================================
     assassin: {
         name: "Assassin",
-        description: "Precision: Targets weak points and high-value enemies",
-        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
-        minimax: true,
+        description: "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+        priorityOrder: ['kill', 'capture', 'attack', 'spell', 'dodge', 'position'],
+        minimax: true,             // Kept
         minimaxDepth: 2,
         weights: {
-            captureBonus: 10000,
-            killBonus: 1800,
-            attackBonus: 300,
+            captureBonus: 8000,
+            killBonus: 5000,       // Very high kill priority, but only if Minimax proves it works
+            attackBonus: 800,
             safeBonus: 600,
             threatPenalty: -350,
             protectedRangeBonus: 75,
             friendlySixBonus: 100,
-            advanceBonus: 250,        // Increased from 60
+            advanceBonus: 400,
+
             guardPenalty: -400,
             mergeOver6Penalty: -450,
             backAndForthPenalty: -300,
-            teamPositionWeight: 0.5,
+
+            teamPositionWeight: 0.3, // Operates alone better than Tactician
             pressureWeight: 0.3,
+
             terrainWeights: {
                 defenseBonusWeight: 100,
                 archerTowerBonus: 150,
                 archerMountainBonus: 200,
                 mountainMovePenalty: -50,
-                losBlockBonus: 200
+                losBlockBonus: 300 // Likes using LOS blockers to sneak up
             },
+
             spells: {
                 SPELLCAST_SHIELD: 0.5,
                 SPELLCAST_SWAP: 1.2,
-                SPELLCAST_SKIRMISH: 1.5,
+                SPELLCAST_SKIRMISH: 2.5, // Minimax will use this heavily to secure a kill and run away
             }
         },
-        riskTolerance: 0.6,           // Moderate-high risk for good targets
-        targetSelection: 'lowArmor',      // Pick easiest kills
-        positioningStyle: 'flank',        // Find weak spots
-        unitSelection: 'highestValue'     // Use best units for kills
-    },
-
-    // =========================================================================
-    // AGGRESSOR - Aggressive ranged/spell strategy
-    // =========================================================================
-    aggressor: {
-        name: "Aggressor",
-        description: "Aggressive Range: Focuses on ranged/spell control and target sniping.",
-        priorityOrder: ['spell', 'kill', 'attack', 'position', 'capture', 'dodge'],
-        weights: {
-            captureBonus: 500,
-            killBonus: 2500,
-            attackBonus: 1500, // Priority on ranged attacks
-            safeBonus: 300,
-            threatPenalty: -200,
-            protectedRangeBonus: 800, // Love being behind friendly lines
-            friendlySixBonus: 100,
-            advanceBonus: 200,
-            guardPenalty: -100,
-            mergeOver6Penalty: -50,
-            backAndForthPenalty: -300,
-            teamPositionWeight: 0.8,
-            pressureWeight: 0.8, // Needs safe positioning to use range/spells
-            terrainWeights: {
-                defenseBonusWeight: 200,
-                archerTowerBonus: 1000,
-                archerMountainBonus: 1000,
-                mountainMovePenalty: -200,
-                losBlockBonus: 500
-            },
-            spells: {
-                SPELLCAST_SHIELD: 1.2,
-                SPELLCAST_SWAP: 1.5,
-                SPELLCAST_SKIRMISH: 2.0,
-            }
-        },
-        riskTolerance: 0.7,
-        targetSelection: 'lowArmor', // Snipes weak units
-        positioningStyle: 'cluster', // Stays together to support
-        unitSelection: 'mostThreatened' // Uses spells/ranged to protect
-    },
+        riskTolerance: 0.8,           // High risk, but mitigated by Minimax verifying the outcome
+        targetSelection: 'lowArmor',  // Hyper-focuses on deleting weak links
+        positioningStyle: 'flank',    // Stalks the edges
+        unitSelection: 'highestValue'
+    }
 };
 
 /**
