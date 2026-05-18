@@ -242,7 +242,7 @@
 			</svg>
 
 			<!-- Unit Info Panel -->
-			<div class="unit-info-panel fixed border border-yellow-900 text-xs bg-hardwood" style="display: none;"
+			<div class="unit-info-panel fixed border border-yellow-900 text-xs bg-wood" style="display: none;"
 				 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
 				 x-show="!autochess && isUnitPanelVisible"
 				 x-data="{ overflow: false, atBottom: true }">
@@ -356,9 +356,9 @@
 	</div>
 
 	<!-- Autochess UI Overlay -->
-	<div style="display: none;" x-show="autochess" x-cloak class="fixed bottom-0 inset-0 mt-12 border bg-hardwood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto">
-		<div class="max-w-4xl w-full">
-			<div class="w-full flex justify-between items-center pb-2 bg-hardwood px-2 pointer-events-auto">
+	<div id="game-autochess" style="display: none;" x-show="autochess" x-cloak class="bottom-0 mt-4 border bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
+		<div class="max-w-full w-full">
+			<div class="w-full flex justify-between items-center pb-2 px-2 pointer-events-auto">
 				<h1 class="text-lg font-bold uppercase">Hex Dice: Autochess</h1>
 				<div class="flex items-center space-x-4">
 					<div class="ml-4 font-bold">Round <span x-text="autochessRound"></span> / 6</div>
@@ -367,37 +367,37 @@
 			</div>
 
 			<!-- PREPARATION PHASE -->
-			<div style="display: none;" x-show="autochessPhase === 'PREPARATION'" class="w-full space-y-4 bg-hardwood pointer-events-auto">
+			<div style="display: none;" x-show="autochessPhase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div class="p-2">
-						<h2 class="font-bold mb-2 uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
+						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
 						<div class="grid grid-cols-6 gap-2 text-xs">
 							<template x-for="(unit, index) in players[0]?.dice" :key="index">
 								<div class="border p-1 text-center bg-gray-50">
 									<!-- <div class="text-lg font-bold" x-text="unit.value"></div> -->
 									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
 									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
-									<div class="mt-2 uppercase leading-tight" x-text="unit.name"></div>
+									<div class="text-xs mt-1 uppercase leading-tight" x-text="unit.name"></div>
 								</div>
 							</template>
 						</div>
 					</div>
-					<div class="border p-2" x-show="autochessInventory?.length">
-						<h2 class="font-bold mb-2 uppercase border-b pb-1">Recruitment</h2>
-						<div class="flex justify-center space-x-4 py-2">
+					<div class="p-2">
+						<h2 class="font-bold uppercase pb-1">Recruitment</h2>
+						<div class="flex justify-center space-x-4 py-2" x-show="autochessInventory?.length">
 							<template x-for="(unit, index) in autochessInventory" :key="index">
 								<button @click="recruitAutochessUnit(index)" class="border p-2 bg-gray-50 hover:bg-black hover:text-white transition-colors">
 									<!-- <div class="text-2xl font-bold" x-text="unit.value"></div> -->
 									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
 									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
-									<div class="text-xs mt-4 uppercase" x-text="unit.name"></div>
+									<div class="text-xs mt-1 uppercase" x-text="unit.name"></div>
 								</button>
 							</template>
 							<template x-if="autochessInventory.length === 0">
 								<div class="italic text-gray-500">No recruits available.</div>
 							</template>
 						</div>
-						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400">
+						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="autochessInventory?.length">
 							<button @click="rerollAutochessRecruits()" :disabled="autochessRerolls <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
 								Reroll (<span x-text="autochessRerolls"></span>)
 							</button>
@@ -406,15 +406,15 @@
 				</div>
 
 				<div class="text-center pt-2">
-					<div class="mb-2">
+					<div class="inline mb-2">
 						<label class="font-bold mr-2">Strategy:</label>
-						<select x-model="selectedAutochessProfile" class="border px-2 py-1 text-sm uppercase">
+						<select x-model="selectedAutochessProfile" class="border px-2 py-1 uppercase">
 							<template x-for="p in getProfileNames()" :key="p">
 								<option :value="p" x-text="p"></option>
 							</template>
 						</select>
 					</div>
-					<button @click="startAutochessCombat()" class="bg-black text-white p-2 font-bold hover:bg-gray-800 uppercase text-lg">
+					<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase">
 						Deploy & Battle
 					</button>
 				</div>
@@ -422,7 +422,7 @@
 
 			<!-- COMBAT PHASE UI (Board is behind) -->
 			<div style="display: none;" x-show="autochessPhase === 'COMBAT'" class="w-full flex flex-col items-center">
-				<div class="w-full flex justify-between border mb-4 text-sm font-bold bg-wood pointer-events-auto">
+				<div class="w-full flex justify-between border mb-4 text-sm font-bold pointer-events-auto">
 					<div class="text-blue-700 uppercase">Player Units: <span x-text="players[0]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
 					<div class="animate-pulse uppercase mx-2">Battle in Progress</div>
 					<div class="text-red-700 uppercase">Enemy Units: <span x-text="players[1]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
@@ -431,7 +431,7 @@
 
 			<!-- RECAP PHASE -->
 			<div style="display: none;" x-show="autochessPhase === 'RECAP'" class="w-full inset-0 flex items-center justify-center z-20 pointer-events-auto">
-				<div class="bg-hardwood border p-2 max-w-sm w-full text-center">
+				<div class="border p-2 max-w-sm w-full text-center">
 					<h2 class="text-lg font-black mb-2 uppercase italic" x-text="autochessLastResult"></h2>
 					<p class="mb-2 font-bold" x-text="autochessLastResult === 'WIN' ? 'Your survivors grew stronger!' : 'The kingdom has fallen.'"></p>
 					<button @click="nextAutochessRound()" class="w-full bg-black text-white py-2 font-black text-lg hover:bg-gray-800 transition-colors uppercase">
@@ -707,7 +707,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div  id="game-log" style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
+	<div  id="game-log" style="display: none;" x-show="showLog && (autochess || !phase.includes('SETUP_')) " class="bg-wood bottom-0 left-0 w-full text-black p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>
@@ -776,7 +776,7 @@
 
 	<!-- Devotion Menu (The Camp) -->
 	<div style="display:none;" x-show="showCamp" x-cloak class="fixed inset-0 z-60 flex items-center justify-center p-2 w-full m-2">
-		<div class="border w-full max-w-4xl overflow-y-auto p-2 relative bg-hardwood" style="max-height: 90vh;">
+		<div class="border w-full max-w-4xl overflow-y-auto p-2 relative bg-wood" style="max-height: 90vh;">
 			<button @click="showCamp = false" class="absolute top-4 right-4 text-lg font-bold cursor-pointer">✕</button>
 
 			<div class="text-center mb-2">

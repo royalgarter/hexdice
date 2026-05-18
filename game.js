@@ -340,6 +340,7 @@ function alpineHexDiceTacticGame() { return {
 	selectedAutochessProfile: 'baseline',
 
 	initAutochess() {
+		this.showLog = true;
 
 		this.gameplayVersion = 2;
 		this.options = this.options || '';
