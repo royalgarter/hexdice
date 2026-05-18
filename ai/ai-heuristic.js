@@ -15,6 +15,7 @@
 
 // Default profile if none specified
 const DEFAULT_PROFILE = heuristicProfiles.baseline;
+const AUTOCHESS_WEIGHT_MULTIPLIER = 2.5;
 
 /**
  * Adjust AI weights based on the current game phase
@@ -22,12 +23,22 @@ const DEFAULT_PROFILE = heuristicProfiles.baseline;
 function calculatePhaseWeights(GAME, state, profile) {
     const dynamicProfile = JSON.parse(JSON.stringify(profile));
     const w = dynamicProfile.weights;
-    
+
     const currentPlayer = state.players[state.currentPlayerIndex];
     const deployedUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath).length;
     const totalPossibleUnits = currentPlayer.dice.length;
     const shouldExcludeBases = GAME.options && GAME.options.includes('a');
-    
+
+    // Autochess mode weight adjustment (Aggressive focus on moving closer to opponent's base)
+    if (GAME.autochess) {
+        w.advanceBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        w.captureBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        w.teamPositionWeight *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        w.killBonus *= 1.2;
+        w.pressureWeight *= 0.8; // Care less about being safe
+        dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.2);
+    }
+
     // Estimate game phase
     let phase = 'mid';
     if (deployedUnits < totalPossibleUnits * 0.4) {
