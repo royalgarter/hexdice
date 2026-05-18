@@ -173,6 +173,212 @@ function alpineHexDiceTacticGame() { return {
 		autoPlay: new URLSearchParams(location.search).get('mode')?.includes('auto'),
 	},
 
+	/* --- AUTOCHESS --- */
+	autochess: new URLSearchParams(location.search).get('autochess') === 'true',
+	autochessRound: 1,
+	autochessInventory: [],
+	autochessRerolls: 1,
+	autochessLastResult: null,
+	autochessPhase: 'PREPARATION', // PREPARATION, COMBAT, RECAP
+
+	initAutochess() {
+		this.gameplayVersion = 2;
+		this.autochessRound = 1;
+		this.autochessRerolls = 1;
+		this.generateHexGrid(this.getRadius());
+		this.generateAutochessInitialArmy();
+		this.generateAutochessRecruits();
+	},
+
+	generateAutochessInitialArmy() {
+		const p1 = this.players[0];
+		p1.dice = [];
+		for (let i = 0; i < 6; i++) {
+			const value = Math.floor(Math.random() * 6) + 1;
+			const unit = this.createAutochessUnit(value, 0);
+			p1.dice.push(unit);
+		}
+	},
+
+	generateAutochessRecruits() {
+		this.autochessInventory = [];
+		const value = Math.floor(Math.random() * 6) + 1;
+		this.autochessInventory.push(this.createAutochessUnit(value, 0));
+	},
+
+	recruitAutochessUnit(index) {
+		const unit = this.autochessInventory.splice(index, 1)[0];
+		this.players[0].dice.push(unit);
+	},
+
+	rerollAutochessRecruits() {
+		if (this.autochessRerolls > 0) {
+			this.autochessRerolls--;
+			this.generateAutochessRecruits();
+		}
+	},
+
+	createAutochessUnit(value, playerId) {
+		const stats = UNIT_STATS[value];
+		const unit = {
+			value: value,
+			name: stats.name,
+			playerId: playerId,
+			hp: 100,
+			maxHp: 100,
+			attack: stats.attack,
+			armor: stats.armor,
+			currentArmor: stats.armor,
+			range: stats.range || 1,
+			speed: { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
+			actionGauge: 0,
+			isDeath: false
+		};
+		unit.spriteUrl = this.getUnitSpriteUrl(unit);
+
+		if (playerId === 0 && this.CampaignManager.state.upgrades[value]) {
+			const upgrades = this.CampaignManager.state.upgrades[value];
+			unit.attack += upgrades.atk;
+			unit.armor += upgrades.def;
+			unit.currentArmor += upgrades.def;
+			unit.maxHp += upgrades.hp * 10;
+			unit.hp = unit.maxHp;
+		}
+
+		return unit;
+	},
+
+	startAutochessCombat() {
+		this.autochessPhase = 'COMBAT';
+		this.messageLog = [];
+		this.prepareAutochessCombat();
+		this.runAutochessSimulation();
+	},
+
+	prepareAutochessCombat() {
+		this.hexes.forEach(h => {
+			h.unit = null;
+			h.unitId = null;
+		});
+
+		// Player 2 is enemy
+		const p2 = this.players[1];
+		p2.dice = [];
+		const enemyUnitCount = 4 + this.autochessRound;
+		for (let i = 0; i < enemyUnitCount; i++) {
+			p2.dice.push(this.createAutochessUnit(Math.floor(Math.random() * 6) + 1, 1));
+		}
+
+		this.players.forEach((player, playerIdx) => {
+			player.dice.forEach((u, i) => {
+				u.id = `${playerIdx}_${i}`; // Ensure unique ID string for compatibility
+				u.isDeath = false;
+				u.hp = u.maxHp;
+				u.actionGauge = 0;
+				u.hexId = null;
+				u.isDeployed = false;
+				u.hasMovedOrAttackedThisTurn = false;
+				u.actionsTakenThisTurn = 0;
+			});
+		});
+
+		// Deploy units randomly in valid deployment hexes
+		this.players.forEach((player, playerIdx) => {
+			player.dice.forEach((unit) => {
+				const validHexes = this.calcValidDeploymentHexes(playerIdx).filter(hexId => !this.getUnitOnHex(hexId));
+				if (validHexes.length > 0) {
+					const hexId = validHexes.random();
+					const targetHex = this.getHex(hexId);
+					targetHex.unit = unit;
+					targetHex.unitId = unit.id;
+					unit.hexId = hexId;
+					unit.isDeployed = true;
+				}
+			});
+		});
+	},
+
+	runAutochessSimulation() {
+		const combatInterval = setInterval(() => {
+			if (this.autochessPhase !== 'COMBAT') {
+				clearInterval(combatInterval);
+				return;
+			}
+
+			this.simulateAutochessStep();
+
+			const playerAlive = this.players[0].dice.some(u => !u.isDeath);
+			const enemyAlive = this.players[1].dice.some(u => !u.isDeath);
+
+			if (!enemyAlive || !playerAlive) {
+				clearInterval(combatInterval);
+				this.autochessLastResult = !enemyAlive ? 'WIN' : 'LOSS';
+				if (this.autochessLastResult === 'WIN') {
+					this.autochessRerolls++;
+					this.players[0].dice.filter(u => !u.isDeath).forEach(u => {
+						u.attack += 1;
+						u.maxHp += 5;
+						if (this.CampaignManager.state.upgrades[u.value]) {
+							this.CampaignManager.state.upgrades[u.value].atk += 1;
+							this.CampaignManager.state.upgrades[u.value].hp += 1;
+						}
+					});
+					this.CampaignManager.save();
+				}
+				this.autochessPhase = 'RECAP';
+			}
+		}, 100);
+	},
+
+	simulateAutochessStep() {
+		const allUnits = [...this.players[0].dice, ...this.players[1].dice]
+			.filter(u => !u.isDeath)
+			.sort((a, b) => b.actionGauge - a.actionGauge);
+
+		allUnits.forEach(unit => {
+			if (unit.isDeath) return;
+			unit.actionGauge += unit.speed;
+			if (unit.actionGauge >= 100) {
+				this.executeAutochessAction(unit);
+				unit.actionGauge -= 100;
+			}
+		});
+	},
+
+	executeAutochessAction(unit) {
+		// Store original turn index to restore after action
+		const originalPlayerIndex = this.currentPlayerIndex;
+
+		// Context setup for AI
+		this.currentPlayerIndex = unit.playerId;
+		unit.hasMovedOrAttackedThisTurn = false;
+		unit.actionsTakenThisTurn = 0;
+
+		const state = this.cloneState();
+		const move = evaluateBestMoveForUnit(this, state, unit, this.players[unit.playerId].profileName);
+
+		if (move && move.actionType !== 'END_TURN') {
+			// If it's a spell, we need to set oracleSelectedSpell
+			if (move.actionType.startsWith('SPELLCAST_')) {
+				this.oracleSelectedSpell = move.actionType.replace('SPELLCAST_', '');
+			}
+			applyMove(this, move);
+		}
+
+		// Restore original turn index
+		this.currentPlayerIndex = originalPlayerIndex;
+	},
+	nextAutochessRound() {
+		this.autochessRound++;
+		if (this.autochessRound > 6) {
+			alert("Tournament Complete!");
+			location.reload();
+		} else {
+			this.generateAutochessRecruits();
+			this.autochessPhase = 'PREPARATION';
+		}
+	},
+
 	get isUnitPanelVisible() {
 		const hexId = this.unitPanelHexId();
 		return (this.phase === 'PLAYER_TURN' && hexId != null && this.getUnitOnHex(hexId)) &&
@@ -947,6 +1153,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+		if (this.autochess) this.playerCount = 2;
 		this.preset = new URLSearchParams(location.search).get('preset');
 		this.mode = new URLSearchParams(location.search).get('mode') || 'gui';
 		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
@@ -962,6 +1169,10 @@ function alpineHexDiceTacticGame() { return {
 			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign') == 'true'),
 			campaignData: campaignData
 		});
+
+		if (this.autochess) {
+			this.initAutochess();
+		}
 	},
 	async resetGame(opts) {
 		const campaignData = opts?.campaignData;
@@ -1351,7 +1562,7 @@ function alpineHexDiceTacticGame() { return {
 
 			style.push(
 				`background-color: unset;`,
-				`background-size: auto ${this.isCampaign ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
+				`background-size: auto ${(this.isCampaign || this.autochess) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
 				`background-image: url("${unitUrl}")
 					${Number.isFinite(hex.basePlayerId)
 						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
@@ -1457,7 +1668,9 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog(`Units auto-deployed for ${preset.name}.`);
 	},
 	getUnitSpriteUrl(unit) {
+		if (!unit) return '';
 		const player = this.players[unit.playerId];
+		if (!player) return '';
 		const spriteColor = player.sprite;
 		const value = unit.value;
 
@@ -4152,7 +4365,7 @@ function alpineHexDiceTacticGame() { return {
 		};
 		this.trailSpell = {};
 
-		if (this.isCampaign) {
+		if (this.isCampaign && !this.autochess) {
 			if (this.CampaignManager.handleCombat(this, attackerHexId, defenderHexId, combatType, state)) return;
 		} else if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
@@ -4168,30 +4381,59 @@ function alpineHexDiceTacticGame() { return {
 
 			if (totalAtk > defenderEffectiveArmor) {
 				// Success
-				this.removeUnit(defenderHexId, state);
-				this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
+				if (this.autochess) {
+					const damage = 30 + attackerUnit.attack * 2;
+					this.addLog(`${this.logUnit(attackerUnit)} dealt ${damage} damage to ${this.logUnit(defenderUnit)}!`);
+					defenderUnit.hp -= damage;
+					if (defenderUnit.hp <= 0) {
+						this.removeUnit(defenderHexId, state);
+					}
+				} else {
+					this.removeUnit(defenderHexId, state);
+					this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
+				}
 
 				if (isSkirmishing) {
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
 					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
-				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+				} else if (!this.autochess && (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER')) {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
 			}
 			else {
 				// Deflected
-				this.addLog(`Attack deflected!`);
+				if (this.autochess) {
+					const damage = 5 + attackerUnit.attack;
+					this.addLog(`Attack deflected! Minor damage: ${damage}`);
+					defenderUnit.hp -= damage;
+					if (defenderUnit.hp <= 0) {
+						this.removeUnit(defenderHexId, state);
+					}
+				} else {
+					this.addLog(`Attack deflected!`);
+				}
+
 				if (combatRoll === 1) {
 					// Behemoth (Tanker Tier 3A) immunity to fumbles
 					if (attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
 						this.addLog(`🛡️ Behemoth! Immune to Fumble.`);
 					} else {
 						this.addLog(`FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
-						this.removeUnit(attackerHexId, state);
+						if (this.autochess) {
+							attackerUnit.hp = 0;
+							this.removeUnit(attackerHexId, state);
+						} else {
+							this.removeUnit(attackerHexId, state);
+						}
 					}
 				} else if (isSkirmishing) {
 					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} eliminated.`);
-					this.removeUnit(attackerHexId, state);
+					if (this.autochess) {
+						attackerUnit.hp = 0;
+						this.removeUnit(attackerHexId, state);
+					} else {
+						this.removeUnit(attackerHexId, state);
+					}
 				}
 			}
 		} else {
@@ -4292,7 +4534,11 @@ function alpineHexDiceTacticGame() { return {
 		if (!state) {
 			this.addLog(`${this.logUnit(unit)} removed [${this.getHex(hexId, state).id}].`);
 		}
-		(state || this).players[unit.playerId].dice.find(d => d.id === unit.id).isDeath = true; // Mark as death
+		
+		const targetPlayer = (state || this).players[unit.playerId];
+		const unitInArray = targetPlayer.dice.find(d => d.id === unit.id);
+		if (unitInArray) unitInArray.isDeath = true; // Mark as death
+		
 		const hex = this.getHex(hexId, state);
 		hex.unitId = null; // Clear hex
 		hex.unit = null;
@@ -4370,7 +4616,7 @@ function alpineHexDiceTacticGame() { return {
 		let isState = !!state;
 		state = state || this;
 
-		console.log(`P${state.currentPlayerIndex + 1} turn ending...`);
+		// console.log(`P${state.currentPlayerIndex + 1} turn ending...`);
 
 		state.hovering = {};
 		state.actionMode = null;
@@ -4686,58 +4932,3 @@ function alpineHexDiceTacticGame() { return {
 		return roll;
 	},
 };}
-
-const BOARD_DOT = [
-	`                         .`,
-	`                     .       .`,
-	`                 .       .       .`,
-	`             .       .       .       .`,
-	`         .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	` .       .       .       .       .       .       .`,
-	`     .       .       .       .       .       .`,
-	`         .       .       .       .       .`,
-	`             .       .       .       .`,
-	`                 .       .       .`,
-	`                     .       .`,
-	`                         .`,
-].join('\n');
-const BOARD_NUM = [
-	`                        057`,
-	`                    045     070`,
-	`                034     058     082`,
-	`            024     046     071     093`,
-	`        015     035     059     083     103`,
-	`    007     025     047     072     094     112`,
-	`000     016     036     060     084     104     120`,
-	`    008     026     048     073     095     113`,
-	`001     017     037     061     085     105     121`,
-	`    009     027     049     074     096     114`,
-	`002     018     038     062     086     106     122`,
-	`    010     028     050     075     097     115`,
-	`003     019     039     063     087     107     123`,
-	`    011     029     051     076     098     116`,
-	`004     020     040     064     088     108     124`,
-	`    012     030     052     077     099     117`,
-	`005     021     041     065     089     109     125`,
-	`    013     031     053     078     100     118`,
-	`006     022     042     066     090     110     126`,
-	`    014     032     054     079     101     119`,
-	`        023     043     067     091     111`,
-	`            033     055     080     102`,
-	`                044     068     092`,
-	`                    056     081`,
-	`                        069`,
-].join('\n');

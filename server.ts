@@ -49,13 +49,16 @@ if (Deno.args.includes('--version')) {
 }
 
 // Pre-calculate processed index.html
-let HTML_INDEX = "";
-try {
-	HTML_INDEX = (await Deno.readTextFile("./index.html"))
-		.replaceAll('___VERSION___', appVersion)
-		.replaceAll('___GOOGLE_CLIENT_ID___', GOOGLE_CLIENT_ID || "")
-} catch (e: any) {
-	console.error("Failed to prepare HTML_INDEX:", e);
+let HTML_INDEX = '';
+async function prepareIndex() {
+	try {
+		HTML_INDEX = (await Deno.readTextFile('./index.html'))
+			.replaceAll('___VERSION___', appVersion)
+			.replaceAll('___GOOGLE_CLIENT_ID___', GOOGLE_CLIENT_ID || "")
+		// console.log('prepareIndex:', HTML_INDEX.length);
+	} catch (e: any) {
+		console.error("Failed to prepare HTML_INDEX:", e);
+	}
 }
 
 const db = new Database({
@@ -91,8 +94,6 @@ async function initDatabase() {
 		console.error("ArangoDB initialization failed:", e);
 	}
 }
-
-await initDatabase();
 
 const head_json = {
 	"Content-Type": "application/json; charset=utf-8"
@@ -235,6 +236,11 @@ async function handleRequest(req: Request) {
 
 	return response(JSON.stringify({error: 'E404'}), {status: 404});
 }
+
+// Warm up
+initDatabase();
+prepareIndex();
+// setInterval(() => prepareIndex(), 30e3);
 
 const PORT = Number(Deno.env.get('PORT')) || 1166;
 console.log(`Server opened: http://localhost:${PORT}`);

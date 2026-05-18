@@ -5,8 +5,21 @@ Implement a new "Autochess" combat mode where players focus on formation and str
 
 ## Core Mechanics:
 
+### 0. References (Read once as basic hard memory layer)
+
+#### Key Findings:
+   1. Stat Inheritance: I've identified that we can leverage the existing CampaignManager system (ATK, DEF, HP upgrades) and its perk system to provide the "evolution" mechanics requested.
+   2. AI Strategy: The current AI uses complex heuristic profiles. For Autochess, we can create simplified, fixed-behavior profiles for each unit class (e.g., Archer kiting, Tanker intercepting).
+   3. Action Gauge: This will be a new addition, moving from turn-based to a tick-based simulation where unit speed determines how often they act.
+
+#### Sources:
+*   `game.js`: core game engine
+*   `index.html`: game UI
+*   `campaign/campaign-manager.js`: modified engine for Campaign, that could be inheritance for Autochess
+*   `ai/ai-heuristic.js` & `ai/ai.js`: core AI logic
+
 ### 1. Progression & Rounds
-*   **Total Rounds:** 6 to 10 rounds.
+*   **Total Rounds:** 6 rounds.
 *   **Starting Army:** 6 random units (Level 1 stats).
 *   **Round Cycle:** 
     1.  **Preparation Phase:** Players arrange units in their deployment zone.

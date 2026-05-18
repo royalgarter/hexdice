@@ -249,6 +249,94 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 }
 
 /**
+ * Evaluate and return the best move for a specific unit (used in Autochess).
+ */
+function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline') {
+    // Load profile
+    let profile = DEFAULT_PROFILE;
+    if (typeof getProfile === 'function') {
+        profile = getProfile(profileName);
+    } else if (typeof heuristicProfiles !== 'undefined' && heuristicProfiles[profileName]) {
+        profile = heuristicProfiles[profileName];
+    }
+
+    const opponentIndices = state.players
+        .filter(p => p.id !== state.currentPlayerIndex && !p.isEliminated)
+        .map(p => p.id);
+
+    const shouldExcludeBases = GAME.options && GAME.options.includes('a');
+    const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
+    profile = dynamicProfile;
+
+    const pressureMap = calculatePressureMap(GAME, state, state.currentPlayerIndex);
+    const predictedThreats = predictEnemyThreats(GAME, state, state.currentPlayerIndex);
+
+    const opponentBases = shouldExcludeBases ? [] : opponentIndices
+        .filter(idx => !state.players[idx].isEliminated)
+        .map(idx => ({
+            id: idx,
+            baseHexId: state.players[idx].baseHexId,
+            baseHex: GAME.getHex(state.players[idx].baseHexId, state)
+        }))
+        .filter(b => b.baseHex);
+
+    // Generate moves specifically for this unit
+    const unitInState = state.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    const moves = generateAllPossibleMoves(GAME, state, unitInState);
+    
+    const scoredMoves = [];
+    for (const move of moves) {
+        // Temporary set spell for Oracle evaluation
+        let originalSpell = GAME.oracleSelectedSpell;
+        if (move.actionType.startsWith('SPELLCAST_') && move.actionType !== 'SPELLCAST_SACRIFICE') {
+            GAME.oracleSelectedSpell = move.actionType.replace('SPELLCAST_', '');
+        }
+
+        const moveAnalysis = heuristicMove(GAME, state, move, unitInState, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
+        
+        // Restore spell
+        GAME.oracleSelectedSpell = originalSpell;
+
+        scoredMoves.push({
+            move,
+            unit: unitInState,
+            ...moveAnalysis
+        });
+    }
+
+    if (scoredMoves.length === 0) return null;
+
+    // Sort by priority order from profile
+    for (const priority of profile.priorityOrder) {
+        const priorityMoves = filterByPriority(scoredMoves, priority, opponentBases);
+        if (priorityMoves.length > 0) {
+            // Sort priority moves by score
+            priorityMoves.sort((a, b) => b.score - a.score);
+            return priorityMoves[0].move;
+        }
+    }
+
+    // Fallback: highest score
+    scoredMoves.sort((a, b) => b.score - a.score);
+    return scoredMoves[0].move;
+}
+
+/**
+ * Helper to filter moves by priority category (logic extracted from executePriority)
+ */
+function filterByPriority(scoredMoves, priority, opponentBases) {
+    switch (priority) {
+        case 'capture': return opponentBases?.length ? scoredMoves.filter(m => m.canCapture) : [];
+        case 'kill': return scoredMoves.filter(m => m.canKillEnemy);
+        case 'attack': return scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
+        case 'spell': return scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_'));
+        case 'dodge': return scoredMoves.filter(m => m.isCurrentlyThreatened || m.canBeKilledCurrently);
+        case 'position': return scoredMoves.filter(m => !m.isThreatened && !m.move.actionType.includes('SPELLCAST_'));
+        default: return [];
+    }
+}
+
+/**
  * Predict which enemy units can attack next turn and calculate likely targets.
  * Used for tactical evaluation of support actions like Shielding or Skirmishing.
  */
