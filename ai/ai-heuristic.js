@@ -132,6 +132,14 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         // console.log(`AI (Heuristic: ${profile.name}) thinking...`);
     }
 
+    // Handle SKIRMISH_POST_MOVE: AI must pick a destination for the successful skirmisher
+    if (GAME.actionMode === 'SKIRMISH_POST_MOVE') {
+        const targetHexId = GAME.validMoves.cosmic_random();
+        if (verbose) GAME.addLog(`P${GAME.currentPlayerIndex+1} AI [SKIRMISH_POST_MOVE]: Choosing hex [${targetHexId}]`);
+        GAME.completeAction(targetHexId);
+        return;
+    }
+
     const state = GAME.cloneState();
     const currentPlayer = state.players[state.currentPlayerIndex];
     
