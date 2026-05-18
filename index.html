@@ -406,6 +406,14 @@
 				</div>
 
 				<div class="text-center pt-2">
+					<div class="mb-2">
+						<label class="font-bold mr-2">Strategy:</label>
+						<select x-model="selectedAutochessProfile" class="border px-2 py-1 text-sm uppercase">
+							<template x-for="p in getProfileNames()" :key="p">
+								<option :value="p" x-text="p"></option>
+							</template>
+						</select>
+					</div>
 					<button @click="startAutochessCombat()" class="bg-black text-white p-2 font-bold hover:bg-gray-800 uppercase text-lg">
 						Deploy & Battle
 					</button>

@@ -55,40 +55,40 @@ const heuristicProfiles = {
     },
 
     // =========================================================================
-    // BERSERKER - Aggressive kill-focused strategy
+    // BERSERKER - Aggressive melee-rush strategy
     // =========================================================================
     berserker: {
         name: "Berserker",
-        description: "Aggressive: Prioritizes kills over safety, rushes enemy",
-        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
+        description: "Aggressive Melee: Rushes enemy with high-value attackers; skirmishes aggressively.",
+        priorityOrder: ['kill', 'attack', 'capture', 'position', 'dodge', 'spell'],
         weights: {
-            captureBonus: 10000,
-            killBonus: 2000,
-            attackBonus: 500,
-            safeBonus: 200,
-            threatPenalty: -100,
-            protectedRangeBonus: 25,
-            friendlySixBonus: 50,
-            advanceBonus: 800,
-            guardPenalty: -1000,
-            mergeOver6Penalty: -200,
-            backAndForthPenalty: -300,
-            teamPositionWeight: 0.4,
-            pressureWeight: 0.2,
+            captureBonus: 2000,
+            killBonus: 3000,
+            attackBonus: 1000,
+            safeBonus: 50,
+            threatPenalty: -10, // Does not fear threats
+            protectedRangeBonus: 10,
+            friendlySixBonus: 20,
+            advanceBonus: 1500, // Strong rush incentive
+            guardPenalty: -5000, // Never guard
+            mergeOver6Penalty: -100,
+            backAndForthPenalty: -100,
+            teamPositionWeight: 0.1,
+            pressureWeight: -0.5, // Actually seeks out pressure (negative penalty)
             terrainWeights: {
-                defenseBonusWeight: 50,
-                archerTowerBonus: 300,
-                archerMountainBonus: 400,
-                mountainMovePenalty: -50,
-                losBlockBonus: 50
+                defenseBonusWeight: 0,
+                archerTowerBonus: 0,
+                archerMountainBonus: 0,
+                mountainMovePenalty: 0,
+                losBlockBonus: 0
             },
             spells: {
-                SPELLCAST_SHIELD: 0.4,
-                SPELLCAST_SWAP: 0.6,
-                SPELLCAST_SKIRMISH: 2.0,
+                SPELLCAST_SHIELD: 0.1,
+                SPELLCAST_SWAP: 0.5,
+                SPELLCAST_SKIRMISH: 2.5, // Only useful spell is one that helps attack
             }
         },
-        riskTolerance: 0.9,
+        riskTolerance: 1.0,
         targetSelection: 'highestValue',
         positioningStyle: 'rush',
         unitSelection: 'highestValue'
@@ -216,6 +216,46 @@ const heuristicProfiles = {
         targetSelection: 'lowArmor',      // Pick easiest kills
         positioningStyle: 'flank',        // Find weak spots
         unitSelection: 'highestValue'     // Use best units for kills
+    },
+
+    // =========================================================================
+    // AGGRESSOR - Aggressive ranged/spell strategy
+    // =========================================================================
+    aggressor: {
+        name: "Aggressor",
+        description: "Aggressive Range: Focuses on ranged/spell control and target sniping.",
+        priorityOrder: ['spell', 'kill', 'attack', 'position', 'capture', 'dodge'],
+        weights: {
+            captureBonus: 500,
+            killBonus: 2500,
+            attackBonus: 1500, // Priority on ranged attacks
+            safeBonus: 300,
+            threatPenalty: -200,
+            protectedRangeBonus: 800, // Love being behind friendly lines
+            friendlySixBonus: 100,
+            advanceBonus: 200,
+            guardPenalty: -100,
+            mergeOver6Penalty: -50,
+            backAndForthPenalty: -300,
+            teamPositionWeight: 0.8,
+            pressureWeight: 0.8, // Needs safe positioning to use range/spells
+            terrainWeights: {
+                defenseBonusWeight: 200,
+                archerTowerBonus: 1000,
+                archerMountainBonus: 1000,
+                mountainMovePenalty: -200,
+                losBlockBonus: 500
+            },
+            spells: {
+                SPELLCAST_SHIELD: 1.2,
+                SPELLCAST_SWAP: 1.5,
+                SPELLCAST_SKIRMISH: 2.0,
+            }
+        },
+        riskTolerance: 0.7,
+        targetSelection: 'lowArmor', // Snipes weak units
+        positioningStyle: 'cluster', // Stays together to support
+        unitSelection: 'mostThreatened' // Uses spells/ranged to protect
     },
 };
 

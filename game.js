@@ -180,6 +180,7 @@ function alpineHexDiceTacticGame() { return {
 	autochessRerolls: 1,
 	autochessLastResult: null,
 	autochessPhase: 'PREPARATION', // PREPARATION, COMBAT, RECAP
+	selectedAutochessProfile: 'baseline',
 
 	initAutochess() {
 
@@ -253,6 +254,8 @@ function alpineHexDiceTacticGame() { return {
 	startAutochessCombat() {
 		this.autochessPhase = 'COMBAT';
 		this.messageLog = [];
+		// Apply selected profile to player
+		this.players[0].profileName = this.selectedAutochessProfile;
 		this.prepareAutochessCombat();
 		this.runAutochessSimulation();
 	},
