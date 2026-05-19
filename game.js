@@ -424,12 +424,16 @@ function alpineHexDiceTacticGame() { return {
 			h.unitId = null;
 		});
 
-		// Player 2 is enemy
-		const p2 = this.players[1];
-		p2.dice = [];
-		const enemyUnitCount = this.players[0].dice.length;
-		for (let i = 0; i < enemyUnitCount; i++) {
-			p2.dice.push(this.createAutochessUnit(Math.floor(Math.random() * 6) + 1, 1));
+		// Player 2 and above are AI enemies
+		for (let pIdx = 1; pIdx < this.playerCount; pIdx++) {
+			const p = this.players[pIdx];
+			p.dice = [];
+			p.profileName = p.profileName || Object.keys(heuristicProfiles).random();
+
+			const enemyUnitCount = this.players[0].dice.length;
+			for (let i = 0; i < enemyUnitCount; i++) {
+				p.dice.push(this.createAutochessUnit(Math.floor(Math.random() * 6) + 1, pIdx));
+			}
 		}
 
 		this.players.forEach((player, playerIdx) => {
@@ -445,8 +449,8 @@ function alpineHexDiceTacticGame() { return {
 			});
 		});
 
-		// Deploy units randomly in valid deployment hexes
-		const playerOrder = [0, 1].sort(() => Math.random() - 0.5);
+		// Deploy units randomly in valid deployment hexes for all players
+		const playerOrder = Array.from({length: this.playerCount}, (_, i) => i).sort(() => Math.random() - 0.5);
 		playerOrder.forEach(playerIdx => {
 			const player = this.players[playerIdx];
 			player.dice.forEach((unit) => {
@@ -472,12 +476,12 @@ function alpineHexDiceTacticGame() { return {
 
 			this.simulateAutochessStep();
 
-			const playerAlive = this.players[0].dice.some(u => !u.isDeath);
-			const enemyAlive = this.players[1].dice.some(u => !u.isDeath);
+			const alivePlayers = this.players.filter(p => p.dice.some(u => !u.isDeath));
 
-			if (!enemyAlive || !playerAlive) {
+			if (alivePlayers.length <= 1) {
 				clearInterval(combatInterval);
-				this.autochessLastResult = !enemyAlive ? 'WIN' : 'LOSS';
+				const winner = alivePlayers[0];
+				this.autochessLastResult = (winner && winner.id === 0) ? 'WIN' : 'LOSS';
 				if (this.autochessLastResult === 'WIN') {
 					this.autochessRerolls++;
 					this.players[0].dice.filter(u => !u.isDeath).forEach(u => {
@@ -496,7 +500,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	simulateAutochessStep() {
-		const allUnits = [...this.players[0].dice, ...this.players[1].dice]
+		const allUnits = this.players.flatMap(p => p.dice)
 			.filter(u => !u.isDeath)
 			.sort((a, b) => (b.actionGauge - a.actionGauge) || (Math.random() - 0.5));
 
@@ -516,11 +520,21 @@ function alpineHexDiceTacticGame() { return {
 
 		// Context setup for AI
 		this.currentPlayerIndex = unit.playerId;
-		unit.hasMovedOrAttackedThisTurn = false;
-		unit.actionsTakenThisTurn = 0;
+		this.resetUnitTurnState(unit);
+
+		// Fixed strategies for each unit class
+		const classProfiles = {
+			1: 'tactician',
+			2: 'ranger',
+			3: 'assassin',
+			4: 'berserker',
+			5: 'turtle',
+			6: 'baseline',
+		};
+		const profileName = this.players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
 
 		const state = this.cloneState();
-		const move = evaluateBestMoveForUnit(this, state, unit, this.players[unit.playerId].profileName);
+		const move = evaluateBestMoveForUnit(this, state, unit, profileName);
 
 		if (move && move.actionType !== 'END_TURN') {
 			// If it's a spell, we need to set oracleSelectedSpell
@@ -1318,7 +1332,6 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
-		if (this.autochess) this.playerCount = 2;
 		this.preset = new URLSearchParams(location.search).get('preset');
 		this.mode = new URLSearchParams(location.search).get('mode') || 'gui';
 		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
@@ -3151,6 +3164,12 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
+		if (this.autochess) {
+			targetUnit.hp = Math.min(targetUnit.maxHp + 20, targetUnit.hp + 20);
+			this.addLog(`✨ Oracle cast Shield! ${this.logUnit(targetUnit)} gained 20 HP Shield.`, state);
+			return;
+		}
+
 		targetUnit.isGuarding = 2;
 		targetUnit.wasGuarding = false; // Reset fade timer when shielding
 		targetUnit.skirmishBuff = 0; // Shield cancels Skirmish
@@ -3177,6 +3196,14 @@ function alpineHexDiceTacticGame() { return {
 		const targetHex = this.getHex(targetHexId, state);
 
 		if (!oracleUnit || !targetUnit || !oracleHex || !targetHex) return;
+
+		if (this.autochess) {
+			const healAmount = (targetUnit.actionGauge / 100) * (targetUnit.maxHp * 0.5);
+			targetUnit.hp = Math.min(targetUnit.maxHp, targetUnit.hp + healAmount);
+			targetUnit.actionGauge = 0;
+			this.addLog(`✨ Oracle cast Swap! Converted ${this.logUnit(targetUnit)} Action Gauge to ${Math.floor(healAmount)} HP.`, state);
+			return;
+		}
 
 		// Manually swap positions to avoid the "move clears previous unit" bug
 		oracleHex.unit = targetUnit;
@@ -3208,6 +3235,12 @@ function alpineHexDiceTacticGame() { return {
 		const oracleHex = this.getHex(oracleHexId, state);
 
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
+
+		if (this.autochess) {
+			targetUnit.actionGauge = Math.min(100, targetUnit.actionGauge + 50);
+			this.addLog(`✨ Oracle cast Skirmish! ${this.logUnit(targetUnit)} Action Gauge filled by 50%.`, state);
+			return;
+		}
 
 		targetUnit.skirmishBuff = 2; // Lasts until end of next activation cycle
 		targetUnit.isGuarding = 0; // Skirmish cancels Shield
@@ -4869,58 +4902,61 @@ function alpineHexDiceTacticGame() { return {
 	},
 	resetTurnActionsForPlayer(playerId, state) {
 		const player = (state || this).players[playerId];
-		player.dice.forEach(die => {
-			die.hasMovedOrAttackedThisTurn = false;
-			die.actionsTakenThisTurn = 0;
-			die.isRerolled = false;
-			die.roundDamageNegated = 0;
+		player.dice.forEach(die => this.resetUnitTurnState(die, state));
+	},
 
-			if (die.venomDuration && die.venomDuration > 0) {
-				this.addLog(`🐍 ${this.logUnit(die)} takes 10 venom damage.`);
-				this.applyDamage(die.hexId, 10, state);
-				die.venomDuration--;
+	resetUnitTurnState(unit, state) {
+		unit.hasMovedOrAttackedThisTurn = false;
+		unit.actionsTakenThisTurn = 0;
+		unit.isRerolled = false;
+		unit.roundDamageNegated = 0;
+
+		if (unit.venomDuration && unit.venomDuration > 0) {
+			this.addLog(`🐍 ${this.logUnit(unit)} takes 10 venom damage.`);
+			this.applyDamage(unit.hexId, 10, state);
+			unit.venomDuration--;
+		}
+
+		// Warlock perk: melting converted units
+		if (unit.isMelting && unit.isMelting > 0) {
+			unit.isMelting--;
+			if (unit.isMelting === 0) {
+				this.addLog(`🔥 ${this.logUnit(unit)} melted away.`);
+				this.removeUnit(unit.hexId, state);
+			} else {
+				this.addLog(`🔥 ${this.logUnit(unit)} is melting! (${unit.isMelting} turns left)`);
+			}
+		}
+
+		if (unit.isDeployed && !unit.isDeath) {
+			const hex = this.getHex(unit.hexId, state);
+
+			// Oracle Tier 1 [A] Blessed Aura
+			if (unit.value === 6 && this.hasPerk(unit, 'tier1', 'A')) {
+				this.getNeighbors(hex, state).forEach(n => {
+					const friend = this.getUnitOnHex(n.id, state);
+					if (friend && friend.playerId === unit.playerId) {
+						friend.currentHP = Math.min(friend.maxHP, friend.currentHP + 10);
+					}
+				});
 			}
 
-			// Warlock perk: melting converted units
-			if (die.isMelting && die.isMelting > 0) {
-				die.isMelting--;
-				if (die.isMelting === 0) {
-					this.addLog(`🔥 ${this.logUnit(die)} melted away.`);
-					this.removeUnit(die.hexId, state);
-				} else {
-					this.addLog(`🔥 ${this.logUnit(die)} is melting! (${die.isMelting} turns left)`);
-				}
+			// Oracle Tier 1 [B] Hex
+			if (unit.value === 6 && this.hasPerk(unit, 'tier1', 'B')) {
+				this.getNeighbors(hex, state).forEach(n => {
+					const enemy = this.getUnitOnHex(n.id, state);
+					if (enemy && enemy.playerId !== unit.playerId) {
+						enemy.armorReduction += 10;
+						this.addLog(`🔮 Hex! ${this.logUnit(enemy)} DEF reduced by 10.`);
+					}
+				});
 			}
 
-			if(die.isDeployed && !die.isDeath) {
-				const hex = this.getHex(die.hexId, state);
+			this.calcDefenderEffectiveArmor(unit.hexId, state);
 
-				// Oracle Tier 1 [A] Blessed Aura
-				if (die.value === 6 && this.hasPerk(die, 'tier1', 'A')) {
-					this.getNeighbors(hex, state).forEach(n => {
-						const friend = this.getUnitOnHex(n.id, state);
-						if (friend && friend.playerId === die.playerId) {
-							friend.currentHP = Math.min(friend.maxHP, friend.currentHP + 10);
-						}
-					});
-				}
-
-				// Oracle Tier 1 [B] Hex
-				if (die.value === 6 && this.hasPerk(die, 'tier1', 'B')) {
-					this.getNeighbors(hex, state).forEach(n => {
-						const enemy = this.getUnitOnHex(n.id, state);
-						if (enemy && enemy.playerId !== die.playerId) {
-							enemy.armorReduction += 10;
-							this.addLog(`🔮 Hex! ${this.logUnit(enemy)} DEF reduced by 10.`);
-						}
-					});
-				}
-
-				this.calcDefenderEffectiveArmor(die.hexId, state);
-				// Decrement skirmish buff
-				if (die.skirmishBuff && die.skirmishBuff > 0) die.skirmishBuff--;
-			}
-		});
+			// Decrement skirmish buff
+			if (unit.skirmishBuff && unit.skirmishBuff > 0) unit.skirmishBuff--;
+		}
 	},
 	checkWinConditions(state) {
 		if (this.phase === 'GAME_OVER') return;

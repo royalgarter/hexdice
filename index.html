@@ -106,12 +106,6 @@
 		</div>
 	</div>
 
-	<!-- Romance Mode Banner -->
-	<div style="display: none;" x-show="players.length > 0 && players.every(p => p.isAI) && phase !== 'SETUP_ROLL'"
-		class="w-full bg-yellow-100 border-y-2 border-yellow-600 py-2 text-center font-bold text-yellow-800 text-lg">
-		👑 Romance of the Dice Kingdoms 👑
-	</div>
-
 	<!-- Welcome Content -->
 	<div x-show="phase === 'SETUP_ROLL' && !isCampaign" class="w-full max-w-2xl p-4 prose">
 		<!--WELCOME_CONTENT-->
@@ -171,10 +165,13 @@
 							</div>
 
 							<!-- Autochess HP Bar -->
-							<div x-show="autochess" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
-								<div class="h-full bg-green-500 transition-all duration-300"
+							<div x-show="autochess" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
+								<div class="h-1 bg-green-500 transition-all duration-300 rounded-full"
 									:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHp * 100) + '%'"
 									:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHp < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHp < 0.25}">
+								</div>
+								<div class="h-1 bg-blue-400 transition-all duration-100 rounded-full mt-0.5"
+									:style="'width: ' + (hex.unit?.actionGauge || 0) + '%'">
 								</div>
 							</div>
 						</div>
@@ -356,12 +353,12 @@
 	</div>
 
 	<!-- Autochess UI Overlay -->
-	<div id="game-autochess" style="display: none;" x-show="autochess" x-cloak class="bottom-0 mt-4 border bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
+	<div id="game-autochess" style="display: none;" x-show="autochess" x-cloak class="bottom-0 mt-4 border-t bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
 		<div class="max-w-full w-full">
 			<div class="w-full flex justify-between items-center pb-2 px-2 pointer-events-auto">
-				<h1 class="text-lg font-bold uppercase">Hex Dice: Autochess</h1>
+				<h1 class="text-lg font-bold uppercase">👑 Romance of the Dice Kingdom</h1>
 				<div class="flex items-center space-x-4">
-					<div class="ml-4 font-bold">Round <span x-text="autochessRound"></span> / 6</div>
+					<div class="ml-4 font-bold">[<span x-text="autochessRound"></span> / 6]</div>
 					<button class="border px-2 py-1 text-xs hover:bg-black hover:text-white" @click="location.href='/'">EXIT</button>
 				</div>
 			</div>
@@ -371,9 +368,9 @@
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div class="p-2">
 						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
-						<div class="grid grid-cols-6 gap-2 text-xs">
+						<div class="grid grid-cols-6 gap-1 text-xs">
 							<template x-for="(unit, index) in players[0]?.dice" :key="index">
-								<div class="border p-1 text-center bg-gray-50">
+								<div class="border text-center bg-gray-50">
 									<!-- <div class="text-lg font-bold" x-text="unit.value"></div> -->
 									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
 									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
@@ -386,7 +383,7 @@
 						<h2 class="font-bold uppercase pb-1">Recruitment</h2>
 						<div class="flex justify-center space-x-4 py-2" x-show="autochessInventory?.length">
 							<template x-for="(unit, index) in autochessInventory" :key="index">
-								<button @click="recruitAutochessUnit(index)" class="border p-2 bg-gray-50 hover:bg-black hover:text-white transition-colors">
+								<button @click="recruitAutochessUnit(index)" class="border bg-gray-50 hover:bg-black hover:text-white transition-colors">
 									<!-- <div class="text-2xl font-bold" x-text="unit.value"></div> -->
 									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
 									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
@@ -422,10 +419,10 @@
 
 			<!-- COMBAT PHASE UI (Board is behind) -->
 			<div style="display: none;" x-show="autochessPhase === 'COMBAT'" class="w-full flex flex-col items-center">
-				<div class="w-full flex justify-between border mb-4 text-sm font-bold pointer-events-auto">
-					<div class="text-blue-700 uppercase">Player Units: <span x-text="players[0]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
-					<div class="animate-pulse uppercase mx-2">Battle in Progress</div>
-					<div class="text-red-700 uppercase">Enemy Units: <span x-text="players[1]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
+				<div class="w-full flex justify-between mb-4 text-sm font-bold pointer-events-auto">
+					<div class="text-blue-700 uppercase">Player: <span x-text="players[0]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
+					<div class="animate-pulse uppercase mx-2">in progress</div>
+					<div class="text-red-700 uppercase">Enemy: <span x-text="players.slice(1).reduce((acc, p) => acc + (p.dice?.filter(u => !u.isDeath).length || 0), 0)"></span></div>
 				</div>
 			</div>
 
@@ -476,12 +473,12 @@
 				</div>
 				<div class="">
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=' + CampaignManager.getCurrentMapName()" x-show="!isCampaign">[Campaign]</button>
-					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?autochess=true'">[Autochess]</button>
+					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?autochess=true&players='+playerCount">[RotDK]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="setupTerrain(true)">[Terrain]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[Deploy]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[Random]</button>
-					<button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button>
+					<!-- <button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button> -->
 					<a href="?players=2&preset=E_21" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">[Epic 21]</a>
 					<a href="?players=2&preset=E_15" class="hidden mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">[Grand 15]</a>
 				</div>
