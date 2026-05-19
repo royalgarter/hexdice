@@ -428,8 +428,7 @@ function alpineHexDiceTacticGame() { return {
 		for (let pIdx = 1; pIdx < this.playerCount; pIdx++) {
 			const p = this.players[pIdx];
 			p.dice = [];
-			p.profileName = p.profileName || Object.keys(heuristicProfiles).random();
-
+			this.setPlayerAI(p, true);
 			const enemyUnitCount = this.players[0].dice.length;
 			for (let i = 0; i < enemyUnitCount; i++) {
 				p.dice.push(this.createAutochessUnit(Math.floor(Math.random() * 6) + 1, pIdx));
@@ -524,12 +523,12 @@ function alpineHexDiceTacticGame() { return {
 
 		// Fixed strategies for each unit class
 		const classProfiles = {
-			1: 'tactician',
+			1: 'baseline',
 			2: 'ranger',
 			3: 'assassin',
 			4: 'berserker',
 			5: 'turtle',
-			6: 'baseline',
+			6: 'tactician',
 		};
 		const profileName = this.players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
 
