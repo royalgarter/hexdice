@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const dirs = ['assets', 'ai', 'rules'];
-const rootFiles = ['index.html', 'rules.html', 'game.js'];
+const rootFiles = ['index.html', 'rules.html', 'blog.html', 'game.js'];
 
 function getFiles(dir) {
 	let files = [];

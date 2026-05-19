@@ -15,6 +15,7 @@
 
 // Default profile if none specified
 const DEFAULT_PROFILE = heuristicProfiles.baseline;
+const AUTOCHESS_WEIGHT_MULTIPLIER = 2.5;
 
 /**
  * Adjust AI weights based on the current game phase
@@ -22,12 +23,22 @@ const DEFAULT_PROFILE = heuristicProfiles.baseline;
 function calculatePhaseWeights(GAME, state, profile) {
     const dynamicProfile = JSON.parse(JSON.stringify(profile));
     const w = dynamicProfile.weights;
-    
+
     const currentPlayer = state.players[state.currentPlayerIndex];
     const deployedUnits = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath).length;
     const totalPossibleUnits = currentPlayer.dice.length;
     const shouldExcludeBases = GAME.options && GAME.options.includes('a');
-    
+
+    // Autochess mode weight adjustment (Aggressive focus on moving closer to opponent's base)
+    if (GAME.autochess) {
+        w.advanceBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        w.captureBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        w.teamPositionWeight *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        w.killBonus *= 1.2;
+        w.pressureWeight *= 0.8; // Care less about being safe
+        dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.2);
+    }
+
     // Estimate game phase
     let phase = 'mid';
     if (deployedUnits < totalPossibleUnits * 0.4) {
@@ -81,9 +92,17 @@ function calculatePressureMap(GAME, state, myPlayerIndex) {
             if (!unitHex) continue;
 
             // Pressure radius: Base radius + Range
-            // Dice 2 (Archer) has Range 2, Dice 6 (Legate) has Range 1
+            // Dice 2 (Archer) has Range 2, Dice 6 (Oracle) has Range 2
             const baseRadius = 2; // Immediate area of influence
-            const totalRadius = baseRadius + (unit.range || 0);
+
+            // Get actual range considering terrain
+            let actualRange = (unit.range || 0);
+            if (unit.value === 2 || unit.value === 6) {
+                if (unitHex.terrainType === 'TOWER') actualRange = 2;
+                else if (unitHex.terrainType === 'MOUNTAIN') actualRange = 3;
+            }
+
+            const totalRadius = baseRadius + actualRange;
 
             // Iterate through hexes in radius to apply pressure
             for (const hex of state.hexes) {
@@ -122,6 +141,14 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 
     if (verbose) {
         // console.log(`AI (Heuristic: ${profile.name}) thinking...`);
+    }
+
+    // Handle SKIRMISH_POST_MOVE: AI must pick a destination for the successful skirmisher
+    if (GAME.actionMode === 'SKIRMISH_POST_MOVE') {
+        const targetHexId = GAME.validMoves.cosmic_random();
+        if (verbose) GAME.addLog(`P${GAME.currentPlayerIndex+1} AI [SKIRMISH_POST_MOVE]: Choosing hex [${targetHexId}]`);
+        GAME.completeAction(targetHexId);
+        return;
     }
 
     const state = GAME.cloneState();
@@ -238,6 +265,94 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     // Fallback: End turn
     GAME.addLog(`P${GAME.currentPlayerIndex+1} AI Heuristic: No good moves. Ending turn.`);
     applyMove(GAME, { actionType: 'END_TURN' });
+}
+
+/**
+ * Evaluate and return the best move for a specific unit (used in Autochess).
+ */
+function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline') {
+    // Load profile
+    let profile = DEFAULT_PROFILE;
+    if (typeof getProfile === 'function') {
+        profile = getProfile(profileName);
+    } else if (typeof heuristicProfiles !== 'undefined' && heuristicProfiles[profileName]) {
+        profile = heuristicProfiles[profileName];
+    }
+
+    const opponentIndices = state.players
+        .filter(p => p.id !== state.currentPlayerIndex && !p.isEliminated)
+        .map(p => p.id);
+
+    const shouldExcludeBases = GAME.options && GAME.options.includes('a');
+    const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
+    profile = dynamicProfile;
+
+    const pressureMap = calculatePressureMap(GAME, state, state.currentPlayerIndex);
+    const predictedThreats = predictEnemyThreats(GAME, state, state.currentPlayerIndex);
+
+    const opponentBases = shouldExcludeBases ? [] : opponentIndices
+        .filter(idx => !state.players[idx].isEliminated)
+        .map(idx => ({
+            id: idx,
+            baseHexId: state.players[idx].baseHexId,
+            baseHex: GAME.getHex(state.players[idx].baseHexId, state)
+        }))
+        .filter(b => b.baseHex);
+
+    // Generate moves specifically for this unit
+    const unitInState = state.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    const moves = generateAllPossibleMoves(GAME, state, unitInState);
+    
+    const scoredMoves = [];
+    for (const move of moves) {
+        // Temporary set spell for Oracle evaluation
+        let originalSpell = GAME.oracleSelectedSpell;
+        if (move.actionType.startsWith('SPELLCAST_') && move.actionType !== 'SPELLCAST_SACRIFICE') {
+            GAME.oracleSelectedSpell = move.actionType.replace('SPELLCAST_', '');
+        }
+
+        const moveAnalysis = heuristicMove(GAME, state, move, unitInState, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
+        
+        // Restore spell
+        GAME.oracleSelectedSpell = originalSpell;
+
+        scoredMoves.push({
+            move,
+            unit: unitInState,
+            ...moveAnalysis
+        });
+    }
+
+    if (scoredMoves.length === 0) return null;
+
+    // Sort by priority order from profile
+    for (const priority of profile.priorityOrder) {
+        const priorityMoves = filterByPriority(scoredMoves, priority, opponentBases);
+        if (priorityMoves.length > 0) {
+            // Sort priority moves by score
+            priorityMoves.sort((a, b) => b.score - a.score);
+            return priorityMoves[0].move;
+        }
+    }
+
+    // Fallback: highest score
+    scoredMoves.sort((a, b) => b.score - a.score);
+    return scoredMoves[0].move;
+}
+
+/**
+ * Helper to filter moves by priority category (logic extracted from executePriority)
+ */
+function filterByPriority(scoredMoves, priority, opponentBases) {
+    switch (priority) {
+        case 'capture': return opponentBases?.length ? scoredMoves.filter(m => m.canCapture) : [];
+        case 'kill': return scoredMoves.filter(m => m.canKillEnemy);
+        case 'attack': return scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
+        case 'spell': return scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_'));
+        case 'dodge': return scoredMoves.filter(m => m.isCurrentlyThreatened || m.canBeKilledCurrently);
+        case 'position': return scoredMoves.filter(m => !m.isThreatened && !m.move.actionType.includes('SPELLCAST_'));
+        default: return [];
+    }
 }
 
 /**
@@ -417,7 +532,9 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 // Filter out spells that are currently unsafe unless they are escape actions
                 const viableSpells = spellMoves.filter(m => m.isSafe || m.isEscapeAction || profile.riskTolerance > 0.7);
 
-                const ratio = viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length; 
+                let hasSacrifice = viableSpells.find(m => m.move.actionType == 'SPELLCAST_SACRIFICE');
+
+                const ratio = hasSacrifice ? 1 : (viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length);
 
                 if (viableSpells.length > 0 && (random() < ratio)) {
                     if (verbose) console.log('Spellcast Ratio:', ratio);
@@ -1221,22 +1338,30 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
             
-            if (targetUnit && oracleUnit) {
+            // Explicitly check calcValidSacrificeTargets as requested
+            const validSacrificeTargets = GAME.calcValidSacrificeTargets(move.unitHexId, state);
+            const isValidSacrifice = validSacrificeTargets.includes(move.targetHexId);
+
+            if (targetUnit && oracleUnit && isValidSacrifice) {
                 const player = state.players[state.currentPlayerIndex];
                 const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
                 const hasReserve = player.dice.some(d => !d.isDeployed && !d.isDeath);
 
-                // Base score for removal
-                analysis.score += (targetUnit.value * 20);
-                if (hasReserve) analysis.score += 50;
+                // Substantially increased score to prioritize Transmute
+                analysis.score += (targetUnit.value * 200);
+                if (hasReserve) analysis.score += 300;
+
+                // Mark as kill so it gets prioritized by the kill loop
+                analysis.canKillEnemy = true;
+                analysis.targetValue = targetUnit.value;
 
                 // Stalemate break bonus
                 if (targetUnit.value === 6 && activeUnits.length === 1) {
                     const enemyPlayer = state.players[targetUnit.playerId];
                     const enemyActiveUnits = enemyPlayer.dice.filter(d => d.isDeployed && !d.isDeath);
-                    analysis.score += 100;
-                    if (enemyActiveUnits.length > 1) analysis.score += 50;
-                    if (enemyActiveUnits.length === 1) analysis.score += 500;
+                    analysis.score += 500;
+                    if (enemyActiveUnits.length > 1) analysis.score += 200;
+                    if (enemyActiveUnits.length === 1) analysis.score += 2000;
                 }
                 analysis.isSupportAction = true;
             }

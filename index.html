@@ -7,7 +7,7 @@
 	<!-- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> -->
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="color-scheme" content="light dark">
+	<meta name="color-scheme" content="light">
 	<meta name="description" content="Hex Dice">
 	<meta name="keywords" content="boardgame,hexagon,dice">
 	<meta name="theme-color" content="#c3a471">
@@ -16,20 +16,30 @@
 	<meta name="apple-mobile-web-app-title" content="Hex Dice">
 	<link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
 
+	<!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+	<meta property="og:image" content="/assets/infographics/hexdice_recap.png">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+
+	<!-- Twitter Card (X/Twitter) -->
+	<meta name="twitter:card" content="Hex Dice is a tactical board game where players command armies of dice, using their face values to determine their unit type, abilities, and movement. Played on a hexagonal map, players maneuver their forces, engage in deterministic combat, and aim to defeat all opponents or capture their base.">
+	<meta name="twitter:image" content="/assets/infographics/hexdice_recap.png">
+
 	<link rel="canonical" :href="host">
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
 	<link rel="manifest" href="/assets/manifest.json">
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
+	<link rel="stylesheet" type="text/css" href="/assets/style.css?v=___VERSION___" />
 
 	<script src="//accounts.google.com/gsi/client" async defer></script>
 	<script src="//unpkg.com/mqtt/dist/mqtt.min.js" async defer></script>
 	<script type="text/javascript" src="/assets/alpine.min.js" defer></script>
 
-	<script type="text/javascript" src="/game.js?v=20260511"></script>
-	<script type="text/javascript" src="/campaign/campaign-manager.js?v=20260511"></script>
-	<script type="text/javascript" src="/ai/heuristic-profiles.js?v=20260511"></script>
-	<script type="text/javascript" src="/ai/ai-heuristic.js?v=20260511"></script>
-	<script type="text/javascript" src="/ai/ai.js?v=20260511"></script>
+	<script type="text/javascript" src="/game.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/campaign/campaign-manager.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/ai/heuristic-profiles.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/ai/ai-heuristic.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/ai/ai.js?v=___VERSION___"></script>
 
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
@@ -38,260 +48,7 @@
 	</script> -->
 	<!-- <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" defer async></script> -->
 	<!-- <script async defer src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
-	<style>
-		.hex-grid-campaign-background {
-			scale: 1.03;
-			/*filter: contrast(0.6) opacity(0.8);*/
-			filter: contrast(0.8);
-			clip-path: polygon(1% 1%, 99% 1%, 99% 99%, 1% 99%);
-			/*clip-path: polygon(50% -2%, 150% 50%, 50% 102%, -50% 50%);*/
-		}
-		.hex-grid-container {
-			transform-origin: center center;
-			max-width: 100%;
-			/*transition: zoom 0.3s ease;*/
-			/*background-image: url(/assets/ro_maps/alberta.gif);*/
-			/*background-position: center;*/
-			/*background-size: 120%;*/
-		}
-		.v0-hexagon { /* Solid  */
-			clip-path: polygon(50% -50%, 100% 50%, 50% 150%, 0 50%);
-			/*scale: 101% 102%;*/
-			background-repeat: no-repeat;
-			background-position: center;
-			background-color: #896648ee;
-		}
-		.hexagon {
-			--border-width: 6%;   /* Control your border thickness here (can be px, rem, or %) */
-			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); /* Explicit 6-point hexagon (visually identical to your clipped 4-point one) */
-			background-color: #33333366;   /* Control opacity */
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.hexagon::before {
-			content: "";
-			position: absolute;
-			inset: 0;
-			background-color: #666666;
-			pointer-events: none; /* Allows clicking through the border */
-			/*The Magic: Draws a full box, then cuts out the inner hexagon shape. The outer box is drawn clockwise, the inner hole is drawn counter-clockwise.*/
-			clip-path: polygon(
-				/* Outer bounding box */
-				0 0, 100% 0, 100% 100%, 0 100%, 0 0,
-				/* Inner hexagon hole */
-				calc(25% + var(--border-width) / 2) var(--border-width),              /* Top-Left */
-				var(--border-width) 50%,                                              /* Left */
-				calc(25% + var(--border-width) / 2) calc(100% - var(--border-width)), /* Bottom-Left */
-				calc(75% - var(--border-width) / 2) calc(100% - var(--border-width)), /* Bottom-Right */
-				calc(100% - var(--border-width)) 50%,                                 /* Right */
-				calc(75% - var(--border-width) / 2) var(--border-width),              /* Top-Right */
-				calc(25% + var(--border-width) / 2) var(--border-width)               /* Close Top-Left */
-			);
-		}
-		.v2-hexagon {
-			/* 1. Clip the element to the exact hexagon shape */
-			clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-			/* 2. Draw the border and transparent center using an inline SVG */
-			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon points='25,0 75,0 100,50 75,100 25,100 0,50' fill='%2389664866' stroke='%23896648' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
-			/* 3. Ensure the background stretches to fit the element perfectly */
-			background-size: 100% 100%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-wood {
-			background-color: #c3a471aa;
-		}
-		.bg-hexdefault {
-		}
-		.bg-hexselect {
-			/*background-color: #f4ecd8;*/
-			/*filter: contrast(0.5);*/
-		}
-		.bg-hexmove {
-			/*background-color: #bd9b6b;*/
-			filter: brightness(0.5);
-			/*filter: drop-shadow(2px 4px 6px #3867d6);*/
-		}
-		.bg-hexmerge {
-			/*background-color: #2bcbba;*/
-			filter: saturate(0.5);
-		}
-		.bg-hextarget {
-			/*background-color: #fed330;*/
-			filter: sepia(1);
-			/*filter: drop-shadow(2px 4px 6px #c8a00a);*/
-		}
-		.bg-hexdanger {
-			/*background-color: #705030;*/
-			filter: contrast(0.5);
-		}
-		.bg-hexdeploy {
-			/*background-color: #f7b73166;*/
-			background-color: #f8f8f8aa;
-		}
-		.bg-hexred {
-			background-color: #eb3b5a33;
-			background-image: url('/assets/sprites/terrain/base_ro_red.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexblue {
-			background-color: #3867d633;
-			background-image: url('/assets/sprites/terrain/base_ro_blue.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexgreen {
-			background-color: #19ad6233;
-			background-image: url('/assets/sprites/terrain/base_ro_green.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexpurple {
-			background-color: #a55eea33;
-			background-image: url('/assets/sprites/terrain/base_ro_purple.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexyellow {
-			background-color: #c8a00a33;
-			background-image: url('/assets/sprites/terrain/base_ro_yellow.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexwhite {
-			background-color: #f8f8f833;
-			background-image: url('/assets/sprites/terrain/base_ro_black.gif');
-			background-size: auto 90%;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
 
-		/* Terrain Colors */
-		.bg-hexplain {
-			background-color: #89664811;
-		}
-		.bg-hexforest {
-			background-color: #228b2266;
-			background-image: url('/assets/sprites/terrain/forest_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexlake {
-			background-color: #4169e166;
-			background-image: url('/assets/sprites/terrain/lake_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hextower {
-			background-color: #40404066;
-			background-image: url('/assets/sprites/terrain/tower_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.bg-hexmountain {
-			background-color: #8b451366;
-			background-image: url('/assets/sprites/terrain/mountain_01.png');
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-		.text-xxs {
-			font-size: 0.6rem;
-		}
-
-		/* Dice Animation Styles */
-		.scene { width: 60px; height: 60px; perspective: 400px; position: fixed; top: 10px; left: 10px; z-index: 50; scale: 0.8; cursor: pointer;}
-		.cube {
-			width: 100%; height: 100%; position: relative;
-			transform-style: preserve-3d;
-			transform: rotateX(15deg) rotateY(15deg);
-			transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-		}
-		.face {
-			position: absolute; width: 100%; height: 100%;
-			background: linear-gradient(135deg, #f4e4bc, #e2d1a3);
-			border: 2px solid #8b5a2b; border-radius: 4px;
-			display: flex; align-items: center; justify-content: center;
-			font-size: 24px; font-weight: bold; color: #4a3728; font-family: 'Georgia', serif;
-			box-shadow: inset 0 0 10px rgba(139, 90, 43, 0.3), 1px 1px 3px rgba(0,0,0,0.5);
-		}
-		.face.front { color: #8b0000; }
-		.front  { transform: rotateY(  0deg) translateZ(30px); }
-		.right  { transform: rotateY( 90deg) translateZ(30px); }
-		.back   { transform: rotateY(180deg) translateZ(30px); }
-		.left   { transform: rotateY(-90deg) translateZ(30px); }
-		.top    { transform: rotateX( 90deg) translateZ(30px); }
-		.bottom { transform: rotateX(-90deg) translateZ(30px); }
-
-		/* Responsive Grid Scaling */
-		/*@media (max-width: 1280px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1.2;
-			}
-		}
-		@media (max-width: 1024px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1.1;
-			}
-		}
-		@media (max-width: 768px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1.05;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 1.0;
-			}
-		}
-		@media (max-width: 640px) {
-			.hex-grid-container.radius-5 {
-				zoom: 1;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.9;
-			}
-		}
-		@media (max-width: 540px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.90;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.80;
-			}
-		}
-		@media (max-width: 480px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.80;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.70;
-			}
-		}
-		@media (max-width: 400px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.75;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.65;
-			}
-		}
-		@media (max-width: 360px) {
-			.hex-grid-container.radius-5 {
-				zoom: 0.70;
-			}
-			.hex-grid-container.radius-6 {
-				zoom: 0.6;
-			}
-		}*/
-	</style>
 	<style type="text/tailwindcss">
 		[x-cloak] { display: none !important; }
 
@@ -306,79 +63,6 @@
 			--color-hexblue: var(--color-blue-700);
 			--color-hexgreen: var(--color-emerald-600);
 			--color-hexpurple: var(--color-purple-700);
-		}
-	</style>
-	<style>
-		body {
-			content: '';
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-
-			background-image: url('/assets/infographics/hexdice_background.jpg');
-			background-size: cover;
-			background-position: center;
-			background-repeat: no-repeat;
-			/* Optional: keeps image fixed while scrolling */
-			background-attachment: fixed;
-
-			/*background: url('/assets/infographics/hexdice_background.jpg') center/cover no-repeat;*/
-			/*opacity: 0.5;*/
-			/*z-index: -1;*/
-			/*filter: contrast(0.1);*/
-		}
-		.unit-info-panel {
-			top: 8rem;
-			left: 0.25rem;
-			width: 15rem;
-			z-index: 40;
-			/*border-radius: 4px;*/
-			/*box-shadow: 0 2px 8px rgba(0,0,0,0.25);*/
-		}
-		.unit-info-panel.is-hover { opacity: 0.95; }
-		.unit-info-panel.is-pinned { opacity: 1; }
-		.unit-info-panel-scroll {
-			max-height: min(36rem, calc(100vh - 7rem));
-			overflow-y: auto;
-			overscroll-behavior: contain;
-		}
-		.unit-info-panel-hint {
-			position: absolute;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			height: 2rem;
-			pointer-events: none;
-			display: flex;
-			align-items: flex-end;
-			justify-content: center;
-			padding-bottom: 0.15rem;
-			margin-bottom: 0.1rem;
-			font-size: 0.85rem;
-			color: #5b3a14;
-			background: linear-gradient(to bottom, rgba(195,164,113,0) 0%, rgba(195,164,113,0.85) 80%);
-			border-radius: 0 0 4px 4px;
-			animation: unitPanelHintBob 1.4s ease-in-out infinite;
-		}
-		@keyframes unitPanelHintBob {
-			0%, 100% { transform: translateY(0); }
-			50% { transform: translateY(2px); }
-		}
-		@media (max-width: 900px) {
-			.unit-info-panel {
-				display: none;
-				top: unset;
-				bottom: 0.25rem;
-				left: 0.25rem;
-				right: 0.25rem;
-				width: auto;
-				font-size: 0.7rem;
-			}
-			.unit-info-panel-scroll {
-				max-height: 40vh;
-			}
 		}
 	</style>
 </head>
@@ -397,7 +81,7 @@
 	</div>
 
 	<!-- User Profile Header -->
-	<div style="display:none;" class="fixed top-1 right-1 z-50 flex items-center space-x-2 p-2" x-show="auth.user" x-cloak>
+	<div style="display:none;" class="fixed top-1 right-2 z-10 flex items-center space-x-2 p-2" x-show="auth.user" x-cloak>
 		<img :src="auth.user?.picture" class="w-8 h-8 rounded-full border" x-show="auth.user?.picture"
 			onerror="this.src = '/assets/images/favicon-32x32.png';"
 		>
@@ -406,12 +90,12 @@
 			<button class="text-blue-600 hover:underline" @click="logout()">Logout</button>
 		</div>
 	</div>
-	<div style="display:none;" class="fixed top-1 right-1 z-50" x-show="!auth.user" x-cloak>
+	<div style="display:none;" class="fixed top-1 right-2 z-10" x-show="!auth.user" x-cloak>
 		<div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="signin" data-size="small" data-logo_alignment="left"></div>
 	</div>
 
 	<!-- Dice Container -->
-	<div style="display:none;" class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="gameplayVersion === 2" @click="rollDice()">
+	<div style="display:none;" class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="!autochess && (gameplayVersion === 2)" @click="rollDice()">
 		<div class="cube" id="cube">
 			<div class="face front">1</div>
 			<div class="face right">2</div>
@@ -428,14 +112,20 @@
 		👑 Romance of the Dice Kingdoms 👑
 	</div>
 
+	<!-- Welcome Content -->
+	<div x-show="phase === 'SETUP_ROLL' && !isCampaign" class="w-full max-w-2xl p-4 prose">
+		<!--WELCOME_CONTENT-->
+	</div>
+
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-center justify-center w-full overflow-auto">
 		<div x-show="isCampaign && showMinimap" class="hex-grid-campaign-background fixed" :style="hexGrid.style">
 		</div>
 		<!-- Hex Grid -->
-		<div class="hex-grid-container radius-5 relative" :style="hexGrid.style">
+		<div class="hex-grid-container relative" :class="'radius-' + (hexGrid.radius || 5)" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
-				<div class="hexagon absolute flex items-center justify-center"
+				<div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase === 'SETUP_DEPLOY' && validDeploymentHexesSet.has(hex.id), selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, autochess && hex.unit?.hp, autochess && hex.unit?.hexId]"
+					class="hexagon absolute flex items-center justify-center"
 					:class="hexColor(hex) + ' hex-' + hex.id"
 					:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 					:data-id="hex.id"
@@ -448,35 +138,44 @@
 					<div class="hex-content text-xxs text-center relative">
 						<span style="top:-0.5rem;right:-0.5rem;color:#44444444" class="absolute" x-show="!hex.unit" x-text="hex.id"></span>
 
-						<span class="text-lg invisible"
-							:class="PLAYER_CONFIG[hex.unit?.playerId]?.logColor || ''"
-							x-show="hex.unit"
-							x-text="hex.unit?.value"
-						>
-						</span>
+						<div x-show="hex.unit" class="contents">
+							<span class="text-lg invisible"
+								:class="PLAYER_CONFIG[hex.unit?.playerId]?.logColor || ''"
+								x-text="hex.unit?.value"
+							>
+							</span>
 
-						<span style="top:-0.6rem;right:0.8rem;" class="absolute text-red-700"
-							x-show="hex.unit" x-text="hex.unit?.attack">
-						</span>
-						<span style="top:-0.6rem;right:-0.6rem;" class="absolute text-gray-700"
-							:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
-							x-show="hex.unit" x-text="hex.unit?.effectiveArmor">
-						</span>
-						<span style="top:-0.6rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
-							x-show="hex.unit?.isRerolled">R
-						</span>
-						<span style="top:0.25rem;right:-0.8rem;" class="absolute text-blue-900 font-bold"
-							x-show="hex.unit?.isGuarding" x-html="(hex.unit?.isGuarding == 2) ? '⛨' : '⛉'">
-						</span>
-						<span style="top:0.25rem;right:0.8rem;" class="absolute text-red-900 font-bold"
-							x-show="hex.unit?.skirmishBuff">⚔
-						</span>
+							<span style="top:-0.5rem;right:0.6rem;" class="absolute z-10 text-red-700"
+								x-text="hex.unit?.attack">
+							</span>
+							<span style="top:-0.5rem;right:-0.4rem;" class="absolute z-10 text-gray-700"
+								:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
+								x-text="hex.unit?.effectiveArmor">
+							</span>
+							<span style="top:-0.5rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
+								x-show="hex.unit?.isRerolled">R
+							</span>
+							<span style="top:0.25rem;right:-0.8rem;" class="absolute text-blue-900 font-bold"
+								x-show="hex.unit?.isGuarding" x-html="(hex.unit?.isGuarding == 2) ? '⛨' : '⛉'">
+							</span>
+							<span style="top:0.25rem;right:0.8rem;" class="absolute text-red-900 font-bold"
+								x-show="hex.unit?.skirmishBuff">⚔
+							</span>
 
-						<!-- Campaign HP Bar -->
-						<div x-show="isCampaign && hex.unit" style="left:-0.45rem" class="absolute bottom-0 w-6 h-1 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
-							<div class="h-full bg-green-500 transition-all duration-300"
-								:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
-								:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
+							<!-- Campaign HP Bar -->
+							<div x-show="isCampaign" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+								<div class="h-full bg-green-500 transition-all duration-300"
+									:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
+									:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
+								</div>
+							</div>
+
+							<!-- Autochess HP Bar -->
+							<div x-show="autochess" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+								<div class="h-full bg-green-500 transition-all duration-300"
+									:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHp * 100) + '%'"
+									:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHp < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHp < 0.25}">
+								</div>
 							</div>
 						</div>
 					</div>
@@ -484,7 +183,8 @@
 			</template>
 
 			<!-- Trail Arrow -->
-			<svg :height="hexGrid.gridHeight || 0" :width="hexGrid.gridWidth || 0" class="absolute inset-0 pointer-events-none z-10" x-show="!phase.startsWith('SETUP')">
+			<svg :height="hexGrid.gridHeight || 0" :width="hexGrid.gridWidth || 0" class="absolute inset-0 pointer-events-none z-10"
+				x-show="!autochess && !phase.startsWith('SETUP')">
 				<!-- Movement -->
 				<g x-show="trail && trail.fromHex && trail.toHex">
 					<circle
@@ -542,130 +242,210 @@
 			</svg>
 
 			<!-- Unit Info Panel -->
-			<template x-if="phase === 'PLAYER_TURN' && unitPanelHexId() != null && getUnitOnHex(unitPanelHexId())">
-				<div class="unit-info-panel fixed bg-wood border border-yellow-900 text-xs"
-					 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
-					 x-data="{ overflow: false, atBottom: true }">
-					<div class="unit-info-panel-scroll"
-						 x-init="$nextTick(() => {
-							 const update = () => {
-								 overflow = $el.scrollHeight > $el.clientHeight + 1;
-								 atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2;
-							 };
-							 update();
-							 new ResizeObserver(update).observe($el);
-							 new MutationObserver(update).observe($el, { childList: true, subtree: true, characterData: true });
-						 })"
-						 @scroll.passive="atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2">
-					<template x-if="getUnitOnHex(unitPanelHexId())">
-						<div x-data="{
-							get u() { return getUnitOnHex(unitPanelHexId()); },
-							get h() { return getHex(unitPanelHexId()); },
-							get br() { return unitPanelBreakdown(this.u, this.h); },
-							get flags() { return unitStatusFlags(this.u, this.h); },
-							get terrain() { return unitTerrainText(this.h); },
-							get actions() { return unitActions(this.u, this.h); }
-						}" class="p-2 space-y-2">
-							<!-- Header -->
-							<div class="flex items-center justify-between border-b border-yellow-900 pb-1 gap-2">
-								<span class="text-3xl leading-none" :class="PLAYER_CONFIG[u.playerId]?.logColor"
-									  x-text="'⚀⚁⚂⚃⚄⚅'[u.value-1]"></span>
-								<div class="flex-grow">
-									<div class="text-base font-bold" x-text="u.name"></div>
-									<div :class="PLAYER_CONFIG[u.playerId]?.logColor"
-										 x-text="'P' + (u.playerId + 1) + ' ' + PLAYER_CONFIG[u.playerId]?.color"></div>
-								</div>
-								<span x-show="unitstat != null" class="text-yellow-700" title="Pinned">📌</span>
+			<div class="unit-info-panel fixed border border-yellow-900 text-xs bg-wood" style="display: none;"
+				 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
+				 x-show="!autochess && isUnitPanelVisible"
+				 x-data="{ overflow: false, atBottom: true }">
+				<div class="unit-info-panel-scroll"
+					 x-init="$nextTick(() => {
+						 const update = () => {
+							 overflow = $el.scrollHeight > $el.clientHeight + 1;
+							 atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2;
+						 };
+						 update();
+						 new ResizeObserver(update).observe($el);
+						 new MutationObserver(update).observe($el, { childList: true, subtree: true, characterData: true });
+					 })"
+					 @scroll.passive="atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2">
+				<div x-data="{ get d() { return unitPanelData } }" class="p-2 space-y-2">
+						<!-- Header -->
+						<div class="flex items-center justify-between border-b border-yellow-900 pb-1 gap-2">
+							<span class="text-3xl leading-none" :class="PLAYER_CONFIG[d.u?.playerId]?.logColor"
+								  x-text="'⚀⚁⚂⚃⚄⚅'[d.u?.value-1]"></span>
+							<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+(d.u?.value)+'.png'" :alt="'D['+(d.u?.value)+']'" :title="'D['+(d.u?.value)+']'" width="16" height="16">
+							<div class="flex-grow">
+								<div class="text-base font-bold" x-text="d.u?.name"></div>
+								<div :class="PLAYER_CONFIG[d.u?.playerId]?.logColor"
+									 x-text="d.u ? ('P' + (d.u.playerId + 1) + ' ' + PLAYER_CONFIG[d.u.playerId]?.color) : ''"></div>
 							</div>
+							<span x-show="unitstat != null" class="mr-2 cursor-pointer" title="Pinned">📌</span>
+							<span x-show="unitstat != null && showUnitInfo" @click="showUnitInfo = false" class="font-bold cursor-pointer" title="Close">✕</span>
+						</div>
 
-							<!-- Blurb -->
-							<div class="italic text-gray-700" x-text="unitBlurb(u)"></div>
+						<!-- Blurb -->
+						<div class="italic text-gray-700" x-text="d.u ? unitBlurb(d.u) : ''"></div>
 
-							<!-- HP for Campaign -->
-							<div x-show="isCampaign" class="border-t border-yellow-900 pt-1">
-								<div class="flex justify-between items-center mb-1">
-									<span class="text-gray-600 font-bold">HIT POINTS</span>
-									<span class="font-bold"><span x-text="u.currentHP"></span> / <span x-text="u.maxHP"></span></span>
-								</div>
-								<div class="w-full h-2 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
-									<div class="h-full bg-green-500 transition-all duration-300"
-										:style="'width: ' + (u.currentHP / u.maxHP * 100) + '%'"
-										:class="{'bg-yellow-500': u.currentHP / u.maxHP < 0.5, 'bg-red-500': u.currentHP / u.maxHP < 0.25}">
-									</div>
+						<!-- HP for Campaign -->
+						<div x-show="isCampaign && d.u" class="border-t border-yellow-900 pt-1">
+							<div class="flex justify-between items-center mb-1">
+								<span class="text-gray-600 font-bold">HIT POINTS</span>
+								<span class="font-bold"><span x-text="d.u?.currentHP"></span> / <span x-text="d.u?.maxHP"></span></span>
+							</div>
+							<div class="w-full h-2 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+								<div class="h-full bg-green-500 transition-all duration-300"
+									:style="'width: ' + (d.u ? (d.u.currentHP / d.u.maxHP * 100) : 0) + '%'"
+									:class="{'bg-yellow-500': d.u && d.u.currentHP / d.u.maxHP < 0.5, 'bg-red-500': d.u && d.u.currentHP / d.u.maxHP < 0.25}">
 								</div>
 							</div>
+						</div>
 
-							<!-- Stats -->
-							<div class="grid grid-cols-2 gap-x-3 gap-y-1">
-								<div>
-									<span class="text-gray-600">Armor</span>
-									<span class="font-bold" x-text="br.total"></span>
-									<span class="text-gray-500"
-										  x-show="br.parts.length > 0 || br.total !== u.currentArmor"
-										  x-text="'(' + u.currentArmor + (br.parts.map(p => (p.value >= 0 ? ' +' : ' ') + p.value + ' ' + p.label).join('')) + ')'"></span>
-									<span class="text-red-700 ml-1" x-show="br.rerolled">[reroll: 0]</span>
-								</div>
-								<div>
-									<span class="text-gray-600">Attack</span>
-									<span class="font-bold" x-text="u.attack"></span>
-								</div>
-								<div x-show="u.range > 0">
-									<span class="text-gray-600">Range</span>
-									<span class="font-bold" x-text="u.range"></span>
-									<span class="text-gray-500" x-show="u.value === 2"> (LoS req.)</span>
-								</div>
-								<div>
-									<span class="text-gray-600">Move</span>
-									<span class="font-bold" x-text="u.distance"></span>
-								</div>
+						<!-- Stats -->
+						<div class="grid grid-cols-2 gap-x-3 gap-y-1">
+							<div>
+								<span class="text-gray-600">Armor</span>
+								<span class="font-bold" x-text="d.br?.total"></span>
+								<span class="text-gray-500"
+									  x-show="d.br?.parts?.length > 0 || d.br?.total !== d.u?.currentArmor"
+									  x-text="'(' + d.u?.currentArmor + (d.br?.parts?.map(p => (p.value >= 0 ? ' +' : ' ') + p.value + ' ' + p.label).join('')) + ')'"></span>
+								<span class="text-red-700 ml-1" x-show="d.br?.rerolled">[reroll: 0]</span>
 							</div>
+							<div>
+								<span class="text-gray-600">Attack</span>
+								<span class="font-bold" x-text="d.u?.attack"></span>
+							</div>
+							<div x-show="d.u?.range > 0">
+								<span class="text-gray-600">Range</span>
+								<span class="font-bold" x-text="d.u?.range"></span>
+								<span class="text-gray-500" x-show="d.u?.value === 2"> (LoS req.)</span>
+							</div>
+							<div>
+								<span class="text-gray-600">Move</span>
+								<span class="font-bold" x-text="d.u?.distance"></span>
+							</div>
+						</div>
 
-							<!-- Movement pattern -->
-							<div class="text-gray-700" x-text="unitMovementText(u)"></div>
+						<!-- Movement pattern -->
+						<div class="text-gray-700" x-text="d.u ? unitMovementText(d.u) : ''"></div>
 
-							<!-- Status flags -->
-							<div x-show="flags.length > 0" class="border-t border-yellow-900 pt-1 space-y-1">
-								<template x-for="(f, idx) in flags" :key="idx">
-									<div :class="{'text-red-700': f.tone === 'warn', 'text-blue-800': f.tone === 'good', 'text-gray-700': f.tone === 'info'}">
-										<span x-text="f.icon"></span>
-										<span x-text="f.label"></span>
+						<!-- Status flags -->
+						<div x-show="d.flags?.length > 0" class="border-t border-yellow-900 pt-1 space-y-1">
+							<template x-for="(f, idx) in d.flags" :key="idx">
+								<div :class="{'text-red-700': f.tone === 'warn', 'text-blue-800': f.tone === 'good', 'text-gray-700': f.tone === 'info'}">
+									<span x-text="f.icon"></span>
+									<span x-text="f.label"></span>
+								</div>
+							</template>
+						</div>
+
+						<!-- Terrain -->
+						<div class="border-t border-yellow-900 pt-1">
+							<span class="text-gray-600">Terrain:</span>
+							<span class="font-bold" x-text="d.terrain?.name"></span>
+							<div class="text-gray-700" x-text="d.terrain?.effect"></div>
+						</div>
+
+						<!-- Actions -->
+						<div class="border-t border-yellow-900 pt-1">
+							<div class="text-gray-600 mb-1">Actions:</div>
+							<div class="space-y-1">
+								<template x-for="(a, idx) in d.actions" :key="idx">
+									<div>
+										<span class="font-bold" x-text="a.name"></span>
+										<div class="text-gray-700" x-text="a.desc"></div>
 									</div>
 								</template>
 							</div>
-
-							<!-- Terrain -->
-							<div class="border-t border-yellow-900 pt-1">
-								<span class="text-gray-600">Terrain:</span>
-								<span class="font-bold" x-text="terrain.name"></span>
-								<div class="text-gray-700" x-text="terrain.effect"></div>
-							</div>
-
-							<!-- Actions -->
-							<div class="border-t border-yellow-900 pt-1">
-								<div class="text-gray-600 mb-1">Actions:</div>
-								<div class="space-y-1">
-									<template x-for="(a, idx) in actions" :key="idx">
-										<div>
-											<span class="font-bold" x-text="a.name"></span>
-											<div class="text-gray-700" x-text="a.desc"></div>
-										</div>
-									</template>
-								</div>
-							</div>
-
 						</div>
-					</template>
+
 					</div>
-					<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
 				</div>
-			</template>
+				<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
+			</div>
+			<a href="#" class="cursor-pointer absolute rounded-full bg-gray-100 hover:bg-gray-300 bottom-2 right-2 text-sm font-bold hover:text-blue-700 px-2 py-1" @click="showUnitInfo = !showUnitInfo" x-show="unitstat || hoverUnitHexId" style="display: none;">❔</a>
 		</div>
 	</div>
 
-	<div id="game-controller" class="w-full flex flex-col items-center mb-16 md:mb-0">
+	<!-- Autochess UI Overlay -->
+	<div id="game-autochess" style="display: none;" x-show="autochess" x-cloak class="bottom-0 mt-4 border bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
+		<div class="max-w-full w-full">
+			<div class="w-full flex justify-between items-center pb-2 px-2 pointer-events-auto">
+				<h1 class="text-lg font-bold uppercase">Hex Dice: Autochess</h1>
+				<div class="flex items-center space-x-4">
+					<div class="ml-4 font-bold">Round <span x-text="autochessRound"></span> / 6</div>
+					<button class="border px-2 py-1 text-xs hover:bg-black hover:text-white" @click="location.href='/'">EXIT</button>
+				</div>
+			</div>
+
+			<!-- PREPARATION PHASE -->
+			<div style="display: none;" x-show="autochessPhase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="p-2">
+						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
+						<div class="grid grid-cols-6 gap-2 text-xs">
+							<template x-for="(unit, index) in players[0]?.dice" :key="index">
+								<div class="border p-1 text-center bg-gray-50">
+									<!-- <div class="text-lg font-bold" x-text="unit.value"></div> -->
+									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
+									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
+									<div class="text-xs mt-1 uppercase leading-tight" x-text="unit.name"></div>
+								</div>
+							</template>
+						</div>
+					</div>
+					<div class="p-2">
+						<h2 class="font-bold uppercase pb-1">Recruitment</h2>
+						<div class="flex justify-center space-x-4 py-2" x-show="autochessInventory?.length">
+							<template x-for="(unit, index) in autochessInventory" :key="index">
+								<button @click="recruitAutochessUnit(index)" class="border p-2 bg-gray-50 hover:bg-black hover:text-white transition-colors">
+									<!-- <div class="text-2xl font-bold" x-text="unit.value"></div> -->
+									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
+									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
+									<div class="text-xs mt-1 uppercase" x-text="unit.name"></div>
+								</button>
+							</template>
+							<template x-if="autochessInventory.length === 0">
+								<div class="italic text-gray-500">No recruits available.</div>
+							</template>
+						</div>
+						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="autochessInventory?.length">
+							<button @click="rerollAutochessRecruits()" :disabled="autochessRerolls <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
+								Reroll (<span x-text="autochessRerolls"></span>)
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="text-center pt-2">
+					<div class="inline mb-2">
+						<label class="font-bold mr-2">Strategy:</label>
+						<select x-model="selectedAutochessProfile" class="border px-2 py-1 uppercase">
+							<template x-for="p in getProfileNames()" :key="p">
+								<option :value="p" x-text="p"></option>
+							</template>
+						</select>
+					</div>
+					<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase">
+						Deploy & Battle
+					</button>
+				</div>
+			</div>
+
+			<!-- COMBAT PHASE UI (Board is behind) -->
+			<div style="display: none;" x-show="autochessPhase === 'COMBAT'" class="w-full flex flex-col items-center">
+				<div class="w-full flex justify-between border mb-4 text-sm font-bold pointer-events-auto">
+					<div class="text-blue-700 uppercase">Player Units: <span x-text="players[0]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
+					<div class="animate-pulse uppercase mx-2">Battle in Progress</div>
+					<div class="text-red-700 uppercase">Enemy Units: <span x-text="players[1]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
+				</div>
+			</div>
+
+			<!-- RECAP PHASE -->
+			<div style="display: none;" x-show="autochessPhase === 'RECAP'" class="w-full inset-0 flex items-center justify-center z-20 pointer-events-auto">
+				<div class="border p-2 max-w-sm w-full text-center">
+					<h2 class="text-lg font-black mb-2 uppercase italic" x-text="autochessLastResult"></h2>
+					<p class="mb-2 font-bold" x-text="autochessLastResult === 'WIN' ? 'Your survivors grew stronger!' : 'The kingdom has fallen.'"></p>
+					<button @click="nextAutochessRound()" class="w-full bg-black text-white py-2 font-black text-lg hover:bg-gray-800 transition-colors uppercase">
+						Continue
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="game-controller" x-show="!autochess" class="w-full flex flex-col items-center mb-20 md:mb-2">
 		<!-- Game Setup -->
 		<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
-			<!-- <h2 class="text-xl mb-2" x-text="setupStatusMessage()"></h2> -->
+			<!-- <h2 class="text-lg mb-2" x-text="setupStatusMessage()"></h2> -->
 			<div x-show="phase === 'SETUP_ROLL'" style="display: none;" class="space-y-2">
 				<div class="">
 					<span class="font-bold text-sm">PLAYERS:</span>
@@ -673,11 +453,12 @@
 					<a href="?players=3" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[3]</a>
 					<a href="?players=4" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[4]</a>
 					<a href="?players=6" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[6]</a>
-				</div>
-				<div class="">
-					<span class="font-bold text-sm uppercase">Gameplay:</span>
+					<span class="font-bold text-sm">COMBAT:</span>
 					<a :href="updateUrlParam('version', 1)" class="hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">[v1: Decisive]</a>
 					<a :href="updateUrlParam('version', 2)" class="hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">[v2: Destiny]</a>
+				</div>
+				<div class="hidden">
+					<span class="font-bold text-sm uppercase">Gameplay:</span>
 				</div>
 				<div class="flex flex-wrap justify-center gap-4" x-show="spriteSets.length > 0 && players.length > 0">
 					<template x-for="(player, idx) in players" :key="idx">
@@ -694,16 +475,17 @@
 					</template>
 				</div>
 				<div class="">
+					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=' + CampaignManager.getCurrentMapName()" x-show="!isCampaign">[Campaign]</button>
+					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?autochess=true'">[Autochess]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="setupTerrain(true)">[Terrain]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[Deploy]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[Random]</button>
-				</div>
-				<div class="">
-					<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=' + CampaignManager.getCurrentMapName()" x-show="!isCampaign">[Campaign]</button>
 					<button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button>
 					<a href="?players=2&preset=E_21" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">[Epic 21]</a>
-					<a href="?players=2&preset=E_15" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">[Grand 15]</a>
+					<a href="?players=2&preset=E_15" class="hidden mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">[Grand 15]</a>
+				</div>
+				<div class="hidden mt-4">
 				</div>
 				<div class="">
 					<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="createRoom()" x-show="auth.user && online.status === 'OFFLINE'">New Room</button>
@@ -712,7 +494,7 @@
 				</div>
 
 				<!-- Online Status -->
-				<div class=" p-2 text-sm border-2 border-dashed relative" x-show="online.status !== 'OFFLINE'" x-cloak>
+				<div class=" p-2 text-sm border border-dashed relative" x-show="online.status !== 'OFFLINE'" x-cloak>
 					<div>Open Room: <span x-text="online.roomId" class="font-bold select-all"></span>, <span class="" x-show="online.status === 'LOBBY'">waiting ...</span></div>
 					
 					<div class="flex items-center justify-center space-x-4 mt-2">
@@ -756,15 +538,15 @@
 				<button @click="skipReroll()" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Skip Reroll</button>
 				<button @click="skipReroll();randomStart();" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Random Deploy</button>
 			</div>
-			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;">
+			 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;" class="mb-4">
 				<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
 				<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
-					Level: <span x-text="campaignData?.level"></span>, <span class="hover:bg-gray-500" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>, <span class="hover:bg-gray-500 cursor-pointer" x-show="isCampaign && currentPlayerIndex === 0" @click="showCamp = true" x-text="'⛺ CAMPING ['+(CampaignManager?.state?.devotionPoints||0)+']🔥'"></span>
+					Level: <span x-text="campaignData?.level"></span>, <span class="hover:bg-gray-500 cursor-pointer select-none" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>, <span class="hover:bg-gray-500 cursor-pointer select-none" x-show="isCampaign && currentPlayerIndex === 0" @click="showCamp = true" x-text="'⛺ CAMPING ['+(CampaignManager?.state?.devotionPoints||0)+']🔥'"></span>
 				</p>
 				<div class="flex justify-center flex-wrap gap-2 mb-2">
 					<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
 						<div
-							class="p-1 border text-xs cursor-pointer min-w-16 text-blue-600"
+							class="p-1 border text-xs cursor-pointer select-none min-w-16 text-blue-600"
 							:class="
 								[
 									selectedDieToDeploy === index ? 'bg-black text-white font-bold' : '',
@@ -791,12 +573,24 @@
 					</template>
 				</div> -->
 			</div>
+			<a href="#" class="text-sm underline hover:text-blue-700" @click="location.href='/'" x-show="isCampaign">Home</a>
 		</div>
 
 		<!-- Game Over -->
 		<div style="display: none;" x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
 			<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
 			<p x-text="winnerMessage"></p>
+
+			<!-- Replay Export Buttons -->
+			<div class="mt-4 flex flex-col items-center space-y-2">
+				<div class="flex space-x-2">
+					<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white text-sm"
+						@click="exportReplay()">Export Replay (.json)</button>
+					<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white text-sm"
+						@click="exportHDPGN()">Export HDPGN (.hdpgn)</button>
+				</div>
+				<p class="text-xxs text-gray-500 italic">Game ID: <span x-text="gameId"></span></p>
+			</div>
 
 			<div x-show="!isCampaign">
 				<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
@@ -913,7 +707,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div  id="game-log" style="display: none;" x-show="showLog && !phase.includes('SETUP_')" class="bg-wood bottom-0 left-0 w-full text-black bg-white p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
+	<div  id="game-log" style="display: none;" x-show="showLog && (autochess || !phase.includes('SETUP_')) " class="bg-wood bottom-0 left-0 w-full text-black p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>
@@ -982,7 +776,7 @@
 
 	<!-- Devotion Menu (The Camp) -->
 	<div style="display:none;" x-show="showCamp" x-cloak class="fixed inset-0 z-60 flex items-center justify-center p-2 w-full m-2">
-		<div class="border w-full max-w-4xl overflow-y-auto p-2 relative" style="background-color: #c3a471; max-height: 90vh;">
+		<div class="border w-full max-w-4xl overflow-y-auto p-2 relative bg-wood" style="max-height: 90vh;">
 			<button @click="showCamp = false" class="absolute top-4 right-4 text-lg font-bold cursor-pointer">✕</button>
 
 			<div class="text-center mb-2">
@@ -996,6 +790,7 @@
 					<div class="border p-2 flex flex-col">
 						<div class="flex items-center gap-3 mb-3 border-b pb-2">
 							<span class="text-4xl" x-text="'⚀⚁⚂⚃⚄⚅'[val-1]"></span>
+							<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+val+'.png'" :alt="'D['+val+']'" :title="'D['+val+']'" width="16" height="16">
 							<div class="font-bold text-lg uppercase" x-text="UNIT_STATS[val].name"></div>
 						</div>
 
@@ -1037,20 +832,20 @@
 											<div class="flex w-full gap-2">
 												<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border hover:text-white p-1 group relative">
 													<div class="font-bold">PATH A</div>
-													<div class="text-[10px] leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
+													<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
 													<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
 												</button>
 												<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border hover:text-white p-1 group relative">
 													<div class="font-bold">PATH B</div>
-													<div class="text-[10px] leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
+													<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
 													<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
 												</button>
 											</div>
 										</template>
 										<template x-if="CampaignManager.state.upgrades[val].perks[tier]">
 											<div class="text-white p-1 w-full text-center">
-												<div class="font-bold uppercase tracking-wider text-sm" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].name"></div>
-												<div class="text-[9px] leading-tight opacity-90" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].desc"></div>
+												<div class="font-bold uppercase text-sm" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].name"></div>
+												<div class="text-sm leading-tight opacity-90" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].desc"></div>
 											</div>
 										</template>
 									</div>
@@ -1070,12 +865,12 @@
 						<button
 							@click="CampaignManager.selectSlot(slotId)"
 							:class="CampaignManager.state.activeSlot === slotId ? 'bg-black text-white' : 'bg-transparent border-black'"
-							class="border px-3 py-1 text-sm font-bold uppercase transition-colors"
+							class="cursor-pointer border px-3 py-1 text-sm font-bold uppercase transition-colors"
 							x-text="CampaignManager.state.slots[slotId]?.name || 'Slot ' + slotId"
 						></button>
 					</template>
 				</div>
-				<button @click="showCamp = false" class="cursor-pointer p-2 font-bold uppercase tracking-widest transition-transform ">[Return to Journey]</button>
+				<button @click="showCamp = false" class="mt-2 cursor-pointer p-2 font-bold uppercase transition-transform hover:bg-gray-500">[Return to Journey]</button>
 			</div>
 		</div>
 	</div>

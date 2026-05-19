@@ -832,3 +832,121 @@ With 2 choices per tier and 3 tiers, each Dice Class has **8 unique final forms*
 In Playthrough 1, the player might build a *Vampiric Dark Knight* paired with an *AoE Dragoon*.
 In Playthrough 2, they might pivot to a *Healing Paladin* protecting a *Line-of-Sight blocking Behemoth* while *Snipers* fire from the backline. **Every journey is entirely crafted, and no two 100-level campaigns will ever feel the same.**
 </ANSWER>
+
+---
+
+<REASONING>
+<CONDUCTOR_NOTE>
+The user has requested a deep dive into the proposed fixes, specifically asking for hard numbers and configuration-ready logic that can be directly implemented into the game's code.
+
+I am reconvening the panel: Dr. Reiner Knizia (Math/Balance), Josh Sawyer (RPG Systems), and Jonathan Blow (Critical Design). Gentlemen, we need to move from abstract concepts to concrete variables, formulas, and config structures.
+</CONDUCTOR_NOTE>
+
+<EXPERT NAME="Dr. Reiner Knizia" FIELD="Board Game Mechanics & Mathematics">
+Let's establish the exact mathematical parameters for the damage and attrition overhaul. We need a formula that scales elegantly from Level 1 to 100 without breaking.
+</EXPERT>
+
+<SPEAKS NAME="Dr. Reiner Knizia">
+We must replace the flat "40" base damage. I propose moving base damage to a unit-specific variable, scaling slightly with tiers.
+
+**New Damage Formula:**
+`Final_Damage = max(MIN_DAMAGE_FLOOR, BASE_WEAPON_DMG + ATK - (DEF * (1 - ARMOR_PIERCING_MULTIPLIER)))`
+
+**Config Values:**
+*   `MIN_DAMAGE_FLOOR`: Set to `0` (was 10).
+*   `BASE_WEAPON_DMG`:
+    *   Minions: `15`
+    *   Elites: `25`
+    *   Bosses: `40`
+*   `ARMOR_PIERCING_MULTIPLIER`: Default `0.0`. For specific "Siege" or "Mage" enemies, set to `0.5` (ignores 50% of DEF) or `1.0` (ignores 100% of DEF).
+
+This allows a Tanker with 30 DEF to take exactly 0 damage from a 15 ATK minion, but still take significant damage from a Boss or an Armor-Piercing Mage.
+</SPEAKS>
+
+<EXPERT NAME="Josh Sawyer" FIELD="RPG Systems & Progression">
+Josh, let's lock in the exact numbers for the Class Evolutions and the Camp Economy. What are the config values?
+</EXPERT>
+
+<SPEAKS NAME="Josh Sawyer">
+For the **Oracle's Warlock (Path B)**, the 80 HP cost is dead.
+*   `skill_transmute_hp_cost`: `25` (down from 80).
+*   `skill_transmute_duration`: `999` (effectively permanent until destroyed, replacing the 3-turn limit). This makes it a strategic 25 HP investment for a permanent meat shield.
+
+For the **Hussar's Windrider (Path B)**, we remove the action refund.
+*   `skill_windrider_action_refund`: `0` (down from 1).
+*   `skill_windrider_bonus_movement`: `2` (hexes). Trigger: `on_kill`. This allows repositioning without breaking the attack economy.
+
+For the **Camp Economy**:
+*   `camp_heal_cost_devotion`: `1`
+*   `camp_heal_amount_percent`: `0.50` (50% max HP to all surviving units).
+*   `camp_revive_cost_devotion`: `2` (Revives one dead unit at 50% HP).
+This forces a hard choice: +1 permanent stat, or survive the next 10 levels.
+</SPEAKS>
+
+<EXPERT NAME="Jonathan Blow" FIELD="Critical Game Design">
+Jonathan, give me the exact data structure for the Crucible scaling. We are replacing the flat +33% enemy count.
+</EXPERT>
+
+<SPEAKS NAME="Jonathan Blow">
+We cap the enemy count increase and introduce a tiered modifier array. The enemy deployment limit should cap at 8 (against the player's 6) to prevent physical board gridlock.
+
+**Crucible Config Array:**
+*   `level_10_modifier`: `enable_flanking_bonus` (Attacks from the rear 3 hexes deal +50% damage).
+*   `level_20_modifier`: `enable_death_hazards` (Enemies drop a hazard tile on death dealing 10 flat damage to units ending their turn on it).
+*   `level_30_modifier`: `spawn_commander_unit` (Replaces 1 minion with a Commander that grants +10 ATK/DEF to enemies within 2 hexes).
+*   `level_40_modifier`: `enable_armor_piercing_elites` (Elite units gain `ARMOR_PIERCING_MULTIPLIER = 0.5`).
+</SPEAKS>
+
+<CONDUCTOR_NOTE>
+The panel has provided exact variables, formulas, and thresholds. I will now format this into a clean, developer-ready configuration spec in the final answer.
+</CONDUCTOR_NOTE>
+</REASONING>
+
+<ANSWER>
+Here are the concluded numbers, formulas, and configuration variables ready to be implemented directly into the game's code and config files to resolve the campaign's balance issues.
+
+### 1. Combat Mathematics & Attrition Config
+Replace the hardcoded damage logic with the following formula and variables to allow defensive builds to function while maintaining threat via armor piercing.
+
+**Core Formula:**
+```javascript
+Final_Damage = Math.max(MIN_DAMAGE_FLOOR, BASE_WEAPON_DMG + ATK - (DEF * (1 - ARMOR_PIERCING_MULTIPLIER)))
+```
+
+**Config Variables:**
+*   `MIN_DAMAGE_FLOOR`: **0** *(Changed from 10)*
+*   `BASE_WEAPON_DMG`:
+    *   `minion_tier`: **15**
+    *   `elite_tier`: **25**
+    *   `boss_tier`: **40**
+*   `ARMOR_PIERCING_MULTIPLIER`: **0.0** *(Default)*. Set to **0.5** for specific anti-tank enemy types (ignores 50% of target's DEF).
+
+### 2. Class Evolution Balance Config
+Adjust the specific skill parameters to remove "trap options" and prevent action-economy exploits.
+
+**Oracle - Warlock (Path B) Fix:**
+*   `skill_transmute_hp_cost`: **25** *(Changed from 80)*
+*   `skill_transmute_duration_turns`: **-1** or **999** *(Changed from 3. The minion is now permanent until destroyed, making it a viable meat-shield investment).*
+
+**Hussar - Windrider (Path B) Fix:**
+*   `skill_windrider_action_refund`: **0** *(Changed from 1. Prevents infinite attack chaining).*
+*   `skill_windrider_bonus_move_hexes`: **2** *(New variable. Granted immediately upon a kill, allowing tactical repositioning without breaking the attack economy).*
+
+### 3. Camp Economy Config (Healing)
+Implement a new resource sink in the inter-level Camp phase to manage the 100-level attrition.
+
+**Camp Variables:**
+*   `camp_heal_cost_devotion`: **1** *(Cost in Devotion Points)*
+*   `camp_heal_amount_pct`: **0.50** *(Restores 50% of Max HP to all currently alive units)*
+*   `camp_revive_cost_devotion`: **2** *(Cost in Devotion Points)*
+*   `camp_revive_amount_pct`: **0.50** *(Brings one dead unit back to the roster at 50% HP)*
+
+### 4. Crucible Scaling Config (The 10-Level Checks)
+Remove the infinite +33% enemy count scaling. Cap the max enemy deployment at **8** (to prevent physical board gridlock) and implement a modifier array that triggers at specific level thresholds.
+
+**Crucible Modifiers Array:**
+*   `level_10`: **"enable_flanking"** *(Attacks originating from the 3 rear hexes of a unit's facing apply a 1.5x damage multiplier).*
+*   `level_20`: **"enable_death_hazards"** *(When an enemy dies, spawn a hazard entity on that hex. Units ending their turn on it take 10 flat, unmitigated damage).*
+*   `level_30`: **"spawn_commander"** *(Replaces 1 standard enemy spawn with a Commander unit. Commander projects an aura: +10 ATK/DEF to all enemies within a 2-hex radius).*
+*   `level_40`: **"enable_ap_elites"** *(All Elite-tier enemies now spawn with `ARMOR_PIERCING_MULTIPLIER` set to 0.5).*
+</ANSWER>

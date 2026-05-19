@@ -12,13 +12,15 @@ const performAI = performAIByWeight;
  * Shared Utilities
  */
 
-function generateAllPossibleMoves(GAME, state) {
+function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 	const moves = [];
 	const currentPlayer = state.players[state.currentPlayerIndex];
 	
 	let unitsThatCanAct = [];
 	
-	if (GAME.gameplayVersion === 2) {
+	if (specificUnit) {
+		unitsThatCanAct = [specificUnit];
+	} else if (GAME.gameplayVersion === 2) {
 		if (GAME.turnPhase === 'FATE_CALL') {
 			unitsThatCanAct = currentPlayer.dice.filter(d => d.isDeployed && !d.isDeath && d.canMoveInFatePhase);
 		} else {
@@ -44,7 +46,7 @@ function generateAllPossibleMoves(GAME, state) {
 		});
 
 		// Skip complex actions during Fate's Call
-		if (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') return;
+		if (!specificUnit && GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL') return;
 
 		// 2. Ranged Attack (Dice 2)
 		if (unitValue === 2) {
@@ -57,16 +59,20 @@ function generateAllPossibleMoves(GAME, state) {
 		// 3. Spellcast (Dice 6 Oracle)
 		if (unitValue === 6) {
 			if (GAME.gameplayVersion === 2) {
-				// In V2, spell is already selected
-				if (GAME.oracleSelectedSpell) {
+				// In V2, spell is already selected (except in Autochess evaluation)
+				const spellsToTry = (GAME.autochess && specificUnit) 
+					? ['SHIELD', 'SWAP', 'SKIRMISH'] 
+					: (GAME.oracleSelectedSpell ? [GAME.oracleSelectedSpell] : []);
+
+				spellsToTry.forEach(spell => {
 					const validSpellTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
 					validSpellTargets.forEach(targetHexId => {
 						const targetUnit = GAME.getUnitOnHex(targetHexId, state);
 						if (targetUnit && targetUnit.playerId === unit.playerId) {
-							moves.push({ actionType: `SPELLCAST_${GAME.oracleSelectedSpell}`, unitHexId, targetHexId });
+							moves.push({ actionType: `SPELLCAST_${spell}`, unitHexId, targetHexId });
 						}
 					});
-				}
+				});
 			} else {
 				const validSpellTargets = GAME.calcValidSpecialAttackTargets(unitHexId, state);
 				validSpellTargets.forEach(targetHexId => {

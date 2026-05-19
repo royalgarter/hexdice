@@ -2,6 +2,8 @@ import {exists} from "https://deno.land/std/fs/mod.ts";
 import {extname} from "https://deno.land/std/path/mod.ts";
 import {load} from "https://deno.land/std/dotenv/mod.ts";
 import { Database } from "https://cdn.jsdelivr.net/npm/arangojs/esm/index.js?+esm";
+import { crypto } from "https://deno.land/std/crypto/mod.ts";
+import { encodeHex } from "https://deno.land/std/encoding/hex.ts";
 
 await load({export: true});
 
@@ -11,7 +13,53 @@ const ARANGO_USER = Deno.env.get("ARANGODB_USER");
 const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD");
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
 
-// console.log(ARANGO_URL, ARANGO_DB, ARANGO_PASS)
+const getAppVersion = async () => {
+	try {
+		const files = [];
+		for await (const entry of Deno.readDir(".")) {
+			if (entry.isFile && (entry.name.endsWith(".js") || entry.name.endsWith(".html") || entry.name.endsWith(".css"))) {
+				files.push(entry.name);
+			}
+		}
+		files.sort();
+
+		let combinedData = new Uint8Array(0);
+		for (const file of files) {
+			const data = await Deno.readFile(file);
+			const newCombined = new Uint8Array(combinedData.length + data.length);
+			newCombined.set(combinedData);
+			newCombined.set(data, combinedData.length);
+			combinedData = newCombined;
+		}
+
+		const hashBuffer = await crypto.subtle.digest("SHA-1", combinedData);
+		return encodeHex(hashBuffer).slice(0, 7);
+	} catch (error) {
+		console.error('Failed to generate version hash:', error);
+		return 'unknown';
+	}
+};
+
+const appVersion = await getAppVersion();
+console.dir({appVersion})
+
+if (Deno.args.includes('--version')) {
+	console.log(appVersion);
+	Deno.exit(0);
+}
+
+// Pre-calculate processed index.html
+let HTML_INDEX = '';
+async function prepareIndex() {
+	try {
+		HTML_INDEX = (await Deno.readTextFile('./index.html'))
+			.replaceAll('___VERSION___', appVersion)
+			.replaceAll('___GOOGLE_CLIENT_ID___', GOOGLE_CLIENT_ID || "")
+		// console.log('prepareIndex:', HTML_INDEX.length);
+	} catch (e: any) {
+		console.error("Failed to prepare HTML_INDEX:", e);
+	}
+}
 
 const db = new Database({
 	url: ARANGO_URL,
@@ -19,12 +67,40 @@ const db = new Database({
 	auth: { username: ARANGO_USER, password: ARANGO_PASS },
 });
 
+// Initialize Database Collections and Indexes
+async function initDatabase() {
+	try {
+		const collections = ['users', 'rooms'];
+		for (const name of collections) {
+			const coll = db.collection(name);
+			const exists = await coll.exists();
+			if (!exists) {
+				console.log(`Creating collection: ${name}`);
+				await coll.create();
+			}
+			
+			// Ensure indexes for performance and cleanup queries
+			if (name === 'users') {
+				await coll.ensureIndex({ type: 'persistent', fields: ['email'], unique: true });
+				await coll.ensureIndex({ type: 'persistent', fields: ['updatedAt'] });
+			} else if (name === 'rooms') {
+				await coll.ensureIndex({ type: 'persistent', fields: ['status'] });
+				await coll.ensureIndex({ type: 'persistent', fields: ['updatedAt'] });
+				await coll.ensureIndex({ type: 'persistent', fields: ['createdAt'] });
+			}
+		}
+		console.log("ArangoDB initialization complete.");
+	} catch (e: any) {
+		console.error("ArangoDB initialization failed:", e);
+	}
+}
+
 const head_json = {
 	"Content-Type": "application/json; charset=utf-8"
 };
 
 async function handleRequest(req: Request) {
-	const {pathname, searchParams} = new URL(req.url);
+	const {pathname} = new URL(req.url);
 
 	if (pathname === "/api/config") {
 		return new Response(JSON.stringify({ GOOGLE_CLIENT_ID }), { headers: head_json });
@@ -51,7 +127,7 @@ async function handleRequest(req: Request) {
 			await db.collection("users").save(user, { overwriteMode: "update" });
 
 			return new Response(JSON.stringify({ user, token: credential }), { headers: head_json });
-		} catch (e) {
+		} catch (e: any) {
 			return new Response(JSON.stringify({ error: e.message }), { status: 500 });
 		}
 	}
@@ -70,7 +146,7 @@ async function handleRequest(req: Request) {
 			};
 			await db.collection("rooms").save(room);
 			return new Response(JSON.stringify(room), { headers: head_json });
-		} catch (e) {
+		} catch (e: any) {
 			return new Response(JSON.stringify({ error: e.message }), { status: 500 });
 		}
 	}
@@ -79,13 +155,13 @@ async function handleRequest(req: Request) {
 		try {
 			const { roomId, userId, name } = await req.json();
 			const roomsColl = db.collection("rooms");
-			const room = await roomsColl.document(roomId);
+			const room: any = await roomsColl.document(roomId);
 
-			if (room.status !== 'WAITING' && !room.players.find(p => p.id === userId)) {
+			if (room.status !== 'WAITING' && !room.players.find((p: any) => p.id === userId)) {
 				return new Response(JSON.stringify({ error: "Room is not available" }), { status: 400 });
 			}
 
-			if (!room.players.find(p => p.id === userId)) {
+			if (!room.players.find((p: any) => p.id === userId)) {
 				room.players.push({ id: userId, name, color: 'Red' });
 				room.status = 'PLAYING';
 				room.updatedAt = new Date().toISOString();
@@ -93,7 +169,7 @@ async function handleRequest(req: Request) {
 			}
 
 			return new Response(JSON.stringify(room), { headers: head_json });
-		} catch (e) {
+		} catch (e: any) {
 			return new Response(JSON.stringify({ error: e.message }), { status: 404 });
 		}
 	}
@@ -103,21 +179,19 @@ async function handleRequest(req: Request) {
 			const { roomId, gameState } = await req.json();
 			await db.collection("rooms").update(roomId, { gameState, updatedAt: new Date().toISOString() });
 			return new Response(JSON.stringify({ success: true }), { headers: head_json });
-		} catch (e) {
+		} catch (e: any) {
 			return new Response(JSON.stringify({ error: e.message }), { status: 500 });
 		}
 	}
 
 	const localpath = `./${pathname}`;
 
-	// console.log(pathname, params);
-	const response = (data, options) => {
-		// console.log(pathname, 'responsed');
+	const response = (data: any, options?: ResponseInit) => {
 		return new Response(data, options);
 	}
 
 	if (pathname === "/") {
-		return response(await Deno.readTextFile("./index.html"), {
+		return response(HTML_INDEX, {
 			headers: {
 				"Content-Type": "text/html; charset=utf-8",
 				"Cache-Control": "public, max-age=604800",
@@ -130,6 +204,16 @@ async function handleRequest(req: Request) {
 		return response(await Deno.readTextFile("./rules.html"), {
 			headers: {
 				"Content-Type": "text/html; charset=utf-8",
+				"Cache-Control": "public, max-age=604800",
+			}
+		});
+	}
+
+	if (pathname === "/game.js") {
+		const content = await Deno.readTextFile("./game.js");
+		return response(content.replaceAll("___GOOGLE_CLIENT_ID___", GOOGLE_CLIENT_ID || ""), {
+			headers: {
+				"Content-Type": "text/javascript; charset=utf-8",
 				"Cache-Control": "public, max-age=604800",
 			}
 		});
@@ -153,5 +237,12 @@ async function handleRequest(req: Request) {
 	return response(JSON.stringify({error: 'E404'}), {status: 404});
 }
 
+// Warm up
+initDatabase();
+prepareIndex();
+// setInterval(() => prepareIndex(), 30e3);
+
 const PORT = Number(Deno.env.get('PORT')) || 1166;
+console.log(`Server opened: http://localhost:${PORT}`);
+console.log(`Versioning url: http://localhost:${PORT}/?v=${appVersion}`);
 Deno.serve({ port: PORT }, handleRequest);

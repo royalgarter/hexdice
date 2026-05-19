@@ -386,6 +386,309 @@ const CampaignManager = {
 	},
 
 	/**
+	 * Main entry point for campaign combat from game.js.
+	 * Handles damage, perks, and post-combat movement.
+	 * @returns {boolean} True if the game loop should return early (e.g. waiting for skirmish input).
+	 */
+	handleCombat(game, attackerHexId, defenderHexId, combatType, state) {
+		const attackerUnit = game.getUnitOnHex(attackerHexId, state);
+		const defenderUnit = game.getUnitOnHex(defenderHexId, state);
+		const attackerHex = game.getHex(attackerHexId, state);
+		const defenderHex = game.getHex(defenderHexId, state);
+
+		if (!attackerUnit || !defenderUnit || !attackerHex || !defenderHex) return false;
+
+		const isSkirmishing = !!attackerUnit.skirmishBuff;
+		const distance = game.axialDistance(attackerHex.q, attackerHex.r, defenderHex.q, defenderHex.r);
+
+		const damage = this.performCampaignCombat(attackerUnit, defenderUnit, distance, combatType, game, state);
+
+		const defenderStillAlive = game.getUnitOnHex(defenderHexId, state);
+
+		// Knight Tier 1 [B] Joust (Push back)
+		if (attackerUnit.value === 4 && game.hasPerk(attackerUnit, 'tier1', 'B')) {
+			const dq = defenderHex.q - attackerHex.q;
+			const dr = defenderHex.r - attackerHex.r;
+			const backQ = defenderHex.q + dq;
+			const backR = defenderHex.r + dr;
+			const backHex = game.getHexByQR(backQ, backR, state);
+			const blocker = backHex ? game.getUnitOnHex(backHex.id, state) : null;
+
+			if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
+				game.addLog(`🛡️ Joust blocked! +15 bonus damage.`);
+				game.applyDamage(defenderHexId, 15, state);
+			} else if (defenderStillAlive) {
+				game.addLog(`🛡️ Joust! ${game.logUnit(defenderStillAlive)} is pushed back.`);
+				game.move(defenderStillAlive, defenderHex, backHex, state);
+			}
+		}
+
+		// Tanker Tier 1 [A] Spiked Armor (Reflect)
+		if (defenderUnit.value === 5 && defenderUnit.isGuarding) {
+			if (damage < 30) {
+				let reflect = 10;
+				if (game.hasPerk(defenderUnit, 'tier1', 'A')) reflect += 15;
+				game.addLog(`💥 Spiked Armor! ${game.logUnit(attackerUnit)} takes ${reflect} reflect damage.`);
+				game.applyDamage(attackerHexId, reflect, state);
+			}
+		}
+
+		// Knight Tier 3 [B] Dark Knight (Lifesteal)
+		if (attackerUnit.value === 4 && game.hasPerk(attackerUnit, 'tier3', 'B')) {
+			const heal = Math.floor(damage * 0.5);
+			attackerUnit.currentHP = Math.min(attackerUnit.maxHP, attackerUnit.currentHP + heal);
+			game.addLog(`🧛 Dark Knight lifesteal! Healed ${heal} HP.`);
+		}
+
+		// Archer Tier 2 [B] Venom Tipped
+		if (attackerUnit.value === 2 && game.hasPerk(attackerUnit, 'tier2', 'B')) {
+			defenderUnit.venomDuration = 2;
+			game.addLog(`🐍 Venom! ${game.logUnit(defenderUnit)} is poisoned for 2 turns.`);
+		}
+
+		// Fencer Tier 3 [A] Paladin (Heal on hit)
+		if (attackerUnit.value === 1 && game.hasPerk(attackerUnit, 'tier3', 'A')) {
+			game.getNeighbors(attackerHex, state).forEach(n => {
+				const friend = game.getUnitOnHex(n.id, state);
+				if (friend && friend.playerId === attackerUnit.playerId) {
+					const heal = 20;
+					friend.currentHP = Math.min(friend.maxHP, friend.currentHP + heal);
+				}
+			});
+		}
+
+		if (defenderStillAlive) {
+			// Fencer Tier 2 [A] Riposte
+			if (combatType === 'MELEE' && defenderStillAlive.value === 1 && game.hasPerk(defenderStillAlive, 'tier2', 'A')) {
+				const counterDamage = Math.floor(defenderStillAlive.attack * 0.5);
+				game.addLog(`↩️ Riposte! ${game.logUnit(defenderStillAlive)} counters for ${counterDamage} damage!`);
+				game.applyDamage(attackerHexId, counterDamage, state);
+			}
+		} else {
+			game.addLog(`${game.logUnit(attackerUnit)} destroyed ${game.logUnit(defenderUnit)}!`);
+
+			// Hussar Tier 3 [B] Windrider (Action Refund)
+			if (attackerUnit.value === 3 && game.hasPerk(attackerUnit, 'tier3', 'B') && !attackerUnit.windriderUsed) {
+				attackerUnit.windriderUsed = true;
+				attackerUnit.hasMovedOrAttackedThisTurn = false;
+				attackerUnit.actionsTakenThisTurn = 0;
+				game.addLog(`🌪️ Windrider! Action refunded.`);
+			}
+
+			if (isSkirmishing) {
+				game.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+				if (game.actionMode === 'SKIRMISH_POST_MOVE') return true; // Wait for user input
+			} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
+				game.move(attackerUnit, attackerHex, defenderHex, state);
+			}
+
+			// Fencer Tier 3 [B] Blademaster (Hit & Run)
+			if (attackerUnit.value === 1 && game.hasPerk(attackerUnit, 'tier3', 'B') && combatType === 'MELEE') {
+				game.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+				if (game.actionMode === 'SKIRMISH_POST_MOVE') return true;
+			}
+
+			// Hussar Tier 2 [A] Hit & Run
+			if (attackerUnit.value === 3 && game.hasPerk(attackerUnit, 'tier2', 'A')) {
+				game.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
+				if (game.actionMode === 'SKIRMISH_POST_MOVE') return true;
+			}
+		}
+		return false;
+	},
+
+	/**
+	 * Select a skin for an AI player in campaign mode.
+	 */
+	getAIPlayerSkin(campaignData, availableSkins, ro_skins) {
+		if (this.state.isCampaignActive && campaignData?.rmi) {
+			let words = campaignData.rmi.split('.')?.[0]?.replace(/\d/g, '')?.split('_');
+			let ro_rmi_skins = words?.length
+				? ro_skins.filter(x => x.split('_').find(x => words.includes(x)))
+				: [];
+
+			return ro_rmi_skins?.length ? ro_rmi_skins.cosmic_random() : availableSkins.cosmic_random();
+		} else {
+			return availableSkins.cosmic_random();
+		}
+	},
+
+	/**
+	 * Initialize campaign dice for the player.
+	 */
+	initCampaignDice(game, campaignData, player) {
+		let diceToLoad = campaignData?.player1Dice || [1, 2, 3, 4, 5, 6]; // Default: Legendary Six
+
+		// Filter out units that are currently locked out (eliminated in previous level)
+		diceToLoad = diceToLoad.filter(val => this.isUnitAvailable(val));
+
+		diceToLoad.forEach((val, idx) => {
+			const upgrades = this.state.upgrades[val] || { atk: 0, def: 0, hp: 0, perks: {} };
+			const baseStats = UNIT_STATS[val];
+
+			const die = {
+				id: `0_${idx}`,
+				originalIndex: idx,
+				playerId: 0,
+				value: val,
+				...baseStats,
+				attack: (baseStats.attack * 10) + upgrades.atk,
+				armor: (baseStats.armor * 10) + upgrades.def,
+				maxHP: 100 + upgrades.hp,
+				isDeployed: false,
+				hexId: null,
+				hasMovedOrAttackedThisTurn: false,
+				isGuarding: 0,
+				skirmishBuff: 0,
+				isDeath: false,
+				actionsTakenThisTurn: 0
+			};
+
+			// Tanker Tier 3 [A] Behemoth: Max HP is permanently doubled
+			if (val === 5 && upgrades.perks?.tier3 === 'A') {
+				die.maxHP *= 2;
+			}
+
+			die.currentHP = die.maxHP;
+			die.currentArmor = die.armor;
+			die.armorReduction = 0;
+
+			this.applyFatigueDebuffs(die);
+			die.effectiveArmor = die.armor;
+			die.spriteUrl = game.getUnitSpriteUrl(die);
+			player.dice.push(die);
+		});
+	},
+
+	/**
+	 * Initialize enemy dice in campaign mode.
+	 */
+	initEnemyDice(game, campaignData, p2) {
+		(campaignData.enemyDice || []).forEach((val, idx) => {
+			const baseStats = UNIT_STATS[val];
+			const die = {
+				id: `1_${idx}`,
+				originalIndex: idx,
+				playerId: 1,
+				value: val,
+				...baseStats,
+				attack: baseStats.attack * 10,
+				armor: baseStats.armor * 10,
+				maxHP: 100,
+				isDeployed: false,
+				hexId: null,
+				hasMovedOrAttackedThisTurn: false,
+				isGuarding: 0,
+				skirmishBuff: 0,
+				isDeath: false,
+				actionsTakenThisTurn: 0
+			};
+			die.currentHP = die.maxHP;
+			die.currentArmor = die.armor;
+			die.armorReduction = 0;
+
+			die.effectiveArmor = die.armor;
+			die.spriteUrl = game.getUnitSpriteUrl(die);
+			p2.dice.push(die);
+		});
+	},
+
+	/**
+	 * Initialize player skins for campaign mode.
+	 */
+	initPlayerSkins(game, playerId) {
+		const player = game.players[playerId];
+		if (!player) return;
+
+		if (playerId === 0) {
+			player.sprites = [];
+			const level = game.campaignData?.level || this.state.currentLevel;
+			if (level < 11) player.selectedSpriteSet = 'ro_job1';
+			else if (level < 21) player.selectedSpriteSet = 'ro_job2';
+			else if (level > 41) player.selectedSpriteSet = 'ro_trans';
+			else if (level > 61) player.selectedSpriteSet = 'ro_job3';
+			else if (level > 81) player.selectedSpriteSet = 'ro_job3_2';
+			else player.selectedSpriteSet = 'tos_mix';
+		}
+	},
+
+	/**
+	 * Auto-deploy enemy forces in campaign mode.
+	 */
+	autoDeployEnemy(game, campaignData) {
+		if (this.state.isCampaignActive && campaignData) {
+			const p2 = game.players[1];
+			p2.dice.forEach((die, idx) => {
+				const validHexes = game.calcValidDeploymentHexes(1);
+				if (validHexes.length > 0) {
+					const hexId = validHexes[Math.floor(Math.random() * validHexes.length)];
+					die.isDeployed = true;
+					game.move(die, null, game.getHex(hexId));
+				}
+			});
+			game.addLog("Enemy forces have taken their positions.");
+		}
+	},
+
+	/**
+	 * Main entry point for campaign game over from game.js.
+	 * Handles rewards, level advancement, and unit tracking.
+	 */
+	handleGameOver(game, winnerPlayerIndex) {
+		const deployedValues = game.players[0].dice
+			.filter(d => d.isDeployed && !d.isDeath)
+			.map(d => d.value);
+		const eliminatedValues = game.players[0].dice
+			.filter(d => d.isDeployed && d.isDeath)
+			.map(d => d.value);
+
+		this.updateAfterBattle(deployedValues, eliminatedValues);
+
+		if (winnerPlayerIndex === 0) {
+			this.advanceLevel();
+			if (game.campaignData?.rewards) {
+				this.grantRewards(game.campaignData.rewards);
+				game.addLog("Rewards Granted: " + Object.entries(game.campaignData.rewards).map(([k, v]) => `${v}x ${k.toUpperCase()}`).join(', '));
+			}
+			game.addLog("Campaign Advanced: New Level Unlocked!");
+		}
+		game.nextCampaignMap = this.getCurrentMapName();
+	},
+
+	/**
+	 * Apply campaign-specific damage to a unit.
+	 * @returns {boolean} True if campaign damage was handled.
+	 */
+	applyDamage(game, hexId, damage, state) {
+		const unit = game.getUnitOnHex(hexId, state);
+		if (!unit) return false;
+
+		// Fencer Tier 1 [A] Parry
+		if (unit.value === 1 && game.hasPerk(unit, 'tier1', 'A')) {
+			const parryAvailable = 15 - (unit.roundDamageNegated || 0);
+			if (parryAvailable > 0) {
+				const negated = Math.min(damage, parryAvailable);
+				damage -= negated;
+				unit.roundDamageNegated = (unit.roundDamageNegated || 0) + negated;
+				if (negated > 0) game.addLog(`🛡️ Parry! ${game.logUnit(unit)} negates ${negated} damage.`);
+			}
+		}
+
+		// Hussar Tier 1 [B] Evasion
+		if (unit.value === 3 && game.hasPerk(unit, 'tier1', 'B') && game.trailAttack?.combatType === 'RANGED_ATTACK') {
+			damage = Math.floor(damage * 0.5);
+			game.addLog(`💨 Evasion! ${game.logUnit(unit)} takes half damage from ranged attack.`);
+		}
+
+		unit.currentHP -= damage;
+		if (unit.currentHP <= 0) {
+			unit.currentHP = 0;
+			game.removeUnit(hexId, state);
+		}
+		return true;
+	},
+
+	/**
 	 * Get the campaign deployment limit based on current level and crucible bonuses.
 	 */
 	getDeploymentLimit(baseLimit) {
