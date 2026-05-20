@@ -35,11 +35,13 @@
 	<script src="//unpkg.com/mqtt/dist/mqtt.min.js" async defer></script>
 	<script type="text/javascript" src="/assets/alpine.min.js" defer></script>
 
-	<script type="text/javascript" src="/game.js?v=___VERSION___"></script>
-	<script type="text/javascript" src="/campaign/campaign-manager.js?v=___VERSION___"></script>
-	<script type="text/javascript" src="/ai/heuristic-profiles.js?v=___VERSION___"></script>
-	<script type="text/javascript" src="/ai/ai-heuristic.js?v=___VERSION___"></script>
-	<script type="text/javascript" src="/ai/ai.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/constants.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/autochess.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/game.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/campaign/campaign-manager.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/ai/heuristic-profiles.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/ai/ai-heuristic.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/ai/ai.js?v=___VERSION___"></script>
 
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
@@ -95,7 +97,7 @@
 	</div>
 
 	<!-- Dice Container -->
-	<div style="display:none;" class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="!autochess && (gameplayVersion === 2)" @click="rollDice()">
+	<div style="display:none;" class="scene ml-2 mt-2 md:ml-4 md:mt-4" x-show="!Autochess.state.enabled && (gameplayVersion === 2)" @click="rollDice()">
 		<div class="cube" id="cube">
 			<div class="face front">1</div>
 			<div class="face right">2</div>
@@ -118,7 +120,7 @@
 		<!-- Hex Grid -->
 		<div class="hex-grid-container relative" :class="'radius-' + (hexGrid.radius || 5)" :style="hexGrid.style">
 			<template x-for="hex in hexes" :key="hex.id">
-				<div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase === 'SETUP_DEPLOY' && validDeploymentHexesSet.has(hex.id), selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, autochess && hex.unit?.hp, autochess && hex.unit?.hexId]"
+				<div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase === 'SETUP_DEPLOY' && validDeploymentHexesSet.has(hex.id), selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, Autochess.state.enabled && hex.unit?.hp, Autochess.state.enabled && hex.unit?.hexId]"
 					class="hexagon absolute flex items-center justify-center"
 					:class="hexColor(hex) + ' hex-' + hex.id"
 					:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
@@ -165,7 +167,7 @@
 							</div>
 
 							<!-- Autochess HP Bar -->
-							<div x-show="autochess" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
+							<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
 								<div class="h-1.5 bg-green-500 transition-all duration-300 rounded-full"
 									:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHp * 100) + '%'"
 									:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHp < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHp < 0.25}">
@@ -181,7 +183,7 @@
 
 			<!-- Trail Arrow -->
 			<svg :height="hexGrid.gridHeight || 0" :width="hexGrid.gridWidth || 0" class="absolute inset-0 pointer-events-none z-10"
-				x-show="!autochess && !phase.startsWith('SETUP')">
+				x-show="!Autochess.state.enabled && !phase.startsWith('SETUP')">
 				<!-- Movement -->
 				<g x-show="trail && trail.fromHex && trail.toHex">
 					<circle
@@ -241,7 +243,7 @@
 			<!-- Unit Info Panel -->
 			<div class="unit-info-panel fixed border border-yellow-900 text-xs bg-wood" style="display: none;"
 				 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
-				 x-show="!autochess && isUnitPanelVisible"
+				 x-show="!Autochess.state.enabled && isUnitPanelVisible"
 				 x-data="{ overflow: false, atBottom: true }">
 				<div class="unit-info-panel-scroll"
 					 x-init="$nextTick(() => {
@@ -353,18 +355,18 @@
 	</div>
 
 	<!-- Autochess UI Overlay -->
-	<div id="game-autochess" style="display: none;" x-show="autochess" x-cloak class="bottom-0 mt-4 border-t bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
+	<div id="game-autochess" style="display: none;" x-show="Autochess.state.enabled" x-cloak class="bottom-0 mt-4 border-t bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
 		<div class="max-w-full w-full">
 			<div class="w-full flex justify-between items-center pb-2 px-2 pointer-events-auto">
 				<h1 class="text-lg font-bold uppercase">👑 Romance of the Dice Kingdom</h1>
 				<div class="flex items-center space-x-4">
-					<div class="ml-4 font-bold">[<span x-text="autochessRound"></span> / 6]</div>
+					<div class="ml-4 font-bold">[<span x-text="Autochess.state.round"></span> / 6]</div>
 					<button class="border px-2 py-1 text-xs hover:bg-black hover:text-white" @click="location.href='/'">EXIT</button>
 				</div>
 			</div>
 
 			<!-- PREPARATION PHASE -->
-			<div style="display: none;" x-show="autochessPhase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
+			<div style="display: none;" x-show="Autochess.state.phase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div class="p-2">
 						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
@@ -381,8 +383,8 @@
 					</div>
 					<div class="p-2">
 						<h2 class="font-bold uppercase pb-1">Recruitment</h2>
-						<div class="flex justify-center space-x-4 py-2" x-show="autochessInventory?.length">
-							<template x-for="(unit, index) in autochessInventory" :key="index">
+						<div class="flex justify-center space-x-4 py-2" x-show="Autochess.state.inventory?.length">
+							<template x-for="(unit, index) in Autochess.state.inventory" :key="index">
 								<button @click="recruitAutochessUnit(index)" class="border bg-gray-50 hover:bg-black hover:text-white transition-colors">
 									<!-- <div class="text-2xl font-bold" x-text="unit.value"></div> -->
 									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
@@ -390,13 +392,13 @@
 									<div class="text-xs mt-1 uppercase" x-text="unit.name"></div>
 								</button>
 							</template>
-							<template x-if="autochessInventory.length === 0">
+							<template x-if="Autochess.state.inventory.length === 0">
 								<div class="italic text-gray-500">No recruits available.</div>
 							</template>
 						</div>
-						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="autochessInventory?.length">
-							<button @click="rerollAutochessRecruits()" :disabled="autochessRerolls <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
-								Reroll (<span x-text="autochessRerolls"></span>)
+						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="Autochess.state.inventory?.length">
+							<button @click="rerollAutochessRecruits()" :disabled="Autochess.state.rerolls <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
+								Reroll (<span x-text="Autochess.state.rerolls"></span>)
 							</button>
 						</div>
 					</div>
@@ -405,7 +407,7 @@
 				<div class="text-center pt-2">
 					<div class="inline mb-2">
 						<label class="font-bold mr-2">Strategy:</label>
-						<select x-model="selectedAutochessProfile" class="border px-2 py-1 uppercase">
+						<select x-model="Autochess.state.selectedProfile" class="border px-2 py-1 uppercase">
 							<template x-for="p in getProfileNames()" :key="p">
 								<option :value="p" x-text="p"></option>
 							</template>
@@ -418,7 +420,7 @@
 			</div>
 
 			<!-- COMBAT PHASE UI (Board is behind) -->
-			<div style="display: none;" x-show="autochessPhase === 'COMBAT'" class="w-full flex flex-col items-center">
+			<div style="display: none;" x-show="Autochess.state.phase === 'COMBAT'" class="w-full flex flex-col items-center">
 				<div class="w-full flex justify-between mb-4 text-sm font-bold pointer-events-auto">
 					<div class="text-blue-700 uppercase">Player: <span x-text="players[0]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
 					<div class="animate-pulse uppercase mx-2">in progress</div>
@@ -427,10 +429,10 @@
 			</div>
 
 			<!-- RECAP PHASE -->
-			<div style="display: none;" x-show="autochessPhase === 'RECAP'" class="w-full inset-0 flex items-center justify-center z-20 pointer-events-auto">
+			<div style="display: none;" x-show="Autochess.state.phase === 'RECAP'" class="w-full inset-0 flex items-center justify-center z-20 pointer-events-auto">
 				<div class="border p-2 max-w-sm w-full text-center">
-					<h2 class="text-lg font-black mb-2 uppercase italic" x-text="autochessLastResult"></h2>
-					<p class="mb-2 font-bold" x-text="autochessLastResult === 'WIN' ? 'Your survivors grew stronger!' : 'The kingdom has fallen.'"></p>
+					<h2 class="text-lg font-black mb-2 uppercase italic" x-text="Autochess.state.lastResult"></h2>
+					<p class="mb-2 font-bold" x-text="Autochess.state.lastResult === 'WIN' ? 'Your survivors grew stronger!' : 'The kingdom has fallen.'"></p>
 					<button @click="nextAutochessRound()" class="w-full bg-black text-white py-2 font-black text-lg hover:bg-gray-800 transition-colors uppercase">
 						Continue
 					</button>
@@ -439,7 +441,7 @@
 		</div>
 	</div>
 
-	<div id="game-controller" x-show="!autochess" class="w-full flex flex-col items-center mb-20 md:mb-2">
+	<div id="game-controller" x-show="!Autochess.state.enabled" class="w-full flex flex-col items-center mb-20 md:mb-2">
 		<!-- Game Setup -->
 		<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
 			<!-- <h2 class="text-lg mb-2" x-text="setupStatusMessage()"></h2> -->
@@ -704,7 +706,7 @@
 	</div>
 
 	<!-- Message Log -->
-	<div  id="game-log" style="display: none;" x-show="showLog && (autochess || !phase.includes('SETUP_')) " class="bg-wood bottom-0 left-0 w-full text-black p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
+	<div  id="game-log" style="display: none;" x-show="showLog && (Autochess.state.enabled || !phase.includes('SETUP_')) " class="bg-wood bottom-0 left-0 w-full text-black p-1 text-xs font-mono h-28 md:h-24 overflow-y-auto border-t ">
 		<template x-for="log in messageLog" :key="log.id">
 			<p x-text="log.message" :class="PLAYER_CONFIG[log.message?.match(/P(\d)/)?.[1] - 1]?.logColor"></p>
 		</template>

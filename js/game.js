@@ -1,85 +1,4 @@
-// deno-lint-ignore-file
-const R = 5; // Map size radius
-const HEX_SIZE = 60; // pixels
-const HEX_WIDTH = HEX_SIZE;
-const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
-const EPIC_PRESETS = {
-	'E_21': {
-		name: 'Standard 21 Dices',
-		radius: R,
-		noReroll: true,
-		dice: [
-		     3,
-		    3,3,
-		   4,6,4,
-		  2,2,2,2,
-		 4,1,2,1,4,
-		1,1,5,5,1,1
-		],
-	},
-	'E_15': {
-		name: 'Quick Mode 15 Dices',
-		radius: R,
-		noReroll: true,
-		dice: [
-		    3,
-		   3,3,
-		  4,6,4,
-		 2,2,2,2,
-		1,1,5,1,1
-		],
-	}
-};
-
-// BIND-EDIT rules.md: ### **4. Dice Soldiers (Unit Types)**
-const UNIT_STATS = {
-	1: { name: "Fencer", attack: 2, armor: 2, range: 0, distance: 2, movement: '*' },
-	2: { name: "Archer", attack: 2, armor: 1, range: 2, distance: 1, movement: '*' },
-	3: { name: "Hussar", attack: 3, armor: 0, range: 0, distance: 3, movement: 'L' },
-	4: { name: "Knight", attack: 2, armor: 1, range: 0, distance: 3, movement: 'X' },
-	5: { name: "Tanker", attack: 1, armor: 4, range: 0, distance: 1, movement: '*' },
-	6: { name: "Oracle", attack: 0, armor: 0, range: 2, distance: 1, movement: '*' },
-};
-const AXES = [
-	{i: 0, q: +1, r: -1, name: '2h'},
-	{i: 1, q: +1, r: +0, name: '4h'},
-	{i: 2, q: +0, r: +1, name: '6h'},
-	{i: 3, q: -1, r: +1, name: '8h'},
-	{i: 4, q: -1, r: +0, name: '10h'},
-	{i: 5, q: +0, r: -1, name: '12h'},
-];
-const PLAYER_PRIMARY_AXIS = {
-	1: [ AXES[5] ],
-	2: [ AXES[5], AXES[2] ],
-	3: [ AXES[5], AXES[3], AXES[1] ],
-	4: [ AXES[4], AXES[3], AXES[0], AXES[1] ],
-	// 5: [ AXES[5], AXES[3], AXES[0], AXES[2], AXES[4] ],
-	6: [ AXES[5], AXES[2], AXES[0], AXES[3], AXES[4], AXES[1] ],
-};
-const PLAYER_CONFIG = [
-	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-700' },
-	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-700' },
-	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-700' },
-	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-700' },
-	{ id: 4, color: 'Black', sprite: 'shadow', bg: 'bg-hexwhite', logColor: 'text-gray-700' },
-	{ id: 5, color: 'Yellow', sprite: 'sepia', bg: 'bg-hexyellow', logColor: 'text-yellow-700' },
-];
-
-const TERRAIN_CONFIG = {
-	'PLAIN': { color: 'Plain', bg: 'bg-hexplain', logColor: 'text-gray-500' },
-	'FOREST': { color: 'Forest', bg: 'bg-hexforest', logColor: 'text-green-800' },
-	'LAKE': { color: 'Lake', bg: 'bg-hexlake', logColor: 'text-blue-500' },
-	'TOWER': { color: 'Tower', bg: 'bg-hextower', logColor: 'text-purple-600' },
-	'MOUNTAIN': { color: 'Mountain', bg: 'bg-hexmountain', logColor: 'text-gray-700' },
-};
-
-const RMI_TERRAIN_PALETTE = {
-	'PLAIN':    [50, 0.6, 0.7], // Grass Green Hue (approx 80-120)
-	'FOREST':   [120, 0.7, 0.4], // Darker Green Hue
-	'LAKE':     [235, 0.6, 0.6], // Blue Hue
-	'TOWER':    [280, 0.6, 0.6], // Purple Hue
-	'MOUNTAIN': [30, 0.5, 0.5],  // Brown/Orange Hue
-};
+// Constants are now in constants.js
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
 Array.prototype.cosmic_random = function () { return this[Math.floor((Math.random() * this.length))]; }
@@ -93,6 +12,7 @@ let random = () => {
 
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
+	Autochess: Autochess,
 	CampaignManager: CampaignManager,
 	auth: {
 		clientId: '___GOOGLE_CLIENT_ID___',
@@ -331,231 +251,26 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- AUTOCHESS --- */
-	autochess: new URLSearchParams(location.search).get('autochess') === 'true',
-	autochessRound: 1,
-	autochessInventory: [],
-	autochessRerolls: 1,
-	autochessLastResult: null,
-	autochessPhase: 'PREPARATION', // PREPARATION, COMBAT, RECAP
-	selectedAutochessProfile: 'baseline',
+	get autochess() { return Autochess.state.enabled; },
+	get autochessRound() { return Autochess.state.round; },
+	get autochessInventory() { return Autochess.state.inventory; },
+	get autochessRerolls() { return Autochess.state.rerolls; },
+	get autochessLastResult() { return Autochess.state.lastResult; },
+	get autochessPhase() { return Autochess.state.phase; },
+	get selectedAutochessProfile() { return Autochess.state.selectedProfile; },
 
-	initAutochess() {
-		this.showLog = true;
-
-		this.gameplayVersion = 2;
-		this.options = this.options || '';
-		if (!this.options.includes('a')) this.options += 'a';
-
-		this.autochessRound = 1;
-		this.autochessRerolls = 1;
-
-		this.generateHexGrid(this.getRadius());
-		this.generateAutochessInitialArmy();
-		// this.generateAutochessRecruits();
-	},
-
-	generateAutochessInitialArmy() {
-		const p1 = this.players[0];
-		p1.dice = [];
-		for (let i = 0; i < 6; i++) {
-			const value = Math.floor(Math.random() * 6) + 1;
-			const unit = this.createAutochessUnit(value, 0);
-			p1.dice.push(unit);
-		}
-	},
-
-	generateAutochessRecruits() {
-		this.autochessInventory = [];
-		const value = Math.floor(Math.random() * 6) + 1;
-		this.autochessInventory.push(this.createAutochessUnit(value, 0));
-	},
-
-	recruitAutochessUnit(index) {
-		const unit = this.autochessInventory.splice(index, 1)[0];
-		this.players[0].dice.push(unit);
-	},
-
-	rerollAutochessRecruits() {
-		if (this.autochessRerolls > 0) {
-			this.autochessRerolls--;
-			this.generateAutochessRecruits();
-		}
-	},
-
-	createAutochessUnit(value, playerId) {
-		const stats = UNIT_STATS[value];
-		const unit = {
-			...stats,
-			value: value,
-			playerId: playerId,
-			hp: 100,
-			maxHp: 100,
-			currentArmor: stats.armor,
-			speed: (6 + stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
-			actionGauge: 0,
-			isDeath: false
-		};
-		unit.spriteUrl = this.getUnitSpriteUrl(unit);
-
-		if (playerId === 0 && this.CampaignManager.state.upgrades[value]) {
-			const upgrades = this.CampaignManager.state.upgrades[value];
-			unit.attack += upgrades.atk;
-			unit.armor += upgrades.def;
-			unit.currentArmor += upgrades.def;
-			unit.maxHp += upgrades.hp * 10;
-			unit.hp = unit.maxHp;
-		}
-
-		return unit;
-	},
-
-	startAutochessCombat() {
-		this.autochessPhase = 'COMBAT';
-		this.messageLog = [];
-		// Apply selected profile to player
-		this.players[0].profileName = this.selectedAutochessProfile;
-		this.prepareAutochessCombat();
-		this.runAutochessSimulation();
-	},
-
-	prepareAutochessCombat() {
-		this.hexes.forEach(h => {
-			h.unit = null;
-			h.unitId = null;
-		});
-
-		// Player 2 and above are AI enemies
-		for (let pIdx = 1; pIdx < this.playerCount; pIdx++) {
-			const p = this.players[pIdx];
-			p.dice = [];
-			this.setPlayerAI(p, true);
-			const enemyUnitCount = this.players[0].dice.length;
-			for (let i = 0; i < enemyUnitCount; i++) {
-				p.dice.push(this.createAutochessUnit(Math.floor(Math.random() * 6) + 1, pIdx));
-			}
-		}
-
-		this.players.forEach((player, playerIdx) => {
-			player.dice.forEach((u, i) => {
-				u.id = `${playerIdx}_${i}`; // Ensure unique ID string for compatibility
-				u.isDeath = false;
-				u.hp = u.maxHp;
-				u.actionGauge = 0;
-				u.hexId = null;
-				u.isDeployed = false;
-				u.hasMovedOrAttackedThisTurn = false;
-				u.actionsTakenThisTurn = 0;
-			});
-		});
-
-		// Deploy units randomly in valid deployment hexes for all players
-		const playerOrder = Array.from({length: this.playerCount}, (_, i) => i).sort(() => Math.random() - 0.5);
-		playerOrder.forEach(playerIdx => {
-			const player = this.players[playerIdx];
-			player.dice.forEach((unit) => {
-				const validHexes = this.calcValidDeploymentHexes(playerIdx).filter(hexId => !this.getUnitOnHex(hexId));
-				if (validHexes.length > 0) {
-					const hexId = validHexes.random();
-					const targetHex = this.getHex(hexId);
-					targetHex.unit = unit;
-					targetHex.unitId = unit.id;
-					unit.hexId = hexId;
-					unit.isDeployed = true;
-				}
-			});
-		});
-	},
-
-	runAutochessSimulation() {
-		const combatInterval = setInterval(() => {
-			if (this.autochessPhase !== 'COMBAT') {
-				clearInterval(combatInterval);
-				return;
-			}
-
-			this.simulateAutochessStep();
-
-			const alivePlayers = this.players.filter(p => p.dice.some(u => !u.isDeath));
-
-			if (alivePlayers.length <= 1) {
-				clearInterval(combatInterval);
-				const winner = alivePlayers[0];
-				this.autochessLastResult = (winner && winner.id === 0) ? 'WIN' : 'LOSS';
-				if (this.autochessLastResult === 'WIN') {
-					this.autochessRerolls++;
-					this.players[0].dice.filter(u => !u.isDeath).forEach(u => {
-						u.attack += 1;
-						u.maxHp += 5;
-						if (this.CampaignManager.state.upgrades[u.value]) {
-							this.CampaignManager.state.upgrades[u.value].atk += 1;
-							this.CampaignManager.state.upgrades[u.value].hp += 1;
-						}
-					});
-					this.CampaignManager.save();
-				}
-				this.autochessPhase = 'RECAP';
-			}
-		}, 100);
-	},
-
-	simulateAutochessStep() {
-		const allUnits = this.players.flatMap(p => p.dice)
-			.filter(u => !u.isDeath)
-			.sort((a, b) => (b.actionGauge - a.actionGauge) || (Math.random() - 0.5));
-
-		allUnits.forEach(unit => {
-			if (unit.isDeath) return;
-			unit.actionGauge += unit.speed;
-			if (unit.actionGauge >= 100) {
-				this.executeAutochessAction(unit);
-				unit.actionGauge -= 100;
-			}
-		});
-	},
-
-	executeAutochessAction(unit) {
-		// Store original turn index to restore after action
-		const originalPlayerIndex = this.currentPlayerIndex;
-
-		// Context setup for AI
-		this.currentPlayerIndex = unit.playerId;
-		this.resetUnitTurnState(unit);
-
-		// Fixed strategies for each unit class
-		const classProfiles = {
-			1: 'baseline',
-			2: 'ranger',
-			3: 'assassin',
-			4: 'berserker',
-			5: 'turtle',
-			6: 'tactician',
-		};
-		const profileName = this.players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
-
-		const state = this.cloneState();
-		const move = evaluateBestMoveForUnit(this, state, unit, profileName);
-
-		if (move && move.actionType !== 'END_TURN') {
-			// If it's a spell, we need to set oracleSelectedSpell
-			if (move.actionType.startsWith('SPELLCAST_')) {
-				this.oracleSelectedSpell = move.actionType.replace('SPELLCAST_', '');
-			}
-			applyMove(this, move);
-		}
-
-		// Restore original turn index
-		this.currentPlayerIndex = originalPlayerIndex;
-	},
-	nextAutochessRound() {
-		this.autochessRound++;
-		if (this.autochessRound > 6) {
-			alert("Tournament Complete!");
-			location.reload();
-		} else {
-			this.generateAutochessRecruits();
-			this.autochessPhase = 'PREPARATION';
-		}
-	},
+	initAutochess() { Autochess.init(this); },
+	generateAutochessInitialArmy() { Autochess.generateInitialArmy(this); },
+	generateAutochessRecruits() { Autochess.generateRecruits(this); },
+	recruitAutochessUnit(index) { Autochess.recruitUnit(this, index); },
+	rerollAutochessRecruits() { Autochess.rerollRecruits(this); },
+	createAutochessUnit(value, playerId) { return Autochess.createUnit(this, value, playerId); },
+	startAutochessCombat() { Autochess.startCombat(this); },
+	prepareAutochessCombat() { Autochess.prepareCombat(this); },
+	runAutochessSimulation() { Autochess.runSimulation(this); },
+	simulateAutochessStep() { Autochess.simulateStep(this); },
+	executeAutochessAction(unit) { Autochess.executeAction(this, unit); },
+	nextAutochessRound() { Autochess.nextRound(this); },
 
 	get isUnitPanelVisible() {
 		const hexId = this.unitPanelHexId();

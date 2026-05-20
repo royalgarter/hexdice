@@ -212,11 +212,11 @@ function createSimulationGame(logger: SimulationLogger, aiType: string, engine: 
 async function loadGameEngine(playerCount: number = 2, version: number = 1): Promise<any> {
     const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount, version);
 
-    let gameCode = await Deno.readTextFile("./game.js");
-    const aiCoreCode = await Deno.readTextFile("./ai/ai.js");
-    const aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
-    const aiHeuristicProfiles = await Deno.readTextFile("./ai/heuristic-profiles.js");
-    const campaignManagerCode = await Deno.readTextFile("./campaign/campaign-manager.js");
+    let gameCode = await Deno.readTextFile("./js/game.js");
+    const aiCoreCode = await Deno.readTextFile("./js/ai/ai.js");
+    const aiHeuristicCode = await Deno.readTextFile("./js/ai/ai-heuristic.js");
+    const aiHeuristicProfiles = await Deno.readTextFile("./js/ai/heuristic-profiles.js");
+    const campaignManagerCode = await Deno.readTextFile("./js/campaign/campaign-manager.js");
 
     // Replace const random with var for override capability
     gameCode = gameCode.replace(

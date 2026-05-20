@@ -158,11 +158,11 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
         heuristicProfilesCode = engineCodes.heuristicProfilesCode;
         campaignManagerCode = engineCodes.campaignManagerCode;
     } else {
-        gameCode = await Deno.readTextFile("./game.js");
-        aiCoreCode = await Deno.readTextFile("./ai/ai.js");
-        aiHeuristicCode = await Deno.readTextFile("./ai/ai-heuristic.js");
-        heuristicProfilesCode = await Deno.readTextFile("./ai/heuristic-profiles.js");
-        campaignManagerCode = await Deno.readTextFile("./campaign/campaign-manager.js");
+        gameCode = await Deno.readTextFile("./js/game.js");
+        aiCoreCode = await Deno.readTextFile("./js/ai/ai.js");
+        aiHeuristicCode = await Deno.readTextFile("./js/ai/ai-heuristic.js");
+        heuristicProfilesCode = await Deno.readTextFile("./js/ai/heuristic-profiles.js");
+        campaignManagerCode = await Deno.readTextFile("./js/campaign/campaign-manager.js");
     }
 
     gameCode = gameCode.replace(
@@ -454,11 +454,11 @@ async function runTournament(args: any) {
     const playerCount = parseInt(args.players) || 2;
 
     const engineCodes = {
-        gameCode: await Deno.readTextFile("./game.js"),
-        aiCoreCode: await Deno.readTextFile("./ai/ai.js"),
-        aiHeuristicCode: await Deno.readTextFile("./ai/ai-heuristic.js"),
-        heuristicProfilesCode: await Deno.readTextFile("./ai/heuristic-profiles.js"),
-        campaignManagerCode: await Deno.readTextFile("./campaign/campaign-manager.js"),
+        gameCode: await Deno.readTextFile("./js/game.js"),
+        aiCoreCode: await Deno.readTextFile("./js/ai/ai.js"),
+        aiHeuristicCode: await Deno.readTextFile("./js/ai/ai-heuristic.js"),
+        heuristicProfilesCode: await Deno.readTextFile("./js/ai/heuristic-profiles.js"),
+        campaignManagerCode: await Deno.readTextFile("./js/campaign/campaign-manager.js"),
     };
 
     const engine = await loadGameEngine(playerCount, engineCodes);

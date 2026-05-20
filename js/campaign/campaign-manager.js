@@ -824,7 +824,7 @@ const CampaignManager = {
 		// if (!response.ok) throw new Error(`Failed to load campaign map: ${filename}`);
 		// return await response.json();
 
-		const path = `/campaign/ro_level_rmi.json`;
+		const path = `/js/campaign/ro_level_rmi.json`;
 		const response = await fetch(path);
 		if (!response.ok) throw new Error(`Failed to load campaign map: ${filename}`);
 

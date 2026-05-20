@@ -25,7 +25,7 @@ function stubBrowserAPIs() {
 // Load game engine
 async function loadGameEngine(): Promise<any> {
     const { location: locationStub, document: documentStub } = stubBrowserAPIs();
-    const gameCode = await Deno.readTextFile("./game.js");
+    const gameCode = await Deno.readTextFile("./js/game.js");
     const fullCode = `
         ${gameCode}
         return {
