@@ -18,11 +18,11 @@ const Autochess = {
 		GAME.options = GAME.options || '';
 		if (!GAME.options.includes('a')) GAME.options += 'a';
 
-		this.state.round = 1;
-		this.state.rerolls = 1;
+		GAME.Autochess.state.round = 1;
+		GAME.Autochess.state.rerolls = 1;
 
 		GAME.generateHexGrid(GAME.getRadius());
-		this.generateInitialArmy(GAME);
+		GAME.Autochess.generateInitialArmy(GAME);
 	},
 
 	generateInitialArmy(GAME) {
@@ -30,26 +30,26 @@ const Autochess = {
 		p1.dice = [];
 		for (let i = 0; i < 6; i++) {
 			const value = Math.floor(Math.random() * 6) + 1;
-			const unit = this.createUnit(GAME, value, 0);
+			const unit = GAME.Autochess.createUnit(GAME, value, 0);
 			p1.dice.push(unit);
 		}
 	},
 
 	generateRecruits(GAME) {
-		this.state.inventory = [];
+		GAME.Autochess.state.inventory = [];
 		const value = Math.floor(Math.random() * 6) + 1;
-		this.state.inventory.push(this.createUnit(GAME, value, 0));
+		GAME.Autochess.state.inventory.push(GAME.Autochess.createUnit(GAME, value, 0));
 	},
 
 	recruitUnit(GAME, index) {
-		const unit = this.state.inventory.splice(index, 1)[0];
+		const unit = GAME.Autochess.state.inventory.splice(index, 1)[0];
 		GAME.players[0].dice.push(unit);
 	},
 
 	rerollRecruits(GAME) {
-		if (this.state.rerolls > 0) {
-			this.state.rerolls--;
-			this.generateRecruits(GAME);
+		if (GAME.Autochess.state.rerolls > 0) {
+			GAME.Autochess.state.rerolls--;
+			GAME.Autochess.generateRecruits(GAME);
 		}
 	},
 
@@ -81,12 +81,12 @@ const Autochess = {
 	},
 
 	startCombat(GAME) {
-		this.state.phase = 'COMBAT';
+		GAME.Autochess.state.phase = 'COMBAT';
 		GAME.messageLog = [];
 		// Apply selected profile to player
-		GAME.players[0].profileName = this.state.selectedProfile;
-		this.prepareCombat(GAME);
-		this.runSimulation(GAME);
+		GAME.players[0].profileName = GAME.Autochess.state.selectedProfile;
+		GAME.Autochess.prepareCombat(GAME);
+		GAME.Autochess.runSimulation(GAME);
 	},
 
 	prepareCombat(GAME) {
@@ -102,7 +102,7 @@ const Autochess = {
 			GAME.setPlayerAI(p, true);
 			const enemyUnitCount = GAME.players[0].dice.length;
 			for (let i = 0; i < enemyUnitCount; i++) {
-				p.dice.push(this.createUnit(GAME, Math.floor(Math.random() * 6) + 1, pIdx));
+				p.dice.push(GAME.Autochess.createUnit(GAME, Math.floor(Math.random() * 6) + 1, pIdx));
 			}
 		}
 
@@ -139,21 +139,21 @@ const Autochess = {
 
 	runSimulation(GAME) {
 		const combatInterval = setInterval(() => {
-			if (this.state.phase !== 'COMBAT') {
+			if (GAME.Autochess.state.phase !== 'COMBAT') {
 				clearInterval(combatInterval);
 				return;
 			}
 
-			this.simulateStep(GAME);
+			GAME.Autochess.simulateStep(GAME);
 
 			const alivePlayers = GAME.players.filter(p => p.dice.some(u => !u.isDeath));
 
 			if (alivePlayers.length <= 1) {
 				clearInterval(combatInterval);
 				const winner = alivePlayers[0];
-				this.state.lastResult = (winner && winner.id === 0) ? 'WIN' : 'LOSS';
-				if (this.state.lastResult === 'WIN') {
-					this.state.rerolls++;
+				GAME.Autochess.state.lastResult = (winner && winner.id === 0) ? 'WIN' : 'LOSS';
+				if (GAME.Autochess.state.lastResult === 'WIN') {
+					GAME.Autochess.state.rerolls++;
 					GAME.players[0].dice.filter(u => !u.isDeath).forEach(u => {
 						u.attack += 1;
 						u.maxHp += 5;
@@ -164,7 +164,7 @@ const Autochess = {
 					});
 					GAME.CampaignManager.save();
 				}
-				this.state.phase = 'RECAP';
+				GAME.Autochess.state.phase = 'RECAP';
 			}
 		}, 100);
 	},
@@ -178,7 +178,7 @@ const Autochess = {
 			if (unit.isDeath) return;
 			unit.actionGauge += unit.speed;
 			if (unit.actionGauge >= 100) {
-				this.executeAction(GAME, unit);
+				GAME.Autochess.executeAction(GAME, unit);
 				unit.actionGauge -= 100;
 			}
 		});
@@ -219,13 +219,13 @@ const Autochess = {
 	},
 
 	nextRound(GAME) {
-		this.state.round++;
-		if (this.state.round > 6) {
+		GAME.Autochess.state.round++;
+		if (GAME.Autochess.state.round > 6) {
 			alert("Tournament Complete!");
 			location.reload();
 		} else {
-			this.generateRecruits(GAME);
-			this.state.phase = 'PREPARATION';
+			GAME.Autochess.generateRecruits(GAME);
+			GAME.Autochess.state.phase = 'PREPARATION';
 		}
 	},
 };
