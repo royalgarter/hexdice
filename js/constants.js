@@ -77,6 +77,18 @@ const TERRAIN_CONFIG = {
 	'MOUNTAIN': { color: 'Mountain', bg: 'bg-hexmountain', logColor: 'text-gray-700' },
 };
 
+// Autochess Balance Configuration
+const AUTOCHESS_CONFIG = {
+	BASE_HP: 100,
+	WIN_REROLLS: 2,
+	LOSS_REROLLS: 1,
+	VETERAN_ATK_BONUS: 1,      // Temporary bonus for surviving units (per round survived)
+	VETERAN_HP_BONUS: 10,      // Temporary bonus for surviving units (per round survived)
+	ENEMY_COUNT_BASE: 3,
+	ENEMY_COUNT_GROWTH: 0.5,   // Round * 0.5 additional units
+	ENEMY_STAT_GROWTH: 0.2,    // Round * 0.2 additional ATK/ARMOR for enemies
+};
+
 const RMI_TERRAIN_PALETTE = {
 	'PLAIN':    [50, 0.6, 0.7], // Grass Green Hue (approx 80-120)
 	'FOREST':   [120, 0.7, 0.4], // Darker Green Hue

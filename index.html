@@ -368,7 +368,7 @@
 			<!-- PREPARATION PHASE -->
 			<div style="display: none;" x-show="Autochess.state.phase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<div class="col-span-2 pr-8 border-r">
+					<div class="col-span-2 px-8 border-r">
 						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
 						<div class="grid grid-cols-6 gap-1 text-xs">
 							<template x-for="(unit, index) in players[0]?.dice" :key="index">
@@ -383,22 +383,22 @@
 					</div>
 					<div class="">
 						<h2 class="font-bold uppercase pb-1">Recruitment</h2>
-						<div class="flex justify-center space-x-2" x-show="Autochess.state.inventory?.length">
-							<template x-for="(unit, index) in Autochess.state.inventory" :key="index">
-								<button @click="recruitAutochessUnit(index)" class="border bg-gray-50 hover:bg-black hover:text-white transition-colors">
+						<div class="flex justify-center space-x-2" x-show="Autochess.state.inventories[0]?.length">
+							<template x-for="(unit, index) in Autochess.state.inventories[0]" :key="index">
+								<button @click="recruitAutochessUnit(0, index)" class="border bg-gray-50 hover:bg-black hover:text-white transition-colors">
 									<!-- <div class="text-2xl font-bold" x-text="unit.value"></div> -->
 									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
 									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
 									<div class="text-xs mt-1 uppercase" x-text="unit.name"></div>
 								</button>
 							</template>
-							<template x-if="Autochess.state.inventory.length === 0">
+							<template x-if="Autochess.state.inventories[0] && Autochess.state.inventories[0].length === 0">
 								<div class="italic text-gray-500">No recruits available.</div>
 							</template>
 						</div>
-						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="Autochess.state.inventory?.length">
-							<button @click="rerollAutochessRecruits()" :disabled="Autochess.state.rerolls <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
-								Reroll (<span x-text="Autochess.state.rerolls"></span>)
+						<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="Autochess.state.inventories[0]?.length">
+							<button @click="rerollAutochessRecruits(0)" :disabled="Autochess.state.rerolls[0] <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
+								Reroll (<span x-text="Autochess.state.rerolls[0]"></span>)
 							</button>
 						</div>
 					</div>

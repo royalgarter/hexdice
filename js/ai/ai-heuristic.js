@@ -32,8 +32,8 @@ function calculatePhaseWeights(GAME, state, profile) {
     // Autochess mode weight adjustment (Aggressive focus on moving closer to opponent's base)
     if (GAME.autochess) {
         w.advanceBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
-        w.captureBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
-        w.teamPositionWeight *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        // w.captureBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
+        // w.teamPositionWeight *= AUTOCHESS_WEIGHT_MULTIPLIER;
         w.killBonus *= 1.2;
         w.pressureWeight *= 0.8; // Care less about being safe
         dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.2);

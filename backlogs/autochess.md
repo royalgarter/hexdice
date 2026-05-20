@@ -73,8 +73,33 @@ Each unit type has a predefined behavior:
 - Add visual indicators for the Action Gauge.
 - Implement round recap UI.
 
-## Verification:
-- Verify units act according to their fixed AI without player input during combat.
-- Verify Action Gauge fills at different rates based on stats.
-- Verify round rewards are correctly applied and persisted.
-- Verify 10-round progression works from start to finish.
+### 5. Rules Configuration & Parameters
+- **`BASE_HP` (100):** Starting health points for all units.
+- **`WIN_REROLLS` (2):** Number of reroll credits granted to each player after winning a combat round.
+- **`LOSS_REROLLS` (1):** Number of reroll credits granted to each player after losing a combat round.
+- **`VETERAN_ATK_BONUS` (1):** ATK increment applied to survivors after a win.
+- **`VETERAN_HP_BONUS` (10):** HP increment applied to survivors after a win.
+- **Round Limit:** 6 total rounds per tournament.
+- **Player Equality:** Every participant (Human/AI) manages their own `inventories` and `rerolls`.
+
+### 8. Core Formulas & Stat Calculations
+
+- **Base Stats:** Initialized directly from the `UNIT_STATS` constant for each unit value (1-6).
+- **Damage Formula:** 
+    - Combat Success: `Math.ceil((Attacker.Attack + CombatRoll) / 2) > Defender.Armor`
+    - If Success: `Damage = 30 + (Attacker.Attack * 2)`
+    - If Deflected: `Damage = 5 + Attacker.Attack`
+    - Base `Attack` and `Armor` are inherited from `UNIT_STATS`.
+- **Veteran Scaling:** 
+    - `Unit.Attack += AUTOCHESS_CONFIG.VETERAN_ATK_BONUS` (Applied per win)
+    - `Unit.MaxHP += AUTOCHESS_CONFIG.VETERAN_HP_BONUS` (Applied per win)
+- **ATB (Action Gauge) Calculation:**
+    - **Gauge Increase:** `Unit.actionGauge += Unit.speed` (calculated every tick).
+    - **Speed Base:** Derived from `UNIT_STATS` distance/class or a hardcoded lookup: `{ 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }`.
+    - **Action Threshold:** An action is triggered when `Unit.actionGauge >= 100`.
+- **Current Armor:** 
+    - Initialized as `UNIT_STATS[value].armor`.
+    - Remains constant during a combat round unless specifically modified by active abilities or spells.
+
+
+

@@ -262,8 +262,8 @@ function alpineHexDiceTacticGame() { return {
 	initAutochess() { this.Autochess.init(this); },
 	generateAutochessInitialArmy() { this.Autochess.generateInitialArmy(this); },
 	generateAutochessRecruits() { this.Autochess.generateRecruits(this); },
-	recruitAutochessUnit(index) { this.Autochess.recruitUnit(this, index); },
-	rerollAutochessRecruits() { this.Autochess.rerollRecruits(this); },
+	recruitAutochessUnit(playerId, index) { this.Autochess.recruitUnit(this, playerId, index); },
+	rerollAutochessRecruits(playerId) { this.Autochess.rerollRecruits(this, playerId); },
 	createAutochessUnit(value, playerId) { return this.Autochess.createUnit(this, value, playerId); },
 	startAutochessCombat() { this.Autochess.startCombat(this); },
 	prepareAutochessCombat() { this.Autochess.prepareCombat(this); },
@@ -4328,12 +4328,7 @@ function alpineHexDiceTacticGame() { return {
 			if (totalAtk > defenderEffectiveArmor) {
 				// Success
 				if (this.autochess) {
-					const damage = 30 + attackerUnit.attack * 2;
-					this.addLog(`${this.logUnit(attackerUnit)} dealt ${damage} damage to ${this.logUnit(defenderUnit)}!`);
-					defenderUnit.hp -= damage;
-					if (defenderUnit.hp <= 0) {
-						this.removeUnit(defenderHexId, state);
-					}
+					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor);
 				} else {
 					this.removeUnit(defenderHexId, state);
 					this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
@@ -4349,12 +4344,7 @@ function alpineHexDiceTacticGame() { return {
 			else {
 				// Deflected
 				if (this.autochess) {
-					const damage = 5 + attackerUnit.attack;
-					this.addLog(`Attack deflected! Minor damage: ${damage}`);
-					defenderUnit.hp -= damage;
-					if (defenderUnit.hp <= 0) {
-						this.removeUnit(defenderHexId, state);
-					}
+					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor);
 				} else {
 					this.addLog(`Attack deflected!`);
 				}
