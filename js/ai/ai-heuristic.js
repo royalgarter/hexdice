@@ -37,6 +37,11 @@ function calculatePhaseWeights(GAME, state, profile) {
         w.killBonus *= 1.2;
         w.pressureWeight *= 0.8; // Care less about being safe
         dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.2);
+
+        // Autochess: Remove 'dodge' to keep units engaged in combat and moving forward
+        if (dynamicProfile.priorityOrder) {
+            dynamicProfile.priorityOrder = dynamicProfile.priorityOrder.filter(p => p !== 'dodge');
+        }
     }
 
     // Estimate game phase
@@ -1180,20 +1185,27 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 // Score shielding based on urgency and unit value
                 if (willBeKilled) {
-                    analysis.score += 150 + (targetUnit.value * 15);
+                    analysis.score += (GAME.autochess ? 250 : 150) + (targetUnit.value * (GAME.autochess ? 25 : 15));
                     analysis.isSupportAction = true;
                 } else if (willBeAttacked) {
-                    analysis.score += 60 + (targetUnit.value * 8);
+                    analysis.score += (GAME.autochess ? 150 : 60) + (targetUnit.value * (GAME.autochess ? 15 : 8));
                     analysis.isSupportAction = true;
                 } else if (isCurrentlyThreatened && targetUnit.value >= 3) {
-                    analysis.score += 50 + (targetUnit.value * 6);
+                    analysis.score += (GAME.autochess ? 80 : 50) + (targetUnit.value * (GAME.autochess ? 10 : 6));
                     analysis.isSupportAction = true;
                 } else if (targetUnit.value >= 5) {
-                    analysis.score += 30 + (targetUnit.value * 3);
+                    analysis.score += (GAME.autochess ? 60 : 30) + (targetUnit.value * (GAME.autochess ? 5 : 3));
                     analysis.isSupportAction = true;
                 } else {
-                    analysis.score += 5;
+                    // Base value for shielding healthy units in Autochess (preventative)
+                    analysis.score += GAME.autochess ? 40 : 5;
                     analysis.isSupportAction = true;
+                }
+
+                // Autochess HP-based bonus: Shield units with lower HP
+                if (GAME.autochess && targetUnit.hp < targetUnit.maxHp) {
+                    const hpMissingRatio = 1 - (targetUnit.hp / targetUnit.maxHp);
+                    analysis.score += hpMissingRatio * 150;
                 }
             }
         }
@@ -1226,24 +1238,22 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 // EMERGENCY ESCAPE: Save Oracle from death
                 if (oracleThreatened || oracleWillBeKilled) {
-                    const escapeScore = oracleWillBeKilled ? 200 : 120;
+                    const escapeScore = oracleWillBeKilled ? (GAME.autochess ? 300 : 200) : (GAME.autochess ? 150 : 120);
                     analysis.score += escapeScore;
                     analysis.isEscapeAction = true;
                     analysis.isSupportAction = true;
                 }
 
-            // TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
-            if (!oracleThreatened && !oracleWillBeKilled && !shouldExcludeBases) {
-                const opponentBasesList = opponentBases.length > 0 ? opponentBases :
-                    state.players.filter((p, idx) => idx !== state.currentPlayerIndex && !p.isEliminated)
-                        .map(p => ({ baseHex: GAME.getHex(p.baseHexId, state) })).filter(b => b.baseHex);
-
+                // TACTICAL REPOSITIONING: Swap valuable unit to advantageous position
+                if (!oracleThreatened && !oracleWillBeKilled) {
                     const targetNeighbors = GAME.getNeighbors(targetHex, state);
                     let targetThreatCount = 0;
+                    let targetNearEnemy = false;
                     for (const neighbor of targetNeighbors) {
                         const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
                         if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
                             targetThreatCount++;
+                            targetNearEnemy = true;
                         }
                     }
 
@@ -1252,8 +1262,25 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                         return nu && nu.playerId !== state.currentPlayerIndex;
                     }).length;
 
+                    // Offensive Swap (Autochess only): Move a fighter (value 1,3,4,5) closer to enemies
+                    if (GAME.autochess && targetUnit.value !== 2 && targetUnit.value !== 6) {
+                        const oracleNearEnemy = oracleNeighbors.some(n => {
+                            const nu = GAME.getUnitOnHex(n.id, state);
+                            return nu && nu.playerId !== state.currentPlayerIndex;
+                        });
+
+                        if (oracleNearEnemy && !targetNearEnemy) {
+                            analysis.score += 150 + (targetUnit.attack * 20);
+                            analysis.isSupportAction = true;
+                        }
+                    }
+
                     if (targetUnit.value >= 4) {
                         let repositionScore = 0;
+                        const opponentBasesList = opponentBases.length > 0 ? opponentBases :
+                            state.players.filter((p, idx) => idx !== state.currentPlayerIndex && !p.isEliminated)
+                                .map(p => ({ baseHex: GAME.getHex(p.baseHexId, state) })).filter(b => b.baseHex);
+
                         if (opponentBasesList.length > 0) {
                             const currentDist = GAME.axialDistance(targetHex.q, targetHex.r, 
                                 opponentBasesList[0].baseHex.q, opponentBasesList[0].baseHex.r);
@@ -1269,15 +1296,6 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                             repositionScore += (oracleThreatCount - targetThreatCount) * 30;
                         }
 
-                        const targetAdjacentToBase = opponentBasesList.some(base => {
-                            const baseNeighbors = GAME.getNeighbors(base.baseHex, state);
-                            return baseNeighbors.some(n => n.id === oracleHex.id);
-                        });
-
-                        if (targetAdjacentToBase && targetUnit.value >= 2) {
-                            repositionScore += 150;
-                        }
-
                         if (repositionScore > 0) {
                             analysis.score += repositionScore;
                             analysis.isSupportAction = true;
@@ -1285,15 +1303,15 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     }
 
                     // Rescue operation: Pull wounded unit out of danger
-                    if (targetUnit.armorReduction > 0 || targetUnit.currentArmor <= 2) {
+                    const isWounded = GAME.autochess ? (targetUnit.hp < targetUnit.maxHp) : (targetUnit.armorReduction > 0 || targetUnit.currentArmor <= 2);
+                    if (isWounded || targetUnit.currentArmor <= 2) {
                         const targetInDanger = targetNeighbors.some(n => {
                             const nu = GAME.getUnitOnHex(n.id, state);
-                            return nu && nu.playerId !== state.currentPlayerIndex && 
-                                   nu.attack >= GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
+                            return nu && nu.playerId !== state.currentPlayerIndex;
                         });
 
                         if (targetInDanger) {
-                            analysis.score += 80 + (targetUnit.value * 15);
+                            analysis.score += (GAME.autochess ? 100 : 80) + (targetUnit.value * (GAME.autochess ? 20 : 15));
                             analysis.isSupportAction = true;
                         }
                     }

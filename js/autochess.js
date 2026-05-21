@@ -10,6 +10,8 @@ const Autochess = {
 		lastResult: null,
 		phase: 'PREPARATION', // PREPARATION, COMBAT, RECAP
 		selectedProfile: 'baseline',
+		roundTimer: 0,
+		selectedUnitId: null, // For merging
 	},
 
 	init(GAME) {
@@ -27,6 +29,7 @@ const Autochess = {
 
 		GAME.generateHexGrid(GAME.getRadius());
 		GAME.Autochess.generateInitialArmy(GAME);
+		GAME.Autochess.deployPlayerUnits(GAME);
 		// GAME.Autochess.generateRecruits(GAME);
 	},
 
@@ -41,12 +44,47 @@ const Autochess = {
 		});
 	},
 
+	deployPlayerUnits(GAME) {
+		const playerIdx = 0;
+		const player = GAME.players[playerIdx];
+		
+		// Clear existing player units from board
+		GAME.hexes.forEach(h => {
+			if (h.unit && h.unit.playerId === playerIdx) {
+				h.unit = null;
+				h.unitId = null;
+			}
+		});
+
+		// Deploy first 6 units to valid base hexes
+		const unitsToDeploy = player.dice.slice(0, 6);
+		const validHexes = GAME.calcValidDeploymentHexes(playerIdx);
+		
+		unitsToDeploy.forEach((unit, i) => {
+			unit.isDeath = false;
+			unit.hp = unit.maxHp;
+			unit.isDeployed = false;
+			unit.hexId = null;
+
+			if (i < validHexes.length) {
+				const hexId = validHexes[i];
+				const targetHex = GAME.getHex(hexId);
+				if (targetHex) {
+					targetHex.unit = unit;
+					targetHex.unitId = unit.id;
+					unit.hexId = hexId;
+					unit.isDeployed = true;
+				}
+			}
+		});
+	},
+
 	generateRecruits(GAME, playerId = null) {
 		const targetPlayerIds = (playerId !== null) ? [playerId] : GAME.players.map(p => p.id);
 
 		targetPlayerIds.forEach(id => {
 			GAME.Autochess.state.inventories[id] = [];
-			// Default 5 options per shop refresh
+			// Each round rewarded with 1 unit option
 			for (let i = 0; i < 1; i++) {
 				const value = Math.floor(Math.random() * 6) + 1;
 				GAME.Autochess.state.inventories[id].push(GAME.Autochess.createUnit(GAME, value, id));
@@ -68,30 +106,68 @@ const Autochess = {
 		}
 	},
 
+	moveUnit(GAME, playerId, fromIndex, toIndex) {
+		const player = GAME.players[playerId];
+		if (fromIndex < 0 || fromIndex >= player.dice.length || toIndex < 0 || toIndex >= player.dice.length) return;
+
+		const unit = player.dice.splice(fromIndex, 1)[0];
+		player.dice.splice(toIndex, 0, unit);
+	},
+
+	mergeUnits(GAME, playerId, unitId1, unitId2) {
+		const player = GAME.players[playerId];
+		const u1Index = player.dice.findIndex(u => u.id === unitId1);
+		const u2Index = player.dice.findIndex(u => u.id === unitId2);
+
+		if (u1Index === -1 || u2Index === -1 || u1Index === u2Index) return;
+
+		const u1 = player.dice[u1Index];
+		const u2 = player.dice[u2Index];
+
+		if (u1.value !== u2.value || u1.veteranLevel !== u2.veteranLevel) {
+			GAME.addLog("Cannot merge: Units must be of the same type.");
+			return;
+		}
+
+		// Merge u2 into u1
+		u1.veteranLevel = (u1.veteranLevel || 0) + 1;
+		u1.attack += AUTOCHESS_CONFIG.VETERAN_ATK_BONUS;
+		u1.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
+		u1.hp = u1.maxHp;
+		if (u1.veteranLevel) u1.name = `${u1.class} ${''.padStart(u1.veteranLevel, '★')}`;
+
+		// Remove u2
+		player.dice.splice(u2Index, 1);
+
+		GAME.Autochess.state.selectedUnitId = null;
+		GAME.addLog(`Merged! ${u1.name} leveled up!`);
+	},
+
 	createUnit(GAME, value, playerId) {
 		const stats = UNIT_STATS[value];
 		const unit = {
 			...stats,
 			value: value,
+			class: stats.name,
 			playerId: playerId,
 			hp: AUTOCHESS_CONFIG.BASE_HP,
 			maxHp: AUTOCHESS_CONFIG.BASE_HP,
 			currentArmor: stats.armor,
-			speed: (6 + stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
+			speed: (6 + stats.distance) || Math.floor(20 / stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
 			actionGauge: 0,
 			isDeath: false,
-			veteranLevel: 0, // Track round survivals for session-only bonuses
+			veteranLevel: 0,
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
-
-		// TODO: In the future, we could add Autochess-specific upgrades here
-		// that apply to all players equally (e.g., from a shared tech tree or shop).
+		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
+		unit.id = `unit_${Math.random().toString(36).substr(2, 9)}`;
 
 		return unit;
 	},
 
 	startCombat(GAME) {
 		GAME.Autochess.state.phase = 'COMBAT';
+		GAME.Autochess.state.roundTimer = 0;
 		GAME.messageLog = [];
 
 		// For single-player mode, ensure Player 0 profile is set
@@ -104,14 +180,18 @@ const Autochess = {
 	},
 
 	prepareCombat(GAME) {
+		// Clear AI units only (Player 0 units are already placed and can be moved manually)
 		GAME.hexes.forEach(h => {
-			h.unit = null;
-			h.unitId = null;
+			if (h.unit && h.unit.playerId !== 0) {
+				h.unit = null;
+				h.unitId = null;
+			}
 		});
 
 		GAME.players.forEach((player, playerIdx) => {
+			if (playerIdx === 0) return; // Human player already positioned
+
 			player.dice.forEach((u, i) => {
-				u.id = `${playerIdx}_${i}`; // Ensure unique ID string for compatibility
 				u.isDeath = false;
 				u.hp = u.maxHp;
 				u.actionGauge = 0;
@@ -120,13 +200,10 @@ const Autochess = {
 				u.hasMovedOrAttackedThisTurn = false;
 				u.actionsTakenThisTurn = 0;
 			});
-		});
 
-		// Deploy units randomly in valid deployment hexes for all players
-		const playerOrder = Array.from({length: GAME.playerCount}, (_, i) => i).sort(() => Math.random() - 0.5);
-		playerOrder.forEach(playerIdx => {
-			const player = GAME.players[playerIdx];
-			player.dice.forEach((unit) => {
+			// Only deploy first 6 units
+			const unitsToDeploy = player.dice.slice(0, 6);
+			unitsToDeploy.forEach(unit => {
 				const validHexes = GAME.calcValidDeploymentHexes(playerIdx).filter(hexId => !GAME.getUnitOnHex(hexId));
 				if (validHexes.length > 0) {
 					const hexId = validHexes.random();
@@ -147,9 +224,16 @@ const Autochess = {
 				return;
 			}
 
+			GAME.Autochess.state.roundTimer += 0.1;
+			if (GAME.Autochess.state.roundTimer >= AUTOCHESS_CONFIG.ROUND_TIME_LIMIT) {
+				GAME.Autochess.resolveTimeout(GAME);
+				clearInterval(combatInterval);
+				return;
+			}
+
 			GAME.Autochess.simulateStep(GAME);
 
-			const alivePlayers = GAME.players.filter(p => p.dice.some(u => !u.isDeath));
+			const alivePlayers = GAME.players.filter(p => p.dice.some(u => u.isDeployed && !u.isDeath));
 
 			if (alivePlayers.length > 1) return;
 
@@ -160,13 +244,6 @@ const Autochess = {
 				const isWinner = winner && p.id === winner.id;
 				if (isWinner) {
 					GAME.Autochess.state.rerolls[p.id] = AUTOCHESS_CONFIG.WIN_REROLLS;
-					// Apply temporary session-only Veteran buffs to survivors
-					p.dice.filter(u => !u.isDeath).forEach(u => {
-						u.veteranLevel = (u.veteranLevel || 0) + 1;
-						u.attack += AUTOCHESS_CONFIG.VETERAN_ATK_BONUS;
-						u.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
-						u.hp = u.maxHp;
-					});
 				} else {
 					GAME.Autochess.state.rerolls[p.id] = AUTOCHESS_CONFIG.LOSS_REROLLS;
 				}
@@ -175,6 +252,30 @@ const Autochess = {
 			GAME.Autochess.state.lastResult = (winner && !winner.isAI) ? 'WIN' : 'LOSS';
 			GAME.Autochess.state.phase = 'RECAP';
 		}, 100);
+	},
+
+	resolveTimeout(GAME) {
+		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.isDeployed && !u.isDeath));
+		const p0HP = aliveUnits[0].reduce((sum, u) => sum + u.hp, 0);
+		const p1HP = aliveUnits[1].reduce((sum, u) => sum + u.hp, 0);
+
+		let winner = null;
+		if (p0HP > p1HP) winner = GAME.players[0];
+		else if (p1HP > p0HP) winner = GAME.players[1];
+
+		GAME.addLog("TIME UP! Resolving by total HP...");
+
+		GAME.players.forEach(p => {
+			const isWinner = winner && p.id === winner.id;
+			if (isWinner) {
+				GAME.Autochess.state.rerolls[p.id] = AUTOCHESS_CONFIG.WIN_REROLLS;
+			} else {
+				GAME.Autochess.state.rerolls[p.id] = AUTOCHESS_CONFIG.LOSS_REROLLS;
+			}
+		});
+
+		GAME.Autochess.state.lastResult = (winner && !winner.isAI) ? 'WIN' : (winner ? 'LOSS' : 'DRAW');
+		GAME.Autochess.state.phase = 'RECAP';
 	},
 
 	simulateStep(GAME) {
@@ -226,22 +327,22 @@ const Autochess = {
 		GAME.currentPlayerIndex = originalPlayerIndex;
 	},
 
-	handleCombat(GAME, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor) {
+	handleCombat(GAME, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state) {
 		const isSuccess = Math.ceil((attackerUnit.attack + combatRoll) / 2) > defenderEffectiveArmor;
 		
 		if (isSuccess) {
 			const damage = 30 + attackerUnit.attack * 2;
-			GAME.addLog(`${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`);
+			GAME.addLog(`${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
 			defenderUnit.hp -= damage;
 		} else {
 			const damage = 5 + attackerUnit.attack;
-			GAME.addLog(`Attack deflected! Minor damage: ${damage}`);
+			GAME.addLog(`Attack deflected! Minor damage: ${damage}`, state);
 			defenderUnit.hp -= damage;
 		}
 
 		if (defenderUnit.hp <= 0) {
 			defenderUnit.isDeath = true;
-			const hex = GAME.getHex(defenderUnit.hexId);
+			const hex = GAME.getHex(defenderUnit.hexId, state);
 			if (hex) {
 				hex.unit = null;
 				hex.unitId = null;
@@ -256,6 +357,7 @@ const Autochess = {
 			location.reload();
 		} else {
 			GAME.Autochess.generateRecruits(GAME);
+			GAME.Autochess.deployPlayerUnits(GAME);
 			GAME.Autochess.state.phase = 'PREPARATION';
 		}
 	},

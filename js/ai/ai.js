@@ -112,6 +112,32 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 function applyMove(GAME, move, state) {
 	const applyState = state ? structuredClone(state) : undefined;
 
+	// Autochess Hook: Redirect combat actions to Autochess.handleCombat
+	if (GAME.autochess) {
+		const attacker = GAME.getUnitOnHex(move.unitHexId, applyState);
+		if (attacker) {
+			if (move.actionType === 'MOVE') {
+				const defender = GAME.getUnitOnHex(move.targetHexId, applyState);
+				if (defender && defender.playerId !== attacker.playerId) {
+					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState);
+					return applyState;
+				}
+			} else if (move.actionType === 'RANGED_ATTACK') {
+				const defender = GAME.getUnitOnHex(move.targetHexId, applyState);
+				if (defender) {
+					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState);
+					return applyState;
+				}
+			} else if (move.actionType === 'COMMAND_CONQUER') {
+				const defender = GAME.getUnitOnHex(move.targetHexId, applyState);
+				if (defender) {
+					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState);
+					return applyState;
+				}
+			}
+		}
+	}
+
 	switch (move.actionType) {
 		case 'MOVE':
 			GAME.performMove(move.unitHexId, move.targetHexId, applyState);

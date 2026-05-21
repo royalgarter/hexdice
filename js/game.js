@@ -1389,7 +1389,14 @@ function alpineHexDiceTacticGame() { return {
 			const parts = hex.unitId.split('_');
 			const playerId = parseInt(parts[0]);
 			const diceIndex = parseInt(parts[1]);
-			unit = (state || this).players[playerId]?.dice[diceIndex];
+			
+			// Fallback: search for unit by ID if legacy parse fails
+			if (isNaN(playerId) || isNaN(diceIndex)) {
+				const s = state || this;
+				unit = s.players.flatMap(p => p.dice).find(d => d.id === hex.unitId);
+			} else {
+				unit = (state || this).players[playerId]?.dice[diceIndex];
+			}
 		}
 
 		return (unit && !unit.isDeath) ? unit : null;
@@ -1422,6 +1429,14 @@ function alpineHexDiceTacticGame() { return {
 
 		if (hex.basePlayerId !== null && hex.basePlayerId !== undefined && !state?.players?.[hex.basePlayerId]?.isEliminated) {
 			cls = PLAYER_CONFIG[hex.basePlayerId].bg;
+		} else if (state.Autochess?.state?.enabled && state.Autochess?.state?.phase === 'PREPARATION') {
+			// Highlight deployment area in Autochess Prep
+			const player = state.players[0];
+			const baseHex = this.getHex(player.baseHexId, state);
+			if (baseHex) {
+				const dist = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
+				if (dist <= 2) cls = PLAYER_CONFIG[0].bg;
+			}
 		}
 
 		// if (state.selectedUnitHexId === hex.id) cls += ' bg-hexselect';
@@ -1467,22 +1482,60 @@ function alpineHexDiceTacticGame() { return {
 
 		if (unit) {
 			const unitUrl = unit.spriteUrl;
+			const isAutochess = !!(this.Autochess?.state?.enabled);
+			const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
+
+			let isPlayerDeploymentHex = false;
+			if (isPrep) {
+				const player = this.players[0];
+				const baseHex = this.getHex(player.baseHexId);
+				if (baseHex) {
+					const dist = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
+					if (dist <= 2) isPlayerDeploymentHex = true;
+				}
+			}
+
+			const shouldSuppressBg = isAutochess && (Number.isFinite(hex.basePlayerId) || isPlayerDeploymentHex);
+
+			if (!shouldSuppressBg) {
+				style.push(`background-color: unset;`);
+			}
 
 			style.push(
-				`background-color: unset;`,
 				`background-size: auto ${(this.isCampaign) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
 				`background-image: url("${unitUrl}")
-					${Number.isFinite(hex.basePlayerId)
+					${(Number.isFinite(hex.basePlayerId) && !isAutochess)
 						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
 						: ``
 					}
-					${terrainStyle
+					${(terrainStyle && !shouldSuppressBg)
 						? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
 						: ``
 					};`
 			);
-		} else if (terrainStyle) {
-			style.push(terrainStyle);
+		} else {
+			const isAutochess = !!(this.Autochess?.state?.enabled);
+			const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
+
+			let isPlayerDeploymentHex = false;
+			if (isPrep) {
+				const player = this.players[0];
+				const baseHex = this.getHex(player.baseHexId);
+				if (baseHex) {
+					const dist = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
+					if (dist <= 2) isPlayerDeploymentHex = true;
+				}
+			}
+			const shouldSuppressBg = isAutochess && (Number.isFinite(hex.basePlayerId) || isPlayerDeploymentHex);
+
+			if (!shouldSuppressBg && terrainStyle) {
+				style.push(terrainStyle);
+			}
+
+			// Autochess Suppression of base image from CSS class (cleaner board)
+			if (shouldSuppressBg) {
+				style.push('background-image: none !important;');
+			}
 		}
 		return style.join(' ');
 	},
@@ -1983,6 +2036,34 @@ function alpineHexDiceTacticGame() { return {
 	_handleHexClick(hexId) {
 		if (this.phase === 'SETUP_DEPLOY') {
 			this.deployUnit(hexId);
+			return;
+		}
+
+		// Autochess manual positioning during PREPARATION phase
+		if (this.Autochess.state.enabled && this.Autochess.state.phase === 'PREPARATION') {
+			const clickedHex = this.getHex(hexId);
+			const unitOnClickedHex = this.getUnitOnHex(hexId);
+			
+			const player = this.players[0];
+			const baseHex = this.getHex(player.baseHexId);
+			let isDeploymentHex = false;
+			if (baseHex) {
+				const dist = this.axialDistance(baseHex.q, baseHex.r, clickedHex.q, clickedHex.r);
+				if (dist <= 2) isDeploymentHex = true;
+			}
+
+			if (unitOnClickedHex && unitOnClickedHex.playerId === 0) {
+				this.selectUnit(hexId);
+			} else if (this.selectedUnitHexId !== null && isDeploymentHex) {
+				const unit = this.getUnitOnHex(this.selectedUnitHexId);
+				if (unit && unit.playerId === 0) {
+					const fromHex = this.getHex(this.selectedUnitHexId);
+					this.move(unit, fromHex, clickedHex);
+					this.deselectUnit();
+				}
+			} else {
+				this.deselectUnit();
+			}
 			return;
 		}
 
@@ -4328,7 +4409,7 @@ function alpineHexDiceTacticGame() { return {
 			if (totalAtk > defenderEffectiveArmor) {
 				// Success
 				if (this.autochess) {
-					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor);
+					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state);
 				} else {
 					this.removeUnit(defenderHexId, state);
 					this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
@@ -4344,7 +4425,7 @@ function alpineHexDiceTacticGame() { return {
 			else {
 				// Deflected
 				if (this.autochess) {
-					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor);
+					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state);
 				} else {
 					this.addLog(`Attack deflected!`);
 				}

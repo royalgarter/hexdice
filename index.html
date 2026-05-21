@@ -369,27 +369,41 @@
 			<div style="display: none;" x-show="Autochess.state.phase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<div class="col-span-2 px-8 border-r">
-						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>)</h2>
+						<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>) - <span class="text-xs italic text-gray-500">First 6 deployed</span></h2>
 						<div class="grid grid-cols-6 gap-1 text-xs">
-							<template x-for="(unit, index) in players[0]?.dice" :key="index">
-								<div class="border text-center bg-gray-50" style="max-width: 4rem;">
-									<!-- <div class="text-lg font-bold" x-text="unit.value"></div> -->
-									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
-									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
-									<div class="text-xs mt-1 uppercase leading-tight" x-text="unit.name"></div>
+							<template x-for="(unit, index) in players[0]?.dice" :key="unit.id">
+								<div class="border text-center p-1 cursor-pointer transition-all hover:shadow-sm"
+									 :class="Autochess.state.selectedUnitId === unit.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 z-10' : (index < 6 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white')"
+									 @click="if(Autochess.state.selectedUnitId && Autochess.state.selectedUnitId !== unit.id) {
+									 			const u1 = players[0].dice.find(u => u.id === Autochess.state.selectedUnitId);
+												if(u1 && u1.value === unit.value) Autochess.mergeUnits($data, 0, Autochess.state.selectedUnitId, unit.id);
+												else Autochess.state.selectedUnitId = unit.id;
+									 		} else { Autochess.state.selectedUnitId = (Autochess.state.selectedUnitId === unit.id ? null : unit.id); }">
+									<div class="flex justify-between items-start">
+										<span x-text="index + 1" class="text-gray-400 font-bold"></span>
+										<span x-show="unit.veteranLevel > 0" class="text-amber-600 font-bold">★<span x-text="unit.veteranLevel"></span></span>
+									</div>
+									<img class="inline h-8 w-8" :src="unit.iconUrl" width="16" height="16">
+									<div class="text-[10px] font-bold uppercase leading-tight truncate" x-text="unit.name"></div>
+									<div class="text-[9px] mt-1 text-gray-600">
+										ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
+									</div>
+									<div class="flex justify-center mt-1 space-x-1" x-show="Autochess.state.selectedUnitId === unit.id">
+										<button @click.stop="Autochess.moveUnit($data, 0, index, index - 1)" class="px-1 border bg-white hover:bg-black hover:text-white" :disabled="index === 0">&lt;</button>
+										<button @click.stop="Autochess.moveUnit($data, 0, index, index + 1)" class="px-1 border bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">&gt;</button>
+									</div>
 								</div>
 							</template>
 						</div>
 					</div>
 					<div class="">
 						<h2 class="font-bold uppercase pb-1">Recruitment</h2>
-						<div class="flex justify-center space-x-2" x-show="Autochess.state.inventories[0]?.length">
-							<template x-for="(unit, index) in Autochess.state.inventories[0]" :key="index">
-								<button @click="recruitAutochessUnit(0, index)" class="border bg-gray-50 hover:bg-black hover:text-white transition-colors">
-									<!-- <div class="text-2xl font-bold" x-text="unit.value"></div> -->
-									<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
-									<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
-									<div class="text-xs mt-1 uppercase" x-text="unit.name"></div>
+						<div class="flex flex-wrap justify-center gap-2" x-show="Autochess.state.inventories[0]?.length">
+							<template x-for="(unit, index) in Autochess.state.inventories[0]" :key="unit.id">
+								<button @click="recruitAutochessUnit(0, index)" class="border bg-white hover:bg-black hover:text-white transition-colors p-1 w-16 text-center">
+									<img class="inline h-8 w-8" :src="unit.iconUrl" width="16" height="16">
+									<div class="text-[10px] mt-1 uppercase truncate" x-text="unit.name"></div>
+									<div class="text-[9px] text-gray-500">ATK:<span x-text="unit.attack"></span></div>
 								</button>
 							</template>
 							<template x-if="Autochess.state.inventories[0] && Autochess.state.inventories[0].length === 0">
@@ -413,7 +427,7 @@
 							</template>
 						</select>
 					</div>
-					<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase">
+					<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase cursor-pointer">
 						Deploy & Battle
 					</button>
 				</div>
@@ -421,10 +435,13 @@
 
 			<!-- COMBAT PHASE UI (Board is behind) -->
 			<div style="display: none;" x-show="Autochess.state.phase === 'COMBAT'" class="w-full flex flex-col items-center">
+				<div class="w-full bg-gray-700 h-1 mb-2 rounded-full overflow-hidden" x-show="Autochess?.state?.roundTimer">
+					<div class="bg-green-500 h-1 rounded-full transition-all duration-100" :style="'width: ' + (Autochess.state.roundTimer / 60 * 100) + '%'"></div>
+				</div>
 				<div class="w-full flex justify-between mb-4 text-sm font-bold pointer-events-auto">
-					<div class="text-blue-700 uppercase">Player: <span x-text="players[0]?.dice?.filter(u => !u.isDeath).length || 0"></span></div>
-					<div class="animate-pulse uppercase mx-2">in progress</div>
-					<div class="text-red-700 uppercase">Enemy: <span x-text="players.slice(1).reduce((acc, p) => acc + (p.dice?.filter(u => !u.isDeath).length || 0), 0)"></span></div>
+					<div class="text-blue-700 uppercase">Player: <span x-text="players[0]?.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0"></span></div>
+					<!-- <div class="animate-pulse uppercase mx-2 text-amber-600">Remain: <span x-text="Math.ceil(60 - Autochess.state.roundTimer)"></span>s</div> -->
+					<div class="text-red-700 uppercase">Enemy: <span x-text="players.slice(1).reduce((acc, p) => acc + (p.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0), 0)"></span></div>
 				</div>
 			</div>
 
