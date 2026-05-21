@@ -1,0 +1,130 @@
+(function(){
+	const AM = {
+		debug: false, // enable for console traces
+		audioCtx: null,
+		buffers: {},
+		musicEl: null,
+		gainNode: null,
+		basePaths: ['/assets/sounds'],
+		init() {
+			try {
+				if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+				if (!this.gainNode) this.gainNode = this.audioCtx.createGain();
+				this.gainNode.connect(this.audioCtx.destination);
+				if (this.debug) console.debug('AudioManager: init AudioContext');
+			} catch (e) {
+				if (this.debug) console.warn('AudioManager: init failed', e);
+			}
+		},
+		resume() {
+			try { if (this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume(); } catch(e) { if (this.debug) console.warn(e); }
+		},
+		async loadSfx(name) {
+			if (!this.audioCtx) this.init();
+			const exts = ['.wav','.ogg','.mp3']; // prefer local .wav copies
+			for (const p of this.basePaths) {
+				for (const ext of exts) {
+					const url = `${p}/${name}${ext}`;
+					try {
+						const res = await fetch(url);
+						if (!res.ok) { if (this.debug) console.debug('AudioManager: not found', url); continue; }
+						const ab = await res.arrayBuffer();
+						const buf = await this.audioCtx.decodeAudioData(ab.slice(0));
+						this.buffers[name] = buf;
+						if (this.debug) console.debug('AudioManager: loaded buffer', name, url);
+						return;
+					} catch (e) {
+						if (this.debug) console.debug('AudioManager: load failed', url, e);
+						// ignore and try next
+					}
+				}
+			}
+			if (this.debug) console.debug('AudioManager: no file found for', name);
+		},
+		async loadDefaults() {
+			this.init();
+			const names = ['attack','spell','deflect','merge','hit','fumble'];
+			for (const n of names) {
+				this.loadSfx(n).catch((e)=>{ if (this.debug) console.debug('loadDefaults error', n, e); });
+			}
+		},
+		playSfx(name, opts = {}) {
+			try {
+				if (!this.audioCtx) this.init();
+				this.resume();
+				const buf = this.buffers[name];
+				const volume = typeof opts.volume === 'number' ? opts.volume : 1;
+				const playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
+				if (buf && this.audioCtx) {
+					const src = this.audioCtx.createBufferSource();
+					src.buffer = buf;
+					src.playbackRate.value = playbackRate;
+					const g = this.audioCtx.createGain();
+					g.gain.value = volume;
+					src.connect(g);
+					g.connect(this.gainNode || this.audioCtx.destination);
+					src.start(0);
+					if (this.debug) console.debug('AudioManager: played buffer', name);
+					return;
+				}
+				// Fallback to HTMLAudioElement, check basePaths and preferred extensions
+				const exts = ['.wav','.ogg','.mp3'];
+				for (const p of this.basePaths) {
+					for (const ext of exts) {
+						const url = `${p}/${name}${ext}`;
+						try {
+							const a = new Audio(url);
+							a.volume = volume;
+							a.playbackRate = playbackRate;
+							a.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: fallback play failed', url, e); });
+							if (this.debug) console.debug('AudioManager: played via HTMLAudio', url);
+							return;
+						} catch (e) { if (this.debug) console.debug('AudioManager: HTMLAudio error', url, e); }
+					}
+				}
+				if (this.debug) console.debug('AudioManager: no audio found to play for', name);
+			} catch (e) {
+				if (this.debug) console.warn('AudioManager: playSfx error', e);
+				// ignore
+			}
+		},
+		playMusic(name, opts = {}) {
+			try {
+				if (this.musicEl) this.stopMusic();
+				const volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
+				const exts = ['.wav','.ogg','.mp3'];
+				for (const p of this.basePaths) {
+					for (const ext of exts) {
+						const url = `${p}/${name}${ext}`;
+						try {
+							this.musicEl = new Audio(url);
+							this.musicEl.loop = opts.loop !== false;
+							this.musicEl.volume = volume;
+							this.musicEl.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: music play failed', url, e); });
+							if (this.debug) console.debug('AudioManager: music playing', url);
+							return;
+						} catch (e) { if (this.debug) console.debug('AudioManager: music error', url, e); }
+					}
+				}
+				if (this.debug) console.debug('AudioManager: no music found for', name);
+			} catch (e) { if (this.debug) console.warn(e); }
+		},
+		stopMusic() {
+			try {
+				if (this.musicEl) {
+					this.musicEl.pause();
+					this.musicEl.src = '';
+					this.musicEl = null;
+					if (this.debug) console.debug('AudioManager: music stopped');
+				}
+			} catch (e) { if (this.debug) console.warn(e); }
+		},
+		// Debug helpers
+		listBuffers() { return Object.keys(this.buffers); },
+		testAll(delay = 300) {
+			const names = ['attack','hit','deflect','merge','spell','fumble'];
+			names.forEach((n,i)=> setTimeout(()=>{ try{ this.playSfx(n); if (this.debug) console.debug('test play', n); }catch(e){ if (this.debug) console.debug(e); } }, i*delay));
+		}
+	};
+	window.AudioManager = AM;
+})();
