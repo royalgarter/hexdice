@@ -384,8 +384,8 @@
 										<span x-show="unit.veteranLevel > 0" class="text-amber-600 font-bold">★<span x-text="unit.veteranLevel"></span></span>
 									</div>
 									<img class="inline h-8 w-8" :src="unit.iconUrl" width="16" height="16">
-									<div class="text-[10px] font-bold uppercase leading-tight truncate" x-text="unit.name"></div>
-									<div class="text-[9px] mt-1 text-gray-600">
+									<div class="text-sm font-bold uppercase leading-tight truncate" x-text="unit.displayName"></div>
+									<div class="text-xs mt-1 text-gray-600">
 										ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
 									</div>
 									<div class="flex justify-center mt-1 space-x-1" x-show="Autochess.state.selectedUnitId === unit.id">

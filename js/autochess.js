@@ -96,6 +96,23 @@ const Autochess = {
 		const unit = GAME.Autochess.state.inventories[playerId].splice(index, 1)[0];
 		if (unit) {
 			GAME.players[playerId].dice.push(unit);
+
+			// Surgical board update for human player:
+			// If we have fewer than 6 units on board, find an empty valid hex and place it.
+			if (playerId === 0) {
+				const deployedCount = GAME.players[0].dice.filter(u => u.hexId).length;
+				if (deployedCount < 6) {
+					const validHexes = GAME.calcValidDeploymentHexes(0).filter(hexId => !GAME.getUnitOnHex(hexId));
+					if (validHexes.length > 0) {
+						const hexId = validHexes[0];
+						const targetHex = GAME.getHex(hexId);
+						targetHex.unit = unit;
+						targetHex.unitId = unit.id;
+						unit.hexId = hexId;
+						unit.isDeployed = true;
+					}
+				}
+			}
 		}
 	},
 
@@ -112,6 +129,10 @@ const Autochess = {
 
 		const unit = player.dice.splice(fromIndex, 1)[0];
 		player.dice.splice(toIndex, 0, unit);
+
+		// If the "top 6" list changed, we might need a full refresh,
+		// but since the user is manually reordering, we'll respect their current board positions for now.
+		// A full refresh would be GAME.Autochess.deployPlayerUnits(GAME);
 	},
 
 	mergeUnits(GAME, playerId, unitId1, unitId2) {
@@ -125,22 +146,36 @@ const Autochess = {
 		const u2 = player.dice[u2Index];
 
 		if (u1.value !== u2.value || u1.veteranLevel !== u2.veteranLevel) {
-			GAME.addLog("Cannot merge: Units must be of the same type.");
+			GAME.addLog("Cannot merge: Units must be of the same type and level.");
 			return;
+		}
+
+		// Surgical board update: If u2 (consumed) was on board, clear its hex
+		if (u2.hexId) {
+			const hex = GAME.getHex(u2.hexId);
+			if (hex) {
+				hex.unit = null;
+				hex.unitId = null;
+			}
 		}
 
 		// Merge u2 into u1
 		u1.veteranLevel = (u1.veteranLevel || 0) + 1;
-		u1.attack += AUTOCHESS_CONFIG.VETERAN_ATK_BONUS;
+		u1.attack += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, u1.attack);
 		u1.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
 		u1.hp = u1.maxHp;
-		if (u1.veteranLevel) u1.name = `${u1.class} ${''.padStart(u1.veteranLevel, '★')}`;
+
+		// Update display name with stars, keep internal 'class' unchanged for logic
+		u1.displayName = `${u1.name} ${'★'.repeat(u1.veteranLevel)}`;
 
 		// Remove u2
 		player.dice.splice(u2Index, 1);
 
 		GAME.Autochess.state.selectedUnitId = null;
-		GAME.addLog(`Merged! ${u1.name} leveled up!`);
+		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
+
+		// If u1 is on board, its reference is already updated, but we might want to refresh its hexId just in case
+		// No full deployPlayerUnits here to preserve other units' positions.
 	},
 
 	createUnit(GAME, value, playerId) {
@@ -148,12 +183,12 @@ const Autochess = {
 		const unit = {
 			...stats,
 			value: value,
-			class: stats.name,
+			displayName: stats.name,
 			playerId: playerId,
 			hp: AUTOCHESS_CONFIG.BASE_HP,
 			maxHp: AUTOCHESS_CONFIG.BASE_HP,
 			currentArmor: stats.armor,
-			speed: (6 + stats.distance) || Math.floor(20 / stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
+			speed:  10 || (10 - stats.distance) || (6 + stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
 			actionGauge: 0,
 			isDeath: false,
 			veteranLevel: 0,
@@ -331,11 +366,13 @@ const Autochess = {
 		const isSuccess = Math.ceil((attackerUnit.attack + combatRoll) / 2) > defenderEffectiveArmor;
 		
 		if (isSuccess) {
-			const damage = 30 + attackerUnit.attack * 2;
+			// const damage = 30 + attackerUnit.attack * 2;
+			const damage = 10 + 5 * attackerUnit.attack;
 			GAME.addLog(`${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
 			defenderUnit.hp -= damage;
 		} else {
-			const damage = 5 + attackerUnit.attack;
+			// const damage = 5 + attackerUnit.attack;
+			const damage = 3 * attackerUnit.attack;
 			GAME.addLog(`Attack deflected! Minor damage: ${damage}`, state);
 			defenderUnit.hp -= damage;
 		}

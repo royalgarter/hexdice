@@ -82,8 +82,8 @@ const AUTOCHESS_CONFIG = {
 	BASE_HP: 100,
 	WIN_REROLLS: 2,
 	LOSS_REROLLS: 1,
-	VETERAN_ATK_BONUS: 1,      // Temporary bonus for surviving units (per round survived)
-	VETERAN_HP_BONUS: 20,      // Temporary bonus for surviving units (per round survived)
+	VETERAN_ATK_BONUS: 2,      // Temporary bonus for surviving units (per round survived)
+	VETERAN_HP_BONUS: 50,      // Temporary bonus for surviving units (per round survived)
 	ENEMY_COUNT_BASE: 3,
 	ENEMY_COUNT_GROWTH: 0.5,   // Round * 0.5 additional units
 	ENEMY_STAT_GROWTH: 0.2,    // Round * 0.2 additional ATK/ARMOR for enemies

@@ -2564,12 +2564,15 @@ function alpineHexDiceTacticGame() { return {
 			this.handleCombat(unitHexId, targetHexId, 'MELEE', state);
 			this.recordAction('MELEE', { unitValue: attackerUnit.value, fromHex: attackerHex.id, toHex: defenderHex.id });
 		} else { // Moving to an empty hex
-			this.addLog([
-				`${this.logUnit(attackerUnit)} moved `,
-				`[${attackerHex.id}]`,
-				`->`,
-				`[${defenderHex.id}].`
-			].join(''), state);
+			if (!this.autochess) {
+				this.addLog([
+					`${this.logUnit(attackerUnit)} moved `,
+					`[${attackerHex.id}]`,
+					`->`,
+					`[${defenderHex.id}].`
+				].join(''), state);
+			}
+
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			this.recordAction('MOVE', { unitValue: attackerUnit.value, fromHex: attackerHex.id, toHex: defenderHex.id });
 
@@ -2680,7 +2683,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		this.addLog(`P${mergingUnit.playerId + 1} D${mergingUnit.value} merged D${targetUnit.value} [${mergingHex.id}]->[${targetHex.id}].`, state);
+		this.addLog(`P${mergingUnit.playerId + 1} ${mergingUnit.name} merged ${targetUnit.name} [${mergingHex.id}]->[${targetHex.id}].`, state);
 
 		const sum = mergingUnit.value + targetUnit.value;
 		let newDieValue;
@@ -2976,7 +2979,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.calcDefenderEffectiveArmor(targetHexId, state);
-		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} ${targetUnit.name} (${targetHex.q},${targetHex.r}).`, state);
 	},
 	/**
 	 * Swap Spell: Oracle and target friendly unit exchange positions.
@@ -3014,7 +3017,7 @@ function alpineHexDiceTacticGame() { return {
 		this.calcDefenderEffectiveArmor(oracleHexId, state);
 		this.calcDefenderEffectiveArmor(targetHexId, state);
 
-		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} D${targetUnit.value} [${oracleHex.id}]<->[${targetHex.id}].`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} ${targetUnit.name} [${oracleHex.id}]<->[${targetHex.id}].`, state);
 	},
 	/**
 	 * Skirmish Spell: Target unit gains Hit & Run status for its next attack.
@@ -3047,7 +3050,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.calcDefenderEffectiveArmor(targetHexId, state);
-		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} D${targetUnit.value} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
+		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} ${targetUnit.name} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
 	/**
 	 * Perform Oracle Transmute action - Oracle sacrifices itself to convert an adjacent enemy unit.
@@ -3103,7 +3106,7 @@ function alpineHexDiceTacticGame() { return {
 			targetUnit.isDeath = true;
 			targetHex.unit = null;
 			targetHex.unitId = null;
-			this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to transmute P${targetUnit.playerId+1} D${targetUnit.value}!`, state);
+			this.addLog(`P${oracleUnit.playerId+1} Oracle sacrificed to transmute P${targetUnit.playerId+1} ${targetUnit.name}!`, state);
 		}
 
 		// Try to find a reserve die for the player (prefer unused, then dead)
@@ -4498,7 +4501,7 @@ function alpineHexDiceTacticGame() { return {
 						if (defenderUnit.value == 5 && defenderUnit.isGuarding > 0) {
 							const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
 							if (attackerEffectiveArmor <= 0) {
-								this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from D${defenderUnit.value} and has been eliminated`, state);
+								this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from ${defenderUnit.name} and has been eliminated`, state);
 								this.removeUnit(attackerHexId, state);
 							}
 						}
@@ -4836,7 +4839,7 @@ function alpineHexDiceTacticGame() { return {
 
 		let pl = state.players[attackerUnit.playerId];
 		return [
-			`P${attackerUnit.playerId+1} D${attackerUnit.value}`,
+			`P${attackerUnit.playerId+1} ${attackerUnit.name}`,
 			(pl?.isAI && pl?.profileName) ? `(${pl?.profileName})` : '',
 		].filter(x => x).join(' ');
 	},

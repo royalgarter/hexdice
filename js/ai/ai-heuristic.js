@@ -15,7 +15,7 @@
 
 // Default profile if none specified
 const DEFAULT_PROFILE = heuristicProfiles.baseline;
-const AUTOCHESS_WEIGHT_MULTIPLIER = 2.5;
+const AUTOCHESS_WEIGHT_MULTIPLIER = 3;
 
 /**
  * Adjust AI weights based on the current game phase
@@ -29,18 +29,24 @@ function calculatePhaseWeights(GAME, state, profile) {
     const totalPossibleUnits = currentPlayer.dice.length;
     const shouldExcludeBases = GAME.options && GAME.options.includes('a');
 
-    // Autochess mode weight adjustment (Aggressive focus on moving closer to opponent's base)
+    // Autochess mode weight adjustment (Berserker aggression focus)
     if (GAME.autochess) {
-        w.advanceBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
-        // w.captureBonus *= AUTOCHESS_WEIGHT_MULTIPLIER;
-        // w.teamPositionWeight *= AUTOCHESS_WEIGHT_MULTIPLIER;
-        w.killBonus *= 1.2;
-        w.pressureWeight *= 0.8; // Care less about being safe
-        dynamicProfile.riskTolerance = Math.min(1.0, dynamicProfile.riskTolerance + 0.2);
+        w.advanceBonus *= 10.0;
+        w.attackBonus *= 15.0;
+        w.killBonus *= 20.0;
+        w.safeBonus = 0; // Don't care about safety
+        w.threatPenalty = 0; // Don't fear death
+        w.guardPenalty *= 5; // Extreme penalty for being passive
+        w.fatigueWeight = 5; // Units will keep acting relentlessly
+        
+        w.teamPositionWeight = 0;
+        w.pressureWeight = 0; 
+        
+        dynamicProfile.riskTolerance = 1.0; // Maximum aggression
 
-        // Autochess: Remove 'dodge' to keep units engaged in combat and moving forward
+        // Autochess: Remove all non-offensive priorities
         if (dynamicProfile.priorityOrder) {
-            dynamicProfile.priorityOrder = dynamicProfile.priorityOrder.filter(p => p !== 'dodge');
+            dynamicProfile.priorityOrder = dynamicProfile.priorityOrder.filter(p => !['position', 'dodge'].includes(p));
         }
     }
 
@@ -971,6 +977,21 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score += (w.backAndForthPenalty || -300);
     }
 
+    // Autochess Aggression: Reward proximity to enemies
+    if (GAME.autochess) {
+        const nearest = findNearestEnemyUnit(GAME, nextState, state.currentPlayerIndex, targetHexObj);
+        if (nearest.unit) {
+            const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
+            // Reward moves that get closer to any enemy
+            analysis.score += (maxDist - nearest.distance) * 100;
+            
+            // Extra bonus for being adjacent (combat engagement)
+            if (nearest.distance === 1) {
+                analysis.score += 500;
+            }
+        }
+    }
+
     // Check if unit is already on an enemy base (base already captured) - skip in annihilation mode
     const unitCurrentHexId = unit.hexId;
     const isTargetOnEnemyBase = shouldExcludeBases ? false : opponentBases.some(b => b.baseHexId === move.targetHexId);
@@ -1202,10 +1223,24 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     analysis.isSupportAction = true;
                 }
 
-                // Autochess HP-based bonus: Shield units with lower HP
-                if (GAME.autochess && targetUnit.hp < targetUnit.maxHp) {
-                    const hpMissingRatio = 1 - (targetUnit.hp / targetUnit.maxHp);
-                    analysis.score += hpMissingRatio * 150;
+                // Autochess-specific tuning: Shield priority and targets
+                if (GAME.autochess) {
+                    // 1. Discourage shielding other backline units (Oracle/Archer) unless they are in real danger
+                    if (!willBeKilled && !willBeAttacked && (targetUnit.value === 6 || targetUnit.value === 2)) {
+                        analysis.score -= 200; // Big penalty for stationary backline support
+                    }
+
+                    // 2. HP-based bonus: Shield units with lower HP
+                    if (targetUnit.hp < targetUnit.maxHp) {
+                        const hpMissingRatio = 1 - (targetUnit.hp / targetUnit.maxHp);
+                        analysis.score += hpMissingRatio * 150;
+                    }
+
+                    // 3. Proximity check: If Oracle is far from any enemy, favor advancing over stationary support
+                    const nearestEnemy = findNearestEnemyUnit(GAME, state, state.currentPlayerIndex, GAME.getHex(unit.hexId, state));
+                    if (nearestEnemy.distance > 3) {
+                        analysis.score -= 300; // Penalize casting while far from action
+                    }
                 }
             }
         }
