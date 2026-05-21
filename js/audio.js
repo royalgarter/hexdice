@@ -1,6 +1,6 @@
 (function(){
 	const AM = {
-		debug: false, // enable for console traces
+		debug: true, // enable for console traces
 		audioCtx: null,
 		buffers: {},
 		musicEl: null,
@@ -43,13 +43,14 @@
 		},
 		async loadDefaults() {
 			this.init();
-			const names = ['attack','spell','deflect','merge','hit','fumble'];
+			const names = 'attack,death,deflect,fumble,hit,merge,shield,skirmish,spell,swap,transmute,victory,levelup,move,battle'.split(',');
 			for (const n of names) {
 				this.loadSfx(n).catch((e)=>{ if (this.debug) console.debug('loadDefaults error', n, e); });
 			}
 		},
 		playSfx(name, opts = {}) {
 			try {
+				console.log('playSfx', name);
 				if (!this.audioCtx) this.init();
 				this.resume();
 				const buf = this.buffers[name];

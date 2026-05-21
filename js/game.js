@@ -1846,7 +1846,9 @@ function alpineHexDiceTacticGame() { return {
 		this.resetTurnActionsForPlayer(this.currentPlayerIndex);
 		this.addLog("---");
 		this.addLog("P1 turn.");
-		if (window.AudioManager) { try { AudioManager.playMusic('battle'); } catch(e) {} }
+
+		window?.AudioManager?.playSfx('levelup');
+		// window?.AudioManager?.playMusic('battle');
 
 		if (this.gameplayVersion === 2) {
 			this.startFatesCall();
@@ -2580,6 +2582,8 @@ function alpineHexDiceTacticGame() { return {
 				].join(''), state);
 			}
 
+			if (!state) window?.AudioManager?.playSfx('move');
+
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			this.recordAction('MOVE', { unitValue: attackerUnit.value, fromHex: attackerHex.id, toHex: defenderHex.id });
 
@@ -2972,7 +2976,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
-		window?.AudioManager.playSfx('shield');
+		if (!state) window?.AudioManager?.playSfx('shield');
 
 		if (this.autochess) {
 			targetUnit.hp = Math.min(targetUnit.maxHp + 20, targetUnit.hp + 20);
@@ -3007,7 +3011,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !oracleHex || !targetHex) return;
 
-		window?.AudioManager.playSfx('swap');
+		if (!state) window?.AudioManager?.playSfx('swap');
 
 		if (this.autochess) {
 			const healAmount = (targetUnit.actionGauge / 100) * (targetUnit.maxHp * 0.5);
@@ -3048,7 +3052,7 @@ function alpineHexDiceTacticGame() { return {
 
 		if (!oracleUnit || !targetUnit || !targetHex || !oracleHex) return;
 
-		window?.AudioManager.playSfx('skirmish');
+		if (!state) window?.AudioManager?.playSfx('skirmish');
 
 		if (this.autochess) {
 			targetUnit.actionGauge = Math.min(100, targetUnit.actionGauge + 50);
@@ -3102,7 +3106,7 @@ function alpineHexDiceTacticGame() { return {
 			return;
 		}
 
-		window?.AudioManager.playSfx('transmute');
+		if (!state) window?.AudioManager?.playSfx('transmute');
 
 		// Oracle T3 [B] Warlock: Does not kill Oracle, costs 80 HP
 		const isWarlock = this.hasPerk(oracleUnit, 'tier3', 'B');
@@ -4416,7 +4420,7 @@ function alpineHexDiceTacticGame() { return {
 		// console.log('handleCombat', this.isCampaign, this.autochess, this.gameplayVersion)
 
 		if (this.isCampaign && !this.autochess) {
-			window?.AudioManager?.playSfx('attack');
+			if (!state) window?.AudioManager?.playSfx('attack');
 			if (this.CampaignManager.handleCombat(this, attackerHexId, defenderHexId, combatType, state)) return;
 		} else if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
@@ -4429,7 +4433,7 @@ function alpineHexDiceTacticGame() { return {
 			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 
 			this.addLog(`🎲 ${this.logUnit(attackerUnit)} rolls D${combatRoll} for combat! Attack: ${totalAtk} vs Armor: ${defenderEffectiveArmor}`);
-			window?.AudioManager?.playSfx('hit');
+			if (!state) window?.AudioManager?.playSfx('hit');
 			if (totalAtk > defenderEffectiveArmor) {
 				// Success
 				if (this.autochess) {
@@ -4448,7 +4452,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 			else {
 				// Deflected
-				window?.AudioManager?.playSfx('deflect');
+				if (!state) window?.AudioManager?.playSfx('deflect');
 				if (this.autochess) {
 					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state);
 				} else {
@@ -4460,7 +4464,7 @@ function alpineHexDiceTacticGame() { return {
 					if (attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
 						this.addLog(`🛡️ Behemoth! Immune to Fumble.`);
 					} else {
-						window?.AudioManager?.playSfx('fumble');
+						if (!state) window?.AudioManager?.playSfx('fumble');
 						this.addLog(`💀 FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
 						if (this.autochess) {
 							attackerUnit.hp = 0;
@@ -4494,7 +4498,7 @@ function alpineHexDiceTacticGame() { return {
 			const attackerWins = isArmorDepleted || attackWins;
 
 			if (attackerWins) {
-				window?.AudioManager?.playSfx('hit');
+				if (!state) window?.AudioManager?.playSfx('hit');
 				this.removeUnit(defenderHexId, state);
 				if (isSkirmishing) {
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
@@ -4506,7 +4510,7 @@ function alpineHexDiceTacticGame() { return {
 					this.addLog(`🗡 ${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
 				}
 			} else {
-				window?.AudioManager?.playSfx('deflect');
+				if (!state) window?.AudioManager?.playSfx('deflect');
 				// Failed
 				if (isSkirmishing) {
 					if (combatType !== 'RANGED_ATTACK') {
@@ -4553,7 +4557,7 @@ function alpineHexDiceTacticGame() { return {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
 		const defenderHex = this.getHex(defenderHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
-		window?.AudioManager?.playSfx('skirmish');
+		if (!state) window?.AudioManager?.playSfx('skirmish');
 		this.addLog(`⚔ ${this.logUnit(attackerUnit)} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
 
 		if (!state) {
@@ -4841,6 +4845,8 @@ function alpineHexDiceTacticGame() { return {
 		} else {
 			this.winnerMessage = `P${winnerPlayerIndex + 1} (${this.players[winnerPlayerIndex].color}) wins! ${message}`;
 		}
+
+		window?.AudioManager?.playSfx('victory');
 		this.addLog(`Game Over: ${this.winnerMessage}`);
 	},
 
