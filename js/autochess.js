@@ -370,7 +370,7 @@ const Autochess = {
 		
 		let damage = 10 + 6 * attackerUnit.attack;
 		if (isSuccess) {
-			GAME.addLog(`🗡 ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+			GAME.addLog(`⚔️ ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
 			defenderUnit.hp -= damage;
 		} else {
 			damage = damage >> 1;
@@ -393,8 +393,9 @@ const Autochess = {
 		GAME.Autochess.state.round++;
 		if (GAME.Autochess.state.round > AUTOCHESS_CONFIG.MAX_ROUND) {
 			const winner = GAME.players.reduce((prev, current) => (prev.wins > current.wins) ? prev : current);
-			GAME.addLog(`🏆 Tournament Complete! Winner: Player ${winner.id + 1}!`);
-			alert(`🏆 Tournament Complete! Winner: Player ${winner.id + 1}!`);
+			let text = `🏆 Tournament Complete! Winner: Player ${winner.id + 1}! 🏆`;
+			GAME.addLog(text);
+			alert(text);
 			location.reload();
 		} else {
 			GAME.generateRouletteTerrain();
