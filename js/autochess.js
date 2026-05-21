@@ -25,6 +25,7 @@ const Autochess = {
 		GAME.players.forEach(p => {
 			GAME.Autochess.state.rerolls[p.id] = 1;
 			GAME.Autochess.state.inventories[p.id] = [];
+			p.wins = 0;
 		});
 
 		GAME.generateHexGrid(GAME.getRadius());
@@ -44,8 +45,7 @@ const Autochess = {
 		});
 	},
 
-	deployPlayerUnits(GAME) {
-		const playerIdx = 0;
+	deployPlayerUnits(GAME, playerIdx = 0) {
 		const player = GAME.players[playerIdx];
 		
 		// Clear existing player units from board
@@ -174,6 +174,8 @@ const Autochess = {
 		GAME.Autochess.state.selectedUnitId = null;
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
+		GAME.Autochess.deployPlayerUnits(GAME, playerId);
+
 		// If u1 is on board, its reference is already updated, but we might want to refresh its hexId just in case
 		// No full deployPlayerUnits here to preserve other units' positions.
 	},
@@ -188,7 +190,7 @@ const Autochess = {
 			hp: AUTOCHESS_CONFIG.BASE_HP,
 			maxHp: AUTOCHESS_CONFIG.BASE_HP,
 			currentArmor: stats.armor,
-			speed:  10 || (10 - stats.distance) || (6 + stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
+			speed: (6 + stats.distance) || (10 - stats.distance) || Math.floor(20 / stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
 			actionGauge: 0,
 			isDeath: false,
 			veteranLevel: 0,
@@ -279,6 +281,7 @@ const Autochess = {
 				const isWinner = winner && p.id === winner.id;
 				if (isWinner) {
 					GAME.Autochess.state.rerolls[p.id] = AUTOCHESS_CONFIG.WIN_REROLLS;
+					p.wins++;
 				} else {
 					GAME.Autochess.state.rerolls[p.id] = AUTOCHESS_CONFIG.LOSS_REROLLS;
 				}
@@ -365,20 +368,19 @@ const Autochess = {
 	handleCombat(GAME, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state) {
 		const isSuccess = Math.ceil((attackerUnit.attack + combatRoll) / 2) > defenderEffectiveArmor;
 		
+		let damage = 10 + 6 * attackerUnit.attack;
 		if (isSuccess) {
-			// const damage = 30 + attackerUnit.attack * 2;
-			const damage = 10 + 5 * attackerUnit.attack;
-			GAME.addLog(`${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+			GAME.addLog(`🗡 ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
 			defenderUnit.hp -= damage;
 		} else {
-			// const damage = 5 + attackerUnit.attack;
-			const damage = 3 * attackerUnit.attack;
-			GAME.addLog(`Attack deflected! Minor damage: ${damage}`, state);
+			damage = damage >> 1;
+			GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
 			defenderUnit.hp -= damage;
 		}
 
 		if (defenderUnit.hp <= 0) {
 			defenderUnit.isDeath = true;
+			GAME.addLog(`💀 ${GAME.logUnit(defenderUnit)} has been defeated!`, state);
 			const hex = GAME.getHex(defenderUnit.hexId, state);
 			if (hex) {
 				hex.unit = null;
@@ -389,13 +391,17 @@ const Autochess = {
 
 	nextRound(GAME) {
 		GAME.Autochess.state.round++;
-		if (GAME.Autochess.state.round > 6) {
-			alert("Tournament Complete!");
+		if (GAME.Autochess.state.round > AUTOCHESS_CONFIG.MAX_ROUND) {
+			const winner = GAME.players.reduce((prev, current) => (prev.wins > current.wins) ? prev : current);
+			GAME.addLog(`🏆 Tournament Complete! Winner: Player ${winner.id + 1}!`);
+			alert(`🏆 Tournament Complete! Winner: Player ${winner.id + 1}!`);
 			location.reload();
 		} else {
+			GAME.generateRouletteTerrain();
 			GAME.Autochess.generateRecruits(GAME);
 			GAME.Autochess.deployPlayerUnits(GAME);
 			GAME.Autochess.state.phase = 'PREPARATION';
 		}
 	},
+
 };

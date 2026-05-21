@@ -1987,7 +1987,7 @@ function alpineHexDiceTacticGame() { return {
 				else if (roll === 2 || roll === 5) this.oracleSelectedSpell = 'SWAP';
 				else this.oracleSelectedSpell = 'SKIRMISH';
 				
-				this.addLog(`[AI] P${this.currentPlayerIndex+1} Oracle channeled: ${this.oracleSelectedSpell}`);
+				this.addLog(`[AI] 💬 P${this.currentPlayerIndex+1} Oracle channeled: ${this.oracleSelectedSpell}`);
 			}
 			this.performAITurn();
 		} else if (this.debug?.autoPlay) {
@@ -2173,7 +2173,7 @@ function alpineHexDiceTacticGame() { return {
 			else if (roll === 2 || roll === 5) spell = 'SWAP';
 			else spell = 'SKIRMISH';
 			
-			this.addLog(`Oracle channeled... Roll: D${roll}. Granted: ${spell}!`);
+			this.addLog(`💬 Oracle channeled... Roll: D${roll}. Granted: ${spell}!`);
 			this.selectOracleSpell(spell);
 		} else {
 			this.actionMode = 'ORACLE_SPELL_SELECT';
@@ -2183,7 +2183,7 @@ function alpineHexDiceTacticGame() { return {
 	selectOracleSpell(spell) {
 		this.oracleSelectedSpell = (this.gameplayVersion === 2 && this.oracleSelectedSpell) ? this.oracleSelectedSpell : spell;
 		this.actionMode = 'SPELLCAST';
-		this.addLog(`Oracle will cast ${this.oracleSelectedSpell}. Select a friendly unit within Range 2.`);
+		this.addLog(`💬 Oracle will cast ${this.oracleSelectedSpell}. Select a friendly unit within Range 2.`);
 	},
 	deselectUnit(state) {
 		state = state || this;
@@ -2599,11 +2599,11 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit || !fromHex || !toHex) return;
 
 		if (unitHexId !== targetHexId) {
-			this.addLog(`${this.logUnit(unit)} skirmish reposition: [${fromHex.id}]->[${toHex.id}].`);
+			this.addLog(`↪️ ${this.logUnit(unit)} skirmish reposition: [${fromHex.id}]->[${toHex.id}].`);
 			this.move(unit, fromHex, toHex);
 			this.recordAction('MOVE', { unitValue: unit.value, fromHex: fromHex.id, toHex: toHex.id, subType: 'SKIRMISH_POST_MOVE' });
 		} else {
-			this.addLog(`${this.logUnit(unit)} skirmish reposition: stayed at [${fromHex.id}].`);
+			this.addLog(`↪️ ${this.logUnit(unit)} skirmish reposition: stayed at [${fromHex.id}].`);
 			this.recordAction('POSITION', { unitValue: unit.value, fromHex: fromHex.id, toHex: toHex.id, subType: 'SKIRMISH_POST_MOVE' });
 		}
 
@@ -2662,7 +2662,7 @@ function alpineHexDiceTacticGame() { return {
 		unit.actionsTakenThisTurn++;
 		this.calcDefenderEffectiveArmor(unitHexId, state);
 		this.recordAction('GUARD', { unitValue: unit.value, fromHex: unitHexId });
-		this.addLog(`${this.logUnit(unit)} guarded [${unitHexId}].`, state);
+		this.addLog(`🛡 ${this.logUnit(unit)} guarded [${unitHexId}].`, state);
 		this.deselectUnit(state);
 		this.checkWinConditions(state); // Though guard alone won't win
 	},
@@ -2979,7 +2979,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.calcDefenderEffectiveArmor(targetHexId, state);
-		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} ${targetUnit.name} (${targetHex.q},${targetHex.r}).`, state);
+		this.addLog(`✨ P${oracleUnit.playerId+1} Oracle cast Shield on P${targetUnit.playerId+1} ${targetUnit.name} (${targetHex.q},${targetHex.r}).`, state);
 	},
 	/**
 	 * Swap Spell: Oracle and target friendly unit exchange positions.
@@ -3017,7 +3017,7 @@ function alpineHexDiceTacticGame() { return {
 		this.calcDefenderEffectiveArmor(oracleHexId, state);
 		this.calcDefenderEffectiveArmor(targetHexId, state);
 
-		this.addLog(`P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} ${targetUnit.name} [${oracleHex.id}]<->[${targetHex.id}].`, state);
+		this.addLog(`✨ P${oracleUnit.playerId+1} Oracle swapped with P${targetUnit.playerId+1} ${targetUnit.name} [${oracleHex.id}]<->[${targetHex.id}].`, state);
 	},
 	/**
 	 * Skirmish Spell: Target unit gains Hit & Run status for its next attack.
@@ -3050,7 +3050,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.calcDefenderEffectiveArmor(targetHexId, state);
-		this.addLog(`P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} ${targetUnit.name} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
+		this.addLog(`✨ P${oracleUnit.playerId+1} Oracle cast Skirmish on P${targetUnit.playerId+1} ${targetUnit.name} (${targetHex.q},${targetHex.r}). Hit & Run (Atk-1) enabled! Fails lead to elimination.`, state);
 	},
 	/**
 	 * Perform Oracle Transmute action - Oracle sacrifices itself to convert an adjacent enemy unit.
@@ -3494,6 +3494,8 @@ function alpineHexDiceTacticGame() { return {
 				// if (!this.hasLineOfSight(attackerHex, potentialTargetHex, attackerHexId, state)) return;
 
 				const targetUnit = this.getUnitOnHex(potentialTargetHex.id, state);
+
+				if (targetUnit?.value === 6 && (state || this)?.autochess) return; // In autochess, Oracle won't target other Oracle
 
 				// Oracle targets friendly units (for spells)
 				if (targetUnit && targetUnit.playerId === attackerUnit.playerId) {
@@ -4415,7 +4417,7 @@ function alpineHexDiceTacticGame() { return {
 					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state);
 				} else {
 					this.removeUnit(defenderHexId, state);
-					this.addLog(`${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
+					this.addLog(`⚔️ ${this.logUnit(attackerUnit)} destroyed ${this.logUnit(defenderUnit)}!`);
 				}
 
 				if (isSkirmishing) {
@@ -4430,7 +4432,7 @@ function alpineHexDiceTacticGame() { return {
 				if (this.autochess) {
 					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state);
 				} else {
-					this.addLog(`Attack deflected!`);
+					this.addLog(`🛡️ Attack deflected!`);
 				}
 
 				if (combatRoll === 1) {
@@ -4438,7 +4440,7 @@ function alpineHexDiceTacticGame() { return {
 					if (attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier3', 'A')) {
 						this.addLog(`🛡️ Behemoth! Immune to Fumble.`);
 					} else {
-						this.addLog(`FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
+						this.addLog(`💀 FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
 						if (this.autochess) {
 							attackerUnit.hp = 0;
 							this.removeUnit(attackerHexId, state);
@@ -4447,7 +4449,7 @@ function alpineHexDiceTacticGame() { return {
 						}
 					}
 				} else if (isSkirmishing) {
-					this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} eliminated.`);
+					this.addLog(`💀 Skirmish failed! ${this.logUnit(attackerUnit)} eliminated.`);
 					if (this.autochess) {
 						attackerUnit.hp = 0;
 						this.removeUnit(attackerHexId, state);
@@ -4477,36 +4479,36 @@ function alpineHexDiceTacticGame() { return {
 					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
 				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
-					this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
+					this.addLog(`🗡 ${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
 				} else {
-					this.addLog(`${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
+					this.addLog(`🗡 ${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
 				}
 			} else {
 				// Failed
 				if (isSkirmishing) {
 					if (combatType !== 'RANGED_ATTACK') {
-						this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} has been eliminated.`, state);
+						this.addLog(`🍌 Skirmish failed! ${this.logUnit(attackerUnit)} has been eliminated.`, state);
 						this.removeUnit(attackerHexId, state);
 					} else {
-						this.addLog(`Skirmish failed! ${this.logUnit(attackerUnit)} s armor exhausted.`, state);
+						this.addLog(`🍌 Skirmish failed! ${this.logUnit(attackerUnit)} s armor exhausted.`, state);
 						this.applyDamage(attackerHexId, 1, state, false);
 					}
 				} else {
-					this.addLog(`${this.logUnit(attackerUnit)} attacked ${this.logUnit(defenderUnit)} failed.`, state);
+					this.addLog(`🍌 ${this.logUnit(attackerUnit)} attacked ${this.logUnit(defenderUnit)} failed.`, state);
 					if (combatType !== 'RANGED_ATTACK') {
 						if (attackerUnit.isGuarding <= 1) {
-							this.addLog(`Attack failed! Attacker's Armor reduced by 1.`, state);
+							this.addLog(`🍌 Attack failed! Attacker's Armor reduced by 1.`, state);
 							this.applyDamage(attackerHexId, 1, state, false);
 						}
 						if (defenderUnit.value == 5 && defenderUnit.isGuarding > 0) {
 							const attackerEffectiveArmor = this.calcDefenderEffectiveArmor(attackerHexId, state);
 							if (attackerEffectiveArmor <= 0) {
-								this.addLog(`${this.logUnit(attackerUnit)} received heavy counter damage from ${defenderUnit.name} and has been eliminated`, state);
+								this.addLog(`💔 ${this.logUnit(attackerUnit)} received heavy counter damage from ${defenderUnit.name} and has been eliminated`, state);
 								this.removeUnit(attackerHexId, state);
 							}
 						}
 					}
-					this.addLog(`Attack failed! Defender's Armor damaged by 1.`, state);
+					this.addLog(`🍌 Attack failed! Defender's Armor damaged by 1.`, state);
 					if (defenderUnit.value != 5 && defenderUnit.isGuarding <= 1) {
 						this.applyDamage(defenderHexId, 1, state, defenderUnit.isGuarding > 0 ? false : true);
 					}
@@ -4529,7 +4531,7 @@ function alpineHexDiceTacticGame() { return {
 		const defenderHex = this.getHex(defenderHexId, state);
 		const attackerHex = this.getHex(attackerHexId, state);
 
-		this.addLog(`${this.logUnit(attackerUnit)} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
+		this.addLog(`⚔ ${this.logUnit(attackerUnit)} performed a successful Skirmish! Choose a destination adjacent to the target.`, state);
 
 		if (!state) {
 			this.actionMode = 'SKIRMISH_POST_MOVE';
