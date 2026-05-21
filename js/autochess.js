@@ -5,6 +5,7 @@ const Autochess = {
 	state: {
 		enabled: new URLSearchParams(location.search).get('autochess') === 'true',
 		round: 1,
+		maxRound: AUTOCHESS_CONFIG.MAX_ROUND,
 		inventories: {}, // playerId -> array of units
 		rerolls: {},    // playerId -> number
 		lastResult: null,
