@@ -3,9 +3,11 @@
 		debug: true, // enable for console traces
 		audioCtx: null,
 		buffers: {},
+		noSFX: false,
 		musicEl: null,
 		gainNode: null,
 		basePaths: ['/assets/sounds'],
+
 		init() {
 			try {
 				if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -16,9 +18,11 @@
 				if (this.debug) console.warn('AudioManager: init failed', e);
 			}
 		},
+
 		resume() {
 			try { if (this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume(); } catch(e) { if (this.debug) console.warn(e); }
 		},
+
 		async loadSfx(name) {
 			if (!this.audioCtx) this.init();
 			for (const p of this.basePaths) {
@@ -40,20 +44,26 @@
 			}
 			if (this.debug) console.debug('AudioManager: no file found for', name);
 		},
+
 		async loadDefaults() {
 			this.init();
 			for (const n of SFX_NAMES) {
 				this.loadSfx(n).catch((e)=>{ if (this.debug) console.debug('loadDefaults error', n, e); });
 			}
 		},
+
 		playSfx(name, opts = {}) {
 			try {
+				if (this.noSFX) return;
+
 				// console.log('playSfx', name);
 				if (!this.audioCtx) this.init();
 				this.resume();
+
 				const buf = this.buffers[name];
 				const volume = typeof opts.volume === 'number' ? opts.volume : 1;
 				const playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
+
 				if (buf && this.audioCtx) {
 					const src = this.audioCtx.createBufferSource();
 					src.buffer = buf;
@@ -66,6 +76,7 @@
 					if (this.debug) console.debug('AudioManager: played buffer', name);
 					return;
 				}
+
 				// Fallback to HTMLAudioElement, check basePaths and preferred extensions
 				for (const p of this.basePaths) {
 					for (const ext of EXT_SOUNDS) {
@@ -86,7 +97,9 @@
 				// ignore
 			}
 		},
+
 		battlePlaylist: BATTLE_PLAYLIST,
+
 		playMusic(name, opts = {}) {
 			try {
 				if (this.musicEl) this.stopMusic();
@@ -96,20 +109,18 @@
 					name = `battles/${randomTrack}`;
 				}
 
-				if (name.includes('battles/')) {
-					this.playMidi(name, opts);
-					return;
-				}
-
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.2;
 				for (const p of this.basePaths) {
-					for (const ext of ['.ogg', '.wav', '.mp3']) {
+					for (const ext of EXT_SOUNDS) {
 						const url = `${p}/${name}${ext}`;
 						try {
 							this.musicEl = new Audio(url);
-							this.musicEl.loop = opts.loop !== false;
+							this.musicEl.loop = opts.loop !== false && !name.includes('battles/');
 							this.musicEl.volume = volume;
 							this.musicEl.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: music play failed', url, e); });
+							if (name.includes('battles/')) {
+								this.musicEl.onended = () => this.playMusic('battle', opts);
+							}
 							if (this.debug) console.debug('AudioManager: music playing', url);
 							return;
 						} catch (e) { if (this.debug) console.debug('AudioManager: music error', url, e); }
@@ -118,18 +129,7 @@
 				if (this.debug) console.debug('AudioManager: no music found for', name);
 			} catch (e) { if (this.debug) console.warn(e); }
 		},
-		async playMidi(name, opts) {
-			const midiPath = `/assets/sounds/${name}.mid`;
 
-			this.midiPlayer = new MIDIPlayer(midiPath);
-			this.midiPlayer.volume = typeof opts.volume === 'number' ? opts.volume * 100 : 10; // Library uses 0-100
-
-			this.midiPlayer.onload = () => {
-				this.midiPlayer.play();
-			};
-
-			this.midiPlayer.onend = () => this.playMusic('battle', opts);
-		},
 		stopMusic() {
 			try {
 				if (this.musicEl) {
@@ -138,19 +138,18 @@
 					this.musicEl = null;
 					if (this.debug) console.debug('AudioManager: music stopped');
 				}
-				if (this.midiPlayer) {
-					this.midiPlayer.stop();
-					this.midiPlayer = null;
-					if (this.debug) console.debug('AudioManager: midi stopped');
-				}
 			} catch (e) { if (this.debug) console.warn(e); }
 		},
+
 		// Debug helpers
 		listBuffers() { return Object.keys(this.buffers); },
+
 		testAll(delay = 300) {
 			SFX_NAMES.forEach((n,i)=> setTimeout(()=>{ try{ this.playSfx(n); if (this.debug) console.debug('test play', n); }catch(e){ if (this.debug) console.debug(e); } }, i*delay));
 		},
+
 		unitSounds: UNIT_SOUNDS,
+
 		playUnitSound(unitValue) {
 			if (this.debug) console.debug('AudioManager: playUnitSound', unitValue);
 			const sounds = this.unitSounds[unitValue];

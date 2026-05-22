@@ -258,6 +258,7 @@ function alpineHexDiceTacticGame() { return {
 	get autochessLastResult() { return this.Autochess.state.lastResult; },
 	get autochessPhase() { return this.Autochess.state.phase; },
 	get selectedAutochessProfile() { return this.Autochess.state.selectedProfile; },
+	get audioManager() { return window?.AudioManager || {}; },
 
 	initAutochess() { this.Autochess.init(this); },
 	generateAutochessInitialArmy() { this.Autochess.generateInitialArmy(this); },

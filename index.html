@@ -44,11 +44,6 @@
 	<script type="text/javascript" src="/js/ai/ai-heuristic.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/ai/ai.js?v=___VERSION___"></script>
 
-	<!-- MIDI Player Dependencies -->
-	<script src="https://fraigo.github.io/javascript-midi-player/midiplayer/WebAudioFontPlayer.js"></script>
-	<script src="https://fraigo.github.io/javascript-midi-player/midiplayer/MIDIFile.js"></script>
-	<script src="https://fraigo.github.io/javascript-midi-player/midiplayer/MIDIPlayer.js"></script>
-
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
 			new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
@@ -356,7 +351,20 @@
 				</div>
 				<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
 			</div>
-			<a href="#" class="cursor-pointer absolute rounded-full bg-gray-100 hover:bg-gray-300 bottom-2 right-2 text-sm font-bold hover:text-blue-700 px-2 py-1" @click="showUnitInfo = !showUnitInfo" x-show="unitstat || hoverUnitHexId" style="display: none;">❔</a>
+			<div class="absolute bottom-2 right-2 text-sm font-bold">
+				<a href="#" class="cursor-pointer rounded-full px-2 py-1 bg-gray-300"
+					@click="showUnitInfo = !showUnitInfo"
+					:class="showUnitInfo ? 'text-gray-100' : 'text-gray-500'"
+					x-show="unitstat || hoverUnitHexId" style="display: none;">?</a>
+
+				<a href="#" class="cursor-pointer rounded-full px-2 py-1 bg-gray-300"
+					@click="audioManager.noSFX = !audioManager.noSFX"
+					:class="audioManager.noSFX ? 'text-gray-100' : 'text-gray-500'">♪</a>
+
+				<a href="#" class="cursor-pointer rounded-full px-2 py-1 bg-gray-300"
+					@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.('battle')"
+					:class="audioManager.musicEl ? 'text-gray-100' : 'text-gray-500'">𝄞</a>
+			</div>
 		</div>
 	</div>
 

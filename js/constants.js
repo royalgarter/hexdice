@@ -154,11 +154,11 @@ const BOARD_NUM = [
     `                        069`,
 ].join('\n');
 
-const EXT_SOUNDS = ['.ogg','.mid','.wav','.mp3'];
+const EXT_SOUNDS = ['.ogg','.mp3','.wav'];
 
 const SFX_NAMES = ['attack','death','deflect','fumble','hit','merge','shield','skirmish','spell','swap','transmute','victory','levelup','move','battle'];
 
-const BATTLE_PLAYLIST = ["Astos","Battle_of_Another_Side","BlackDragon","DR_GS2_FelixBattle","DR_GS_BossBattle_V1_5","FE-TogetherWeRide","FEKnight","FETSS-PF","FETSS-TDH","FF1_-_Battle_Scene","FF1_-_Inside_a_Boss_Battle","FF2Final","FF2_-_Battle_Scene_1","FF5_Battle","FFIV-Creepy_Doll_Battle","Final_Fantasy_Tactics_Advance-Snow_Battle","GS2Jenna","GSLA_agatio_battle","GS_Battle","GS_MoapaBattle","GS_VICTORY","GoldenSun2_BoatBattles_GMv250","GoldenSun2_BossBattle","GoldenSun2_ThemeArg1","GoldenSunRises","GoldenSun_SaturosBattleGMv102","Golden_Sun_-_Victory_fanfare","Golden_Sun_3","Golden_sun_theme","Human1gm","Human2gm","Human3gm","Human4gm","KHCOM-AnsemBattle","KHCOM-MarluxiaBattle","KHCOM-RikuBattle","Marluxia2","Orc1gm","Orc2gm","Orc3gm","Orc4gm","Sacred_Strength","Saturos","Twilight_Town_Battle","com_XIII_boss","emblem_fin","fe6_final","fe7-arenabattle","golden_sun_-_battle_theme","gs-batt","gs-colosso-battle","vgKHCOMprebattle"];
+const BATTLE_PLAYLIST = ["Human_1","Human_2","Human_3","Human_4","Human_5","Human_Defeat","Human_Victory","Mission_Briefing","Orc_1","Orc_2","Orc_3","Orc_4","Orc_5","Orc_Defeat","Orc_Victory","Title_Theme"];
 
 const UNIT_SOUNDS = {
     '1': ["Hdempis4","Hdempis5","Hdempis6","Hdempis7","Hhelp1","Hhelp2","Hpissed1","Hpissed2","Hpissed3","Hpissed4","Hpissed5","Hpissed6","Hpissed7","Hready","Hwhat1","Hwhat2","Hwhat3","Hwhat4","Hwhat5","Hwhat6","Hwrkdone","Hyessir1","Hyessir2","Hyessir3","Hyessir4"],
