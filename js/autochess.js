@@ -175,6 +175,11 @@ const Autochess = {
 			return;
 		}
 
+		if (u1.veteranLevel >= 3) {
+			GAME.addLog("Cannot merge: Maximum veteran level reached (★3).");
+			return;
+		}
+
 		// Surgical board update: If u2 (consumed) was on board, clear its hex
 		if (u2.hexId) {
 			const hex = GAME.getHex(u2.hexId);
@@ -186,6 +191,10 @@ const Autochess = {
 
 		// Merge u2 into u1
 		u1.veteranLevel = (u1.veteranLevel || 0) + 1;
+
+		if (!u1.perks) {
+			u1.perks = { tier1: null, tier2: null, tier3: null };
+		}
 
 		u1.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
 		u1.maxAtk += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, u1.maxAtk);
@@ -199,7 +208,7 @@ const Autochess = {
 		// Remove u2
 		player.dice.splice(u2Index, 1);
 
-		GAME.Autochess.state.selectedUnitId = null;
+		GAME.Autochess.state.selectedUnitId = unitId1;
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
 		GAME.Autochess.deployPlayerUnits(GAME, playerId);
@@ -223,12 +232,31 @@ const Autochess = {
 			actionGauge: 0,
 			isDeath: false,
 			veteranLevel: 0,
+			perks: { tier1: null, tier2: null, tier3: null },
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
 		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
 		unit.id = `unit_${Math.random().toString(36).substr(2, 9)}`;
 
 		return unit;
+	},
+
+	selectUnitSkill(GAME, unitId, tier, option) {
+		const unit = GAME.players[0].dice.find(u => u.id === unitId);
+		if (!unit) return;
+
+		const tierLevel = { 'tier1': 1, 'tier2': 2, 'tier3': 3 }[tier];
+		if (unit.veteranLevel < tierLevel) {
+			GAME.addLog("Unit veteran level is too low for this skill.");
+			return;
+		}
+
+		if (!unit.perks) {
+			unit.perks = { tier1: null, tier2: null, tier3: null };
+		}
+
+		unit.perks[tier] = option;
+		GAME.addLog(`${unit.displayName} learned ${CampaignManager.PERK_DESCRIPTIONS[unit.value][tier][option].name}!`);
 	},
 
 	startCombat(GAME) {
@@ -265,6 +293,7 @@ const Autochess = {
 					unit.veteranLevel = 0;
 					unit.displayName = baseStats.name;
 					unit.hp = unit.maxHp;
+					unit.perks = { tier1: null, tier2: null, tier3: null };
 				}
 			});
 
@@ -291,6 +320,9 @@ const Autochess = {
 					unit.veteranLevel++;
 					unit.attack += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, unit.attack);
 					unit.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
+					
+					const tier = `tier${lvl + 1}`;
+					unit.perks[tier] = Math.random() < 0.5 ? 'A' : 'B';
 				}
 				unit.hp = unit.maxHp;
 				unit.displayName = `${unit.name} ${'★'.repeat(unit.veteranLevel)}`;
@@ -408,6 +440,21 @@ const Autochess = {
 
 		allUnits.forEach(unit => {
 			if (unit.isDeath) return;
+
+			// --- Poison/Venom Logic ---
+			if (unit.venomDuration > 0) {
+				const venomDamage = 10;
+				unit.hp -= venomDamage;
+				unit.venomDuration--;
+				GAME.addLog(`🐍 ${GAME.logUnit(unit)} suffers ${venomDamage} poison damage (${unit.venomDuration} turns left).`, GAME.Autochess.state.phase === 'COMBAT');
+				if (unit.hp <= 0) {
+					unit.isDeath = true;
+					const hex = GAME.getHex(unit.hexId);
+					if (hex) { hex.unit = null; hex.unitId = null; }
+					return;
+				}
+			}
+
 			unit.actionGauge += unit.speed;
 			if (unit.actionGauge >= 100) {
 				GAME.Autochess.executeAction(GAME, unit);
@@ -450,23 +497,122 @@ const Autochess = {
 		GAME.currentPlayerIndex = originalPlayerIndex;
 	},
 
-	handleCombat(GAME, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state) {
-		const isSuccess = Math.ceil((attackerUnit.attack + combatRoll) / 2) > defenderEffectiveArmor;
+	handleCombat(GAME, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state, combatType = 'MELEE', distance = 1) {
+		let attackMod = 0;
+		let damageMod = 0;
+
+		// --- Attack Perks ---
+		// Fencer Tier 1 [B] Lunge
+		if (GAME.hasPerk(attackerUnit, 'tier1', 'B') && defenderUnit.hp >= defenderUnit.maxHp) {
+			damageMod += 15;
+		}
+		// Hussar Tier 1 [A] Momentum
+		if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier1', 'A') && distance >= 3) {
+			damageMod += 20;
+		}
+		// Archer Tier 3 [A] Sniper
+		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier3', 'A') && distance >= 3) {
+			damageMod += 30;
+		}
+		// Knight Tier 1 [A] Pincer Strike (Simplified for Autochess)
+		if (attackerUnit.value === 4 && GAME.hasPerk(attackerUnit, 'tier1', 'A')) {
+			const neighbors = GAME.getNeighbors(GAME.getHex(defenderUnit.hexId, state), state);
+			const allies = neighbors.filter(n => {
+				const u = GAME.getUnitOnHex(n.id, state);
+				return u && u.playerId === attackerUnit.playerId && u.id !== attackerUnit.id;
+			});
+			if (allies.length > 0) damageMod += 20;
+		}
+
+		// Archer Tier 2 [A] Piercing Arrow
+		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier2', 'A')) {
+			defenderEffectiveArmor = Math.floor(defenderEffectiveArmor * 0.7);
+		}
+
+		const isSuccess = Math.ceil((attackerUnit.attack + combatRoll + attackMod) / 2) > defenderEffectiveArmor;
 		
-		let damage = 10 + 6 * attackerUnit.attack;
+		let damage = 10 + 6 * attackerUnit.attack + damageMod;
+		if (!isSuccess) {
+			damage = damage >> 1;
+		}
+
+		// --- Defensive Perks ---
+		// Fencer Tier 1 [A] Parry
+		if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
+			const parry = 15;
+			damage = Math.max(5, damage - parry);
+		}
+		// Hussar Tier 1 [B] Evasion
+		if (defenderUnit.value === 3 && GAME.hasPerk(defenderUnit, 'tier1', 'B') && combatType === 'RANGED_ATTACK') {
+			damage = Math.floor(damage * 0.5);
+		}
+		// Tanker Tier 1 [A] Spiked Armor
+		if (defenderUnit.value === 5 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
+			const reflect = 15;
+			attackerUnit.hp -= reflect;
+			GAME.addLog(`💥 Spiked Armor! ${GAME.logUnit(attackerUnit)} takes ${reflect} reflect damage.`, state);
+		}
+
 		if (isSuccess) {
 			GAME.addLog(`⚔️ ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
-			defenderUnit.hp -= damage;
 		} else {
-			damage = damage >> 1;
 			GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
-			defenderUnit.hp -= damage;
+		}
+
+		defenderUnit.hp -= damage;
+
+		// --- Post-Damage Perks ---
+		// Archer Tier 2 [B] Venom Tipped
+		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier2', 'B')) {
+			defenderUnit.venomDuration = 2;
+			GAME.addLog(`🐍 Venom! ${GAME.logUnit(defenderUnit)} is poisoned for 2 turns.`, state);
+		}
+		// Knight Tier 3 [B] Dark Knight (Lifesteal)
+		if (attackerUnit.value === 4 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
+			const heal = Math.floor(damage * 0.5);
+			attackerUnit.hp = Math.min(attackerUnit.maxHp, attackerUnit.hp + heal);
+		}
+		// Fencer Tier 3 [A] Paladin (Heal on hit)
+		if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier3', 'A')) {
+			const hex = GAME.getHex(attackerUnit.hexId, state);
+			if (hex) {
+				GAME.getNeighbors(hex, state).forEach(n => {
+					const friend = GAME.getUnitOnHex(n.id, state);
+					if (friend && friend.playerId === attackerUnit.playerId) {
+						const heal = 10;
+						friend.hp = Math.min(friend.maxHp, friend.hp + heal);
+					}
+				});
+			}
 		}
 
 		if (defenderUnit.hp <= 0) {
 			defenderUnit.isDeath = true;
 			GAME.addLog(`💀 ${GAME.logUnit(defenderUnit)} has been defeated!`, state);
 			const hex = GAME.getHex(defenderUnit.hexId, state);
+			if (hex) {
+				hex.unit = null;
+				hex.unitId = null;
+			}
+
+			// Hussar Tier 3 [B] Windrider (Simplified: Action Gauge Reset)
+			if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
+				attackerUnit.actionGauge = 100;
+				GAME.addLog(`🌪️ Windrider! ${GAME.logUnit(attackerUnit)} acts again!`, state);
+			}
+		} else {
+			// Fencer Tier 2 [A] Riposte
+			if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier2', 'A') && combatType === 'MELEE') {
+				const counterDamage = Math.floor(defenderUnit.attack * 5);
+				attackerUnit.hp -= counterDamage;
+				GAME.addLog(`↩️ Riposte! ${GAME.logUnit(defenderUnit)} counters for ${counterDamage} damage!`, state);
+			}
+		}
+
+		if (attackerUnit.hp <= 0) {
+			attackerUnit.isDeath = true;
+			GAME.addLog(`💀 ${GAME.logUnit(attackerUnit)} was killed by counter/reflect!`, state);
+			const hex = GAME.getHex(attackerUnit.hexId, state);
 			if (hex) {
 				hex.unit = null;
 				hex.unitId = null;

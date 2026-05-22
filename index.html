@@ -404,7 +404,11 @@
 									 @click="Autochess.clickUnit($data, unit)">
 									<div class="flex justify-between items-start">
 										<span x-text="index + 1" class="text-gray-400 font-bold"></span>
-										<span x-show="unit.veteranLevel > 0" class="text-amber-600 font-bold">★<span x-text="unit.veteranLevel"></span></span>
+										<div class="flex items-center space-x-1">
+											<span x-show="unit.veteranLevel > 0 && ((unit.veteranLevel >= 1 && !unit.perks?.tier1) || (unit.veteranLevel >= 2 && !unit.perks?.tier2) || (unit.veteranLevel >= 3 && !unit.perks?.tier3))" 
+												  class="text-amber-600 font-black animate-pulse text-xs">⚡</span>
+											<span x-show="unit.veteranLevel > 0" class="text-amber-600 font-bold">★<span x-text="unit.veteranLevel"></span></span>
+										</div>
 									</div>
 									<img class="inline h-8 w-8" :src="unit.iconUrl" width="16" height="16">
 									<div class="text-sm font-bold uppercase leading-tight truncate" x-text="unit.displayName"></div>
@@ -440,6 +444,81 @@
 						</div>
 					</div>
 				</div>
+
+				<!-- Selected Unit Details & Skill Tree Panel -->
+				<template x-if="Autochess.state.selectedUnitId && players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)">
+					<div class="mt-4 p-4 border border-amber-900/30 rounded-lg bg-white/95 shadow-md backdrop-blur-sm transition-all duration-300 w-full">
+						<div class="flex flex-wrap items-center justify-between border-b border-amber-900/20 pb-2 mb-3">
+							<div class="flex items-center space-x-2">
+								<img class="h-10 w-10 border border-amber-700/30 rounded bg-amber-50" :src="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.iconUrl">
+								<div>
+									<h3 class="text-md font-bold uppercase tracking-wider text-amber-900" x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.displayName"></h3>
+									<span class="text-[10px] text-gray-500 font-bold uppercase">Unit Details & Skill Tree</span>
+								</div>
+							</div>
+							<div class="text-xs font-bold text-amber-800 space-x-2">
+								<span>HP: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.maxHp"></span></span>
+								<span>•</span>
+								<span>ATK: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.attack"></span></span>
+								<span>•</span>
+								<span>ARMOR: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.currentArmor"></span></span>
+								<span>•</span>
+								<span>SPEED: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.speed"></span></span>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+							<template x-for="tier in ['tier1', 'tier2', 'tier3']" :key="tier">
+								<div class="p-3 border rounded bg-amber-50/40 relative flex flex-col justify-between"
+									 :class="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)
+									 	? 'border-amber-700/20 bg-amber-50/50' : 'border-gray-200 opacity-50 bg-gray-100/50'">
+									
+									<div>
+										<div class="flex justify-between items-center mb-1">
+											<span class="text-[10px] font-black uppercase text-gray-500" x-text="tier.replace('tier', 'Tier ')"></span>
+											<span class="text-[9px] font-bold px-1 rounded" 
+												  :class="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)
+												  	? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600'"
+												  x-text="tier === 'tier1' ? '★' : tier === 'tier2' ? '★★' : '★★★'"></span>
+										</div>
+
+										<!-- If Locked -->
+										<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel < (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)">
+											<div class="text-center py-4 text-xs italic text-gray-400">
+												🔒 Requires level <span x-text="tier === 'tier1' ? '★1' : tier === 'tier2' ? '★2' : '★3'"></span>
+											</div>
+										</template>
+
+										<!-- If Unlocked and has chosen a skill -->
+										<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
+											<div class="py-1">
+												<div class="text-sm font-bold text-amber-900" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.name"></div>
+												<div class="text-[11px] text-gray-600 mt-1 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.desc"></div>
+											</div>
+										</template>
+
+										<!-- If Unlocked but NOT chosen yet -->
+										<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && !players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
+											<div class="space-y-2 py-2">
+												<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'A')"
+														class="w-full text-left p-2 border border-amber-600/30 rounded bg-white hover:bg-amber-600 hover:text-white transition-all shadow-sm group">
+													<div class="text-xs font-bold uppercase text-amber-900 group-hover:text-white" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.name"></div>
+													<div class="text-[10px] text-gray-500 group-hover:text-amber-100 mt-0.5 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.desc"></div>
+												</button>
+												<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'B')"
+														class="w-full text-left p-2 border border-amber-600/30 rounded bg-white hover:bg-amber-600 hover:text-white transition-all shadow-sm group">
+													<div class="text-xs font-bold uppercase text-amber-900 group-hover:text-white" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.name"></div>
+													<div class="text-[10px] text-gray-500 group-hover:text-amber-100 mt-0.5 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.desc"></div>
+												</button>
+											</div>
+										</template>
+									</div>
+
+								</div>
+							</template>
+						</div>
+					</div>
+				</template>
 
 				<div class="text-center pt-2">
 					<div class="inline mb-2">

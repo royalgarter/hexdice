@@ -116,22 +116,26 @@ function applyMove(GAME, move, state) {
 	if (GAME.autochess) {
 		const attacker = GAME.getUnitOnHex(move.unitHexId, applyState);
 		if (attacker) {
+			const attackerHex = GAME.getHex(move.unitHexId, applyState);
+			const targetHex = GAME.getHex(move.targetHexId, applyState);
+			const distance = (attackerHex && targetHex) ? GAME.axialDistance(attackerHex.q, attackerHex.r, targetHex.q, targetHex.r) : 1;
+			
 			if (move.actionType === 'MOVE') {
 				const defender = GAME.getUnitOnHex(move.targetHexId, applyState);
 				if (defender && defender.playerId !== attacker.playerId) {
-					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState);
+					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState, 'MELEE', distance);
 					return applyState;
 				}
 			} else if (move.actionType === 'RANGED_ATTACK') {
 				const defender = GAME.getUnitOnHex(move.targetHexId, applyState);
 				if (defender) {
-					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState);
+					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState, 'RANGED_ATTACK', distance);
 					return applyState;
 				}
 			} else if (move.actionType === 'COMMAND_CONQUER') {
 				const defender = GAME.getUnitOnHex(move.targetHexId, applyState);
 				if (defender) {
-					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState);
+					GAME.Autochess.handleCombat(GAME, attacker, defender, GAME.rollDice(), GAME.calcDefenderEffectiveArmor(move.targetHexId, applyState), applyState, 'COMMAND_CONQUER', distance);
 					return applyState;
 				}
 			}

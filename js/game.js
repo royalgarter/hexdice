@@ -272,6 +272,7 @@ function alpineHexDiceTacticGame() { return {
 	simulateAutochessStep() { this.Autochess.simulateStep(this); },
 	executeAutochessAction(unit) { this.Autochess.executeAction(this, unit); },
 	nextAutochessRound() { this.Autochess.nextRound(this); },
+	selectAutochessUnitSkill(unitId, tier, option) { this.Autochess.selectUnitSkill(this, unitId, tier, option); },
 
 	get isUnitPanelVisible() {
 		const hexId = this.unitPanelHexId();
@@ -4887,6 +4888,9 @@ function alpineHexDiceTacticGame() { return {
 		return data;
 	},
 	hasPerk(unit, tier, option) {
+		if (this.autochess) {
+			return unit?.perks?.[tier] === option;
+		}
 		if (!this.isCampaign || unit.playerId !== 0) return false;
 		const upgrades = this.CampaignManager.state.upgrades[unit.value];
 		return upgrades?.perks[tier] === option;
