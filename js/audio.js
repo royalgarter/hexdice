@@ -89,19 +89,27 @@
 				// ignore
 			}
 		},
+		battlePlaylist: ["Astos","Battle_of_Another_Side","BlackDragon","DR_GS2_FelixBattle","DR_GS_BossBattle_V1_5","FE-TogetherWeRide","FEKnight","FETSS-PF","FETSS-TDH","FF1_-_Battle_Scene","FF1_-_Inside_a_Boss_Battle","FF2Final","FF2_-_Battle_Scene_1","FF5_Battle","FFIV-Creepy_Doll_Battle","Final_Fantasy_Tactics_Advance-Snow_Battle","GS2Jenna","GSLA_agatio_battle","GS_Battle","GS_MoapaBattle","GS_VICTORY","GoldenSun2_BoatBattles_GMv250","GoldenSun2_BossBattle","GoldenSun2_ThemeArg1","GoldenSunRises","GoldenSun_SaturosBattleGMv102","Golden_Sun_-_Victory_fanfare","Golden_Sun_3","Golden_sun_theme","Human1gm","Human2gm","Human3gm","Human4gm","KHCOM-AnsemBattle","KHCOM-MarluxiaBattle","KHCOM-RikuBattle","Marluxia2","Orc1gm","Orc2gm","Orc3gm","Orc4gm","Sacred_Strength","Saturos","Twilight_Town_Battle","com_XIII_boss","emblem_fin","fe6_final","fe7-arenabattle","golden_sun_-_battle_theme","gs-batt","gs-colosso-battle","vgKHCOMprebattle"],
 		playMusic(name, opts = {}) {
 			try {
 				if (this.musicEl) this.stopMusic();
+				if (name === 'battle') {
+					const randomTrack = this.battlePlaylist[Math.floor(Math.random() * this.battlePlaylist.length)];
+					name = `battles/${randomTrack}`;
+				}
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
-				const exts = ['.wav','.ogg','.mp3'];
+				const exts = ['.mid','.wav','.ogg','.mp3'];
 				for (const p of this.basePaths) {
 					for (const ext of exts) {
 						const url = `${p}/${name}${ext}`;
 						try {
 							this.musicEl = new Audio(url);
-							this.musicEl.loop = opts.loop !== false;
+							this.musicEl.loop = opts.loop !== false && !name.includes('battles/');
 							this.musicEl.volume = volume;
 							this.musicEl.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: music play failed', url, e); });
+							if (name.includes('battles/')) {
+								this.musicEl.onended = () => this.playMusic('battle', opts);
+							}
 							if (this.debug) console.debug('AudioManager: music playing', url);
 							return;
 						} catch (e) { if (this.debug) console.debug('AudioManager: music error', url, e); }
