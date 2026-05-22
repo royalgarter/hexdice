@@ -154,17 +154,17 @@ const BOARD_NUM = [
     `                        069`,
 ].join('\n');
 
-const EXT_SOUNDS = ['.ogg','.mp3','.wav'];
+const EXT_SOUNDS = '.ogg,.mp3,.wav'.split(',');
 
-const SFX_NAMES = ['attack','death','deflect','fumble','hit','merge','shield','skirmish','spell','swap','transmute','victory','move','battle'];
+const SFX_NAMES = 'attack,bow,capture,critical,death,deflect,explode,final_hit,fumble,guard,hit,horse,merge,move,resurrection,shield,skirmish,spell,swap,tactic,thunder,transmute,victory,wing'.split(',');
 
-const BATTLE_PLAYLIST = ["Human_1","Human_2","Human_3","Human_4","Human_5","Human_Defeat","Human_Victory","Mission_Briefing","Orc_1","Orc_2","Orc_3","Orc_4","Orc_5","Orc_Defeat","Orc_Victory","Title_Theme"];
+const BATTLE_PLAYLIST = 'Human_1,Human_2,Human_3,Human_4,Human_5,Orc_1,Orc_2,Orc_3,Orc_4,Orc_5'.split(',');
 
 const UNIT_SOUNDS = {
-    '1': ["Hdempis4","Hdempis5","Hdempis6","Hdempis7","Hhelp1","Hhelp2","Hpissed1","Hpissed2","Hpissed3","Hpissed4","Hpissed5","Hpissed6","Hpissed7","Hready","Hwhat1","Hwhat2","Hwhat3","Hwhat4","Hwhat5","Hwhat6","Hwrkdone","Hyessir1","Hyessir2","Hyessir3","Hyessir4"],
-    '2': ["Epissed1","Epissed2","Epissed3","Eready","Ewhat1","Ewhat2","Ewhat3","Ewhat4","Eyessir1","Eyessir2","Eyessir3","Eyessir4"],
-    '3': ["Griffon1","Griffon2","Grwhat"],
-    '4': ["Knpissd1","Knpissd2","Knpissd3","Knready","Knwhat1","Knwhat2","Knwhat3","Knwhat4","Knyessr1","Knyessr2","Knyessr3","Knyessr4"],
-    '5': ["Pkatak1","Pkpissd1","Pkpissd2","Pkpissd3","Pkready","Pkwhat1","Pkwhat2","Pkwhat3","Pkwhat4","Pkyessr1","Pkyessr2","Pkyessr3","Pkyessr4"],
-    '6': ["Wzpissd1","Wzpissd2","Wzpissd3","Wzready","Wzwhat1","Wzwhat2","Wzwhat3","Wzyessr1","Wzyessr2","Wzyessr3"]
+    '1': 'Hdempis4,Hdempis5,Hdempis6,Hdempis7,Hhelp1,Hhelp2,Hpissed1,Hpissed2,Hpissed3,Hpissed4,Hpissed5,Hpissed6,Hpissed7,Hready,Hwhat1,Hwhat2,Hwhat3,Hwhat4,Hwhat5,Hwhat6,Hwrkdone,Hyessir1,Hyessir2,Hyessir3,Hyessir4'.split(','),
+    '2': 'Epissed1,Epissed2,Epissed3,Eready,Ewhat1,Ewhat2,Ewhat3,Ewhat4,Eyessir1,Eyessir2,Eyessir3,Eyessir4',
+    '3': 'Griffon1,Griffon2,Grwhat'.split(','),
+    '4': 'Knpissd1,Knpissd2,Knpissd3,Knready,Knwhat1,Knwhat2,Knwhat3,Knwhat4,Knyessr1,Knyessr2,Knyessr3,Knyessr4'.split(','),
+    '5': 'Pkatak1,Pkpissd1,Pkpissd2,Pkpissd3,Pkready,Pkwhat1,Pkwhat2,Pkwhat3,Pkwhat4,Pkyessr1,Pkyessr2,Pkyessr3,Pkyessr4'.split(','),
+    '6': 'Wzpissd1,Wzpissd2,Wzpissd3,Wzready,Wzwhat1,Wzwhat2,Wzwhat3,Wzyessr1,Wzyessr2,Wzyessr3'.split(','),
 };
