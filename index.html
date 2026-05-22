@@ -608,8 +608,8 @@
 
 		<!-- Game Over -->
 		<div style="display: none;" x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
-			<h2 class="text-2xl mb-2 font-bold">GAME OVER</h2>
-			<p x-text="winnerMessage"></p>
+			<h2 class="text-2xl mb-2 font-bold" x-text="winnerMessage">GAME OVER</h2>
+			<!-- <p x-text="winnerMessage"></p> -->
 
 			<!-- Replay Export Buttons -->
 			<div class="mt-4 flex flex-col items-center space-y-2">
@@ -619,7 +619,7 @@
 					<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white text-sm"
 						@click="exportHDPGN()">Export HDPGN (.hdpgn)</button>
 				</div>
-				<p class="text-xxs text-gray-500 italic">Game ID: <span x-text="gameId"></span></p>
+				<!-- <p class="text-xxs text-gray-500 italic">Game ID: <span x-text="gameId"></span></p> -->
 			</div>
 
 			<div x-show="!isCampaign">

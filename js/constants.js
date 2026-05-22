@@ -61,7 +61,7 @@ const PLAYER_PRIMARY_AXIS = {
 };
 
 const PLAYER_CONFIG = [
-	{ id: 0, color: 'Blue', sprite: 'blue', bg: 'bg-hexblue', logColor: 'text-blue-700' },
+	{ id: 0, color: 'Blue', sprite: 'yellow', bg: 'bg-hexblue', logColor: 'text-blue-700' },
 	{ id: 1, color: 'Red', sprite: 'red', bg: 'bg-hexred', logColor: 'text-red-700' },
 	{ id: 2, color: 'Green', sprite: 'green', bg: 'bg-hexgreen', logColor: 'text-green-700' },
 	{ id: 3, color: 'Purple', sprite: 'purple', bg: 'bg-hexpurple', logColor: 'text-purple-700' },
