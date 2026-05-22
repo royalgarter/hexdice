@@ -125,6 +125,24 @@
 		testAll(delay = 300) {
 			const names = ['attack','hit','deflect','merge','spell','fumble'];
 			names.forEach((n,i)=> setTimeout(()=>{ try{ this.playSfx(n); if (this.debug) console.debug('test play', n); }catch(e){ if (this.debug) console.debug(e); } }, i*delay));
+		},
+		unitSounds: {
+			'1': ["Hdempis4","Hdempis5","Hdempis6","Hdempis7","Hhelp1","Hhelp2","Hpissed1","Hpissed2","Hpissed3","Hpissed4","Hpissed5","Hpissed6","Hpissed7","Hready","Hwhat1","Hwhat2","Hwhat3","Hwhat4","Hwhat5","Hwhat6","Hwrkdone","Hyessir1","Hyessir2","Hyessir3","Hyessir4"],
+			'2': ["Epissed1","Epissed2","Epissed3","Eready","Ewhat1","Ewhat2","Ewhat3","Ewhat4","Eyessir1","Eyessir2","Eyessir3","Eyessir4"],
+			'3': ["Griffon1","Griffon2","Grwhat"],
+			'4': ["Knpissd1","Knpissd2","Knpissd3","Knready","Knwhat1","Knwhat2","Knwhat3","Knwhat4","Knyessr1","Knyessr2","Knyessr3","Knyessr4"],
+			'5': ["Pkatak1","Pkpissd1","Pkpissd2","Pkpissd3","Pkready","Pkwhat1","Pkwhat2","Pkwhat3","Pkwhat4","Pkyessr1","Pkyessr2","Pkyessr3","Pkyessr4"],
+			'6': ["Wzpissd1","Wzpissd2","Wzpissd3","Wzready","Wzwhat1","Wzwhat2","Wzwhat3","Wzyessr1","Wzyessr2","Wzyessr3"]
+		},
+		playUnitSound(unitValue) {
+			if (this.debug) console.debug('AudioManager: playUnitSound', unitValue);
+			const sounds = this.unitSounds[unitValue];
+			if (sounds && sounds.length > 0) {
+				const sound = sounds[Math.floor(Math.random() * sounds.length)];
+				// The files are in assets/sounds/<unitValue>/<filename>.wav
+				// We can try to play it using a modified path
+				this.playSfx(`${unitValue}/${sound}`);
+			}
 		}
 	};
 	window.AudioManager = AM;
