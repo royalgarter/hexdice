@@ -44,6 +44,11 @@
 	<script type="text/javascript" src="/js/ai/ai-heuristic.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/ai/ai.js?v=___VERSION___"></script>
 
+	<!-- MIDI Player Dependencies -->
+	<script src="https://fraigo.github.io/javascript-midi-player/midiplayer/WebAudioFontPlayer.js"></script>
+	<script src="https://fraigo.github.io/javascript-midi-player/midiplayer/MIDIFile.js"></script>
+	<script src="https://fraigo.github.io/javascript-midi-player/midiplayer/MIDIPlayer.js"></script>
+
 	<!-- <script type="text/javascript">
 		function googleTranslateElementInit() {
 			new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
@@ -790,6 +795,9 @@
 			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 32px; height: 32px;`"
 		>
 	</template>
+
+	<div id="midi-container" style="display: none;">
+	</div>
 
 	<!-- Devotion Menu (The Camp) -->
 	<div style="display:none;" x-show="showCamp" x-cloak class="fixed inset-0 z-60 flex items-center justify-center p-2 w-full m-2">
