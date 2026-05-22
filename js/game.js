@@ -2591,7 +2591,7 @@ function alpineHexDiceTacticGame() { return {
 				].join(''), state);
 			}
 
-			if (!state) window?.AudioManager?.playSfx(unitValue == 3 ? 'wing' : unitValue == 4 ? 'horse' : 'move');
+			if (!state && !this.autochess) window?.AudioManager?.playSfx(unitValue == 3 ? 'wing' : unitValue == 4 ? 'horse' : 'move');
 
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			this.recordAction('MOVE', { unitValue, fromHex: attackerHex.id, toHex: defenderHex.id });

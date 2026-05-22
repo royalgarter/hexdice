@@ -61,7 +61,7 @@
 				this.resume();
 
 				const buf = this.buffers[name];
-				const volume = typeof opts.volume === 'number' ? opts.volume : 1;
+				const volume = typeof opts.volume === 'number' ? opts.volume : 0.4;
 				const playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
 
 				if (buf && this.audioCtx) {
