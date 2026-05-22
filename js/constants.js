@@ -156,7 +156,7 @@ const BOARD_NUM = [
 
 const EXT_SOUNDS = ['.ogg','.mp3','.wav'];
 
-const SFX_NAMES = ['attack','death','deflect','fumble','hit','merge','shield','skirmish','spell','swap','transmute','victory','levelup','move','battle'];
+const SFX_NAMES = ['attack','death','deflect','fumble','hit','merge','shield','skirmish','spell','swap','transmute','victory','move','battle'];
 
 const BATTLE_PLAYLIST = ["Human_1","Human_2","Human_3","Human_4","Human_5","Human_Defeat","Human_Victory","Mission_Briefing","Orc_1","Orc_2","Orc_3","Orc_4","Orc_5","Orc_Defeat","Orc_Victory","Title_Theme"];
 
