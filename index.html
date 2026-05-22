@@ -401,11 +401,7 @@
 							<template x-for="(unit, index) in players[0]?.dice" :key="unit.id">
 								<div class="border text-center p-1 cursor-pointer transition-all hover:shadow-sm"
 									 :class="Autochess.state.selectedUnitId === unit.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 z-10' : (index < 6 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white')"
-									 @click="if(Autochess.state.selectedUnitId && Autochess.state.selectedUnitId !== unit.id) {
-									 			const u1 = players[0].dice.find(u => u.id === Autochess.state.selectedUnitId);
-												if(u1 && u1.value === unit.value) Autochess.mergeUnits($data, 0, Autochess.state.selectedUnitId, unit.id);
-												else Autochess.state.selectedUnitId = unit.id;
-									 		} else { Autochess.state.selectedUnitId = (Autochess.state.selectedUnitId === unit.id ? null : unit.id); }">
+									 @click="Autochess.clickUnit($data, unit)">
 									<div class="flex justify-between items-start">
 										<span x-text="index + 1" class="text-gray-400 font-bold"></span>
 										<span x-show="unit.veteranLevel > 0" class="text-amber-600 font-bold">★<span x-text="unit.veteranLevel"></span></span>

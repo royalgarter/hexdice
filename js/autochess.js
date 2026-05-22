@@ -81,6 +81,14 @@ const Autochess = {
 	},
 
 	generateRecruits(GAME, playerId = null) {
+		GAME.players.forEach(p => {
+			p.dice.forEach(d => {
+				d.hp = d.maxHp;
+				d.attack = d.maxAtk;
+				d.currentArmor = d.armor;
+			});
+		});
+
 		const targetPlayerIds = (playerId !== null) ? [playerId] : GAME.players.map(p => p.id);
 
 		targetPlayerIds.forEach(id => {
@@ -136,6 +144,22 @@ const Autochess = {
 		// A full refresh would be GAME.Autochess.deployPlayerUnits(GAME);
 	},
 
+	clickUnit(GAME, unit) {
+		if (!GAME?.Autochess?.state || !unit?.id) return console.log('Autochess.clickUnit.invalid');
+		console.log('clickUnit.unit', unit);
+		if (GAME.Autochess.state.selectedUnitId && GAME.Autochess.state.selectedUnitId !== unit.id) {
+			const u1 = GAME.players[0].dice.find(u => u.id === GAME.Autochess.state.selectedUnitId);
+			console.log('clickUnit.u1', u1);
+
+			if (u1 && u1.value === unit.value)
+				GAME.Autochess.mergeUnits(GAME, 0, GAME.Autochess.state.selectedUnitId, unit.id);
+			else
+				GAME.Autochess.state.selectedUnitId = unit.id;
+		} else {
+			GAME.Autochess.state.selectedUnitId = (GAME.Autochess.state.selectedUnitId === unit.id ? null : unit.id);
+		}
+	},
+
 	mergeUnits(GAME, playerId, unitId1, unitId2) {
 		const player = GAME.players[playerId];
 		const u1Index = player.dice.findIndex(u => u.id === unitId1);
@@ -162,9 +186,12 @@ const Autochess = {
 
 		// Merge u2 into u1
 		u1.veteranLevel = (u1.veteranLevel || 0) + 1;
-		u1.attack += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, u1.attack);
+
 		u1.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
+		u1.maxAtk += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, u1.maxAtk);
+
 		u1.hp = u1.maxHp;
+		u1.attack = u1.maxAtk;
 
 		// Update display name with stars, keep internal 'class' unchanged for logic
 		u1.displayName = `${u1.name} ${'★'.repeat(u1.veteranLevel)}`;
@@ -190,6 +217,7 @@ const Autochess = {
 			playerId: playerId,
 			hp: AUTOCHESS_CONFIG.BASE_HP,
 			maxHp: AUTOCHESS_CONFIG.BASE_HP,
+			maxAtk: stats.attack,
 			currentArmor: stats.armor,
 			speed: (6 + stats.distance) || (10 - stats.distance) || Math.floor(20 / stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
 			actionGauge: 0,
@@ -217,6 +245,59 @@ const Autochess = {
 		GAME.Autochess.runSimulation(GAME);
 	},
 
+	adjustAIVeterans(GAME) {
+		const p0 = GAME.players[0];
+		if (!p0) return;
+
+		// Collect veteran levels from player 0's top 6 (deployed) units
+		const p0Deployed = p0.dice.slice(0, 6);
+		const veteranLevels = p0Deployed.map(u => u.veteranLevel || 0).filter(lvl => lvl > 0);
+
+		GAME.players.forEach((player, playerIdx) => {
+			if (playerIdx === 0) return; // Skip human player
+
+			// Reset all AI units to base level 0 stats first
+			player.dice.forEach(unit => {
+				const baseStats = UNIT_STATS[unit.value];
+				if (baseStats) {
+					unit.attack = baseStats.attack;
+					unit.maxHp = AUTOCHESS_CONFIG.BASE_HP;
+					unit.veteranLevel = 0;
+					unit.displayName = baseStats.name;
+					unit.hp = unit.maxHp;
+				}
+			});
+
+			// If player 0 has no veterans, we are done
+			if (veteranLevels.length === 0) return;
+
+			// Assign veteran levels to a random subset of AI units
+			const indices = player.dice.map((_, idx) => idx);
+			for (let i = indices.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				const temp = indices[i];
+				indices[i] = indices[j];
+				indices[j] = temp;
+			}
+
+			// Apply the veteran levels to the selected random units
+			const numToUpgrade = Math.min(veteranLevels.length, player.dice.length);
+			for (let k = 0; k < numToUpgrade; k++) {
+				const unitIdx = indices[k];
+				const targetLevel = veteranLevels[k];
+				const unit = player.dice[unitIdx];
+
+				for (let lvl = 0; lvl < targetLevel; lvl++) {
+					unit.veteranLevel++;
+					unit.attack += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, unit.attack);
+					unit.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
+				}
+				unit.hp = unit.maxHp;
+				unit.displayName = `${unit.name} ${'★'.repeat(unit.veteranLevel)}`;
+			}
+		});
+	},
+
 	prepareCombat(GAME) {
 		// Clear AI units only (Player 0 units are already placed and can be moved manually)
 		GAME.hexes.forEach(h => {
@@ -225,6 +306,9 @@ const Autochess = {
 				h.unitId = null;
 			}
 		});
+
+		// Dynamic veteran adjustment for AI players to match Player 0
+		GAME.Autochess.adjustAIVeterans(GAME);
 
 		GAME.players.forEach((player, playerIdx) => {
 			if (playerIdx === 0) return; // Human player already positioned
