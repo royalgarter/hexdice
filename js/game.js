@@ -1072,6 +1072,9 @@ function alpineHexDiceTacticGame() { return {
 		if (this.autochess) {
 			this.initAutochess();
 		}
+
+		setTimeout(() => window?.AudioManager?.playMusic('title_theme'), 1e3)
+
 	},
 	async resetGame(opts) {
 		if (window.AudioManager) { try { AudioManager.stopMusic(); } catch (e) {} }
