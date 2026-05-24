@@ -56,12 +56,13 @@
 			try {
 				if (this.noSFX) return;
 
-				// console.log('playSfx', name);
+				console.log('playSfx', name);
+				
 				if (!this.audioCtx) this.init();
 				this.resume();
 
 				const buf = this.buffers[name];
-				const volume = typeof opts.volume === 'number' ? opts.volume : 0.4;
+				const volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
 				const playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
 
 				if (buf && this.audioCtx) {
@@ -109,7 +110,7 @@
 					name = `battles/${randomTrack}`;
 				}
 
-				const volume = typeof opts.volume === 'number' ? opts.volume : 0.2;
+				const volume = typeof opts.volume === 'number' ? opts.volume : 0.5;
 				for (const p of this.basePaths) {
 					for (const ext of EXT_SOUNDS) {
 						const url = `${p}/${name}${ext}`;
