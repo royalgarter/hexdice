@@ -1,0 +1,25 @@
+<!-- Google One Tap -->
+<div id="g_id_onload"
+	data-type="standard" data-shape="pill" data-theme="outline" data-text="signin" data-size="small" data-logo_alignment="left"
+	:data-client_id="auth.clientId"
+	data-context="signin"
+	data-ux_mode="popup"
+	data-color_scheme="light"
+	data-callback="handleCredentialResponse"
+	data-color_scheme="default"
+	data-auto_prompt="false">
+</div>
+
+<!-- User Profile Header -->
+<div style="display:none;" class="flex items-center space-x-2" x-show="auth.user" x-cloak>
+	<img :src="auth.user?.picture" class="w-8 h-8 rounded-full border" x-show="auth.user?.picture"
+		onerror="this.src = '/assets/images/favicon-32x32.png';"
+	>
+	<div class="">
+		<div class="font-bold" x-text="auth?.user?.name?.split(' ')?.[0]"></div>
+		<button class="text-blue-600 hover:underline" @click="logout()">Logout</button>
+	</div>
+</div>
+<div style="display:none;" class="" x-show="!auth.user" x-cloak>
+	<div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="signin" data-size="small" data-logo_alignment="left"></div>
+</div>

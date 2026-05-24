@@ -1,0 +1,132 @@
+<!-- Hex Grid -->
+<div class="hex-grid-container relative" :class="'radius-' + (hexGrid.radius || 5)" :style="hexGrid.style">
+	<template x-for="hex in hexes" :key="hex.id">
+		<div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase === 'SETUP_DEPLOY' && validDeploymentHexesSet.has(hex.id), selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, Autochess.state.enabled && hex.unit?.hp, Autochess.state.enabled && hex.unit?.hexId]"
+			class="hexagon absolute flex items-center justify-center"
+			:class="hexColor(hex) + ' hex-' + hex.id"
+			:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
+			:data-id="hex.id"
+			@click="handleHexClick(hex.id)"
+			@mouseenter="hex.unit && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex)"
+			@mouseleave="unitPanelHoverLeave(hex.id); cursorSprite = null"
+		>
+			<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
+			<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>
+			<div class="hex-content text-xxs text-center relative">
+				<span style="top:-0.5rem;right:-0.5rem;color:#44444444" class="absolute" x-show="!hex.unit" x-text="hex.id"></span>
+
+				<div x-show="hex.unit" class="contents">
+					<span class="text-lg invisible"
+						:class="PLAYER_CONFIG[hex.unit?.playerId]?.logColor || ''"
+						x-text="hex.unit?.value"
+					>
+					</span>
+
+					<span style="top:-0.5rem;right:0.6rem;" class="absolute z-10 text-red-700"
+						x-text="hex.unit?.attack">
+					</span>
+					<span style="top:-0.5rem;right:-0.4rem;" class="absolute z-10 text-gray-700"
+						:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
+						x-text="hex.unit?.effectiveArmor">
+					</span>
+					<span style="top:-0.5rem;right:-0.25rem;" class="absolute text-green-700 font-bold"
+						x-show="hex.unit?.isRerolled">R
+					</span>
+					<span style="top:0.25rem;right:-0.8rem;" class="absolute text-blue-900 font-bold"
+						x-show="hex.unit?.isGuarding" x-html="(hex.unit?.isGuarding == 2) ? '⛨' : '⛉'">
+					</span>
+					<span style="top:0.25rem;right:0.8rem;" class="absolute text-red-900 font-bold"
+						x-show="hex.unit?.skirmishBuff">⚔
+					</span>
+
+					<!-- Campaign HP Bar -->
+					<div x-show="isCampaign" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+						<div class="h-full bg-green-500 transition-all duration-300"
+							:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
+							:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
+						</div>
+					</div>
+
+					<!-- Autochess HP Bar -->
+					<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
+						<div class="h-1.5 bg-green-500 transition-all duration-300 rounded-full"
+							:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%'"
+							:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHP < 0.25}">
+						</div>
+						<div class="h-1 bg-blue-400 transition-all duration-100 rounded-full mt-0.5"
+							:style="'width: ' + (hex.unit?.actionGauge || 0) + '%'">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</template>
+
+	<!-- Trail Arrow -->
+	<svg :height="hexGrid.gridHeight || 0" :width="hexGrid.gridWidth || 0" class="absolute inset-0 pointer-events-none z-10"
+		style="display: none;" x-show="!Autochess.state.enabled && !phase.startsWith('SETUP')">
+		<!-- Movement -->
+		<g x-show="trail && trail.fromHex && trail.toHex">
+			<circle
+				:cx="trail.fromHex?.trailX || 0" :cy="trail.fromHex?.trailY || 0"
+				r="3" style="fill: black;"
+			/>
+			<line
+				:x1="trail.fromHex?.trailX || 0"
+				:y1="trail.fromHex?.trailY || 0"
+				:x2="trail.fromHex?.trailX + (trail.toHex?.trailX - trail.fromHex?.trailX) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+				:y2="trail.fromHex?.trailY + (trail.toHex?.trailY - trail.fromHex?.trailY) * 0.55 * Math.log1p(trail.dist + 1) || 0"
+				style="stroke-width: 2;stroke: black;"
+			/>
+		</g>
+
+		<!-- Attack (melee: gray dashed, ranged: orange dashed) -->
+		<g x-show="trailAttack && trailAttack.fromHex && trailAttack.toHex">
+			<circle
+				:cx="trailAttack.fromHex?.trailX || 0" :cy="trailAttack.fromHex?.trailY || 0"
+				r="3" :style="trailAttack.combatType === 'RANGED_ATTACK' ? 'fill: #f97316;' : 'fill: gray;'"
+			/>
+			<line
+				:x1="trailAttack.fromHex?.trailX || 0"
+				:y1="trailAttack.fromHex?.trailY || 0"
+				:x2="trailAttack.fromHex?.trailX + (trailAttack.toHex?.trailX - trailAttack.fromHex?.trailX) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
+				:y2="trailAttack.fromHex?.trailY + (trailAttack.toHex?.trailY - trailAttack.fromHex?.trailY) * 0.55 * Math.log1p(trailAttack.dist + 1) || 0"
+				:style="trailAttack.combatType === 'RANGED_ATTACK' ? 'stroke-width: 2;stroke: #f97316;stroke-dasharray: 6 3;' : 'stroke-width: 2;stroke: gray;stroke-dasharray: 4;'"
+			/>
+		</g>
+
+		<!-- Spell (purple line + label) -->
+		<g x-show="trailSpell && trailSpell.fromHex && trailSpell.toHex">
+			<circle
+				:cx="trailSpell.fromHex?.trailX || 0" :cy="trailSpell.fromHex?.trailY || 0"
+				r="4" style="fill: #a855f7;"
+			/>
+			<line
+				:x1="trailSpell.fromHex?.trailX || 0"
+				:y1="trailSpell.fromHex?.trailY || 0"
+				:x2="trailSpell.toHex?.trailX || 0"
+				:y2="trailSpell.toHex?.trailY || 0"
+				style="stroke-width: 2;stroke: #a855f7;stroke-dasharray: 5 3;"
+			/>
+			<circle
+				:cx="trailSpell.toHex?.trailX || 0" :cy="trailSpell.toHex?.trailY || 0"
+				r="6" style="fill: none;stroke: #a855f7;stroke-width: 2;"
+			/>
+			<text
+				:x="((trailSpell.fromHex?.trailX || 0) + (trailSpell.toHex?.trailX || 0)) / 2"
+				:y="((trailSpell.fromHex?.trailY || 0) + (trailSpell.toHex?.trailY || 0)) / 2 - 6"
+				style="fill: #a855f7;font-size: 9px;font-weight: bold;text-anchor: middle;paint-order: stroke;stroke: white;stroke-width: 3;"
+				x-text="trailSpell.spellType"
+			/>
+		</g>
+	</svg>
+
+	<!-- Unit Info Panel -->
+	<div x-init="loadComponent($el, 'unit-info-panel')"></div>
+
+	<!-- Top Right -->
+	<div class="absolute top-1 right-1 text-xs z-10" x-init="loadComponent($el, 'auth')"></div>
+
+	<!-- Toolbars -->
+	<div x-init="loadComponent($el, 'toolbars')"></div>
+</div>

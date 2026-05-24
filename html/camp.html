@@ -1,0 +1,99 @@
+<div style="display:none;" x-show="showCamp" x-cloak class="fixed inset-0 z-60 flex items-center justify-center p-2 w-full m-2">
+	<div class="border w-full max-w-4xl overflow-y-auto p-2 relative bg-wood" style="max-height: 90vh;">
+		<button @click="showCamp = false" class="absolute top-4 right-4 text-lg font-bold cursor-pointer">✕</button>
+
+		<div class="text-center mb-2">
+			<div class="mt-4 inline-block px-4 py-2 font-bold">
+				POINTS: <span x-text="CampaignManager.state.devotionPoints" class="text-lg text-red-700"></span>
+			</div>
+		</div>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+			<template x-for="val in [1, 2, 3, 4, 5, 6]" :key="val">
+				<div class="border p-2 flex flex-col">
+					<div class="flex items-center gap-3 mb-3 border-b pb-2">
+						<span class="text-4xl" x-text="'⚀⚁⚂⚃⚄⚅'[val-1]"></span>
+						<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+val+'.png'" :alt="'D['+val+']'" :title="'D['+val+']'" width="16" height="16">
+						<div class="font-bold text-lg uppercase" x-text="UNIT_STATS[val].name"></div>
+					</div>
+
+					<!-- Stats -->
+					<div class="space-y-2 mb-2 text-sm">
+						<div class="flex justify-between items-center">
+							<span>ATTACK:</span>
+							<div class="flex items-center gap-2">
+								<span class="font-bold text-red-700" x-text="'+' + CampaignManager.state.upgrades[val].atk"></span>
+								<button @click="CampaignManager.spendDevotionPoint(val, 'atk')" class="bg-red-700 text-white px-2 py-0.5 hover:bg-red-800 disabled:opacity-50 text-xs font-bold" :disabled="CampaignManager.state.devotionPoints <= 0 || CampaignManager.state.upgrades[val].points >= 15">+05</button>
+							</div>
+						</div>
+						<div class="flex justify-between items-center">
+							<span>ARMOR:</span>
+							<div class="flex items-center gap-2">
+								<span class="font-bold text-blue-700" x-text="'+' + CampaignManager.state.upgrades[val].def"></span>
+								<button @click="CampaignManager.spendDevotionPoint(val, 'def')" class="bg-blue-700 text-white px-2 py-0.5 hover:bg-blue-800 disabled:opacity-50 text-xs font-bold" :disabled="CampaignManager.state.devotionPoints <= 0 || CampaignManager.state.upgrades[val].points >= 15">+05</button>
+							</div>
+						</div>
+						<div class="flex justify-between items-center">
+							<span>MAX HP:</span>
+							<div class="flex items-center gap-2">
+								<span class="font-bold text-green-700" x-text="'+' + CampaignManager.state.upgrades[val].hp"></span>
+								<button @click="CampaignManager.spendDevotionPoint(val, 'hp')" class="bg-green-700 text-white px-2 py-0.5 hover:bg-green-800 disabled:opacity-50 text-xs font-bold" :disabled="CampaignManager.state.devotionPoints <= 0 || CampaignManager.state.upgrades[val].points >= 15">+20</button>
+							</div>
+						</div>
+						<div class="text-center mt-2 font-bold py-1">
+							Points: <span x-text="CampaignManager.state.upgrades[val].points"></span>/15
+						</div>
+					</div>
+
+					<!-- Perks -->
+					<div class="space-y-3 mt-auto pt-4 border-t 30">
+						<template x-for="tier in ['tier1', 'tier2', 'tier3']" :key="tier">
+							<div class="text-xs">
+								<div class="font-bold uppercase opacity-60" x-text="tier.replace('tier', 'Tier ')"></div>
+								<div class="flex gap-2 mt-1" x-show="CampaignManager.state.upgrades[val].points >= (tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)">
+									<template x-if="!CampaignManager.state.upgrades[val].perks[tier]">
+										<div class="flex w-full gap-2">
+											<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border hover:text-white p-1 group relative">
+												<div class="font-bold">PATH A</div>
+												<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
+												<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
+											</button>
+											<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border hover:text-white p-1 group relative">
+												<div class="font-bold">PATH B</div>
+												<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
+												<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
+											</button>
+										</div>
+									</template>
+									<template x-if="CampaignManager.state.upgrades[val].perks[tier]">
+										<div class="text-white p-1 w-full text-center">
+											<div class="font-bold uppercase text-sm" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].name"></div>
+											<div class="text-sm leading-tight opacity-90" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier][CampaignManager.state.upgrades[val].perks[tier]].desc"></div>
+										</div>
+									</template>
+								</div>
+								<div class="italic opacity-40 text-center" x-show="CampaignManager.state.upgrades[val].points < (tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)">
+									(<span x-text="(tier === 'tier1' ? 5 : tier === 'tier2' ? 10 : 15)"></span> pts to unlock)
+								</div>
+							</div>
+						</template>
+					</div>
+				</div>
+			</template>
+		</div>
+
+		<div class="p-2 text-center">
+			<div class="mt-4 flex justify-center gap-2">
+				<template x-for="slotId in [1, 2, 3]" :key="slotId">
+					<button
+						@click="CampaignManager.selectSlot(slotId)"
+						:class="CampaignManager.state.activeSlot === slotId ? 'bg-black text-white' : 'bg-transparent border-black'"
+						class="cursor-pointer border px-3 py-1 text-sm font-bold uppercase transition-colors"
+						x-text="CampaignManager.state.slots[slotId]?.name || 'Slot ' + slotId"
+					></button>
+				</template>
+			</div>
+			<button @click="showCamp = false" class="mt-2 cursor-pointer p-2 font-bold uppercase transition-transform hover:bg-gray-500">[Return to Journey]</button>
+		</div>
+	</div>
+</div>

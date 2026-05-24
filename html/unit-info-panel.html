@@ -1,0 +1,109 @@
+<div class="unit-info-panel fixed border border-yellow-900 text-xs bg-wood" style="display: none;"
+	 :class="unitstat != null ? 'is-pinned' : 'is-hover'"
+	 x-show="!Autochess.state.enabled && isUnitPanelVisible"
+	 x-data="{ overflow: false, atBottom: true }">
+	<div class="unit-info-panel-scroll"
+		 x-init="$nextTick(() => {
+			 const update = () => {
+				 overflow = $el.scrollHeight > $el.clientHeight + 1;
+				 atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2;
+			 };
+			 update();
+			 new ResizeObserver(update).observe($el);
+			 new MutationObserver(update).observe($el, { childList: true, subtree: true, characterData: true });
+		 })"
+		 @scroll.passive="atBottom = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 2">
+	<div x-data="{ get d() { return unitPanelData } }" class="p-2 space-y-2">
+			<!-- Header -->
+			<div class="flex items-center justify-between border-b border-yellow-900 pb-1 gap-2">
+				<span class="text-3xl leading-none" :class="PLAYER_CONFIG[d.u?.playerId]?.logColor"
+					  x-text="'⚀⚁⚂⚃⚄⚅'[d.u?.value-1]"></span>
+				<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+(d.u?.value)+'.png'" :alt="'D['+(d.u?.value)+']'" :title="'D['+(d.u?.value)+']'" width="16" height="16">
+				<div class="flex-grow">
+					<div class="text-base font-bold" x-text="d.u?.name"></div>
+					<div :class="PLAYER_CONFIG[d.u?.playerId]?.logColor"
+						 x-text="d.u ? ('P' + (d.u.playerId + 1) + ' ' + PLAYER_CONFIG[d.u.playerId]?.color) : ''"></div>
+				</div>
+				<span x-show="unitstat != null" class="mr-2 cursor-pointer" title="Pinned">📌</span>
+				<span x-show="unitstat != null && showUnitInfo" @click="showUnitInfo = false" class="font-bold cursor-pointer" title="Close">✕</span>
+			</div>
+
+			<!-- Blurb -->
+			<div class="italic text-gray-700" x-text="d.u ? unitBlurb(d.u) : ''"></div>
+
+			<!-- HP for Campaign -->
+			<div x-show="isCampaign && d.u" class="border-t border-yellow-900 pt-1">
+				<div class="flex justify-between items-center mb-1">
+					<span class="text-gray-600 font-bold">HIT POINTS</span>
+					<span class="font-bold"><span x-text="d.u?.currentHP"></span> / <span x-text="d.u?.maxHP"></span></span>
+				</div>
+				<div class="w-full h-2 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+					<div class="h-full bg-green-500 transition-all duration-300"
+						:style="'width: ' + (d.u ? (d.u.currentHP / d.u.maxHP * 100) : 0) + '%'"
+						:class="{'bg-yellow-500': d.u && d.u.currentHP / d.u.maxHP < 0.5, 'bg-red-500': d.u && d.u.currentHP / d.u.maxHP < 0.25}">
+					</div>
+				</div>
+			</div>
+
+			<!-- Stats -->
+			<div class="grid grid-cols-2 gap-x-3 gap-y-1">
+				<div>
+					<span class="text-gray-600">Armor</span>
+					<span class="font-bold" x-text="d.br?.total"></span>
+					<span class="text-gray-500"
+						  x-show="d.br?.parts?.length > 0 || d.br?.total !== d.u?.currentArmor"
+						  x-text="'(' + d.u?.currentArmor + (d.br?.parts?.map(p => (p.value >= 0 ? ' +' : ' ') + p.value + ' ' + p.label).join('')) + ')'"></span>
+					<span class="text-red-700 ml-1" x-show="d.br?.rerolled">[reroll: 0]</span>
+				</div>
+				<div>
+					<span class="text-gray-600">Attack</span>
+					<span class="font-bold" x-text="d.u?.attack"></span>
+				</div>
+				<div x-show="d.u?.range > 0">
+					<span class="text-gray-600">Range</span>
+					<span class="font-bold" x-text="d.u?.range"></span>
+					<span class="text-gray-500" x-show="d.u?.value === 2"> (LoS req.)</span>
+				</div>
+				<div>
+					<span class="text-gray-600">Move</span>
+					<span class="font-bold" x-text="d.u?.distance"></span>
+				</div>
+			</div>
+
+			<!-- Movement pattern -->
+			<div class="text-gray-700" x-text="d.u ? unitMovementText(d.u) : ''"></div>
+
+			<!-- Status flags -->
+			<div x-show="d.flags?.length > 0" class="border-t border-yellow-900 pt-1 space-y-1">
+				<template x-for="(f, idx) in d.flags" :key="idx">
+					<div :class="{'text-red-700': f.tone === 'warn', 'text-blue-800': f.tone === 'good', 'text-gray-700': f.tone === 'info'}">
+						<span x-text="f.icon"></span>
+						<span x-text="f.label"></span>
+					</div>
+				</template>
+			</div>
+
+			<!-- Terrain -->
+			<div class="border-t border-yellow-900 pt-1">
+				<span class="text-gray-600">Terrain:</span>
+				<span class="font-bold" x-text="d.terrain?.name"></span>
+				<div class="text-gray-700" x-text="d.terrain?.effect"></div>
+			</div>
+
+			<!-- Actions -->
+			<div class="border-t border-yellow-900 pt-1">
+				<div class="text-gray-600 mb-1">Actions:</div>
+				<div class="space-y-1">
+					<template x-for="(a, idx) in d.actions" :key="idx">
+						<div>
+							<span class="font-bold" x-text="a.name"></span>
+							<div class="text-gray-700" x-text="a.desc"></div>
+						</div>
+					</template>
+				</div>
+			</div>
+
+		</div>
+	</div>
+	<div class="unit-info-panel-hint" x-show="overflow && !atBottom">▾ scroll for more</div>
+</div>

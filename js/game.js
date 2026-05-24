@@ -99,6 +99,16 @@ function alpineHexDiceTacticGame() { return {
 		autoPlay: new URLSearchParams(location.search).get('mode')?.includes('auto'),
 	},
 
+	async loadComponent(el, name) {
+		try {
+			const response = await fetch(`/html/${name}.html`);
+			el.innerHTML = await response.text();
+			Alpine.initTree(el);
+		} catch (e) {
+			console.error(`Failed to load component ${name}:`, e);
+		}
+	},
+
 	generateGameId() {
 		return Date.now().toString(36).substr(2) + Math.random().toString(36).substr(2, 3);
 	},

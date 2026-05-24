@@ -1,0 +1,253 @@
+<div id="game-controller" x-show="!Autochess.state.enabled" class="w-full flex flex-col items-center mb-20 md:mb-2">
+	<!-- Game Setup -->
+	<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
+		<!-- <h2 class="text-lg mb-2" x-text="setupStatusMessage()"></h2> -->
+		<div x-show="phase === 'SETUP_ROLL'" style="display: none;" class="space-y-2">
+			<div class="">
+				<span class="font-bold text-sm">PLAYERS:</span>
+				<a href="?players=2" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 2 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[2]</a>
+				<a href="?players=3" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 3 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[3]</a>
+				<a href="?players=4" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[4]</a>
+				<a href="?players=6" class="mx-1 hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[6]</a>
+				<span class="font-bold text-sm">COMBAT:</span>
+				<a :href="updateUrlParam('version', 1)" class="hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">[v1: Decisive]</a>
+				<a :href="updateUrlParam('version', 2)" class="hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">[v2: Destiny]</a>
+			</div>
+			<div class="hidden">
+				<span class="font-bold text-sm uppercase">Gameplay:</span>
+			</div>
+			<div class="flex flex-wrap justify-center gap-4" x-show="spriteSets.length > 0 && players.length > 0">
+				<template x-for="(player, idx) in players" :key="idx">
+					<div class="py-2 text-sm" x-show="!player.isAI">
+						<!-- <span class="font-bold" :class="player.logColor" x-text="player.color"></span> -->
+						<select x-model="player.selectedSpriteSet" class="text-sm w-24 cursor-pointer" :class="player.logColor">
+							<option value="" class="uppercase">Default</option>
+							<option :value="spriteSets.random()" class="uppercase">Random</option>
+							<template x-for="set in spriteSets" :key="set">
+								<option :value="set" class="" x-text="set.replace(/_/g, ' ')"></option>
+							</template>
+						</select>
+					</div>
+				</template>
+			</div>
+			<div class="">
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?campaign=true&map=' + CampaignManager.getCurrentMapName()" x-show="!isCampaign">[β:Campaign]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="location.href='?autochess=true&players='+playerCount">[α:RotDK]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="setupTerrain(true)">[Terrain]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[Deploy]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[Random]</button>
+				<!-- <button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button> -->
+				<a href="?players=2&preset=E_21" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">[Epic 21]</a>
+				<a href="?players=2&preset=E_15" class="hidden mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">[Grand 15]</a>
+			</div>
+			<div class="hidden mt-4">
+			</div>
+			<div class="">
+				<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="createRoom()" x-show="auth.user && online.status === 'OFFLINE'">New Room</button>
+				<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="joinRoom()" x-show="auth.user && online.status === 'OFFLINE'">Join</button>
+				
+			</div>
+
+			<!-- Online Status -->
+			<div class=" p-2 text-sm border border-dashed relative" x-show="online.status !== 'OFFLINE'" x-cloak>
+				<div>Open Room: <span x-text="online.roomId" class="font-bold select-all"></span>, <span class="" x-show="online.status === 'LOBBY'">waiting ...</span></div>
+				
+				<div class="flex items-center justify-center space-x-4 mt-2">
+					<div class="">
+						<div x-show="online.status === 'PLAYING'" class="flex items-center space-x-2">
+							<div class="w-3 h-3 rounded-full" :class="currentPlayerIndex === online.playerIndex ? 'bg-green-500 animate-pulse' : 'bg-gray-300'"></div>
+							<span :class="currentPlayerIndex === online.playerIndex ? 'font-bold text-green-700' : 'text-gray-500'">
+								<span x-show="currentPlayerIndex === online.playerIndex">YOUR TURN</span>
+								<span x-show="currentPlayerIndex !== online.playerIndex">OPPONENT'S TURN</span>
+							</span>
+							<span class="text-xs bg-gray-200 px-1.5 py-0.5 font-bold" x-text="online.turnTimer + 's'"></span>
+						</div>
+					</div>
+				</div>
+				
+				<div class="text-gray-500 mt-1 border-t pt-1 flex justify-between items-center" x-show="online.opponent">
+					<div>Opponent: <span class="font-bold" x-text="online.opponent?.name"></span></div>
+					<button class="text-red-500 hover:underline cursor-pointer" @click="leaveRoom()">[Leave]</button>
+				</div>
+				<button class="hover:underline cursor-pointer" x-show="!online.opponent" @click="leaveRoom()">[Cancel]</button>
+			</div>
+
+		</div>
+		<div x-show="phase === 'SETUP_REROLL'" class="bg-wood" style="display: none;">
+			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), select up to <span x-text="rules.maxRerolls"></span> dice to reroll:</p>
+			<div class="flex justify-center space-x-2 mb-2">
+				<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
+					<div x-show="!die.isDeployed" class="p-2 border cursor-pointer"
+						 :class="{'bg-black text-white': diceToReroll.includes(index)}"
+						 @click="toggleRerollSelection(index)">
+						<span x-text="die.value"></span>
+					</div>
+				</template>
+			</div>
+			<button @click="performReroll()" class="border px-2 py-1 hover:bg-black hover:text-white" :disabled="!canConfirmReroll()">Confirm Reroll (<span x-text="diceToReroll.length"></span>)</button>
+			<button @click="skipReroll()" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Skip Reroll</button>
+			<button @click="skipReroll();randomStart();" class="border px-2 py-1 hover:bg-black hover:text-white ml-2">Random Deploy</button>
+		</div>
+		 <div x-show="phase === 'SETUP_DEPLOY'" style="display: none;" class="mb-4">
+			<p class="mb-2">Player <span x-text="currentPlayerIndex + 1"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>), deploy your units.</p>
+			<p class="mb-2 text-sm italic" x-show="isCampaign && campaignData && currentPlayerIndex === 0">
+				Level: <span x-text="campaignData?.level"></span>, <span class="hover:bg-gray-500 cursor-pointer select-none" x-text="campaignData?.rmi?.split('.')[0]" @click="showMinimap = !showMinimap"></span>, <span class="hover:bg-gray-500 cursor-pointer select-none" x-show="isCampaign && currentPlayerIndex === 0" @click="showCamp = true" x-text="'⛺ CAMPING ['+(CampaignManager?.state?.devotionPoints||0)+']🔥'"></span>
+			</p>
+			<div class="flex justify-center flex-wrap gap-2 mb-2">
+				<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
+					<div
+						class="p-1 border text-xs cursor-pointer select-none min-w-16 text-blue-600"
+						:class="
+							[
+								selectedDieToDeploy === index ? 'bg-black text-white font-bold' : '',
+								players[currentPlayerIndex]?.dice[index]?.isDeployed ? 'opacity-50 border-dashed' : '',
+								(players[currentPlayerIndex]?.dice[index]?.fatigueStatus === 'FATIGUED') ? 'border-yellow-500' : '',
+								(players[currentPlayerIndex]?.dice[index]?.fatigueStatus === 'SCARRED') ? 'border-red-500 text-red-700' : '',
+							].join(' ')
+						"
+						@click="selectDieToDeploy(index)"
+					>
+						<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
+						<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
+						<!-- D<span x-text="players[currentPlayerIndex]?.dice[index]?.value"></span> -->
+						<div class="text-xs font-bold" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
+					</div>
+				</template>
+			</div>
+			<!-- <div x-show="isCampaign && currentPlayerIndex === 0" class="flex justify-center space-x-2 mt-2">
+				<div class="text-xs font-bold self-center">RUNES:</div>
+				<template x-for="(count, type) in CampaignManager.state.runes" :key="type">
+					<div class="px-2 py-1 text-sm">
+						<span class="capitalize" x-text="type"></span>: <span x-text="count"></span>
+					</div>
+				</template>
+			</div> -->
+		</div>
+	</div>
+
+	<!-- Game Over -->
+	<div style="display: none;" x-show="phase === 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
+		<h2 class="text-2xl mb-2 font-bold" x-text="winnerMessage">GAME OVER</h2>
+		<!-- <p x-text="winnerMessage"></p> -->
+
+		<!-- Replay Export Buttons -->
+		<div class="mt-4 flex flex-col items-center space-y-2">
+			<div class="flex space-x-2">
+				<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white text-sm"
+					@click="exportReplay()">Export Replay (.json)</button>
+				<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white text-sm"
+					@click="exportHDPGN()">Export HDPGN (.hdpgn)</button>
+			</div>
+			<!-- <p class="text-xxs text-gray-500 italic">Game ID: <span x-text="gameId"></span></p> -->
+		</div>
+
+		<div x-show="!isCampaign">
+			<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
+				@click="resetGame({isP2AI: new URLSearchParams(location.search).get('mode') == 'single'})"
+			>New Game</button>
+		</div>
+
+		<div x-show="isCampaign">
+			<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
+				@click="location.href='?campaign=true&map=' + nextCampaignMap"
+			>
+				<span x-text="winnerPlayerId === 0 ? 'Next Level' : 'Retry Level'"></span>
+			</button>
+			<button class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white"
+				@click="location.href='index.html'"
+			>Exit Campaign</button>
+		</div>
+	</div>
+
+	<!-- Game Actions -->
+	<div style="display: none;" x-show="false && (actionMode !== null)" class="bg-wood mb-1 p-2 border text-center">
+		<p x-text="actionModeMessage()"></p>
+		<button @click="cancelAction()" class="mt-2 border px-3 py-1 text-sm hover:bg-black hover:text-white">Cancel Action</button>
+	</div>
+
+	<!-- Game Info -->
+	<div style="display: none;" x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
+		<p class="text-xs text-gray-500 italic">
+			Mode: <span x-text="gameplayVersion === 2 ? 'Destiny Dice (v2)' : 'Decisive Dice (v1)'"></span>
+			<span x-show="gameplayVersion === 2 && turnPhase" x-text="' - Phase: ' + (turnPhase ? turnPhase.replace('_', ' ') : '')"></span>
+		</p>
+
+		<div class="space-x-2">
+			<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
+				@click="initiateAction('MOVE')"
+			>[MOVE]</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
+				@click="performAction('REROLL', selectedUnitHexId)"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/reroll.png" alt="[REROLL]" title="REROLL" width="24" height="24">
+			</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
+				@click="performAction('GUARD', selectedUnitHexId)"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/guard.png" alt="[GUARD]" title="GUARD" width="24" height="24">
+			</button>
+			<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
+				@click="initiateAction('RANGED_ATTACK')"
+			>[RANGE]</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
+				@click="initiateAction('SPECIAL_ATTACK')"
+				--x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? '[SPELLS]' : '[SPL ATK]'"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/spell.png" alt="[SPELLS]" title="SPELLS" width="24" height="24">
+			</button>
+
+			<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">
+				<button class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/shield.png" alt="[SHIELD]" title="SHIELD" width="24" height="24">
+				</button>
+				<button class="cursor-pointer p-1" @click="selectOracleSpell('SWAP')">
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/swap.png" alt="[SWAP]" title="SWAP" width="24" height="24">
+				</button>
+				<button class="cursor-pointer p-1" @click="selectOracleSpell('SKIRMISH')">
+					<img class="inline h-6 w-6" src="/assets/sprites/icons/skirmish.png" alt="[SKIRMISH]" title="SKIRMISH" width="24" height="24">
+				</button>
+			</div>
+
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
+				@click="initiateAction('MERGE')"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/merge.png" alt="[MERGE]" title="MERGE" width="24" height="24">
+			</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white font-bold bg-red-100"
+				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
+				@click="initiateAction('SPELLCAST_SACRIFICE')"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/transmute.png" alt="[TRANSMUTE]" title="TRANSMUTE" width="24" height="24">
+			</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="actionMode !== null"
+				@click="cancelAction()"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/cancel.png" alt="[CANCEL]" title="CANCEL" width="24" height="24">
+			</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				@click="startTacticalCommand()"
+				x-show="gameplayVersion == 2 && turnPhase == 'FATE_CALL'"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/fate.png" alt="[END FATE]" title="END FATE" width="24" height="24">
+			</button>
+			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				@click="endTurn()"
+			>
+				<img class="inline h-6 w-6" src="/assets/sprites/icons/escape.png" alt="[END TURN]" title="END TURN" width="24" height="24">
+			</button>
+		</div>
+
+		<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
+			<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
+			Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + players[currentPlayerIndex].name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+		</p>
+	</div>
+</div>

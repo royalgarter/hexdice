@@ -1,0 +1,24 @@
+<!-- Bottom Right -->
+<div class="absolute bottom-2 right-1 text-sm font-mono font-bold flex flex-col items-end gap-1" style="display: none;" x-show="audioManager">
+	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood"
+		@click="showUnitInfo = !showUnitInfo"
+		:class="showUnitInfo ? 'text-gray-300' : 'text-gray-800'"
+		x-show="unitstat || hoverUnitHexId" style="display: none;">?</a>
+
+	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood"
+		@click="audioManager.noSFX = !audioManager.noSFX"
+		:class="audioManager.noSFX ? 'text-gray-300' : 'text-gray-800'">♪</a>
+
+	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood text-xs"
+		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.('battle')"
+		:class="audioManager.musicEl ? 'text-gray-300' : 'text-gray-800'">𝄞</a>
+</div>
+
+<!-- Bottom Left -->
+<div class="absolute bottom-2 left-1 text-sm font-mono flex gap-1">
+	<a href="#" class="rounded-full w-6 h-6 text-center content-center bg-wood hover:bg-gray-200" @click="location.href='/'" style="display: none;" x-show="isCampaign || autochess">🏠</a>
+	<a href="#" class="rounded-full w-6 h-6 text-center content-center bg-wood hover:bg-gray-200" @click="showMinimap = !showMinimap" style="display: none;" x-show="isCampaign">🏞️</a>
+	<a href="#" class="rounded-full w-6 h-6 text-center content-center bg-wood hover:bg-gray-200" @click="showLog = !showLog" style="display: none;" x-show="messageLog?.length">📜</a>
+	<a href="/blog.html" class="p-1 rounded-full bg-wood hover:bg-gray-200" target="_blank" >📝</a>
+	<a href="/rules.html" class="p-1 rounded-full bg-wood hover:bg-gray-200" target="_blank" >📐</a>
+</div>

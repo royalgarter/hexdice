@@ -168,3 +168,55 @@ const UNIT_SOUNDS = {
     '5': 'Pkatak1,Pkpissd1,Pkpissd2,Pkpissd3,Pkready,Pkwhat1,Pkwhat2,Pkwhat3,Pkwhat4,Pkyessr1,Pkyessr2,Pkyessr3,Pkyessr4'.split(','),
     '6': 'Wzpissd1,Wzpissd2,Wzpissd3,Wzready,Wzwhat1,Wzwhat2,Wzwhat3,Wzyessr1,Wzyessr2,Wzyessr3'.split(','),
 };
+
+
+// Global Dice Logic
+window.currentX = 15;
+window.currentY = 15;
+window.rollDiceAnimation = function(targetNumber) {
+	const cube = document.getElementById('cube');
+	if (!cube) return;
+
+	const rotations = [
+		[0, 0],      // 1
+		[0, -90],    // 2
+		[0, 180],    // 3
+		[0, 90],     // 4
+		[-90, 0],    // 5
+		[90, 0]      // 6
+	];
+
+	const [targetX, targetY] = rotations[targetNumber - 1];
+
+	currentX += 360 * (Math.floor(Math.random() * 3) + 2) + targetX - (currentX % 360);
+	currentY += 360 * (Math.floor(Math.random() * 3) + 2) + targetY - (currentY % 360);
+
+	cube.style.transform = `rotateX(${currentX+6}deg) rotateY(${currentY+13}deg)`;
+};
+
+window.handleCredentialResponse = (response) => {
+	Alpine.$data(document.querySelector('body'))?.handleGoogleAuth?.(response);
+};
+
+// Register the service worker
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+		navigator.serviceWorker.register('/service-worker.js')
+			.then(registration => {
+				console.log('ServiceWorker registration successful with scope: ', registration.scope);
+				
+				// Check for updates
+				registration.addEventListener('updatefound', () => {
+					const newWorker = registration.installing;
+					newWorker.addEventListener('statechange', () => {
+						if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+							console.log('New version available. Reload to update.');
+						}
+					});
+				});
+			})
+			.catch(error => {
+				console.log('ServiceWorker registration failed: ', error);
+			});
+	});
+}
