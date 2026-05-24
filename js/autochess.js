@@ -568,6 +568,7 @@ const Autochess = {
 		}
 
 		defenderUnit.hp -= damage;
+		console.log(`Combat: ${GAME.logUnit(attackerUnit)} dealt ${damage} to ${GAME.logUnit(defenderUnit)}. New HP: ${defenderUnit.hp}`);
 
 		// --- Post-Damage Perks ---
 		// Archer Tier 2 [B] Venom Tipped
