@@ -220,15 +220,30 @@ async function handleRequest(req: Request) {
 	}
 
 	if (await exists(localpath)) {
-		let mime = extname(localpath);
+		const ext = extname(localpath).toLowerCase();
+		const mimeMap: Record<string, string> = {
+			".html": "text/html",
+			".htm": "text/html",
+			".css": "text/css",
+			".js": "text/javascript",
+			".mjs": "text/javascript",
+			".json": "application/json",
+			".png": "image/png",
+			".jpg": "image/jpeg",
+			".jpeg": "image/jpeg",
+			".gif": "image/gif",
+			".svg": "image/svg+xml",
+			".wav": "audio/wav",
+			".mp3": "audio/mpeg",
+			".ogg": "audio/ogg",
+			".ico": "image/x-icon",
+		};
 		
-		if (mime?.includes('htm')) mime = 'html';
-		else if (mime?.includes('css')) mime = 'css';
-		else if (mime?.includes('js')) mime = 'javascript';
+		const contentType = mimeMap[ext] || "application/octet-stream";
 
 		return response(await Deno.readFile(localpath), {
 			headers: {
-				"Content-Type": `${mime ? ('text/' + mime) : "text/plain"}; charset=utf-8`,
+				"Content-Type": contentType,
 				"Cache-Control": "public, max-age=604800",
 			}
 		})

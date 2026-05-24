@@ -3,7 +3,7 @@ const CORE_ASSETS = [
 	'/',
 	'/index.html',
 	'/rules.html',
-	'/game.js',
+	'/js/game.js',
 	'/assets/assets-manifest.json'
 ];
 

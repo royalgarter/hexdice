@@ -73,8 +73,94 @@ Each unit type has a predefined behavior:
 - Add visual indicators for the Action Gauge.
 - Implement round recap UI.
 
-## Verification:
-- Verify units act according to their fixed AI without player input during combat.
-- Verify Action Gauge fills at different rates based on stats.
-- Verify round rewards are correctly applied and persisted.
-- Verify 10-round progression works from start to finish.
+### 5. Rules Configuration & Parameters
+- **`BASE_HP` (100):** Starting health points for all units.
+- **`WIN_REROLLS` (2):** Number of reroll credits granted to each player after winning a combat round.
+- **`LOSS_REROLLS` (1):** Number of reroll credits granted to each player after losing a combat round.
+- **`VETERAN_ATK_BONUS` (1):** ATK increment applied to survivors after a win.
+- **`VETERAN_HP_BONUS` (10):** HP increment applied to survivors after a win.
+- **Round Limit:** 6 total rounds per tournament.
+- **Player Equality:** Every participant (Human/AI) manages their own `inventories` and `rerolls`.
+
+### 8. Core Formulas & Stat Calculations
+
+- **Base Stats:** Initialized directly from the `UNIT_STATS` constant for each unit value (1-6).
+- **Damage Formula:** 
+    - Combat Success: `Math.ceil((Attacker.Attack + CombatRoll) / 2) > Defender.Armor`
+    - If Success: `Damage = 30 + (Attacker.Attack * 2)`
+    - If Deflected: `Damage = 5 + Attacker.Attack`
+    - Base `Attack` and `Armor` are inherited from `UNIT_STATS`.
+- **Veteran Scaling:** 
+    - `Unit.Attack += AUTOCHESS_CONFIG.VETERAN_ATK_BONUS` (Applied per win)
+    - `Unit.MaxHP += AUTOCHESS_CONFIG.VETERAN_HP_BONUS` (Applied per win)
+- **ATB (Action Gauge) Calculation:**
+    - **Gauge Increase:** `Unit.actionGauge += Unit.speed` (calculated every tick).
+    - **Speed Base:** Derived from `UNIT_STATS` distance/class or a hardcoded lookup: `{ 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }`.
+    - **Action Threshold:** An action is triggered when `Unit.actionGauge >= 100`.
+- **Current Armor:** 
+    - Initialized as `UNIT_STATS[value].armor`.
+    - Remains constant during a combat round unless specifically modified by active abilities or spells.
+
+
+---
+
+# Review 01: HexDice Autochess
+
+Welcome to the advisory review board. As a panel of mobile board game experts—comprising Lead Game Designers, System Architects, and Mobile UX Specialists—we have thoroughly reviewed the proposed "Autochess" mode for **HexDice**.
+
+Taking a tactical, deterministic dice game and adapting it into a fast-paced, asynchronous auto-battler is a brilliant pivot for mobile retention. It taps into the highly successful "Super Auto Pets" and "Teamfight Tactics" (TFT) demographic.
+
+Here is our comprehensive analysis of your design document and implementation, broken down by our respective areas of expertise.
+
+---
+
+### 🎲 1. The Game Designer's Perspective: Balance & Mechanics
+*Focus: Player experience, economic loops, and game balance.*
+
+**🟢 The Good:**
+* **The ATB (Action Gauge) Shift:** Moving from alternating turns to a tick-based speed gauge is the right call for an auto-battler. It allows for dynamic, simultaneous-feeling combat that is fun to watch.
+* **Class-Based AI:** Leveraging your existing heuristic AI to give units distinct personalities (e.g., Archer "kiting," Hussar "assassinating") will create highly readable and engaging visual gameplay without requiring complex player input.
+* **HP System Introduction:** Transitioning from the base game's "1-hit kill / armor reduction" to a 100 HP base system is necessary for the auto-battler genre. It ensures combats last long enough for players to actually enjoy the spectacle of the fight.
+
+**🔴 The Critical Risks:**
+* **The "Win-More" Snowball Effect:** Your reward structure gives round winners **+2 Rerolls** and **permanent stat buffs** (+1 ATK, +10 HP), while losers only get **+1 Reroll** and no buffs. In auto-battlers, this is a fatal flaw. The winner will snowball out of control by Round 3.
+  * *Fix:* Reverse or flatten the economy. Losers need comeback mechanics (e.g., loss-streak bonuses or more shop rerolls). Base stat buffs should come from merging identical dice (e.g., combining three "1"s makes a Level 2 Fencer), not just surviving.
+
+---
+
+### 💻 2. The Systems Architect's Perspective: Code & Execution
+*Focus: Logic flow, scalability, and technical debt.*
+
+**🟢 The Good:**
+* **Clean State Separation:** Introducing `GAME.Autochess.state` keeps this mode cleanly separated from your base version V1/V2 logic, preventing massive technical debt.
+* **Randomized Tie-Breaking:** `(b.actionGauge - a.actionGauge) || (Math.random() - 0.5)` is a very elegant and cheap way to handle simultaneous turn priority.
+
+**🔴 The Critical Risks:**
+* **Action Hook Override Conflict:** In `executeAction`, you use `applyMove(GAME, move);` from the base game. However, you also have a custom `handleCombat` function in `autochess.js` designed for the new HP system. **If `applyMove` relies on the base game's V1/V2 combat logic (which insta-kills units or reduces armor), your custom HP system will be completely bypassed.**
+  * *Fix:* You must either intercept the combat resolution inside `applyMove` when `GAME.Autochess.state.enabled` is true, OR refactor `executeAction` to manually move units and trigger `handleCombat` directly.
+* **Simulation Loop (`setInterval`):** Relying on a fixed `100ms` interval for combat steps is okay for a web prototype, but on mobile devices, DOM/Canvas rendering can desync.
+  * *Fix:* Tie your simulation steps to a `requestAnimationFrame` loop with a delta-time multiplier to ensure smooth animations and consistent logic execution regardless of device frame rate.
+
+---
+
+### 🎯 Summary of Actionable Recommendations
+
+- **Rebalance the Economy:** Remove the "Winner gets more stats and rerolls" mechanic. Instead, implement a **Merge System**: buying 2 identical dice from the shop combines them into a Veteran die with the +ATK/+HP buffs. This rewards economy management, not just early RNG luck.
+- **Check Your Combat Hooks:** Ensure that the AI executing `applyMove` actually triggers your new `handleCombat(HP)` function instead of the base game's instant-kill mechanics.
+
+**Final Verdict:** This is a fantastic expansion of the *HexDice* IP. The groundwork is solid, and with a few crucial tweaks to the economy and code-hooking, you have a highly addictive mobile game loop on your hands.
+
+---
+
+# TODO
+
+- **Combat Hook Interception:** Modified `js/ai/ai.js` to redirect combat actions to `Autochess.handleCombat` when Autochess mode is active, bypassing base game logic.
+- **Merge System:** Added `mergeUnits` in `js/autochess.js` allowing players to combine 2 identical units for stat upgrades. UI will have click to highlight and [Merge] button to upgrade it's stats.
+- **Economy Rebalance:** Eech round is rewarded 1 unit with change of reroll (Losers: 1, Winners: 2) and removed post-match stat buffs in favor of the merge system.
+- **Team Management:**
+    - Removed 6-unit cap in `recruitUnit`, allowing collection.
+    - Updated `prepareCombat` to only deploy the first 6 units in the player's team list for battle.
+    - Added drag & drop reordering UI in `index.html` to allow player control over team formation.
+- **Timeout and Tie-Breaker:**
+    - Added a 1-minute round timer and UI display.
+    - Added `resolveTimeout` which determines the winner based on remaining units and HP if time expires.

@@ -2,19 +2,19 @@
   "scripts": {
     "start": "deno run --unstable-kv --allow-net --allow-read --allow-env --env-file server.ts",
     "sprites:gen": "node -e \"require('fs').writeFileSync('./assets/sets.json',JSON.stringify(require('fs').readdirSync('./assets/sprites/sets/',{withFileTypes:true }).filter(d => d.isDirectory()).map(d => d.name),null,'\\t'));\"",
-    "manifest:gen": "node generate-assets-manifest.js",
+    "manifest:gen": "node js/generate-assets-manifest.js",
     "gen": "npm run sprites:gen;npm run manifest:gen",
-    "simulate": "deno run --allow-all simulate.ts",
-    "simulate:v2": "deno run --allow-all simulate.ts --version=2 -g=1",
-    "tournament": "deno run --allow-all tournament.ts",
-    "tournament:test": "deno run --allow-all tournament.ts -g=5 --profiles=baseline,berserker,turtle",
-    "tournament:full": "deno run --allow-all tournament.ts -g=20",
-    "tournament:fast": "deno run --allow-all tournament.ts -q -p=4 -g=4",
-    "tournament:mutate": "deno run --allow-all tournament.ts -m -r=0.1 -g=1 --profiles=baseline,berserker,turtle",
-    "replay": "deno run --allow-read replay.ts",
-    "replay:latest": "deno run --allow-read replay.ts simulations/*.json",
-    "campaign:gen-sample": "node campaign/generator.js --name='Valley of Shadow' --dice='11/21/31/41/51/61' --enemies='12/21/51' --terrain='forest:8,lake:4,mountain:3' --limit=4 --runes='aegis:1,pegasus:1' --output='campaign/level_sample.json'",
-    "campaign:gen-random": "node campaign/generator.js --name='Random Skirmish' --output='campaign/level_random.json'",
-    "campaign:ro_rmi": "node campaign/generator_ro_rmi.js"
+    "simulate": "deno run --allow-all js/simulate.ts",
+    "simulate:v2": "deno run --allow-all js/simulate.ts --version=2 -g=1",
+    "tournament": "deno run --allow-all js/tournament.ts",
+    "tournament:test": "deno run --allow-all js/tournament.ts -g=5 --profiles=baseline,berserker,turtle",
+    "tournament:full": "deno run --allow-all js/tournament.ts -g=20",
+    "tournament:fast": "deno run --allow-all js/tournament.ts -q -p=4 -g=4",
+    "tournament:mutate": "deno run --allow-all js/tournament.ts -m -r=0.1 -g=1 --profiles=baseline,berserker,turtle",
+    "replay": "deno run --allow-read js/replay.ts",
+    "replay:latest": "deno run --allow-read js/replay.ts simulations/*.json",
+    "campaign:gen-sample": "node js/campaign/generator.js --name='Valley of Shadow' --dice='11/21/31/41/51/61' --enemies='12/21/51' --terrain='forest:8,lake:4,mountain:3' --limit=4 --runes='aegis:1,pegasus:1' --output='js/campaign/level_sample.json'",
+    "campaign:gen-random": "node js/campaign/generator.js --name='Random Skirmish' --output='js/campaign/level_random.json'",
+    "campaign:ro_rmi": "node js/campaign/generator_ro_rmi.js"
   }
 }
