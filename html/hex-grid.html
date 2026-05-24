@@ -41,7 +41,7 @@
 
 					<!-- Campaign HP Bar -->
 					<div x-show="isCampaign" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
-						<div class="h-full bg-green-500 transition-all duration-300"
+						<div class="h-full bg-green-500 "
 							:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
 							:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
 						</div>
@@ -49,11 +49,11 @@
 
 					<!-- Autochess HP Bar -->
 					<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
-						<div class="h-1.5 bg-green-500 transition-all duration-300 rounded-full"
-							:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%'"
-							:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHP < 0.25}">
+						<div class="h-1.5 bg-green-500  rounded-full"
+							:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHp * 100) + '%'"
+							:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHp < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHp < 0.25}">
 						</div>
-						<div class="h-1 bg-blue-400 transition-all duration-100 rounded-full mt-0.5"
+						<div class="h-1 bg-blue-400  rounded-full mt-0.5"
 							:style="'width: ' + (hex.unit?.actionGauge || 0) + '%'">
 						</div>
 					</div>
