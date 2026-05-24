@@ -63,7 +63,7 @@ const Autochess = {
 		
 		unitsToDeploy.forEach((unit, i) => {
 			unit.isDeath = false;
-			unit.hp = unit.maxHp;
+			unit.hp = unit.maxHP;
 			unit.isDeployed = false;
 			unit.hexId = null;
 
@@ -83,7 +83,7 @@ const Autochess = {
 	generateRecruits(GAME, playerId = null) {
 		GAME.players.forEach(p => {
 			p.dice.forEach(d => {
-				d.hp = d.maxHp;
+				d.hp = d.maxHP;
 				d.attack = d.maxAtk;
 				d.currentArmor = d.armor;
 			});
@@ -196,10 +196,10 @@ const Autochess = {
 			u1.perks = { tier1: null, tier2: null, tier3: null };
 		}
 
-		u1.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
+		u1.maxHP += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
 		u1.maxAtk += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, u1.maxAtk);
 
-		u1.hp = u1.maxHp;
+		u1.hp = u1.maxHP;
 		u1.attack = u1.maxAtk;
 
 		// Update display name with stars, keep internal 'class' unchanged for logic
@@ -225,7 +225,7 @@ const Autochess = {
 			displayName: stats.name,
 			playerId: playerId,
 			hp: AUTOCHESS_CONFIG.BASE_HP,
-			maxHp: AUTOCHESS_CONFIG.BASE_HP,
+			maxHP: AUTOCHESS_CONFIG.BASE_HP,
 			maxAtk: stats.attack,
 			currentArmor: stats.armor,
 			speed: (6 + stats.distance) || (10 - stats.distance) || Math.floor(20 / stats.distance) || { 1: 10, 2: 12, 3: 15, 4: 8, 5: 5, 6: 10 }[value] || 10,
@@ -289,10 +289,10 @@ const Autochess = {
 				const baseStats = UNIT_STATS[unit.value];
 				if (baseStats) {
 					unit.attack = baseStats.attack;
-					unit.maxHp = AUTOCHESS_CONFIG.BASE_HP;
+					unit.maxHP = AUTOCHESS_CONFIG.BASE_HP;
 					unit.veteranLevel = 0;
 					unit.displayName = baseStats.name;
-					unit.hp = unit.maxHp;
+					unit.hp = unit.maxHP;
 					unit.perks = { tier1: null, tier2: null, tier3: null };
 				}
 			});
@@ -319,12 +319,12 @@ const Autochess = {
 				for (let lvl = 0; lvl < targetLevel; lvl++) {
 					unit.veteranLevel++;
 					unit.attack += Math.min(AUTOCHESS_CONFIG.VETERAN_ATK_BONUS, unit.attack);
-					unit.maxHp += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
+					unit.maxHP += AUTOCHESS_CONFIG.VETERAN_HP_BONUS;
 					
 					const tier = `tier${lvl + 1}`;
 					unit.perks[tier] = Math.random() < 0.5 ? 'A' : 'B';
 				}
-				unit.hp = unit.maxHp;
+				unit.hp = unit.maxHP;
 				unit.displayName = `${unit.name} ${'★'.repeat(unit.veteranLevel)}`;
 			}
 		});
@@ -347,7 +347,7 @@ const Autochess = {
 
 			player.dice.forEach((u, i) => {
 				u.isDeath = false;
-				u.hp = u.maxHp;
+				u.hp = u.maxHP;
 				u.actionGauge = 0;
 				u.hexId = null;
 				u.isDeployed = false;
@@ -503,7 +503,7 @@ const Autochess = {
 
 		// --- Attack Perks ---
 		// Fencer Tier 1 [B] Lunge
-		if (GAME.hasPerk(attackerUnit, 'tier1', 'B') && defenderUnit.hp >= defenderUnit.maxHp) {
+		if (GAME.hasPerk(attackerUnit, 'tier1', 'B') && defenderUnit.hp >= defenderUnit.maxHP) {
 			damageMod += 15;
 		}
 		// Hussar Tier 1 [A] Momentum
@@ -579,7 +579,7 @@ const Autochess = {
 		// Knight Tier 3 [B] Dark Knight (Lifesteal)
 		if (attackerUnit.value === 4 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
 			const heal = Math.floor(damage * 0.5);
-			attackerUnit.hp = Math.min(attackerUnit.maxHp, attackerUnit.hp + heal);
+			attackerUnit.hp = Math.min(attackerUnit.maxHP, attackerUnit.hp + heal);
 		}
 		// Fencer Tier 3 [A] Paladin (Heal on hit)
 		if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier3', 'A')) {
@@ -589,7 +589,7 @@ const Autochess = {
 					const friend = GAME.getUnitOnHex(n.id, state);
 					if (friend && friend.playerId === attackerUnit.playerId) {
 						const heal = 10;
-						friend.hp = Math.min(friend.maxHp, friend.hp + heal);
+						friend.hp = Math.min(friend.maxHP, friend.hp + heal);
 					}
 				});
 			}

@@ -3011,7 +3011,7 @@ function alpineHexDiceTacticGame() { return {
 		if (!state) window?.AudioManager?.playSfx('shield');
 
 		if (this.autochess) {
-			targetUnit.hp = Math.min(targetUnit.maxHp + 20, targetUnit.hp + 20);
+			targetUnit.hp = Math.min(targetUnit.maxHP + 20, targetUnit.hp + 20);
 			this.addLog(`✨ Oracle cast Shield! ${this.logUnit(targetUnit)} gained 20 HP Shield.`, state);
 			return;
 		}
@@ -3046,8 +3046,8 @@ function alpineHexDiceTacticGame() { return {
 		if (!state) window?.AudioManager?.playSfx('swap');
 
 		if (this.autochess) {
-			const healAmount = (targetUnit.actionGauge / 100) * (targetUnit.maxHp * 0.5);
-			targetUnit.hp = Math.min(targetUnit.maxHp, targetUnit.hp + healAmount);
+			const healAmount = (targetUnit.actionGauge / 100) * (targetUnit.maxHP * 0.5);
+			targetUnit.hp = Math.min(targetUnit.maxHP, targetUnit.hp + healAmount);
 			targetUnit.actionGauge = 0;
 			this.addLog(`✨ Oracle cast Swap! Converted ${this.logUnit(targetUnit)} Action Gauge to ${Math.floor(healAmount)} HP.`, state);
 			return;

@@ -1231,8 +1231,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     }
 
                     // 2. HP-based bonus: Shield units with lower HP
-                    if (targetUnit.hp < targetUnit.maxHp) {
-                        const hpMissingRatio = 1 - (targetUnit.hp / targetUnit.maxHp);
+                    if (targetUnit.hp < targetUnit.maxHP) {
+                        const hpMissingRatio = 1 - (targetUnit.hp / targetUnit.maxHP);
                         analysis.score += hpMissingRatio * 150;
                     }
 
@@ -1338,7 +1338,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                     }
 
                     // Rescue operation: Pull wounded unit out of danger
-                    const isWounded = GAME.autochess ? (targetUnit.hp < targetUnit.maxHp) : (targetUnit.armorReduction > 0 || targetUnit.currentArmor <= 2);
+                    const isWounded = GAME.autochess ? (targetUnit.hp < targetUnit.maxHP) : (targetUnit.armorReduction > 0 || targetUnit.currentArmor <= 2);
                     if (isWounded || targetUnit.currentArmor <= 2) {
                         const targetInDanger = targetNeighbors.some(n => {
                             const nu = GAME.getUnitOnHex(n.id, state);
