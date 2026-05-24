@@ -1,7 +1,7 @@
-<div id="game-autochess" style="display: none;min-height: min-content;" x-show="Autochess.state.enabled" x-cloak class="bottom-0 mt-4 border bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
+<div id="game-autochess" style="display: none;min-height: min-content;" x-show="Autochess.state.enabled" x-cloak class="bottom-0 mt-4 mb-1 border bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
 	<div class="max-w-full w-full">
-		<div class="w-full flex justify-between items-center pb-2 px-2 pointer-events-auto">
-			<h1 class="text-lg font-bold uppercase">Romance of the Dice Kingdom</h1>
+		<div class="text-xl w-full flex justify-between items-center pointer-events-auto">
+			<h1 class="font-bold uppercase">Romance of the Dice Kingdom</h1>
 			<div class="flex items-center space-x-4">
 				<div class="ml-4 font-bold">[<span x-text="Autochess.state.round"></span>/<span x-text="Autochess.state.maxRound"></span>]</div>
 				<!-- <button class="p-1 text-sm hover:bg-black hover:text-white" @click="location.href='/'">[Home]</button> -->
@@ -27,13 +27,13 @@
 									</div>
 								</div>
 								<img class="inline h-6 w-6" :src="unit.iconUrl" width="16" height="16">
-								<div class="text-sm font-bold uppercase leading-tight truncate" x-text="unit.displayName"></div>
+								<div class="text-sm font-bold uppercase leading-tight truncate mt-1" x-show="Autochess.state.selectedUnitId !== unit.id" x-text="unit.displayName"></div>
 								<div class="text-xs mt-1 text-gray-600">
 									ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
 								</div>
-								<div class="flex justify-center mt-1 space-x-2" x-show="Autochess.state.selectedUnitId === unit.id">
-									<button @click.stop="moveAutochessUnit(0, index, index - 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
-									<button @click.stop="moveAutochessUnit(0, index, index + 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
+								<div class="flex justify-center mt-1 space-x-3 font-bold" x-show="Autochess.state.selectedUnitId === unit.id">
+									<button @click.stop="moveAutochessUnit(0, index, index - 1)" class="cursor-pointer px-1 bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
+									<button @click.stop="moveAutochessUnit(0, index, index + 1)" class="cursor-pointer px-1 bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
 								</div>
 							</div>
 						</template>
@@ -66,7 +66,7 @@
 				<div class="mt-4 p-4 transition-all duration-300 w-full">
 					<div class="flex flex-wrap items-center justify-between mb-3">
 						<div class="flex items-center space-x-2">
-							<img class="h-10 w-10" :src="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.iconUrl">
+							<img class="h-8 w-8" :src="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.iconUrl">
 							<div>
 								<h3 class="text-md font-bold uppercase tracking-wider " x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.displayName"></h3>
 								<span class="text-sm text-gray-500 font-bold uppercase">Unit Details & Skill Tree</span>
@@ -138,7 +138,7 @@
 
 			<div class="text-center pt-2">
 				<div class="inline mb-2">
-					<label class="font-bold mr-2">Strategy:</label>
+					<!-- <label class="font-bold mr-2">Strategy:</label> -->
 					<select x-model="Autochess.state.selectedProfile" class="border px-2 py-1 uppercase">
 						<template x-for="p in getProfileNames()" :key="p">
 							<option :value="p" x-text="p"></option>
@@ -167,7 +167,7 @@
 		<div style="display: none;" x-show="Autochess.state.phase === 'RECAP'" class="w-full inset-0 flex items-center justify-center z-20 pointer-events-auto">
 			<div class="border p-2 max-w-sm w-full text-center">
 				<h2 class="text-lg font-black mb-2 uppercase italic" x-text="Autochess.state.lastResult"></h2>
-				<p class="mb-2 font-bold" x-text="Autochess.state.lastResult === 'WIN' ? 'Your survivors grew stronger!' : 'The kingdom has fallen.'"></p>
+				<p class="mb-2 font-bold" x-text="Autochess.state.lastResult === 'DRAW' ? 'Round ended in a draw.' : (players[Autochess.state.lastWinnerId]?.name ? players[Autochess.state.lastWinnerId].name + ' won this round!' : (Autochess.state.lastWinnerId === 0 ? 'You won this round!' : (players[Autochess.state.lastWinnerId]?.isAI ? 'Enemy ' + Autochess.state.lastWinnerId + ' won this round!' : 'Player ' + Autochess.state.lastWinnerId + ' won this round!'))) "></p>
 				<button @click="nextAutochessRound()" class="w-full bg-black text-white py-2 font-black text-lg hover:bg-gray-800 transition-colors uppercase">
 					Continue
 				</button>

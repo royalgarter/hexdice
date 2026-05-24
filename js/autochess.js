@@ -405,6 +405,7 @@ const Autochess = {
 			});
 
 			GAME.Autochess.state.lastResult = (winner && !winner.isAI) ? 'WIN' : 'LOSS';
+			GAME.Autochess.state.lastWinnerId = winner ? winner.id : null;
 			GAME.Autochess.state.phase = 'RECAP';
 		}, 100);
 	},
@@ -430,6 +431,7 @@ const Autochess = {
 		});
 
 		GAME.Autochess.state.lastResult = (winner && !winner.isAI) ? 'WIN' : (winner ? 'LOSS' : 'DRAW');
+		GAME.Autochess.state.lastWinnerId = winner ? winner.id : null;
 		GAME.Autochess.state.phase = 'RECAP';
 	},
 
