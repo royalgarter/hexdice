@@ -1,4 +1,4 @@
-<div id="game-autochess" style="display: none;min-height: min-content;" x-show="Autochess.state.enabled" x-cloak class="bottom-0 mt-4 border-t bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
+<div id="game-autochess" style="display: none;min-height: min-content;" x-show="Autochess.state.enabled" x-cloak class="bottom-0 mt-4 border bg-wood z-30 flex flex-col items-center p-2 pointer-events-none overflow-y-auto w-full">
 	<div class="max-w-full w-full">
 		<div class="w-full flex justify-between items-center pb-2 px-2 pointer-events-auto">
 			<h1 class="text-lg font-bold uppercase">Romance of the Dice Kingdom</h1>
@@ -26,14 +26,14 @@
 										<span x-show="unit.veteranLevel > 0" class=" font-bold">★<span x-text="unit.veteranLevel"></span></span>
 									</div>
 								</div>
-								<img class="inline h-8 w-8" :src="unit.iconUrl" width="16" height="16">
+								<img class="inline h-6 w-6" :src="unit.iconUrl" width="16" height="16">
 								<div class="text-sm font-bold uppercase leading-tight truncate" x-text="unit.displayName"></div>
 								<div class="text-xs mt-1 text-gray-600">
 									ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
 								</div>
 								<div class="flex justify-center mt-1 space-x-1" x-show="Autochess.state.selectedUnitId === unit.id">
-									<button @click.stop="Autochess.moveUnit($data, 0, index, index - 1)" class="px-1 border bg-white hover:bg-black hover:text-white" :disabled="index === 0">&lt;</button>
-									<button @click.stop="Autochess.moveUnit($data, 0, index, index + 1)" class="px-1 border bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">&gt;</button>
+									<button @click.stop="Autochess.moveUnit($data, 0, index, index - 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
+									<button @click.stop="Autochess.moveUnit($data, 0, index, index + 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
 								</div>
 							</div>
 						</template>
@@ -44,7 +44,7 @@
 					<div class="flex flex-wrap justify-center gap-2" x-show="Autochess.state.inventories[0]?.length">
 						<template x-for="(unit, index) in Autochess.state.inventories[0]" :key="unit.id">
 							<button @click="recruitAutochessUnit(0, index)" class="border bg-white hover:bg-black hover:text-white transition-colors p-1 w-16 text-center">
-								<img class="inline h-8 w-8" :src="unit.iconUrl" width="16" height="16">
+								<img class="inline h-6 w-6" :src="unit.iconUrl" width="16" height="16">
 								<div class="text-sm mt-1 uppercase truncate" x-text="unit.name"></div>
 								<div class="text-xs text-gray-500">ATK:<span x-text="unit.attack"></span></div>
 							</button>

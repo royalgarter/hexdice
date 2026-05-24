@@ -2624,14 +2624,14 @@ function alpineHexDiceTacticGame() { return {
 	 * @param {number} unitHexId - Current hex ID of the attacker
 	 * @param {number} targetHexId - Destination hex ID
 	 */
-	performSkirmishPostMove(unitHexId, targetHexId) {
-		const unit = this.getUnitOnHex(unitHexId);
-		const fromHex = this.getHex(unitHexId);
-		const toHex = this.getHex(targetHexId);
+	performSkirmishPostMove(unitHexId, targetHexId, state) {
+		const unit = this.getUnitOnHex(unitHexId, state);
+		const fromHex = this.getHex(unitHexId, state);
+		const toHex = this.getHex(targetHexId, state);
 
 		if (!unit || !fromHex || !toHex) return;
 
-		if (!state) window?.AudioManager?.playSfx(unitValue == 3 ? 'wing' : unitValue == 4 ? 'horse' : 'move');
+		if (!state) window?.AudioManager?.playSfx(unit.value == 3 ? 'wing' : unit.value == 4 ? 'horse' : 'move');
 
 		if (unitHexId !== targetHexId) {
 			this.addLog(`↪️ ${this.logUnit(unit)} skirmish reposition: [${fromHex.id}]->[${toHex.id}].`);
@@ -4452,9 +4452,13 @@ function alpineHexDiceTacticGame() { return {
 		this.trailSpell = {};
 
 		// console.log('handleCombat', this.isCampaign, this.autochess, this.gameplayVersion)
+		let sfxSword = 'sword'+[1,2,3].random();
+
+		if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : sfxSword);
 
 		if (this.isCampaign && !this.autochess) {
-			if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : 'attack');
+			if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : 'hit');
+
 			if (this.CampaignManager.handleCombat(this, attackerHexId, defenderHexId, combatType, state)) return;
 		} else if (this.gameplayVersion === 2) {
 			const combatRoll = this.rollDice();
@@ -4467,8 +4471,9 @@ function alpineHexDiceTacticGame() { return {
 			const defenderEffectiveArmor = this.calcDefenderEffectiveArmor(defenderHexId, state);
 
 			this.addLog(`🎲 ${this.logUnit(attackerUnit)} rolls D${combatRoll} for combat! Attack: ${totalAtk} vs Armor: ${defenderEffectiveArmor}`);
-			if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : 'hit');
+
 			if (totalAtk > defenderEffectiveArmor) {
+				if (!state) window?.AudioManager?.playSfx('hit')
 				// Success
 				if (this.autochess) {
 					this.Autochess.handleCombat(this, attackerUnit, defenderUnit, combatRoll, defenderEffectiveArmor, state);
@@ -4478,13 +4483,14 @@ function alpineHexDiceTacticGame() { return {
 				}
 
 				if (isSkirmishing) {
+					if (!state) window?.AudioManager?.playSfx('critical')
+						
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
 					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
 				} else if (!this.autochess && (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER')) {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
-			}
-			else {
+			} else {
 				// Deflected
 				if (!state) window?.AudioManager?.playSfx('deflect');
 				if (this.autochess) {
@@ -4533,7 +4539,8 @@ function alpineHexDiceTacticGame() { return {
 			const attackerWins = isArmorDepleted || attackWins;
 
 			if (attackerWins) {
-				if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : 'hit');
+				if (!state) window?.AudioManager?.playSfx('hit');
+
 				this.removeUnit(defenderHexId, state);
 				if (isSkirmishing) {
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
@@ -4545,7 +4552,6 @@ function alpineHexDiceTacticGame() { return {
 					this.addLog(`⚔️ ${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${defenderHex.id}].`, state);
 				}
 			} else {
-
 				// Failed
 				if (isSkirmishing) {
 					if (combatType !== 'RANGED_ATTACK') {

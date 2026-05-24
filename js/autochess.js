@@ -559,6 +559,14 @@ const Autochess = {
 			GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
 		}
 
+		if (!state) {
+			let sfxSword = 'sword'+[1,2,3].random();
+
+			if (combatType === 'RANGED_ATTACK') window?.AudioManager?.playSfx('bow');
+			else if (isSuccess) window?.AudioManager?.playSfx(sfxSword);
+			else window?.AudioManager?.playSfx('deflect');
+		}
+
 		defenderUnit.hp -= damage;
 
 		// --- Post-Damage Perks ---
@@ -589,6 +597,7 @@ const Autochess = {
 		if (defenderUnit.hp <= 0) {
 			defenderUnit.isDeath = true;
 			GAME.addLog(`💀 ${GAME.logUnit(defenderUnit)} has been defeated!`, state);
+			if (!state) window?.AudioManager?.playSfx('death');
 			const hex = GAME.getHex(defenderUnit.hexId, state);
 			if (hex) {
 				hex.unit = null;
