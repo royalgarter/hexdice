@@ -169,8 +169,9 @@ const UNIT_SOUNDS = {
     '6': 'Wzpissd1,Wzpissd2,Wzpissd3,Wzready,Wzwhat1,Wzwhat2,Wzwhat3,Wzyessr1,Wzyessr2,Wzyessr3'.split(','),
 };
 
-
 // Global Dice Logic
+window.hexdice_version = document.querySelector('meta#hexdice_version').content;console.log('hexdice_version', hexdice_version)
+
 window.currentX = 15;
 window.currentY = 15;
 window.rollDiceAnimation = function(targetNumber) {
@@ -201,7 +202,7 @@ window.handleCredentialResponse = (response) => {
 // Register the service worker
 if ('serviceWorker' in navigator) {
 	window.addEventListener('load', () => {
-		navigator.serviceWorker.register('/service-worker.js')
+		navigator.serviceWorker.register('/service-worker.js?v=' + window.hexdice_version)
 			.then(registration => {
 				console.log('ServiceWorker registration successful with scope: ', registration.scope);
 				

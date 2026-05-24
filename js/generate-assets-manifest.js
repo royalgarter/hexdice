@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const dirs = ['assets', 'js', 'rules'];
+const dirs = ['assets', 'js', 'rules', 'html'];
 const rootFiles = ['index.html', 'rules.html', 'blog.html'];
 
 function getFiles(dir) {
