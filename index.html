@@ -72,8 +72,10 @@
 
 	<!-- Hex Grid Container -->
 	<div class="flex-grow flex items-start justify-center w-full overflow-auto mt-6">
-		<div x-show="isCampaign && showMinimap" class="hex-grid-campaign-background fixed" :style="hexGrid.style">
-		</div>
+		<template x-if="isCampaign && showMinimap && !autochess">
+			<div class="hex-grid-campaign-background fixed" :style="hexGrid.style">
+			</div>
+		</template>
 		<!-- Hex Grid (contains unit-info-panel, auth, toolbars) -->
 		<div x-init="loadComponent($el, 'hex-grid')"></div>
 	</div>

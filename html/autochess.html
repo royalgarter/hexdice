@@ -31,7 +31,7 @@
 								<div class="text-xs mt-1 text-gray-600">
 									ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
 								</div>
-								<div class="flex justify-center mt-1 space-x-1" x-show="Autochess.state.selectedUnitId === unit.id">
+								<div class="flex justify-center mt-1 space-x-2" x-show="Autochess.state.selectedUnitId === unit.id">
 									<button @click.stop="moveAutochessUnit(0, index, index - 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
 									<button @click.stop="moveAutochessUnit(0, index, index + 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
 								</div>
