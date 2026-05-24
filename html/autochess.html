@@ -17,7 +17,7 @@
 						<template x-for="(unit, index) in players[0]?.dice" :key="unit.id">
 							<div class="border text-center p-1 cursor-pointer transition-all hover:shadow-sm"
 								 :class="Autochess.state.selectedUnitId === unit.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 z-10' : (index < 6 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white')"
-								 @click="Autochess.clickUnit($data, unit)">
+								 @click="clickAutochessUnit(unit)">
 								<div class="flex justify-between items-start">
 									<span x-text="index + 1" class="text-gray-400 font-bold"></span>
 									<div class="flex items-center space-x-1">
@@ -32,8 +32,8 @@
 									ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
 								</div>
 								<div class="flex justify-center mt-1 space-x-1" x-show="Autochess.state.selectedUnitId === unit.id">
-									<button @click.stop="Autochess.moveUnit($data, 0, index, index - 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
-									<button @click.stop="Autochess.moveUnit($data, 0, index, index + 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
+									<button @click.stop="moveAutochessUnit(0, index, index - 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
+									<button @click.stop="moveAutochessUnit(0, index, index + 1)" class="bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
 								</div>
 							</div>
 						</template>

@@ -146,17 +146,17 @@ const Autochess = {
 
 	clickUnit(GAME, unit) {
 		if (!GAME?.Autochess?.state || !unit?.id) return console.log('Autochess.clickUnit.invalid');
-		console.log('clickUnit.unit', unit);
-		if (GAME.Autochess.state.selectedUnitId && GAME.Autochess.state.selectedUnitId !== unit.id) {
-			const u1 = GAME.players[0].dice.find(u => u.id === GAME.Autochess.state.selectedUnitId);
-			console.log('clickUnit.u1', u1);
+		
+		const state = GAME.Autochess.state;
+		if (state.selectedUnitId && state.selectedUnitId !== unit.id) {
+			const u1 = GAME.players[0].dice.find(u => u.id === state.selectedUnitId);
 
 			if (u1 && u1.value === unit.value)
-				GAME.Autochess.mergeUnits(GAME, 0, GAME.Autochess.state.selectedUnitId, unit.id);
+				GAME.Autochess.mergeUnits(GAME, 0, state.selectedUnitId, unit.id);
 			else
-				GAME.Autochess.state.selectedUnitId = unit.id;
+				state.selectedUnitId = unit.id;
 		} else {
-			GAME.Autochess.state.selectedUnitId = (GAME.Autochess.state.selectedUnitId === unit.id ? null : unit.id);
+			state.selectedUnitId = (state.selectedUnitId === unit.id ? null : unit.id);
 		}
 	},
 
@@ -568,6 +568,7 @@ const Autochess = {
 		}
 
 		defenderUnit.hp -= damage;
+		console.log(`Combat: ${GAME.logUnit(attackerUnit)} dealt ${damage} to ${GAME.logUnit(defenderUnit)}. New HP: ${defenderUnit.hp}`);
 
 		// --- Post-Damage Perks ---
 		// Archer Tier 2 [B] Venom Tipped
