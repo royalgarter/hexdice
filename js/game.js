@@ -283,6 +283,8 @@ function alpineHexDiceTacticGame() { return {
 	executeAutochessAction(unit) { this.Autochess.executeAction(this, unit); },
 	nextAutochessRound() { this.Autochess.nextRound(this); },
 	selectAutochessUnitSkill(unitId, tier, option) { this.Autochess.selectUnitSkill(this, unitId, tier, option); },
+	clickAutochessUnit(unit) { this.Autochess.clickUnit(this, unit); },
+	moveAutochessUnit(playerId, fromIndex, toIndex) { this.Autochess.moveUnit(this, playerId, fromIndex, toIndex); },
 
 	get isUnitPanelVisible() {
 		const hexId = this.unitPanelHexId();
