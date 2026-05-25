@@ -56,7 +56,13 @@
 			try {
 				if (this.noSFX) return;
 
-				console.log('playSfx', name);
+				// console.log('playSfx', name);
+
+				switch (name) {
+					case 'bow': name = 'bow'+[1,2].random(); break;
+					case 'hit': name = 'hit'+[1,2,3,4,5,6].random(); break;
+					case 'sword': name = 'sword'+[1,2,3].random(); break;
+				}
 				
 				if (!this.audioCtx) this.init();
 				this.resume();

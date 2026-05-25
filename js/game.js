@@ -4580,9 +4580,9 @@ function alpineHexDiceTacticGame() { return {
 		this.trailSpell = {};
 
 		// console.log('handleCombat', this.isCampaign, this.autochess, this.gameplayVersion)
-		let sfxSword = 'sword'+[1,2,3].random();
+		// let sfxSword = 'sword'+[1,2,3].random();
 
-		if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : sfxSword);
+		if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : 'sword');
 
 		if (this.isCampaign && !this.autochess) {
 			if (!state) window?.AudioManager?.playSfx(combatType == 'RANGED_ATTACK' ? 'bow' : 'hit');

@@ -578,10 +578,8 @@ const Autochess = {
 		}
 
 		if (!state) {
-			let sfxSword = 'sword'+[1,2,3].random();
-
 			if (combatType === 'RANGED_ATTACK') window?.AudioManager?.playSfx('bow');
-			else if (isSuccess) window?.AudioManager?.playSfx(sfxSword);
+			else if (isSuccess) window?.AudioManager?.playSfx('sword');
 			else window?.AudioManager?.playSfx('deflect');
 		}
 
