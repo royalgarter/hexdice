@@ -740,6 +740,11 @@ function alpineHexDiceTacticGame() { return {
 				localStorage.setItem('hexdice_user', JSON.stringify(data.user));
 				localStorage.setItem('hexdice_token', data.token);
 				this.addLog(`Welcome, ${data.user.name}!`);
+
+				// Sync campaign progress
+				if (this.CampaignManager) {
+					this.CampaignManager.syncWithServer('PULL');
+				}
 			} else {
 				this.addLog("Login failed.");
 			}
@@ -1071,7 +1076,8 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- INITIALIZATION --- */
 	async init() {
-		this.CampaignManager.init();
+		await this.initAuth();
+		await this.CampaignManager.init();
 
 		try {
 			const response = await fetch('/assets/sets.json');
@@ -4535,7 +4541,7 @@ function alpineHexDiceTacticGame() { return {
 						this.addLog(`🛡️ Behemoth! Immune to Fumble.`);
 					} else {
 						if (!state) window?.AudioManager?.playSfx('fumble');
-						this.addLog(`🍌 FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
+						this.addLog(`🩼 FUMBLE! ${this.logUnit(attackerUnit)} destroyed themselves!`);
 						if (this.autochess) {
 							attackerUnit.hp = 0;
 							this.removeUnit(attackerHexId, state);

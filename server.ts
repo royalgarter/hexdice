@@ -70,7 +70,7 @@ const db = new Database({
 // Initialize Database Collections and Indexes
 async function initDatabase() {
 	try {
-		const collections = ['users', 'rooms'];
+		const collections = ['users', 'rooms', 'user_data'];
 		for (const name of collections) {
 			const coll = db.collection(name);
 			const exists = await coll.exists();
@@ -87,6 +87,8 @@ async function initDatabase() {
 				await coll.ensureIndex({ type: 'persistent', fields: ['status'] });
 				await coll.ensureIndex({ type: 'persistent', fields: ['updatedAt'] });
 				await coll.ensureIndex({ type: 'persistent', fields: ['createdAt'] });
+			} else if (name === 'user_data') {
+				await coll.ensureIndex({ type: 'persistent', fields: ['userId', 'key'] });
 			}
 		}
 		console.log("ArangoDB initialization complete.");
@@ -98,6 +100,18 @@ async function initDatabase() {
 const head_json = {
 	"Content-Type": "application/json; charset=utf-8"
 };
+
+async function getUserIdFromToken(token: string) {
+	if (!token) return null;
+	try {
+		const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+		const payload = await verifyRes.json();
+		if (payload.aud !== GOOGLE_CLIENT_ID) return null;
+		return payload.sub;
+	} catch (e) {
+		return null;
+	}
+}
 
 async function handleRequest(req: Request) {
 	const {pathname} = new URL(req.url);
@@ -127,6 +141,49 @@ async function handleRequest(req: Request) {
 			await db.collection("users").save(user, { overwriteMode: "update" });
 
 			return new Response(JSON.stringify({ user, token: credential }), { headers: head_json });
+		} catch (e: any) {
+			return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+		}
+	}
+
+	// User Data Storage (KV)
+	if (pathname === "/api/user/data" && (req.method === "POST" || req.method === "GET")) {
+		try {
+			const authHeader = req.headers.get("Authorization");
+			const token = authHeader ? authHeader.replace("Bearer ", "") : null;
+			const userId = await getUserIdFromToken(token || "");
+
+			if (!userId) {
+				return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+			}
+
+			const coll = db.collection("user_data");
+
+			if (req.method === "POST") {
+				const { key, value } = await req.json();
+				const docId = `${userId}:${key}`;
+				await coll.save({
+					_key: docId,
+					userId,
+					key,
+					value,
+					updatedAt: new Date().toISOString()
+				}, { overwriteMode: "update" });
+				return new Response(JSON.stringify({ success: true }), { headers: head_json });
+			} else {
+				const url = new URL(req.url);
+				const key = url.searchParams.get("key");
+				if (!key) {
+					return new Response(JSON.stringify({ error: "Key required" }), { status: 400 });
+				}
+				const docId = `${userId}:${key}`;
+				try {
+					const doc: any = await coll.document(docId);
+					return new Response(JSON.stringify({ value: doc.value }), { headers: head_json });
+				} catch (e) {
+					return new Response(JSON.stringify({ value: null }), { headers: head_json });
+				}
+			}
 		} catch (e: any) {
 			return new Response(JSON.stringify({ error: e.message }), { status: 500 });
 		}

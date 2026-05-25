@@ -151,7 +151,7 @@ const CampaignManager = {
 	/**
 	 * Initialize the campaign state by loading from localStorage.
 	 */
-	init() {
+	async init() {
 		const savedState = localStorage.getItem(this.STORAGE_KEY);
 		if (savedState) {
 			try {
@@ -191,6 +191,48 @@ const CampaignManager = {
 		if (this.state.isCampaignActive) {
 			console.log("Campaign Mode Active:", this.state);
 		}
+
+		// Sync with server if logged in
+		await this.syncWithServer();
+	},
+
+	/**
+	 * Sync campaign state with server if user is authenticated.
+	 */
+	async syncWithServer(mode = 'PULL') {
+		const app = Alpine.$data(document.querySelector('body'));
+		if (!app || !app.auth || !app.auth.token) return;
+
+		try {
+			if (mode === 'PUSH') {
+				await fetch('/api/user/data', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${app.auth.token}`
+					},
+					body: JSON.stringify({
+						key: 'campaign_state',
+						value: this.state
+					})
+				});
+			} else {
+				const res = await fetch(`/api/user/data?key=campaign_state`, {
+					headers: {
+						'Authorization': `Bearer ${app.auth.token}`
+					}
+				});
+				const data = await res.json();
+				if (data.value) {
+					// Merge server state into local state
+					// We might want more sophisticated merging, but for now server wins
+					Object.assign(this.state, data.value);
+					localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+				}
+			}
+		} catch (e) {
+			console.error("Failed to sync campaign with server:", e);
+		}
 	},
 
 	/**
@@ -207,6 +249,9 @@ const CampaignManager = {
 			};
 		}
 		localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+		
+		// Async push to server
+		this.syncWithServer('PUSH');
 	},
 
 	/**
