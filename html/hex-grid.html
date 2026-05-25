@@ -49,12 +49,12 @@
 
 					<!-- Autochess HP Bar -->
 					<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
-						<div class="h-1.5 bg-green-500  rounded-full"
-							:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%'"
+						<div class="h-1.5 bg-green-500 rounded-full transition-all"
+							:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 100) + 'ms'"
 							:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHP < 0.25}">
 						</div>
-						<div class="h-1 bg-blue-400  rounded-full mt-0.5"
-							:style="'width: ' + (hex.unit?.actionGauge || 0) + '%'">
+						<div class="h-1 bg-blue-400 rounded-full mt-0.5 transition-all"
+							:style="'width: ' + (hex.unit?.actionGauge || 0) + '%; transition-duration: ' + (Autochess.state.pulseMs || 100) + 'ms'">
 						</div>
 					</div>
 				</div>

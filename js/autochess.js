@@ -102,6 +102,10 @@ const Autochess = {
 	},
 
 	recruitUnit(GAME, playerId, index) {
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_RECRUIT', { index });
+			return;
+		}
 		const unit = GAME.Autochess.state.inventories[playerId].splice(index, 1)[0];
 		if (unit) {
 			GAME.players[playerId].dice.push(unit);
@@ -126,6 +130,10 @@ const Autochess = {
 	},
 
 	rerollRecruits(GAME, playerId) {
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_REROLL', {});
+			return;
+		}
 		if (GAME.Autochess.state.rerolls[playerId] > 0) {
 			GAME.Autochess.state.rerolls[playerId]--;
 			GAME.Autochess.generateRecruits(GAME, playerId);
@@ -139,9 +147,9 @@ const Autochess = {
 		const unit = player.dice.splice(fromIndex, 1)[0];
 		player.dice.splice(toIndex, 0, unit);
 
-		// If the "top 6" list changed, we might need a full refresh,
-		// but since the user is manually reordering, we'll respect their current board positions for now.
-		// A full refresh would be GAME.Autochess.deployPlayerUnits(GAME);
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_MOVE', { fromIndex, toIndex });
+		}
 	},
 
 	clickUnit(GAME, unit) {
@@ -161,6 +169,10 @@ const Autochess = {
 	},
 
 	mergeUnits(GAME, playerId, unitId1, unitId2) {
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_MERGE', { unitId1, unitId2 });
+			return;
+		}
 		const player = GAME.players[playerId];
 		const u1Index = player.dice.findIndex(u => u.id === unitId1);
 		const u2Index = player.dice.findIndex(u => u.id === unitId2);
@@ -260,6 +272,10 @@ const Autochess = {
 	},
 
 	startCombat(GAME) {
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_START_COMBAT', {});
+			return;
+		}
 		GAME.Autochess.state.phase = 'COMBAT';
 		GAME.Autochess.state.roundTimer = 0;
 		GAME.messageLog = [];
@@ -633,6 +649,10 @@ const Autochess = {
 	},
 
 	nextRound(GAME) {
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_NEXT_ROUND', {});
+			return;
+		}
 		GAME.Autochess.state.round++;
 		if (GAME.Autochess.state.round > AUTOCHESS_CONFIG.MAX_ROUND) {
 			const winner = GAME.players.reduce((prev, current) => (prev.wins > current.wins) ? prev : current);

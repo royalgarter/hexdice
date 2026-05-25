@@ -4,6 +4,8 @@ import {load} from "https://deno.land/std/dotenv/mod.ts";
 import { Database } from "https://cdn.jsdelivr.net/npm/arangojs/esm/index.js?+esm";
 import { crypto } from "https://deno.land/std/crypto/mod.ts";
 import { encodeHex } from "https://deno.land/std/encoding/hex.ts";
+import mqtt from "https://esm.sh/mqtt@4.3.7";
+import { loadEngine, GameEngine } from "./js/engine-server.ts";
 
 await load({export: true});
 
@@ -12,6 +14,185 @@ const ARANGO_DB = Deno.env.get("ARANGODB_DATABASE");
 const ARANGO_USER = Deno.env.get("ARANGODB_USER");
 const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD");
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
+
+const MQTT = Deno.env.get("MQTT") || "wss://broker.emqx.io:8084/mqtt";
+const mqttClient = mqtt.connect(MQTT);
+
+const MQTT_PULSE_MS = Number(Deno.env.get("MQTT_PULSE_MS")) || 100;
+
+const roomEngines: Record<string, any> = {};
+
+mqttClient.on("connect", () => {
+	console.log("Connected to MQTT broker via esm.sh (v4)");
+	mqttClient.subscribe("hexdice/rooms/+/actions");
+});
+
+mqttClient.on("message", (topic, message) => {
+	try {
+		const roomId = topic.split("/")[2];
+		const payload = JSON.parse(message.toString());
+		handleRoomAction(roomId, payload);
+	} catch (e) {
+		console.error("MQTT message handling failed:", e);
+	}
+});
+
+async function getOrInitEngine(roomId: string) {
+	if (roomEngines[roomId]) return roomEngines[roomId];
+
+	console.log(`Initializing engine for room ${roomId}`);
+
+	// Fetch room from DB to get players
+	const roomsColl = db.collection("rooms");
+	let room: any;
+	try {
+		room = await roomsColl.document(roomId);
+	} catch (e) {
+		console.error(`Room ${roomId} not found in DB`);
+		return null;
+	}
+
+	const engine = await loadEngine(room.players.length);
+	const game = engine.createGame();
+
+	// Map DB players to game players
+	game.players = room.players.map((p: any, idx: number) => ({
+		id: p.id,
+		name: p.name,
+		color: p.color,
+		dice: [],
+		wins: 0
+	}));
+
+	game.Autochess.init(game);
+
+	roomEngines[roomId] = game;
+	return game;
+}
+
+async function handleRoomAction(roomId: string, payload: any) {
+	const game = await getOrInitEngine(roomId);
+	if (!game) return;
+
+	const { type, data, sender } = payload;
+
+	console.log(`[Room ${roomId}] Action: ${type} from ${sender}`);
+
+	let updated = false;
+
+	if (type === 'AUTOCHESS_RECRUIT') {
+		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		if (playerIdx !== -1) {
+			game.Autochess.recruitUnit(game, playerIdx, data.index);
+			updated = true;
+		}
+	} else if (type === 'AUTOCHESS_REROLL') {
+		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		if (playerIdx !== -1) {
+			game.Autochess.rerollRecruits(game, playerIdx);
+			updated = true;
+		}
+	} else if (type === 'AUTOCHESS_MOVE') {
+		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		if (playerIdx !== -1) {
+			game.Autochess.moveUnit(game, playerIdx, data.fromIndex, data.toIndex);
+			updated = true;
+		}
+	} else if (type === 'AUTOCHESS_MERGE') {
+		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		if (playerIdx !== -1) {
+			game.Autochess.mergeUnits(game, playerIdx, data.unitId1, data.unitId2);
+			updated = true;
+		}
+	} else if (type === 'AUTOCHESS_START_COMBAT') {
+		// Only host or certain conditions?
+		game.Autochess.startCombat(game);
+		updated = true;
+
+		// Stream combat steps
+		startCombatStreaming(roomId, game);
+	} else if (type === 'AUTOCHESS_NEXT_ROUND') {
+		game.Autochess.nextRound(game);
+		updated = true;
+	} else if (type === 'GUEST_JOINED') {
+		// Ensure guest is in game.players
+		if (!game.players.find((p: any) => p.id === sender)) {
+			// Room changed in DB, let's re-init engine next time
+			delete roomEngines[roomId];
+			await getOrInitEngine(roomId);
+			updated = true;
+		}
+	}
+
+	if (updated) {
+		broadcastState(roomId, game, true);
+	}
+}
+
+function broadcastState(roomId: string, game: any, full = false) {
+	const topic = `hexdice/rooms/${roomId}/state`;
+	const state: any = {
+		autochess: {
+			phase: game.Autochess.state.phase,
+			round: game.Autochess.state.round,
+			roundTimer: game.Autochess.state.roundTimer,
+			lastResult: game.Autochess.state.lastResult,
+			lastWinnerId: game.Autochess.state.lastWinnerId,
+			pulseMs: MQTT_PULSE_MS
+		}
+	};
+
+	if (full || game.Autochess.state.phase !== 'COMBAT') {
+		state.players = game.players.map((p: any) => ({
+			id: p.id,
+			name: p.name,
+			wins: p.wins,
+			dice: p.dice
+		}));
+		state.hexes = game.hexes.map((h: any) => ({
+			id: h.id,
+			unitId: h.unitId,
+			unit: h.unit
+		}));
+	} else {
+		// Light update for COMBAT: Only send dynamic unit data
+		state.units = game.players.flatMap((p: any) => p.dice.map((d: any) => ({
+			id: d.id,
+			hexId: d.hexId,
+			hp: d.hp,
+			actionGauge: d.actionGauge,
+			isDeath: d.isDeath
+		})));
+	}
+	mqttClient.publish(topic, JSON.stringify(state));
+}
+
+function startCombatStreaming(roomId: string, game: any) {
+	// Hook into game.addLog to broadcast logs too
+	const originalAddLog = game.addLog.bind(game);
+	game.addLog = (msg: string) => {
+		originalAddLog(msg);
+		mqttClient.publish(`hexdice/rooms/${roomId}/logs`, JSON.stringify({ message: msg }));
+	};
+
+	// Use a throttled broadcast during simulation
+	let stepCount = 0;
+	let lastPhase = game.Autochess.state.phase;
+	const broadcastEvery = Math.max(1, Math.floor(MQTT_PULSE_MS / 100));
+
+	const originalSimStep = game.Autochess.simulateStep.bind(game.Autochess);
+	game.Autochess.simulateStep = (g: any) => {
+		originalSimStep(g);
+		stepCount++;
+
+		if (g.Autochess.state.phase !== lastPhase) {
+			broadcastState(roomId, g, true);
+			lastPhase = g.Autochess.state.phase;
+		} else if (stepCount % broadcastEvery === 0) {
+			broadcastState(roomId, g);
+		}
+	};
+}
 
 const getAppVersion = async () => {
 	try {
@@ -54,6 +235,7 @@ async function prepareIndex() {
 	try {
 		HTML_INDEX = (await Deno.readTextFile('./index.html'))
 			.replaceAll('___VERSION___', appVersion)
+			.replaceAll('___MQTT___', MQTT)
 			.replaceAll('___GOOGLE_CLIENT_ID___', GOOGLE_CLIENT_ID || "")
 		// console.log('prepareIndex:', HTML_INDEX.length);
 	} catch (e: any) {
@@ -117,7 +299,7 @@ async function handleRequest(req: Request) {
 	const {pathname} = new URL(req.url);
 
 	if (pathname === "/api/config") {
-		return new Response(JSON.stringify({ GOOGLE_CLIENT_ID }), { headers: head_json });
+		return new Response(JSON.stringify({ GOOGLE_CLIENT_ID, MQTT }), { headers: head_json });
 	}
 
 	if (pathname === "/api/auth/google" && req.method === "POST") {
@@ -261,16 +443,6 @@ async function handleRequest(req: Request) {
 		return response(await Deno.readTextFile("./rules.html"), {
 			headers: {
 				"Content-Type": "text/html; charset=utf-8",
-				"Cache-Control": "public, max-age=604800",
-			}
-		});
-	}
-
-	if (pathname === "/game.js") {
-		const content = await Deno.readTextFile("./game.js");
-		return response(content.replaceAll("___GOOGLE_CLIENT_ID___", GOOGLE_CLIENT_ID || ""), {
-			headers: {
-				"Content-Type": "text/javascript; charset=utf-8",
 				"Cache-Control": "public, max-age=604800",
 			}
 		});

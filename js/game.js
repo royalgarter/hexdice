@@ -15,11 +15,12 @@ function alpineHexDiceTacticGame() { return {
 	Autochess: Autochess,
 	CampaignManager: CampaignManager,
 	auth: {
-		clientId: '___GOOGLE_CLIENT_ID___',
+		clientId: null,
 		user: null,
 		token: null,
 	},
 	online: {
+		broker: null,
 		roomId: null,
 		isHost: false,
 		status: 'OFFLINE', // OFFLINE, LOBBY, PLAYING
@@ -657,7 +658,9 @@ function alpineHexDiceTacticGame() { return {
 		try {
 			const res = await fetch('/api/config');
 			const config = await res.json();
+			console.log('/api/config', config);
 			this.auth.clientId = config.GOOGLE_CLIENT_ID;
+			this.online.broker = config.MQTT;
 
 			// Debug Bypass: Check URL Params (e.g., ?auth_user=royalgarter&auth_token=123456)
 			const urlParams = new URLSearchParams(window.location.search);
@@ -849,8 +852,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	connectMQTT() {
-		const broker = 'wss://broker.emqx.io:8084/mqtt';
-		this.addLog("Connecting to MQTT...");
+		this.addLog("Connecting to MQTT: " + this.online.broker);
 		
 		const statusTopic = `hexdice/rooms/${this.online.roomId}/status`;
 		const options = {
@@ -862,11 +864,16 @@ function alpineHexDiceTacticGame() { return {
 			}
 		};
 
-		this.online.mqttClient = mqtt.connect(broker, options);
+		this.online.mqttClient = mqtt.connect(this.online.broker, options);
 
 		this.online.mqttClient.on('connect', () => {
 			const topic = `hexdice/rooms/${this.online.roomId}`;
+			const stateTopic = `hexdice/rooms/${this.online.roomId}/state`;
+			const logTopic = `hexdice/rooms/${this.online.roomId}/logs`;
+
 			this.online.mqttClient.subscribe(topic, { qos: 1 });
+			this.online.mqttClient.subscribe(stateTopic, { qos: 1 });
+			this.online.mqttClient.subscribe(logTopic, { qos: 1 });
 			this.online.mqttClient.subscribe(statusTopic, { qos: 1 });
 			
 			// Mark as online
@@ -884,6 +891,10 @@ function alpineHexDiceTacticGame() { return {
 				const payload = JSON.parse(message.toString());
 				if (topic.endsWith('/status')) {
 					this.handleStatusMessage(payload);
+				} else if (topic.endsWith('/state')) {
+					this.handleAuthoritativeState(payload);
+				} else if (topic.endsWith('/logs')) {
+					this.addLog(payload.message);
 				} else {
 					this.handleMQTTMessage(payload);
 				}
@@ -891,6 +902,87 @@ function alpineHexDiceTacticGame() { return {
 				console.error("MQTT parse error", e);
 			}
 		});
+	},
+
+	handleAuthoritativeState(state) {
+		if (state.autochess) {
+			Object.assign(this.Autochess.state, state.autochess);
+		}
+
+		// Map of all units for quick lookup
+		const unitMap = new Map();
+		this.players.forEach(p => p.dice.forEach(d => unitMap.set(d.id, d)));
+
+		// Surgical update for individual units (e.g. during combat)
+		if (state.units) {
+			state.units.forEach(su => {
+				const lu = unitMap.get(su.id);
+				if (lu) {
+					// Only update dynamic properties
+					if (su.hexId !== undefined && lu.hexId !== su.hexId) {
+						const fromHex = this.getHex(lu.hexId);
+						const toHex = this.getHex(su.hexId);
+						if (fromHex) { fromHex.unit = null; fromHex.unitId = null; }
+						if (toHex) { toHex.unit = lu; toHex.unitId = lu.id; }
+						lu.hexId = su.hexId;
+					}
+					if (su.hp !== undefined) lu.hp = su.hp;
+					if (su.actionGauge !== undefined) lu.actionGauge = su.actionGauge;
+					if (su.isDeath !== undefined) {
+						lu.isDeath = su.isDeath;
+						if (lu.isDeath && lu.hexId) {
+							const hex = this.getHex(lu.hexId);
+							if (hex) { hex.unit = null; hex.unitId = null; }
+						}
+					}
+				}
+			});
+		}
+
+		if (state.players) {
+			state.players.forEach(sp => {
+				let lp = this.players.find(p => p.id === sp.id);
+				if (lp) {
+					lp.wins = sp.wins;
+					// Surgical update for player dice list if lengths differ
+					if (lp.dice.length !== sp.dice.length) {
+						lp.dice = sp.dice;
+					} else {
+						sp.dice.forEach((sd, idx) => {
+							Object.assign(lp.dice[idx], sd);
+						});
+					}
+
+					lp.dice.forEach(d => {
+						if (!d.spriteUrl) d.spriteUrl = this.getUnitSpriteUrl(d);
+					});
+				} else {
+					this.players.push({
+						...sp,
+						color: PLAYER_CONFIG[this.players.length]?.color || 'Gray'
+					});
+				}
+			});
+		}
+
+		if (state.hexes) {
+			state.hexes.forEach(sh => {
+				const lh = this.hexGrid.hexes[sh.id];
+				if (lh) {
+					lh.unitId = sh.unitId;
+					// If unit changed, update reference surgically
+					if (sh.unit && (!lh.unit || lh.unit.id !== sh.unit.id)) {
+						lh.unit = sh.unit;
+					} else if (!sh.unit) {
+						lh.unit = null;
+					}
+
+					if (lh.unit && !lh.unit.spriteUrl) {
+						lh.unit.spriteUrl = this.getUnitSpriteUrl(lh.unit);
+					}
+				}
+			});
+		}
 	},
 
 	handleStatusMessage(payload) {
@@ -1991,7 +2083,7 @@ function alpineHexDiceTacticGame() { return {
 
 		const matchingUnits = this.players[this.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.value === this.fateRoll);
 		if (matchingUnits.length === 0) {
-			this.addLog(`P${this.currentPlayerIndex+1} No matching units. Moving to Tactical Command.`);
+			this.addLog(`🧮 P${this.currentPlayerIndex+1} No matching units. Moving to Tactical Command.`);
 			this.startTacticalCommand();
 		} else {
 			this.addLog(`P${this.currentPlayerIndex+1} ${matchingUnits.length} units can perform a free Move action.`);
@@ -2034,7 +2126,7 @@ function alpineHexDiceTacticGame() { return {
 		console.log(`P${this.currentPlayerIndex+1} startTacticalCommand`);
 
 		this.turnPhase = 'TACTICAL_COMMAND';
-		this.addLog(`🎲 P${this.currentPlayerIndex+1} Phase 2: Tactical Command. Choose one unit to act.`);
+		this.addLog(`🧮 P${this.currentPlayerIndex+1} Phase 2: Tactical Command. Choose one unit to act.`);
 		
 		// Reset move flags from Phase 1
 		this.players[this.currentPlayerIndex].dice.forEach(d => d.canMoveInFatePhase = false);
