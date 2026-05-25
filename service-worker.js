@@ -1,9 +1,9 @@
-const CACHE_NAME = 'hexdice-cache-v4';
+const CACHE_NAME = 'hexdice-cache-v5';
 const CORE_ASSETS = [
 	'/',
 	'/index.html',
 	'/rules.html',
-	'/js/game.js',
+	'/blog.html',
 	'/assets/assets-manifest.json'
 ];
 

@@ -12,9 +12,9 @@
 
 <!-- User Profile Header -->
 <div style="display:none;" class="flex items-center space-x-1" x-show="auth.user" x-cloak>
-	<div class="text-right items-end">
-		<div class="font-bold text-right" x-text="auth?.user?.name?.split(' ')?.[0]"></div>
-		<button class="text-blue-600 hover:underline text-right" @click="logout()">📴</button>
+	<div class="text-right items-center justify-center align-middle">
+		<div class="inline font-bold text-right" x-text="auth?.user?.name?.split(' ')?.[0]"></div>
+		<button class="inline text-right" @click="logout()">📴</button>
 	</div>
 	<img :src="auth.user?.picture" class="w-8 h-8 rounded-full border" x-show="auth.user?.picture"
 		onerror="this.src = '/assets/images/favicon-32x32.png';"

@@ -1,8 +1,8 @@
 <!-- Hex Grid -->
 <div class="hex-grid-container relative" :class="'radius-' + (hexGrid.radius || 5)" :style="hexGrid.style">
 	<template x-for="hex in hexes" :key="hex.id">
-		<div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase === 'SETUP_DEPLOY' && validDeploymentHexesSet.has(hex.id), selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, Autochess.state.enabled && hex.unit?.hp, Autochess.state.enabled && hex.unit?.hexId]"
-			class="hexagon absolute flex items-center justify-center"
+		<!-- <div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase === 'SETUP_DEPLOY' && validDeploymentHexesSet.has(hex.id), selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, Autochess.state.enabled && hex.unit?.hp, Autochess.state.enabled && hex.unit?.hexId]"></div> -->
+		<div class="hexagon absolute flex items-center justify-center"
 			:class="hexColor(hex) + ' hex-' + hex.id"
 			:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 			:data-id="hex.id"
@@ -125,7 +125,7 @@
 	<div x-init="loadComponent($el, 'unit-info-panel')"></div>
 
 	<!-- Top Right -->
-	<div class="absolute top-1 right-1 text-xs z-10" x-init="loadComponent($el, 'auth')"></div>
+	<div x-init="loadComponent($el, 'auth')" class="absolute top-1 right-1 text-xs z-10"></div>
 
 	<!-- Toolbars -->
 	<div x-init="loadComponent($el, 'toolbars')"></div>
