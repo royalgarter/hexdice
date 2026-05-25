@@ -74,12 +74,17 @@ function fetchEvent(event) {
 			return response;
 		}
 	).catch(() => {
-		// If both cache and network fail, return offline fallback
-		if (event.request.destination === 'document') {
-			return caches.match('/');
-		}
-		return new Response('Offline - resource not cached', {
-			headers: { 'Content-Type': 'text/plain' }
+		// Network failed, try cache
+		return caches.match(event.request).then((cachedResponse) => {
+			if (cachedResponse) return cachedResponse;
+			
+			// If both cache and network fail, return offline fallback for documents
+			if (event.request.destination === 'document') {
+				return caches.match('/');
+			}
+			return new Response('Offline - resource not cached', {
+				headers: { 'Content-Type': 'text/plain' }
+			});
 		});
 	});
 }
@@ -90,19 +95,7 @@ self.addEventListener('fetch', (event) => {
 		return;
 	}
 
-	event.respondWith(
-		caches.match(event.request)
-			.then((response) => {
-				// Cache hit, return response
-				if (response) {
-					fetchEvent(event);
-					return response;
-				}
-				// Not in cache, fetch from network
-
-				return fetchEvent(event);
-			})
-	);
+	event.respondWith(fetchEvent(event));
 });
 
 self.addEventListener('activate', (event) => {
