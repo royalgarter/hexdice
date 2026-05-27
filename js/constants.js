@@ -159,6 +159,7 @@ const EXT_SOUNDS = '.ogg,.mp3,.wav'.split(',');
 const SFX_NAMES = 'attack,bow,capture,critical,death,deflect,explode,final_hit,fumble,guard,hit,horse,merge,move,resurrection,shield,skirmish,spell,swap,tactic,thunder,transmute,victory,wing'.split(',');
 
 const BATTLE_PLAYLIST = 'Human_1,Human_2,Human_3,Human_4,Human_5,Orc_1,Orc_2,Orc_3,Orc_4,Orc_5'.split(',');
+const QUEUE_PLAYLIST = 'Human_Defeat,Human_Victory,Mission_Briefing,Orc_Defeat,Orc_Victory,Title_Theme'.split(',');
 
 const UNIT_SOUNDS = {
     '1': 'Hpissed3,Hpissed4,Hpissed5,Hpissed6,Hpissed7,Hready,Hwhat1,Hwhat2,Hwhat3,Hwhat4,Hwhat5,Hwhat6,Hwrkdone,Hyessir1,Hyessir2,Hyessir3,Hyessir4,Hdead,Hdempis7,Hhelp1,Hhelp2,Hpissed1,Hpissed2'.split(','),

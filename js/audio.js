@@ -105,8 +105,6 @@
 			}
 		},
 
-		battlePlaylist: BATTLE_PLAYLIST,
-
 		playMusic(name, opts = {}) {
 			try {
 				if (this.musicEl) this.stopMusic();
@@ -114,6 +112,11 @@
 				if (name === 'battle') {
 					const randomTrack = BATTLE_PLAYLIST[Math.floor(Math.random() * BATTLE_PLAYLIST.length)];
 					name = `battles/${randomTrack}`;
+				}
+
+				if (name === 'queue') {
+					const randomTrack = QUEUE_PLAYLIST[Math.floor(Math.random() * QUEUE_PLAYLIST.length)];
+					name = `queue/${randomTrack}`;
 				}
 
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.5;

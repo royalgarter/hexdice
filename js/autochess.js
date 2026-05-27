@@ -285,6 +285,7 @@ const Autochess = {
 	},
 
 	startCombat(GAME) {
+		window?.AudioManager?.playMusic('battle');
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_START_COMBAT', {});
 			return;
@@ -372,19 +373,37 @@ const Autochess = {
 		GAME.Autochess.adjustAIVeterans(GAME);
 
 		GAME.players.forEach((player, playerIdx) => {
-			if (playerIdx === 0) return; // Human player already positioned
-
-			player.dice.forEach((u, i) => {
+			// Reset ALL units' state first to prevent stale isDeployed/isDeath flags
+			player.dice.forEach(u => {
 				u.isDeath = false;
 				u.hp = u.maxHP;
 				u.actionGauge = 0;
-				u.hexId = null;
 				u.isDeployed = false;
+				u.hexId = null;
+				u.ticksInCombat = 0;
 				u.hasMovedOrAttackedThisTurn = false;
 				u.actionsTakenThisTurn = 0;
+				u.oncePerBattleUsed = false;
+				u.speedBuff = 0;
+				u.speedBuffDuration = 0;
+				u.frozenTicks = 0;
+				u.parryShield = 0;
+				u.consecutiveHits = 0;
+				u.lastTargetId = null;
 			});
 
-			// Only deploy first 6 units
+			if (playerIdx === 0) {
+				// For human player, identify which units were manually placed on board
+				GAME.hexes.forEach(h => {
+					if (h.unit && h.unit.playerId === 0) {
+						h.unit.isDeployed = true;
+						h.unit.hexId = h.id;
+					}
+				});
+				return;
+			}
+
+			// AI deployment: Only deploy first 6 units
 			const unitsToDeploy = player.dice.slice(0, 6);
 			unitsToDeploy.forEach(unit => {
 				const validHexes = GAME.calcValidDeploymentHexes(playerIdx).filter(hexId => !GAME.getUnitOnHex(hexId));
@@ -416,7 +435,7 @@ const Autochess = {
 
 			GAME.Autochess.simulateStep(GAME);
 
-			const alivePlayers = GAME.players.filter(p => p.dice.some(u => u.isDeployed && !u.isDeath));
+			const alivePlayers = GAME.players.filter(p => p.dice.some(u => u.hexId && u.isDeployed && !u.isDeath));
 
 			if (alivePlayers.length > 1) return;
 
@@ -440,7 +459,7 @@ const Autochess = {
 	},
 
 	resolveTimeout(GAME) {
-		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.isDeployed && !u.isDeath));
+		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.hexId && u.isDeployed && !u.isDeath));
 		const p0HP = aliveUnits[0].reduce((sum, u) => sum + u.hp, 0);
 		const p1HP = aliveUnits[1].reduce((sum, u) => sum + u.hp, 0);
 
@@ -466,11 +485,11 @@ const Autochess = {
 
 	simulateStep(GAME) {
 		const allUnits = GAME.players.flatMap(p => p.dice)
-			.filter(u => !u.isDeath)
+			.filter(u => u.hexId && u.isDeployed && !u.isDeath)
 			.sort((a, b) => (b.actionGauge - a.actionGauge) || (Math.random() - 0.5));
 
 		allUnits.forEach(unit => {
-			if (unit.isDeath) return;
+			if (unit.isDeath || !unit.hexId) return;
 
 			unit.ticksInCombat = (unit.ticksInCombat || 0) + 1;
 
@@ -608,6 +627,8 @@ const Autochess = {
 			hex.unit = null;
 			hex.unitId = null;
 		}
+		unit.hexId = null;
+		unit.isDeployed = false;
 
 		// Tanker T3B Dreadnought (On Death)
 		if (unit.value === 5 && GAME.hasPerk(unit, 'tier3', 'B')) {
@@ -935,6 +956,7 @@ const Autochess = {
 	},
 
 	nextRound(GAME) {
+		window?.AudioManager?.playMusic('queue');
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_NEXT_ROUND', {});
 			return;
