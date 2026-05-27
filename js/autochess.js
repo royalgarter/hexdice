@@ -51,7 +51,7 @@ const Autochess = {
 		
 		// Clear existing player units from board
 		GAME.hexes.forEach(h => {
-			if (h.unit && h.unit.playerId === playerIdx) {
+			if (h.unit) {
 				h.unit = null;
 				h.unitId = null;
 			}
@@ -245,6 +245,19 @@ const Autochess = {
 			isDeath: false,
 			veteranLevel: 0,
 			perks: { tier1: null, tier2: null, tier3: null },
+
+			// Autochess-specific tracking
+			ticksInCombat: 0,
+			oncePerBattleUsed: false,
+			lastWindriderTick: 0,
+			consecutiveHits: 0,
+			lastTargetId: null,
+			entrenchStacks: 0,
+			parryShield: 0,
+			frozenTicks: 0,
+			speedBuff: 0,
+			speedBuffDuration: 0,
+			sniperCount: 0,
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
 		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
@@ -268,7 +281,7 @@ const Autochess = {
 		}
 
 		unit.perks[tier] = option;
-		GAME.addLog(`${unit.displayName} learned ${CampaignManager.PERK_DESCRIPTIONS[unit.value][tier][option].name}!`);
+		GAME.addLog(`${unit.displayName} learned ${Autochess.PERK_DESCRIPTIONS[unit.value][tier][option].name}!`);
 	},
 
 	startCombat(GAME) {
@@ -459,31 +472,224 @@ const Autochess = {
 		allUnits.forEach(unit => {
 			if (unit.isDeath) return;
 
+			unit.ticksInCombat = (unit.ticksInCombat || 0) + 1;
+
+			// --- Status Effect Ticks ---
+			if (unit.frozenTicks > 0) {
+				unit.frozenTicks--;
+				return;
+			}
+
+			if (unit.speedBuffDuration > 0) {
+				unit.speedBuffDuration--;
+				if (unit.speedBuffDuration === 0) unit.speedBuff = 0;
+			}
+
 			// --- Poison/Venom Logic ---
 			if (unit.venomDuration > 0) {
 				const venomDamage = 10;
 				unit.hp -= venomDamage;
 				unit.venomDuration--;
-				GAME.addLog(`🐍 ${GAME.logUnit(unit)} suffers ${venomDamage} poison damage (${unit.venomDuration} turns left).`, GAME.Autochess.state.phase === 'COMBAT');
+				GAME.addLog(`🐍 ${GAME.logUnit(unit)} suffers ${venomDamage} poison damage (${unit.venomDuration} ticks left).`, GAME.Autochess.state.phase === 'COMBAT');
 				if (unit.hp <= 0) {
-					unit.isDeath = true;
-					const hex = GAME.getHex(unit.hexId);
-					if (hex) { hex.unit = null; hex.unitId = null; }
+					GAME.Autochess.killUnit(GAME, unit);
 					return;
 				}
 			}
 
-			unit.actionGauge += unit.speed;
+			// --- Passive Auras (Every 10 ticks = 1s) ---
+			if (unit.ticksInCombat % 10 === 0 && unit.hexId) {
+				const hex = GAME.getHex(unit.hexId);
+
+				// Oracle T1A Blessed Aura
+				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'A')) {
+					GAME.getNeighbors(hex).forEach(n => {
+						const friend = GAME.getUnitOnHex(n.id);
+						if (friend && friend.playerId === unit.playerId) {
+							friend.hp = Math.min(friend.maxHP, friend.hp + 10);
+						}
+					});
+				}
+				// Oracle T1B Hex
+				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'B')) {
+					const enemies = GAME.players.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId).q, GAME.getHex(a.hexId).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId).q, GAME.getHex(b.hexId).r));
+					enemies.slice(0, 2).forEach(e => {
+						e.currentArmor = Math.max(0, (e.currentArmor || e.armor) - 10);
+						GAME.addLog(`🔮 Hex! ${GAME.logUnit(e)} lost 10 DEF.`, true);
+					});
+				}
+			}
+
+			// Tanker T1B Magnetic (Every 15 ticks)
+			if (unit.ticksInCombat % 15 === 0 && unit.hexId && unit.value === 5 && GAME.hasPerk(unit, 'tier1', 'B')) {
+				const hex = GAME.getHex(unit.hexId);
+				const enemies = GAME.players.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId).q, GAME.getHex(a.hexId).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId).q, GAME.getHex(b.hexId).r));
+				const target = enemies[0];
+				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId).q, GAME.getHex(target.hexId).r) <= 3) {
+					const neighbors = GAME.getNeighbors(hex).filter(n => !GAME.getUnitOnHex(n.id));
+					if (neighbors.length > 0) {
+						const targetHex = neighbors.random();
+						GAME.move(target, GAME.getHex(target.hexId), targetHex);
+						target.frozenTicks = 20;
+						GAME.addLog(`🧲 Magnetic! ${GAME.logUnit(target)} pulled and stunned.`, true);
+					}
+				}
+			}
+
+			// --- Speed Calculation ---
+			let currentSpeed = unit.speed + (unit.speedBuff || 0);
+
+			// Behemoth T3A Speed bonus
+			if (unit.value === 5 && GAME.hasPerk(unit, 'tier3', 'A') && unit.hp < (unit.maxHP / 2)) {
+				currentSpeed *= 1.5;
+			}
+
+			// Knight T2B Vanguard (Enemy Speed debuff)
+			const hex = unit.hexId ? GAME.getHex(unit.hexId) : null;
+			if (hex) {
+				GAME.getNeighbors(hex).forEach(n => {
+					const enemy = GAME.getUnitOnHex(n.id);
+					if (enemy && enemy.playerId !== unit.playerId && GAME.hasPerk(enemy, 'tier2', 'B')) {
+						currentSpeed -= 5;
+					}
+				});
+
+				// Templar T3A Speed Aura
+				GAME.hexes.forEach(h => {
+					const templar = h.unit;
+					if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
+						if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
+							currentSpeed += templar.speed * 0.2;
+						}
+					}
+				});
+			}
+
+			unit.actionGauge += Math.max(1, currentSpeed);
 			if (unit.actionGauge >= 100) {
+				// Fencer T1A Parry Shield Refresh
+				if (unit.value === 1 && GAME.hasPerk(unit, 'tier1', 'A')) {
+					unit.parryShield = 15;
+				}
+				// Tanker T2A Entrench
+				if (unit.value === 5 && GAME.hasPerk(unit, 'tier2', 'A') && unit.actionsTakenThisTurn === 0) {
+					unit.entrenchStacks = Math.min(3, (unit.entrenchStacks || 0) + 1);
+					unit.currentArmor = (unit.currentArmor || unit.armor) + 20;
+					GAME.addLog(`🛡️ Entrench! ${GAME.logUnit(unit)} gains DEF (Stack: ${unit.entrenchStacks})`, true);
+				}
+
 				GAME.Autochess.executeAction(GAME, unit);
 				unit.actionGauge -= 100;
 			}
 		});
 	},
 
+	killUnit(GAME, unit) {
+		unit.isDeath = true;
+		GAME.addLog(`💀 ${GAME.logUnit(unit)} has been defeated!`, GAME.Autochess.state.phase === 'COMBAT');
+
+		// Oracle T3A High Priest (Rescue)
+		if (!unit.oncePerBattleUsed) {
+			const oracle = GAME.players[unit.playerId].dice.find(d => !d.isDeath && d.value === 6 && GAME.hasPerk(d, 'tier3', 'A'));
+			if (oracle) {
+				unit.isDeath = false;
+				unit.hp = 1;
+				unit.actionGauge = 100;
+				unit.oncePerBattleUsed = true;
+				GAME.addLog(`😇 Divine Intervention! ${GAME.logUnit(unit)} rescued by High Priest!`, true);
+				return;
+			}
+		}
+
+		const hex = GAME.getHex(unit.hexId);
+		if (hex) {
+			hex.unit = null;
+			hex.unitId = null;
+		}
+
+		// Tanker T3B Dreadnought (On Death)
+		if (unit.value === 5 && GAME.hasPerk(unit, 'tier3', 'B')) {
+			GAME.Autochess.triggerDreadnoughtDeath(GAME, unit);
+		}
+	},
+
+	triggerDreadnoughtDeath(GAME, unit) {
+		const hex = GAME.getHex(unit.hexId);
+		if (!hex) return;
+		GAME.addLog(`💥 Reactor Meltdown! ${GAME.logUnit(unit)} explodes!`, true);
+		GAME.hexes.forEach(h => {
+			if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 3) {
+				const target = h.unit;
+				if (target) {
+					target.hp -= 100;
+					target.actionGauge = 0;
+					if (target.hp <= 0) GAME.Autochess.killUnit(GAME, target);
+				}
+			}
+		});
+	},
+
+	PERK_DESCRIPTIONS: {
+		1: {
+			tier1: { A: { name: "Parry", desc: "Negates 15 damage every Gauge reset." }, B: { name: "Lunge", desc: "+20 DMG if Gauge > Target Gauge." } },
+			tier2: { A: { name: "Riposte", desc: "On hit: +20% Gauge & 25% ATK counter." }, B: { name: "Flurry", desc: "+2 Speed per consecutive hit (Max +10)." } },
+			tier3: { A: { name: "Paladin", desc: "Attacks heal neighbors for 15% Max HP." }, B: { name: "Blademaster", desc: "Gauge +50% on attack, 100% on kill." } }
+		},
+		2: {
+			tier1: { A: { name: "Eagle Eye", desc: "Range +1. No max range penalty." }, B: { name: "Point Blank", desc: "Attacks at Range 1-2 grant +10 Speed." } },
+			tier2: { A: { name: "Piercing Arrow", desc: "40% DEF ignore, -10% Target Gauge." }, B: { name: "Slowing Shot", desc: "Reduce Target Speed by 5." } },
+			tier3: { A: { name: "Sniper", desc: "3rd hit: +100% DMG & 50 tick freeze." }, B: { name: "Ranger", desc: "+20 Speed while moving." } }
+		},
+		3: {
+			tier1: { A: { name: "Momentum", desc: "+1 ATK per 5% Gauge at start of action." }, B: { name: "Evasion", desc: "30% dodge if Gauge > 50%." } },
+			tier2: { A: { name: "Hit & Run", desc: "Teleport after attack, +5 Speed." }, B: { name: "Trample", desc: "Passing enemies reduces their Gauge by 30%." } },
+			tier3: { A: { name: "Dragoon", desc: "Landing jump: 30 DMG & 0 Gauge to neighbors." }, B: { name: "Windrider", desc: "Kill: 100% Gauge (5s Cooldown)." } }
+		},
+		4: {
+			tier1: { A: { name: "Pincer Strike", desc: "+15 Speed if ally is adjacent to target." }, B: { name: "Joust", desc: "Push back. If blocked: -50% Target Gauge." } },
+			tier2: { A: { name: "Bulwark", desc: "+30 DEF while charging Gauge." }, B: { name: "Vanguard", desc: "Adjacent enemies: -5 Speed, -10 ATK." } },
+			tier3: { A: { name: "Templar", desc: "Allies Range 2: +20% Templar Speed." }, B: { name: "Dark Knight", desc: "50% Lifesteal, 10% Gauge Vampire." } }
+		},
+		5: {
+			tier1: { A: { name: "Spiked Armor", desc: "Reflect 20 flat damage." }, B: { name: "Magnetic", desc: "Every 1.5s: Pull enemy Range 3 & Stun." } },
+			tier2: { A: { name: "Entrench", desc: "Gauge 100 (Stayed Still): +20 DEF (Stack 3)." }, B: { name: "Heavy Ordinance", desc: "Range 2 AOE, but -5 Speed next action." } },
+			tier3: { A: { name: "Behemoth", desc: "Max HP x2. If <50% HP: +50% Speed." }, B: { name: "Dreadnought", desc: "Death: 100 AOE DMG & 0 Gauge." } }
+		},
+		6: {
+			tier1: { A: { name: "Blessed Aura", desc: "Every 1s: Heal allies Range 2 for 10." }, B: { name: "Hex", desc: "Every 1s: Nearest 2 enemies -10 DEF." } },
+			tier2: { A: { name: "Haste Cast", desc: "Spells grant +10 Speed." }, B: { name: "Twin Cast", desc: "Spells hit 3 targets & +10% Gauge." } },
+			tier3: { A: { name: "High Priest", desc: "1/Battle: Rescues ally with 1 HP & 100% Gauge." }, B: { name: "Warlock", desc: "1/Battle: Sac 50 HP for Global Gauge Warp." } }
+		}
+	},
+
+	triggerOracleWarlock(GAME, unit) {
+		unit.hp -= 50;
+		unit.oncePerBattleUsed = true;
+		GAME.addLog(`🧙 Warlock! Time Warp!`, true);
+		GAME.players.forEach(p => {
+			p.dice.forEach(d => {
+				if (d.isDeath || !d.hexId) return;
+				if (d.playerId === unit.playerId) d.actionGauge = 100;
+				else d.actionGauge = 0;
+			});
+		});
+	},
+
 	executeAction(GAME, unit) {
 		// Store original turn index to restore after action
 		const originalPlayerIndex = GAME.currentPlayerIndex;
+
+		// Oracle T3B Warlock
+		if (unit.value === 6 && GAME.hasPerk(unit, 'tier3', 'B') && !unit.oncePerBattleUsed && unit.hp > 60) {
+			const enemies = GAME.players.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+			if (enemies.length > 2) {
+				GAME.Autochess.triggerOracleWarlock(GAME, unit);
+				unit.actionGauge = 0;
+				return;
+			}
+		}
 
 		// Context setup for AI
 		GAME.currentPlayerIndex = unit.playerId;
@@ -507,8 +713,32 @@ const Autochess = {
 			// If it's a spell, we need to set oracleSelectedSpell
 			if (move.actionType.startsWith('SPELLCAST_')) {
 				GAME.oracleSelectedSpell = move.actionType.replace('SPELLCAST_', '');
+
+				// Oracle T2A Haste Cast
+				if (GAME.hasPerk(unit, 'tier2', 'A')) {
+					unit.speedBuff = 10;
+					unit.speedBuffDuration = 20;
+				}
+				// Oracle T2B Twin Cast (Simplified)
+				if (GAME.hasPerk(unit, 'tier2', 'B')) {
+					unit.actionGauge = Math.min(100, unit.actionGauge + 10);
+				}
 			}
 			applyMove(GAME, move);
+
+			// Hussar T3A Dragoon Jump Effect
+			if (unit.value === 3 && GAME.hasPerk(unit, 'tier3', 'A') && move.actionType === 'MOVE') {
+				const hex = GAME.getHex(unit.hexId);
+				GAME.getNeighbors(hex).forEach(n => {
+					const enemy = GAME.getUnitOnHex(n.id);
+					if (enemy && enemy.playerId !== unit.playerId) {
+						enemy.hp -= 30;
+						enemy.actionGauge = 0;
+						GAME.addLog(`🐉 Dragoon Landing! ${GAME.logUnit(enemy)} crushed.`, true);
+						if (enemy.hp <= 0) GAME.Autochess.killUnit(GAME, enemy);
+					}
+				});
+			}
 		}
 
 		// Restore original turn index
@@ -521,30 +751,49 @@ const Autochess = {
 
 		// --- Attack Perks ---
 		// Fencer Tier 1 [B] Lunge
-		if (GAME.hasPerk(attackerUnit, 'tier1', 'B') && defenderUnit.hp >= defenderUnit.maxHP) {
-			damageMod += 15;
-		}
-		// Hussar Tier 1 [A] Momentum
-		if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier1', 'A') && distance >= 3) {
+		if (GAME.hasPerk(attackerUnit, 'tier1', 'B') && attackerUnit.actionGauge > defenderUnit.actionGauge) {
 			damageMod += 20;
 		}
-		// Archer Tier 3 [A] Sniper
-		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier3', 'A') && distance >= 3) {
-			damageMod += 30;
+		// Hussar Tier 1 [A] Momentum
+		if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier1', 'A')) {
+			damageMod += Math.floor(attackerUnit.actionGauge / 5);
 		}
-		// Knight Tier 1 [A] Pincer Strike (Simplified for Autochess)
+		// Archer Tier 1 [A] Eagle Eye
+		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier1', 'A')) {
+			if (distance >= 3) attackMod += 10;
+		}
+		// Archer Tier 3 [A] Sniper
+		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier3', 'A')) {
+			attackerUnit.sniperCount = (attackerUnit.sniperCount || 0) + 1;
+			if (attackerUnit.sniperCount % 3 === 0) {
+				damageMod += (10 + 6 * attackerUnit.attack); // +100% Damage
+				defenderUnit.frozenTicks = 50;
+				GAME.addLog(`🎯 Sniper Shot! Critical damage and freeze!`, state);
+			}
+		}
+		// Knight Tier 1 [A] Pincer Strike
 		if (attackerUnit.value === 4 && GAME.hasPerk(attackerUnit, 'tier1', 'A')) {
 			const neighbors = GAME.getNeighbors(GAME.getHex(defenderUnit.hexId, state), state);
 			const allies = neighbors.filter(n => {
 				const u = GAME.getUnitOnHex(n.id, state);
 				return u && u.playerId === attackerUnit.playerId && u.id !== attackerUnit.id;
 			});
-			if (allies.length > 0) damageMod += 20;
+			if (allies.length > 0) {
+				attackerUnit.speedBuff = 15;
+				attackerUnit.speedBuffDuration = 10;
+			}
 		}
 
 		// Archer Tier 2 [A] Piercing Arrow
 		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier2', 'A')) {
-			defenderEffectiveArmor = Math.floor(defenderEffectiveArmor * 0.7);
+			defenderEffectiveArmor = Math.floor(defenderEffectiveArmor * 0.6); // 40% ignore
+			defenderUnit.actionGauge = Math.max(0, defenderUnit.actionGauge - 10);
+		}
+
+		// --- Defensive Calculations ---
+		// Knight T2A Bulwark
+		if (defenderUnit.value === 4 && GAME.hasPerk(defenderUnit, 'tier2', 'A')) {
+			defenderEffectiveArmor += 30;
 		}
 
 		const isSuccess = Math.ceil((attackerUnit.attack + combatRoll + attackMod) / 2) > defenderEffectiveArmor;
@@ -556,25 +805,32 @@ const Autochess = {
 
 		// --- Defensive Perks ---
 		// Fencer Tier 1 [A] Parry
-		if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
-			const parry = 15;
-			damage = Math.max(5, damage - parry);
+		if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier1', 'A') && (defenderUnit.parryShield || 0) > 0) {
+			const reduction = Math.min(damage, defenderUnit.parryShield);
+			damage -= reduction;
+			defenderUnit.parryShield -= reduction;
+			GAME.addLog(`🛡️ Parry! ${reduction} damage negated.`, state);
 		}
 		// Hussar Tier 1 [B] Evasion
-		if (defenderUnit.value === 3 && GAME.hasPerk(defenderUnit, 'tier1', 'B') && combatType === 'RANGED_ATTACK') {
-			damage = Math.floor(damage * 0.5);
+		if (defenderUnit.value === 3 && GAME.hasPerk(defenderUnit, 'tier1', 'B') && defenderUnit.actionGauge > 50) {
+			if (Math.random() < 0.3) {
+				damage = 0;
+				GAME.addLog(`💨 Evaded!`, state);
+			}
 		}
 		// Tanker Tier 1 [A] Spiked Armor
 		if (defenderUnit.value === 5 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
-			const reflect = 15;
+			const reflect = 20;
 			attackerUnit.hp -= reflect;
 			GAME.addLog(`💥 Spiked Armor! ${GAME.logUnit(attackerUnit)} takes ${reflect} reflect damage.`, state);
 		}
 
-		if (isSuccess) {
-			GAME.addLog(`⚔️ ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
-		} else {
-			GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+		if (damage > 0) {
+			if (isSuccess) {
+				GAME.addLog(`⚔️ ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+			} else {
+				GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+			}
 		}
 
 		if (!state) {
@@ -584,18 +840,38 @@ const Autochess = {
 		}
 
 		defenderUnit.hp -= damage;
-		console.log(`Combat: ${GAME.logUnit(attackerUnit)} dealt ${damage} to ${GAME.logUnit(defenderUnit)}. New HP: ${defenderUnit.hp}`);
 
 		// --- Post-Damage Perks ---
-		// Archer Tier 2 [B] Venom Tipped
+		// Archer Tier 2 [B] Slowing Shot
 		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier2', 'B')) {
-			defenderUnit.venomDuration = 2;
-			GAME.addLog(`🐍 Venom! ${GAME.logUnit(defenderUnit)} is poisoned for 2 turns.`, state);
+			defenderUnit.speedBuff = -5;
+			defenderUnit.speedBuffDuration = 20;
 		}
-		// Knight Tier 3 [B] Dark Knight (Lifesteal)
+		// Knight Tier 3 [B] Dark Knight (Lifesteal + Vampire)
 		if (attackerUnit.value === 4 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
 			const heal = Math.floor(damage * 0.5);
 			attackerUnit.hp = Math.min(attackerUnit.maxHP, attackerUnit.hp + heal);
+			const vamp = Math.floor(defenderUnit.actionGauge * 0.1);
+			defenderUnit.actionGauge -= vamp;
+			attackerUnit.actionGauge = Math.min(100, attackerUnit.actionGauge + vamp);
+		}
+		// Fencer Tier 2 [A] Riposte (On Hit)
+		if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier2', 'A')) {
+			defenderUnit.actionGauge = Math.min(100, defenderUnit.actionGauge + 20);
+			const counterDamage = Math.floor(defenderUnit.attack * 2.5);
+			attackerUnit.hp -= counterDamage;
+			GAME.addLog(`↩️ Riposte! Countered for ${counterDamage} damage.`, state);
+		}
+		// Fencer Tier 2 [B] Flurry
+		if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier2', 'B')) {
+			if (attackerUnit.lastTargetId === defenderUnit.id) {
+				attackerUnit.consecutiveHits = Math.min(5, (attackerUnit.consecutiveHits || 0) + 1);
+				attackerUnit.speedBuff = attackerUnit.consecutiveHits * 2;
+				attackerUnit.speedBuffDuration = 20;
+			} else {
+				attackerUnit.consecutiveHits = 1;
+				attackerUnit.lastTargetId = defenderUnit.id;
+			}
 		}
 		// Fencer Tier 3 [A] Paladin (Heal on hit)
 		if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier3', 'A')) {
@@ -604,7 +880,7 @@ const Autochess = {
 				GAME.getNeighbors(hex, state).forEach(n => {
 					const friend = GAME.getUnitOnHex(n.id, state);
 					if (friend && friend.playerId === attackerUnit.playerId) {
-						const heal = 10;
+						const heal = Math.floor(friend.maxHP * 0.15);
 						friend.hp = Math.min(friend.maxHP, friend.hp + heal);
 					}
 				});
@@ -612,37 +888,49 @@ const Autochess = {
 		}
 
 		if (defenderUnit.hp <= 0) {
-			defenderUnit.isDeath = true;
-			GAME.addLog(`💀 ${GAME.logUnit(defenderUnit)} has been defeated!`, state);
-			if (!state) window?.AudioManager?.playSfx('death');
-			const hex = GAME.getHex(defenderUnit.hexId, state);
-			if (hex) {
-				hex.unit = null;
-				hex.unitId = null;
-			}
+			GAME.Autochess.killUnit(GAME, defenderUnit);
 
-			// Hussar Tier 3 [B] Windrider (Simplified: Action Gauge Reset)
+			// Hussar Tier 3 [B] Windrider
 			if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
+				if (attackerUnit.ticksInCombat - (attackerUnit.lastWindriderTick || 0) > 50) {
+					attackerUnit.actionGauge = 100;
+					attackerUnit.lastWindriderTick = attackerUnit.ticksInCombat;
+					GAME.addLog(`🌪️ Windrider!`, state);
+				}
+			}
+			// Fencer Tier 3 [B] Blademaster (Kill)
+			if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
 				attackerUnit.actionGauge = 100;
-				GAME.addLog(`🌪️ Windrider! ${GAME.logUnit(attackerUnit)} acts again!`, state);
 			}
 		} else {
-			// Fencer Tier 2 [A] Riposte
-			if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier2', 'A') && combatType === 'MELEE') {
-				const counterDamage = Math.floor(defenderUnit.attack * 5);
-				attackerUnit.hp -= counterDamage;
-				GAME.addLog(`↩️ Riposte! ${GAME.logUnit(defenderUnit)} counters for ${counterDamage} damage!`, state);
+			// Knight Tier 1 [B] Joust
+			if (attackerUnit.value === 4 && GAME.hasPerk(attackerUnit, 'tier1', 'B')) {
+				const attackerHex = GAME.getHex(attackerUnit.hexId, state);
+				const defenderHex = GAME.getHex(defenderUnit.hexId, state);
+				const dq = defenderHex.q - attackerHex.q;
+				const dr = defenderHex.r - attackerHex.r;
+				const backQ = defenderHex.q + dq;
+				const backR = defenderHex.r + dr;
+				const backHex = GAME.getHexByQR(backQ, backR, state);
+				const blocker = backHex ? GAME.getUnitOnHex(backHex.id, state) : null;
+
+				if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
+					defenderUnit.actionGauge = Math.max(0, defenderUnit.actionGauge - 50);
+					GAME.addLog(`🛡️ Joust blocked! ${GAME.logUnit(defenderUnit)} Gauge reduced.`, state);
+				} else {
+					GAME.move(defenderUnit, defenderHex, backHex, state);
+					GAME.addLog(`🛡️ Joust! ${GAME.logUnit(defenderUnit)} pushed back.`, state);
+				}
 			}
 		}
 
+		// Blademaster Tier 3 [B] (Attack)
+		if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier3', 'B') && !defenderUnit.isDeath) {
+			attackerUnit.actionGauge = Math.min(100, attackerUnit.actionGauge + 50);
+		}
+
 		if (attackerUnit.hp <= 0) {
-			attackerUnit.isDeath = true;
-			GAME.addLog(`💀 ${GAME.logUnit(attackerUnit)} was killed by counter/reflect!`, state);
-			const hex = GAME.getHex(attackerUnit.hexId, state);
-			if (hex) {
-				hex.unit = null;
-				hex.unitId = null;
-			}
+			GAME.Autochess.killUnit(GAME, attackerUnit);
 		}
 	},
 

@@ -108,8 +108,8 @@
 									<!-- If Unlocked and has chosen a skill -->
 									<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
 										<div class="py-1">
-											<div class="text-sm font-bold " x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.name"></div>
-											<div class="text-sm text-gray-600 mt-1 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.desc"></div>
+											<div class="text-sm font-bold " x-text="Autochess.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.name"></div>
+											<div class="text-sm text-gray-600 mt-1 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.desc"></div>
 										</div>
 									</template>
 
@@ -118,13 +118,13 @@
 										<div class="space-y-2 py-2">
 											<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'A')"
 													class="w-full text-left p-2 border rounded bg-white transition-all shadow-sm group">
-												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.name"></div>
-												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.desc"></div>
+												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="Autochess.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.name"></div>
+												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.desc"></div>
 											</button>
 											<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'B')"
 													class="w-full text-left p-2 border rounded bg-white transition-all shadow-sm group">
-												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.name"></div>
-												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.desc"></div>
+												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="Autochess.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.name"></div>
+												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.desc"></div>
 											</button>
 										</div>
 									</template>
