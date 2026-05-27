@@ -23,7 +23,7 @@
 					</span>
 
 					<span style="top:-0.5rem;right:0.6rem;" class="absolute z-10 text-red-700"
-						x-text="hex.unit?.attack">
+						x-text="hex.unit?.attack + (hex.unit?.veteranLevel ? '★'.repeat(hex.unit.veteranLevel) : '')">
 					</span>
 					<span style="top:-0.5rem;right:-0.4rem;" class="absolute z-10 text-gray-700"
 						:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
