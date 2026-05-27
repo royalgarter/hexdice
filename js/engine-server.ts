@@ -14,7 +14,8 @@ export async function loadEngine(playerCount: number = 2, version: number = 2): 
 	const locationStub = {
 		search: `?mode=headless&players=${playerCount}&version=${version}&autochess=true`,
 		href: `https://hexdice.local/`,
-		toString: () => `https://hexdice.local/`
+		toString: () => `https://hexdice.local/`,
+		reload: () => {}
 	};
 	
 	const documentStub = {

@@ -87,6 +87,10 @@ function alpineHexDiceTacticGame() { return {
 	},
 	showLog: true,
 	showMinimap: true,
+	get autochessPlayerIndex() {
+		if (this.online?.status === 'PLAYING') return this.online.playerIndex;
+		return 0;
+	},
 	showUnitInfo: false,
 	showCamp: false,
 	preset: null,
@@ -284,6 +288,7 @@ function alpineHexDiceTacticGame() { return {
 	simulateAutochessStep() { this.Autochess.simulateStep(this); },
 	executeAutochessAction(unit) { this.Autochess.executeAction(this, unit); },
 	nextAutochessRound() { this.Autochess.nextRound(this); },
+	toggleAutochessReady() { this.Autochess.toggleReady(this); },
 	selectAutochessUnitSkill(unitId, tier, option) { this.Autochess.selectUnitSkill(this, unitId, tier, option); },
 	clickAutochessUnit(unit) { this.Autochess.clickUnit(this, unit); },
 	moveAutochessUnit(playerId, fromIndex, toIndex) { this.Autochess.moveUnit(this, playerId, fromIndex, toIndex); },
@@ -907,6 +912,16 @@ function alpineHexDiceTacticGame() { return {
 	handleAuthoritativeState(state) {
 		if (state.autochess) {
 			Object.assign(this.Autochess.state, state.autochess);
+			// Merge nested state objects keyed by playerId
+			if (state.autochess.inventories) {
+				Object.assign(this.Autochess.state.inventories, state.autochess.inventories);
+			}
+			if (state.autochess.rerolls) {
+				Object.assign(this.Autochess.state.rerolls, state.autochess.rerolls);
+			}
+			if (state.autochess.ready) {
+				this.Autochess.state.ready = state.autochess.ready;
+			}
 		}
 
 		// Map of all units for quick lookup
@@ -1132,12 +1147,17 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 
-		this.randomStart();
-		this.phase = 'PLAYER_TURN'; // Explicitly set phase
-		
-		this.online.status = prevStatus;
-		this.addLog("Online game ready! Turn: P1");
-		this.startOnlineTimer();
+		if (this.Autochess.state.enabled) {
+			this.initAutochess();
+			this.online.status = prevStatus;
+			this.addLog("Autochess online game ready! Prepare your army.");
+		} else {
+			this.randomStart();
+			this.phase = 'PLAYER_TURN';
+			this.online.status = prevStatus;
+			this.addLog("Online game ready! Turn: P1");
+			this.startOnlineTimer();
+		}
 	},
 
 	applyRemoteAction(data, sender) {
@@ -1207,7 +1227,7 @@ function alpineHexDiceTacticGame() { return {
 			campaignData: campaignData
 		});
 
-		if (this.autochess) {
+		if (this.Autochess.state.enabled) {
 			this.initAutochess();
 		}
 
@@ -1959,20 +1979,23 @@ function alpineHexDiceTacticGame() { return {
 		this.move(dieToDeploy, null, targetHex);
 		this.recordAction('DEPLOY', { unitValue: dieToDeploy.value, toHex: targetHex.id });
 
-		this.addLog(`P${player.id + 1} deployed #${dieToDeploy.value} to [${hexId}]`);
+		const deployPlayerIdx = this.players.indexOf(player);
+		this.addLog(`P${deployPlayerIdx + 1} deployed #${dieToDeploy.value} to [${hexId}]`);
 		this.selectedDieToDeploy = player.dice.find(x => !x.isDeployed)?.originalIndex;
 		this.refreshValidDeploymentHexes();
 
 		// Check if current player has deployed all dice OR reached deployment limit
 		const deployedCount = player.dice.filter(d => d.isDeployed).length;
 		if (player.dice.every(d => d.isDeployed) || (this.isCampaign && player.id === 0 && deployedCount >= this.deploymentLimit)) {
-			// Find next player who hasn't deployed all dice
-			const nextDeployPlayer = this.players.find(p => p.id > player.id && p.dice.some(d => !d.isDeployed));
+			// Find next player (by index) who hasn't deployed all dice
+			const playerIdx = this.players.indexOf(player);
+			const nextDeployPlayer = this.players.slice(playerIdx + 1).find(p => p.dice.some(d => !d.isDeployed));
 
 			if (nextDeployPlayer) {
-				this.currentPlayerIndex = nextDeployPlayer.id;
-				this.selectedDieToDeploy = this.players[this.currentPlayerIndex].dice.findIndex(d => !d.isDeployed);
-				this.addLog(`P${this.currentPlayerIndex + 1} turn to deploy`);
+				const nextIdx = this.players.indexOf(nextDeployPlayer);
+				this.currentPlayerIndex = nextIdx;
+				this.selectedDieToDeploy = this.players[nextIdx].dice.findIndex(d => !d.isDeployed);
+				this.addLog(`P${nextIdx + 1} turn to deploy`);
 				this.refreshValidDeploymentHexes();
 			} else {
 				this.startGamePlay();
@@ -2174,7 +2197,9 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- GAMEPLAY --- */
 	handleHexClick(hexId) {
-		if (this.online.status === 'PLAYING') {
+		// Autochess PREPARATION phase: simultaneous, skip turn checks
+		const isAutochessPrep = this.Autochess?.state?.enabled && this.Autochess?.state?.phase === 'PREPARATION';
+		if (!isAutochessPrep && this.online.status === 'PLAYING') {
 			if (this.currentPlayerIndex !== this.online.playerIndex) {
 				this.addLog("Wait for opponent's turn.");
 				console.log("Turn block: current", this.currentPlayerIndex, "me", this.online.playerIndex);
@@ -2182,7 +2207,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 		this._handleHexClick(hexId);
-		if (this.online.status === 'PLAYING' && this.online.status !== 'SYNCING') {
+		if (!isAutochessPrep && this.online.status === 'PLAYING' && this.online.status !== 'SYNCING') {
 			this.publishAction('GAME_ACTION', { action: 'HEX_CLICK', args: [hexId] });
 		}
 	},
@@ -2194,25 +2219,30 @@ function alpineHexDiceTacticGame() { return {
 
 		// Autochess manual positioning during PREPARATION phase
 		if (this.Autochess.state.enabled && this.Autochess.state.phase === 'PREPARATION') {
+			const pi = this.autochessPlayerIndex;
 			const clickedHex = this.getHex(hexId);
 			const unitOnClickedHex = this.getUnitOnHex(hexId);
 			
-			const player = this.players[0];
-			const baseHex = this.getHex(player.baseHexId);
+			const player = this.players[pi];
+			const baseHex = this.getHex(player?.baseHexId);
 			let isDeploymentHex = false;
 			if (baseHex) {
 				const dist = this.axialDistance(baseHex.q, baseHex.r, clickedHex.q, clickedHex.r);
 				if (dist <= 2) isDeploymentHex = true;
 			}
 
-			if (unitOnClickedHex && unitOnClickedHex.playerId === 0) {
-				this.selectUnit(hexId);
+			if (unitOnClickedHex && unitOnClickedHex.playerId === pi) {
+				this.selectedUnitHexId = hexId;
 			} else if (this.selectedUnitHexId !== null && isDeploymentHex) {
 				const unit = this.getUnitOnHex(this.selectedUnitHexId);
-				if (unit && unit.playerId === 0) {
+				if (unit && unit.playerId === pi) {
 					const fromHex = this.getHex(this.selectedUnitHexId);
 					this.move(unit, fromHex, clickedHex);
 					this.deselectUnit();
+					// Publish placement for online mode
+					if (this.online?.roomId) {
+						this.Autochess.placeUnit(this, pi, unit.id, clickedHex.id, fromHex.id);
+					}
 				}
 			} else {
 				this.deselectUnit();

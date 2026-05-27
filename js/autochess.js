@@ -13,6 +13,7 @@ const Autochess = {
 		selectedProfile: 'baseline',
 		roundTimer: 0,
 		selectedUnitId: null, // For merging
+		ready: {}, // playerId -> boolean (for online multiplayer ready-up)
 	},
 
 	init(GAME) {
@@ -102,42 +103,47 @@ const Autochess = {
 		});
 	},
 
-	recruitUnit(GAME, playerId, index) {
+	recruitUnit(GAME, playerIdx, index) {
+		const player = GAME.players[playerIdx];
+		if (!player) return;
+		const pid = player.id;
+
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_RECRUIT', { index });
 			return;
 		}
-		const unit = GAME.Autochess.state.inventories[playerId].splice(index, 1)[0];
+		const unit = GAME.Autochess.state.inventories[pid]?.splice(index, 1)?.[0];
 		if (unit) {
-			GAME.players[playerId].dice.push(unit);
+			player.dice.push(unit);
 
-			// Surgical board update for human player:
-			// If we have fewer than 6 units on board, find an empty valid hex and place it.
-			if (playerId === 0) {
-				const deployedCount = GAME.players[0].dice.filter(u => u.hexId).length;
-				if (deployedCount < 6) {
-					const validHexes = GAME.calcValidDeploymentHexes(0).filter(hexId => !GAME.getUnitOnHex(hexId));
-					if (validHexes.length > 0) {
-						const hexId = validHexes[0];
-						const targetHex = GAME.getHex(hexId);
-						targetHex.unit = unit;
-						targetHex.unitId = unit.id;
-						unit.hexId = hexId;
-						unit.isDeployed = true;
-					}
+			// Auto-deploy recruited unit to board if under 6 deployed
+			const deployedCount = player.dice.filter(u => u.hexId).length;
+			if (deployedCount < 6) {
+				const validHexes = GAME.calcValidDeploymentHexes(playerIdx).filter(hexId => !GAME.getUnitOnHex(hexId));
+				if (validHexes.length > 0) {
+					const hexId = validHexes[0];
+					const targetHex = GAME.getHex(hexId);
+					targetHex.unit = unit;
+					targetHex.unitId = unit.id;
+					unit.hexId = hexId;
+					unit.isDeployed = true;
 				}
 			}
 		}
 	},
 
-	rerollRecruits(GAME, playerId) {
+	rerollRecruits(GAME, playerIdx) {
+		const player = GAME.players[playerIdx];
+		if (!player) return;
+		const pid = player.id;
+
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_REROLL', {});
 			return;
 		}
-		if (GAME.Autochess.state.rerolls[playerId] > 0) {
-			GAME.Autochess.state.rerolls[playerId]--;
-			GAME.Autochess.generateRecruits(GAME, playerId);
+		if (GAME.Autochess.state.rerolls[pid] > 0) {
+			GAME.Autochess.state.rerolls[pid]--;
+			GAME.Autochess.generateRecruits(GAME, pid);
 		}
 	},
 
@@ -156,12 +162,13 @@ const Autochess = {
 	clickUnit(GAME, unit) {
 		if (!GAME?.Autochess?.state || !unit?.id) return console.log('Autochess.clickUnit.invalid');
 		
+		const playerIdx = GAME.autochessPlayerIndex ?? 0;
 		const state = GAME.Autochess.state;
 		if (state.selectedUnitId && state.selectedUnitId !== unit.id) {
-			const u1 = GAME.players[0].dice.find(u => u.id === state.selectedUnitId);
+			const u1 = GAME.players[playerIdx]?.dice.find(u => u.id === state.selectedUnitId);
 
 			if (u1 && u1.value === unit.value)
-				GAME.Autochess.mergeUnits(GAME, 0, state.selectedUnitId, unit.id);
+				GAME.Autochess.mergeUnits(GAME, playerIdx, state.selectedUnitId, unit.id);
 			else
 				state.selectedUnitId = unit.id;
 		} else {
@@ -268,7 +275,8 @@ const Autochess = {
 	},
 
 	selectUnitSkill(GAME, unitId, tier, option) {
-		const unit = GAME.players[0].dice.find(u => u.id === unitId);
+		const playerIdx = GAME.autochessPlayerIndex ?? 0;
+		const unit = GAME.players[playerIdx]?.dice.find(u => u.id === unitId);
 		if (!unit) return;
 
 		const tierLevel = { 'tier1': 1, 'tier2': 2, 'tier3': 3 }[tier];
@@ -980,7 +988,28 @@ const Autochess = {
 			GAME.Autochess.generateRecruits(GAME);
 			GAME.Autochess.deployPlayerUnits(GAME);
 			GAME.Autochess.state.phase = 'PREPARATION';
+			GAME.Autochess.state.ready = {}; // Reset ready for next round
 		}
+	},
+
+	toggleReady(GAME) {
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_READY', {});
+			return;
+		}
+		// Single-player: start combat immediately
+		GAME.Autochess.startCombat(GAME);
+	},
+
+	placeUnit(GAME, playerIdx, unitId, toHexId, fromHexId) {
+		const player = GAME.players[playerIdx];
+		if (!player) return;
+
+		if (GAME.online?.roomId) {
+			GAME.publishAction('AUTOCHESS_PLACE', { unitId, toHexId, fromHexId });
+			return;
+		}
+		// Single-player: already handled by local hex click logic
 	},
 
 };

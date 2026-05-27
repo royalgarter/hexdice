@@ -80,44 +80,76 @@ async function handleRoomAction(roomId: string, payload: any) {
 
 	let updated = false;
 
+	const findPlayerIdx = (senderId: string) => game.players.findIndex((p: any) => p.id === senderId);
+
 	if (type === 'AUTOCHESS_RECRUIT') {
-		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
 			game.Autochess.recruitUnit(game, playerIdx, data.index);
 			updated = true;
 		}
 	} else if (type === 'AUTOCHESS_REROLL') {
-		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
 			game.Autochess.rerollRecruits(game, playerIdx);
 			updated = true;
 		}
 	} else if (type === 'AUTOCHESS_MOVE') {
-		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
 			game.Autochess.moveUnit(game, playerIdx, data.fromIndex, data.toIndex);
 			updated = true;
 		}
 	} else if (type === 'AUTOCHESS_MERGE') {
-		const playerIdx = game.players.findIndex((p: any) => p.id === sender);
+		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
 			game.Autochess.mergeUnits(game, playerIdx, data.unitId1, data.unitId2);
 			updated = true;
 		}
 	} else if (type === 'AUTOCHESS_START_COMBAT') {
-		// Only host or certain conditions?
 		game.Autochess.startCombat(game);
 		updated = true;
-
-		// Stream combat steps
 		startCombatStreaming(roomId, game);
 	} else if (type === 'AUTOCHESS_NEXT_ROUND') {
 		game.Autochess.nextRound(game);
 		updated = true;
+	} else if (type === 'AUTOCHESS_READY') {
+		const playerIdx = findPlayerIdx(sender);
+		if (playerIdx !== -1) {
+			const pid = game.players[playerIdx].id;
+			game.Autochess.state.ready = game.Autochess.state.ready || {};
+			game.Autochess.state.ready[pid] = !game.Autochess.state.ready[pid];
+			updated = true;
+
+			// Check if both (all) players are ready
+			if (game.players.every((p: any) => game.Autochess.state.ready[p.id])) {
+				game.Autochess.state.ready = {};
+				game.Autochess.startCombat(game);
+				startCombatStreaming(roomId, game);
+			}
+		}
+	} else if (type === 'AUTOCHESS_PLACE') {
+		const playerIdx = findPlayerIdx(sender);
+		if (playerIdx !== -1) {
+			const { unitId, toHexId, fromHexId } = data;
+			const unit = game.players[playerIdx].dice.find((d: any) => d.id === unitId);
+			if (unit) {
+				if (fromHexId) {
+					const fromHex = game.getHex(fromHexId);
+					if (fromHex) { fromHex.unit = null; fromHex.unitId = null; }
+				}
+				const toHex = game.getHex(toHexId);
+				if (toHex) {
+					toHex.unit = unit;
+					toHex.unitId = unit.id;
+					unit.hexId = toHexId;
+					unit.isDeployed = true;
+				}
+			}
+			updated = true;
+		}
 	} else if (type === 'GUEST_JOINED') {
-		// Ensure guest is in game.players
 		if (!game.players.find((p: any) => p.id === sender)) {
-			// Room changed in DB, let's re-init engine next time
 			delete roomEngines[roomId];
 			await getOrInitEngine(roomId);
 			updated = true;
@@ -138,7 +170,10 @@ function broadcastState(roomId: string, game: any, full = false) {
 			roundTimer: game.Autochess.state.roundTimer,
 			lastResult: game.Autochess.state.lastResult,
 			lastWinnerId: game.Autochess.state.lastWinnerId,
-			pulseMs: MQTT_PULSE_MS
+			pulseMs: MQTT_PULSE_MS,
+			inventories: game.Autochess.state.inventories,
+			rerolls: game.Autochess.state.rerolls,
+			ready: game.Autochess.state.ready || {}
 		}
 	};
 
