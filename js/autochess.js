@@ -20,6 +20,7 @@ const Autochess = {
 		GAME.gameplayVersion = 2;
 		GAME.options = GAME.options || '';
 		if (!GAME.options.includes('a')) GAME.options += 'a';
+		GAME.autochess = true;
 
 		GAME.Autochess.state.round = 1;
 
@@ -483,8 +484,9 @@ const Autochess = {
 		GAME.Autochess.state.phase = 'RECAP';
 	},
 
-	simulateStep(GAME) {
-		const allUnits = GAME.players.flatMap(p => p.dice)
+	simulateStep(GAME, state) {
+		const targetPlayers = (state || GAME).players;
+		const allUnits = targetPlayers.flatMap(p => p.dice)
 			.filter(u => u.hexId && u.isDeployed && !u.isDeath)
 			.sort((a, b) => (b.actionGauge - a.actionGauge) || (Math.random() - 0.5));
 
@@ -509,21 +511,21 @@ const Autochess = {
 				const venomDamage = 10;
 				unit.hp -= venomDamage;
 				unit.venomDuration--;
-				GAME.addLog(`🐍 ${GAME.logUnit(unit)} suffers ${venomDamage} poison damage (${unit.venomDuration} ticks left).`, GAME.Autochess.state.phase === 'COMBAT');
+				GAME.addLog(`🐍 ${GAME.logUnit(unit, state)} suffers ${venomDamage} poison damage (${unit.venomDuration} ticks left).`, (state || GAME).Autochess.state.phase === 'COMBAT', state);
 				if (unit.hp <= 0) {
-					GAME.Autochess.killUnit(GAME, unit);
+					GAME.Autochess.killUnit(GAME, unit, state);
 					return;
 				}
 			}
 
 			// --- Passive Auras (Every 10 ticks = 1s) ---
 			if (unit.ticksInCombat % 10 === 0 && unit.hexId) {
-				const hex = GAME.getHex(unit.hexId);
+				const hex = GAME.getHex(unit.hexId, state);
 
 				// Oracle T1A Blessed Aura
 				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'A')) {
-					GAME.getNeighbors(hex).forEach(n => {
-						const friend = GAME.getUnitOnHex(n.id);
+					GAME.getNeighbors(hex, state).forEach(n => {
+						const friend = GAME.getUnitOnHex(n.id, state);
 						if (friend && friend.playerId === unit.playerId) {
 							friend.hp = Math.min(friend.maxHP, friend.hp + 10);
 						}
@@ -531,28 +533,28 @@ const Autochess = {
 				}
 				// Oracle T1B Hex
 				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'B')) {
-					const enemies = GAME.players.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
-					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId).q, GAME.getHex(a.hexId).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId).q, GAME.getHex(b.hexId).r));
+					const enemies = targetPlayers.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId).r));
 					enemies.slice(0, 2).forEach(e => {
 						e.currentArmor = Math.max(0, (e.currentArmor || e.armor) - 10);
-						GAME.addLog(`🔮 Hex! ${GAME.logUnit(e)} lost 10 DEF.`, true);
+						GAME.addLog(`🔮 Hex! ${GAME.logUnit(e, state)} lost 10 DEF.`, true, state);
 					});
 				}
 			}
 
 			// Tanker T1B Magnetic (Every 15 ticks)
 			if (unit.ticksInCombat % 15 === 0 && unit.hexId && unit.value === 5 && GAME.hasPerk(unit, 'tier1', 'B')) {
-				const hex = GAME.getHex(unit.hexId);
-				const enemies = GAME.players.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
-				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId).q, GAME.getHex(a.hexId).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId).q, GAME.getHex(b.hexId).r));
+				const hex = GAME.getHex(unit.hexId, state);
+				const enemies = targetPlayers.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 				const target = enemies[0];
-				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId).q, GAME.getHex(target.hexId).r) <= 3) {
-					const neighbors = GAME.getNeighbors(hex).filter(n => !GAME.getUnitOnHex(n.id));
+				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId, state).q, GAME.getHex(target.hexId, state).r) <= 3) {
+					const neighbors = GAME.getNeighbors(hex, state).filter(n => !GAME.getUnitOnHex(n.id, state));
 					if (neighbors.length > 0) {
 						const targetHex = neighbors.random();
-						GAME.move(target, GAME.getHex(target.hexId), targetHex);
+						GAME.move(target, GAME.getHex(target.hexId, state), targetHex, state);
 						target.frozenTicks = 20;
-						GAME.addLog(`🧲 Magnetic! ${GAME.logUnit(target)} pulled and stunned.`, true);
+						GAME.addLog(`🧲 Magnetic! ${GAME.logUnit(target, state)} pulled and stunned.`, true, state);
 					}
 				}
 			}
@@ -566,17 +568,17 @@ const Autochess = {
 			}
 
 			// Knight T2B Vanguard (Enemy Speed debuff)
-			const hex = unit.hexId ? GAME.getHex(unit.hexId) : null;
+			const hex = unit.hexId ? GAME.getHex(unit.hexId, state) : null;
 			if (hex) {
-				GAME.getNeighbors(hex).forEach(n => {
-					const enemy = GAME.getUnitOnHex(n.id);
+				GAME.getNeighbors(hex, state).forEach(n => {
+					const enemy = GAME.getUnitOnHex(n.id, state);
 					if (enemy && enemy.playerId !== unit.playerId && GAME.hasPerk(enemy, 'tier2', 'B')) {
 						currentSpeed -= 5;
 					}
 				});
 
 				// Templar T3A Speed Aura
-				GAME.hexes.forEach(h => {
+				(state || GAME).hexes.forEach(h => {
 					const templar = h.unit;
 					if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
 						if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
@@ -596,33 +598,35 @@ const Autochess = {
 				if (unit.value === 5 && GAME.hasPerk(unit, 'tier2', 'A') && unit.actionsTakenThisTurn === 0) {
 					unit.entrenchStacks = Math.min(3, (unit.entrenchStacks || 0) + 1);
 					unit.currentArmor = (unit.currentArmor || unit.armor) + 20;
-					GAME.addLog(`🛡️ Entrench! ${GAME.logUnit(unit)} gains DEF (Stack: ${unit.entrenchStacks})`, true);
+					GAME.addLog(`🛡️ Entrench! ${GAME.logUnit(unit, state)} gains DEF (Stack: ${unit.entrenchStacks})`, true, state);
 				}
 
-				GAME.Autochess.executeAction(GAME, unit);
+				GAME.Autochess.executeAction(GAME, unit, state);
 				unit.actionGauge -= 100;
 			}
 		});
 	},
 
-	killUnit(GAME, unit) {
+	killUnit(GAME, unit, state) {
 		unit.isDeath = true;
-		GAME.addLog(`💀 ${GAME.logUnit(unit)} has been defeated!`, GAME.Autochess.state.phase === 'COMBAT');
+		GAME.addLog(`💀 ${GAME.logUnit(unit, state)} has been defeated!`, (state || GAME).Autochess.state.phase === 'COMBAT', state);
 
 		// Oracle T3A High Priest (Rescue)
 		if (!unit.oncePerBattleUsed) {
-			const oracle = GAME.players[unit.playerId].dice.find(d => !d.isDeath && d.value === 6 && GAME.hasPerk(d, 'tier3', 'A'));
+			const player = (state || GAME).players[unit.playerId];
+			const oracle = player.dice.find(d => !d.isDeath && d.value === 6 && GAME.hasPerk(d, 'tier3', 'A'));
 			if (oracle) {
 				unit.isDeath = false;
 				unit.hp = 1;
 				unit.actionGauge = 100;
 				unit.oncePerBattleUsed = true;
-				GAME.addLog(`😇 Divine Intervention! ${GAME.logUnit(unit)} rescued by High Priest!`, true);
+				GAME.addLog(`😇 Divine Intervention! ${GAME.logUnit(unit, state)} rescued by High Priest!`, true, state);
 				return;
 			}
 		}
 
-		const hex = GAME.getHex(unit.hexId);
+		const hexId = unit.hexId;
+		const hex = GAME.getHex(hexId, state);
 		if (hex) {
 			hex.unit = null;
 			hex.unitId = null;
@@ -632,21 +636,22 @@ const Autochess = {
 
 		// Tanker T3B Dreadnought (On Death)
 		if (unit.value === 5 && GAME.hasPerk(unit, 'tier3', 'B')) {
-			GAME.Autochess.triggerDreadnoughtDeath(GAME, unit);
+			GAME.Autochess.triggerDreadnoughtDeath(GAME, unit, hexId, state);
 		}
 	},
 
-	triggerDreadnoughtDeath(GAME, unit) {
-		const hex = GAME.getHex(unit.hexId);
+	triggerDreadnoughtDeath(GAME, unit, hexId, state) {
+		const hex = GAME.getHex(hexId, state);
 		if (!hex) return;
-		GAME.addLog(`💥 Reactor Meltdown! ${GAME.logUnit(unit)} explodes!`, true);
-		GAME.hexes.forEach(h => {
+		GAME.addLog(`💥 Reactor Meltdown! ${GAME.logUnit(unit, state)} explodes!`, true, state);
+		const targetHexes = (state || GAME).hexes;
+		targetHexes.forEach(h => {
 			if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 3) {
 				const target = h.unit;
 				if (target) {
 					target.hp -= 100;
 					target.actionGauge = 0;
-					if (target.hp <= 0) GAME.Autochess.killUnit(GAME, target);
+					if (target.hp <= 0) GAME.Autochess.killUnit(GAME, target, state);
 				}
 			}
 		});
@@ -655,8 +660,8 @@ const Autochess = {
 	PERK_DESCRIPTIONS: {
 		1: {
 			tier1: { A: { name: "Parry", desc: "Negates 15 damage every Gauge reset." }, B: { name: "Lunge", desc: "+20 DMG if Gauge > Target Gauge." } },
-			tier2: { A: { name: "Riposte", desc: "On hit: +20% Gauge & 25% ATK counter." }, B: { name: "Flurry", desc: "+2 Speed per consecutive hit (Max +10)." } },
-			tier3: { A: { name: "Paladin", desc: "Attacks heal neighbors for 15% Max HP." }, B: { name: "Blademaster", desc: "Gauge +50% on attack, 100% on kill." } }
+			tier2: { A: { name: "Riposte", desc: "On hit: +20% Gauge & 50% ATK counter." }, B: { name: "Flurry", desc: "+2 Speed per consecutive hit (Max +10)." } },
+			tier3: { A: { name: "Paladin", desc: "Attacks heal neighbors for 15% Max HP." }, B: { name: "Blademaster", desc: "Gauge +30% on attack, 100% on kill." } }
 		},
 		2: {
 			tier1: { A: { name: "Eagle Eye", desc: "Range +1. No max range penalty." }, B: { name: "Point Blank", desc: "Attacks at Range 1-2 grant +10 Speed." } },
@@ -664,7 +669,7 @@ const Autochess = {
 			tier3: { A: { name: "Sniper", desc: "3rd hit: +100% DMG & 50 tick freeze." }, B: { name: "Ranger", desc: "+20 Speed while moving." } }
 		},
 		3: {
-			tier1: { A: { name: "Momentum", desc: "+1 ATK per 5% Gauge at start of action." }, B: { name: "Evasion", desc: "30% dodge if Gauge > 50%." } },
+			tier1: { A: { name: "Momentum", desc: "+1 ATK per 10% Gauge at start of action." }, B: { name: "Evasion", desc: "30% dodge if Gauge > 50%." } },
 			tier2: { A: { name: "Hit & Run", desc: "Teleport after attack, +5 Speed." }, B: { name: "Trample", desc: "Passing enemies reduces their Gauge by 30%." } },
 			tier3: { A: { name: "Dragoon", desc: "Landing jump: 30 DMG & 0 Gauge to neighbors." }, B: { name: "Windrider", desc: "Kill: 100% Gauge (5s Cooldown)." } }
 		},
@@ -681,15 +686,16 @@ const Autochess = {
 		6: {
 			tier1: { A: { name: "Blessed Aura", desc: "Every 1s: Heal allies Range 2 for 10." }, B: { name: "Hex", desc: "Every 1s: Nearest 2 enemies -10 DEF." } },
 			tier2: { A: { name: "Haste Cast", desc: "Spells grant +10 Speed." }, B: { name: "Twin Cast", desc: "Spells hit 3 targets & +10% Gauge." } },
-			tier3: { A: { name: "High Priest", desc: "1/Battle: Rescues ally with 1 HP & 100% Gauge." }, B: { name: "Warlock", desc: "1/Battle: Sac 50 HP for Global Gauge Warp." } }
+			tier3: { A: { name: "High Priest", desc: "1/Battle: Rescues ally with 1 HP & 100% Gauge." }, B: { name: "Warlock", desc: "1/Battle: Sac 40 HP for Global Gauge Warp." } }
 		}
 	},
 
-	triggerOracleWarlock(GAME, unit) {
-		unit.hp -= 50;
+	triggerOracleWarlock(GAME, unit, state) {
+		unit.hp -= 40;
 		unit.oncePerBattleUsed = true;
-		GAME.addLog(`🧙 Warlock! Time Warp!`, true);
-		GAME.players.forEach(p => {
+		GAME.addLog(`🧙 Warlock! Time Warp!`, true, state);
+		const players = (state || GAME).players;
+		players.forEach(p => {
 			p.dice.forEach(d => {
 				if (d.isDeath || !d.hexId) return;
 				if (d.playerId === unit.playerId) d.actionGauge = 100;
@@ -698,15 +704,16 @@ const Autochess = {
 		});
 	},
 
-	executeAction(GAME, unit) {
+	executeAction(GAME, unit, state) {
 		// Store original turn index to restore after action
 		const originalPlayerIndex = GAME.currentPlayerIndex;
 
 		// Oracle T3B Warlock
 		if (unit.value === 6 && GAME.hasPerk(unit, 'tier3', 'B') && !unit.oncePerBattleUsed && unit.hp > 60) {
-			const enemies = GAME.players.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+			const targetPlayers = (state || GAME).players;
+			const enemies = targetPlayers.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
 			if (enemies.length > 2) {
-				GAME.Autochess.triggerOracleWarlock(GAME, unit);
+				GAME.Autochess.triggerOracleWarlock(GAME, unit, state);
 				unit.actionGauge = 0;
 				return;
 			}
@@ -725,10 +732,10 @@ const Autochess = {
 			5: 'turtle',
 			6: 'tactician',
 		};
-		const profileName = GAME.players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
+		const profileName = (state || GAME).players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
 
-		const state = GAME.cloneState();
-		const move = evaluateBestMoveForUnit(GAME, state, unit, profileName);
+		const evaluationState = state || GAME.cloneState();
+		const move = evaluateBestMoveForUnit(GAME, evaluationState, unit, profileName);
 
 		if (move && move.actionType !== 'END_TURN') {
 			// If it's a spell, we need to set oracleSelectedSpell
@@ -745,18 +752,18 @@ const Autochess = {
 					unit.actionGauge = Math.min(100, unit.actionGauge + 10);
 				}
 			}
-			applyMove(GAME, move);
+			applyMove(GAME, move, state);
 
 			// Hussar T3A Dragoon Jump Effect
 			if (unit.value === 3 && GAME.hasPerk(unit, 'tier3', 'A') && move.actionType === 'MOVE') {
-				const hex = GAME.getHex(unit.hexId);
-				GAME.getNeighbors(hex).forEach(n => {
-					const enemy = GAME.getUnitOnHex(n.id);
+				const hex = GAME.getHex(unit.hexId, state);
+				GAME.getNeighbors(hex, state).forEach(n => {
+					const enemy = GAME.getUnitOnHex(n.id, state);
 					if (enemy && enemy.playerId !== unit.playerId) {
 						enemy.hp -= 30;
 						enemy.actionGauge = 0;
-						GAME.addLog(`🐉 Dragoon Landing! ${GAME.logUnit(enemy)} crushed.`, true);
-						if (enemy.hp <= 0) GAME.Autochess.killUnit(GAME, enemy);
+						GAME.addLog(`🐉 Dragoon Landing! ${GAME.logUnit(enemy, state)} crushed.`, true, state);
+						if (enemy.hp <= 0) GAME.Autochess.killUnit(GAME, enemy, state);
 					}
 				});
 			}
@@ -777,7 +784,7 @@ const Autochess = {
 		}
 		// Hussar Tier 1 [A] Momentum
 		if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier1', 'A')) {
-			damageMod += Math.floor(attackerUnit.actionGauge / 5);
+			damageMod += Math.floor(attackerUnit.actionGauge / 10);
 		}
 		// Archer Tier 1 [A] Eagle Eye
 		if (attackerUnit.value === 2 && GAME.hasPerk(attackerUnit, 'tier1', 'A')) {
@@ -843,14 +850,14 @@ const Autochess = {
 		if (defenderUnit.value === 5 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
 			const reflect = 20;
 			attackerUnit.hp -= reflect;
-			GAME.addLog(`💥 Spiked Armor! ${GAME.logUnit(attackerUnit)} takes ${reflect} reflect damage.`, state);
+			GAME.addLog(`💥 Spiked Armor! ${GAME.logUnit(attackerUnit, state)} takes ${reflect} reflect damage.`, state);
 		}
 
 		if (damage > 0) {
 			if (isSuccess) {
-				GAME.addLog(`⚔️ ${GAME.logUnit(attackerUnit)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+				GAME.addLog(`⚔️ ${GAME.logUnit(attackerUnit, state)} dealt ${damage} damage to ${GAME.logUnit(defenderUnit, state)}!`, state);
 			} else {
-				GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit)}!`, state);
+				GAME.addLog(`🍌 ${GAME.logUnit(attackerUnit, state)}'s attack deflected, minor ${damage} damage to ${GAME.logUnit(defenderUnit, state)}!`, state);
 			}
 		}
 
@@ -879,7 +886,7 @@ const Autochess = {
 		// Fencer Tier 2 [A] Riposte (On Hit)
 		if (defenderUnit.value === 1 && GAME.hasPerk(defenderUnit, 'tier2', 'A')) {
 			defenderUnit.actionGauge = Math.min(100, defenderUnit.actionGauge + 20);
-			const counterDamage = Math.floor(defenderUnit.attack * 2.5);
+			const counterDamage = Math.floor(defenderUnit.attack * 0.5);
 			attackerUnit.hp -= counterDamage;
 			GAME.addLog(`↩️ Riposte! Countered for ${counterDamage} damage.`, state);
 		}
@@ -909,7 +916,7 @@ const Autochess = {
 		}
 
 		if (defenderUnit.hp <= 0) {
-			GAME.Autochess.killUnit(GAME, defenderUnit);
+			GAME.Autochess.killUnit(GAME, defenderUnit, state);
 
 			// Hussar Tier 3 [B] Windrider
 			if (attackerUnit.value === 3 && GAME.hasPerk(attackerUnit, 'tier3', 'B')) {
@@ -937,21 +944,21 @@ const Autochess = {
 
 				if (!backHex || blocker || backHex.terrainType === 'LAKE' || backHex.terrainType === 'MOUNTAIN') {
 					defenderUnit.actionGauge = Math.max(0, defenderUnit.actionGauge - 50);
-					GAME.addLog(`🛡️ Joust blocked! ${GAME.logUnit(defenderUnit)} Gauge reduced.`, state);
+					GAME.addLog(`🛡️ Joust blocked! ${GAME.logUnit(defenderUnit, state)} Gauge reduced.`, state);
 				} else {
 					GAME.move(defenderUnit, defenderHex, backHex, state);
-					GAME.addLog(`🛡️ Joust! ${GAME.logUnit(defenderUnit)} pushed back.`, state);
+					GAME.addLog(`🛡️ Joust! ${GAME.logUnit(defenderUnit, state)} pushed back.`, state);
 				}
 			}
 		}
 
 		// Blademaster Tier 3 [B] (Attack)
 		if (attackerUnit.value === 1 && GAME.hasPerk(attackerUnit, 'tier3', 'B') && !defenderUnit.isDeath) {
-			attackerUnit.actionGauge = Math.min(100, attackerUnit.actionGauge + 50);
+			attackerUnit.actionGauge = Math.min(100, attackerUnit.actionGauge + 30);
 		}
 
 		if (attackerUnit.hp <= 0) {
-			GAME.Autochess.killUnit(GAME, attackerUnit);
+			GAME.Autochess.killUnit(GAME, attackerUnit, state);
 		}
 	},
 

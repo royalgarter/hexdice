@@ -3312,6 +3312,10 @@ function alpineHexDiceTacticGame() { return {
 			// Update stats
 			const stats = UNIT_STATS[newRoll];
 			Object.assign(reserveDie, stats);
+			reserveDie.hp = AUTOCHESS_CONFIG.BASE_HP; // Autochess HP
+			reserveDie.currentHP = stats.hp || AUTOCHESS_CONFIG.BASE_HP; // Base/Campaign HP
+			reserveDie.maxHP = reserveDie.currentHP;
+			reserveDie.actionGauge = 100; // Immediate impact
 			reserveDie.currentArmor = stats.armor;
 			reserveDie.effectiveArmor = stats.armor;
 			reserveDie.armorReduction = 0;
@@ -5034,7 +5038,8 @@ function alpineHexDiceTacticGame() { return {
 		return data;
 	},
 	hasPerk(unit, tier, option) {
-		if (this.autochess) {
+		const isAutochess = !!(this.Autochess?.state?.enabled);
+		if (isAutochess) {
 			return unit?.perks?.[tier] === option;
 		}
 		if (!this.isCampaign || unit.playerId !== 0) return false;
