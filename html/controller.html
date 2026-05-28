@@ -171,7 +171,7 @@
 	<div style="display: none;" x-show="!phase.startsWith('SETUP') && phase !== 'GAME_OVER'" class="bg-wood mb-1 p-2 border text-center">
 		<p class="text-xs text-gray-500 italic">
 			Mode: <span x-text="gameplayVersion === 2 ? 'Destiny Dice (v2)' : 'Decisive Dice (v1)'"></span>
-			<span x-show="gameplayVersion === 2 && turnPhase" x-text="' - Phase: ' + (turnPhase ? turnPhase.replace('_', ' ') : '')"></span>
+			<span x-show="gameplayVersion === 2 && turnPhase && !rollingDice" x-text="' - Phase: ' + (turnPhase ? turnPhase.replace('_', ' ') : '')"></span>
 		</p>
 
 		<div class="space-x-2">

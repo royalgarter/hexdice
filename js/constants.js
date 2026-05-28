@@ -193,7 +193,7 @@ window.rollDiceAnimation = function(targetNumber) {
 	currentX += 360 * (Math.floor(Math.random() * 3) + 2) + targetX - (currentX % 360);
 	currentY += 360 * (Math.floor(Math.random() * 3) + 2) + targetY - (currentY % 360);
 
-	cube.style.transform = `rotateX(${currentX+6}deg) rotateY(${currentY+13}deg)`;
+	cube.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
 };
 
 window.handleCredentialResponse = (response) => {

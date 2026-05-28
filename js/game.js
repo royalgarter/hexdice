@@ -2110,8 +2110,8 @@ function alpineHexDiceTacticGame() { return {
 
 		let delay = this.players[this.currentPlayerIndex].isAI ? 0 : 1e3;
 
-		this.turnPhase = 'FATE_CALL';
 		this.fateRoll = this.rollDice(6, 1e3 + delay);
+		this.turnPhase = `FATE_CALL [${this.fateRoll}]`;
 
 		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
 			setTimeout(() => this.actFatesCall(), 3e3 + delay);
@@ -2145,7 +2145,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 	},
 	checkFinishFatesCall(unit) {
-		if (this.gameplayVersion != 2 || this.turnPhase != 'FATE_CALL') return false;
+		if (this.gameplayVersion != 2 || !this.turnPhase.includes('FATE_CALL')) return false;
 
 		if (unit) {
 			unit.canMoveInFatePhase = false;
@@ -2197,21 +2197,21 @@ function alpineHexDiceTacticGame() { return {
 		
 		try {
 			if (this.mode === 'headless') {
-				while (this.turnPhase === 'FATE_CALL') {
+				while (this.turnPhase.includes('FATE_CALL')) {
 					performAIByHeuristic(this);
 				}
 			} else {
 				performAIByHeuristic(this);
 				
 				// If still in FATE_CALL, it means the AI performed one move but more matching units remain
-				if (this.turnPhase === 'FATE_CALL' && this.players[this.currentPlayerIndex].dice.find(d => d.canMoveInFatePhase == false)) {
+				if (this.turnPhase.includes('FATE_CALL') && this.players[this.currentPlayerIndex].dice.find(d => d.canMoveInFatePhase == false)) {
 					setTimeout(() => this.performAIFateMoves(), 500);
 				}
 			}
 		} catch (e) {
 			console.error("AI Error in Phase 1:", e);
 			this.addLog(`[AI] P${this.currentPlayerIndex+1} Error in Phase 1: ${e.message}`);
-			if (this.turnPhase === 'FATE_CALL') this.startTacticalCommand();
+			if (this.turnPhase.includes('FATE_CALL')) this.startTacticalCommand();
 		}
 	},
 
@@ -2318,7 +2318,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (this.gameplayVersion === 2) {
-			if (this.turnPhase === 'FATE_CALL') {
+			if (this.turnPhase.includes('FATE_CALL')) {
 				if (unit.value !== this.fateRoll || !unit.canMoveInFatePhase) {
 					this.addLog(`Only units with value ${this.fateRoll} can move in Phase 1.`);
 					this.deselectUnit();
@@ -2787,7 +2787,7 @@ function alpineHexDiceTacticGame() { return {
 			this.move(attackerUnit, attackerHex, defenderHex, state);
 			this.recordAction('MOVE', { unitValue, fromHex: attackerHex.id, toHex: defenderHex.id });
 
-			if (this.gameplayVersion === 2 && this.turnPhase === 'FATE_CALL') {
+			if (this.gameplayVersion === 2 && this.turnPhase.includes('FATE_CALL')) {
 				attackerUnit.hasMovedOrAttackedThisTurn = false;
 			} else {
 				attackerUnit.hasMovedOrAttackedThisTurn = true;
@@ -5229,7 +5229,7 @@ function alpineHexDiceTacticGame() { return {
 		if (typeof window !== 'undefined' && window.rollDiceAnimation) {
 			if (delay) setTimeout(() => window.rollDiceAnimation(roll), delay);
 			else window.rollDiceAnimation(roll);
-			setTimeout(() => {this.rollingDice = false;}, 1e3);
+			setTimeout(() => {this.rollingDice = false;}, 0.6e3);
 		}
 
 		return roll;
