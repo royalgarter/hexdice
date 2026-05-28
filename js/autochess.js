@@ -38,11 +38,11 @@ const Autochess = {
 	},
 
 	generateInitialArmy(GAME) {
-		GAME.players.forEach(p => {
+		GAME.players.forEach((p, idx) => {
 			p.dice = [];
 			for (let i = 0; i < 6; i++) {
 				const value = Math.floor(Math.random() * 6) + 1;
-				const unit = GAME.Autochess.createUnit(GAME, value, p.id);
+				const unit = GAME.Autochess.createUnit(GAME, value, idx);
 				p.dice.push(unit);
 			}
 		});
@@ -94,11 +94,12 @@ const Autochess = {
 		const targetPlayerIds = (playerId !== null) ? [playerId] : GAME.players.map(p => p.id);
 
 		targetPlayerIds.forEach(id => {
+			const playerIdx = GAME.players.findIndex(p => p.id === id);
 			GAME.Autochess.state.inventories[id] = [];
 			// Each round rewarded with 1 unit option
 			for (let i = 0; i < 1; i++) {
 				const value = Math.floor(Math.random() * 6) + 1;
-				GAME.Autochess.state.inventories[id].push(GAME.Autochess.createUnit(GAME, value, id));
+				GAME.Autochess.state.inventories[id].push(GAME.Autochess.createUnit(GAME, value, playerIdx));
 			}
 		});
 	},
@@ -541,7 +542,7 @@ const Autochess = {
 				}
 				// Oracle T1B Hex
 				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'B')) {
-					const enemies = targetPlayers.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+					const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
 					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId).r));
 					enemies.slice(0, 2).forEach(e => {
 						e.currentArmor = Math.max(0, (e.currentArmor || e.armor) - 10);
@@ -553,7 +554,7 @@ const Autochess = {
 			// Tanker T1B Magnetic (Every 15 ticks)
 			if (unit.ticksInCombat % 15 === 0 && unit.hexId && unit.value === 5 && GAME.hasPerk(unit, 'tier1', 'B')) {
 				const hex = GAME.getHex(unit.hexId, state);
-				const enemies = targetPlayers.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+				const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
 				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 				const target = enemies[0];
 				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId, state).q, GAME.getHex(target.hexId, state).r) <= 3) {
@@ -719,7 +720,7 @@ const Autochess = {
 		// Oracle T3B Warlock
 		if (unit.value === 6 && GAME.hasPerk(unit, 'tier3', 'B') && !unit.oncePerBattleUsed && unit.hp > 60) {
 			const targetPlayers = (state || GAME).players;
-			const enemies = targetPlayers.find(p => p.id !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+			const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
 			if (enemies.length > 2) {
 				GAME.Autochess.triggerOracleWarlock(GAME, unit, state);
 				unit.actionGauge = 0;
@@ -979,10 +980,10 @@ const Autochess = {
 		GAME.Autochess.state.round++;
 		if (GAME.Autochess.state.round > AUTOCHESS_CONFIG.MAX_ROUND) {
 			const winner = GAME.players.reduce((prev, current) => (prev.wins > current.wins) ? prev : current);
-			let text = `🏆 Tournament Complete! Winner: Player ${winner.id + 1}! 🏆`;
+			const winnerIdx = GAME.players.indexOf(winner);
+			let text = `🏆 Tournament Complete! Winner: Player ${winnerIdx + 1}! 🏆`;
 			GAME.addLog(text);
 			alert(text);
-			location.reload();
 		} else {
 			GAME.generateRouletteTerrain();
 			GAME.Autochess.generateRecruits(GAME);

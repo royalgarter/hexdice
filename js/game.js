@@ -1,4 +1,6 @@
 // Constants are now in constants.js
+// http://localhost:1166/?auth_user=a
+// http://localhost:1166/?auth_user=b
 
 Array.prototype.random = function () { return this[Math.floor((random() * this.length))]; }
 Array.prototype.cosmic_random = function () { return this[Math.floor((Math.random() * this.length))]; }
@@ -317,6 +319,24 @@ function alpineHexDiceTacticGame() { return {
 		const url = new URL(window.location.href);
 		url.searchParams.set(key, value);
 		return url.search + url.hash;
+	},
+	getUrl(url = null, params = {}) {
+		let baseUrl = url || window.location.href;
+		if (baseUrl.startsWith('?')) {
+			baseUrl = window.location.pathname + baseUrl;
+		}
+		const targetUrl = new URL(baseUrl, window.location.origin);
+		for (const [key, value] of Object.entries(params)) {
+			if (value === null || value === undefined) {
+				targetUrl.searchParams.delete(key);
+			} else {
+				targetUrl.searchParams.set(key, value);
+			}
+		}
+		return targetUrl.pathname + targetUrl.search + targetUrl.hash;
+	},
+	openURL(url = null, params = {}) {
+		window.location.href = this.getUrl(url, params);
 	},
 
 	// --- SETUP TERRAIN METHODS ---
@@ -679,7 +699,7 @@ function alpineHexDiceTacticGame() { return {
 					email: `${debugUser}@localhost`,
 					picture: `https://ui-avatars.com/api/?name=${debugUser}`
 				};
-				this.auth.token = debugToken || 'debug-token';
+				this.auth.token = debugToken || debugUser || 'debug-token';
 				this.addLog(`Debug mode: Logged in as ${debugUser}`);
 			} else {
 				// Check if already logged in (local storage)
@@ -2923,9 +2943,9 @@ function alpineHexDiceTacticGame() { return {
 		// Best way for this model: Create totally new die, assign new unique ID
 		const newDieOriginalIndex = p.dice.length; // New effective index
 		const newUnit = {
-			id: `${p.id}_${newDieOriginalIndex}`, // Unique enough for prototype
+			id: `${mergingUnit.playerId}_${newDieOriginalIndex}`, // Unique enough for prototype
 			originalIndex: newDieOriginalIndex,
-			playerId: p.id,
+			playerId: mergingUnit.playerId,
 			value: newDieValue,
 			...UNIT_STATS[newDieValue],
 			currentArmor: UNIT_STATS[newDieValue].armor,
@@ -4485,7 +4505,7 @@ function alpineHexDiceTacticGame() { return {
 		const dangerMap = {};
 
 		// Get all enemy players
-		const enemyPlayers = state.players.filter(p => p.id !== playerId && !p.isEliminated);
+		const enemyPlayers = state.players.filter((p, idx) => idx !== playerId && !p.isEliminated);
 		if (enemyPlayers.length === 0) return dangerMap;
 
 		// For each enemy unit, collect all hexes they can attack using existing methods
@@ -4989,17 +5009,18 @@ function alpineHexDiceTacticGame() { return {
 		const activePlayers = (state || this).players.filter(p => !p.isEliminated);
 
 		activePlayers.forEach(p => {
+			const playerIdx = (state || this).players.indexOf(p);
 			const activeDice = p.dice.filter(d => d.isDeployed && !d.isDeath).length;
 			const baseHex = this.getHex(p.baseHexId, state);
 			const unitOnBase = this.getUnitOnHex(baseHex?.id, state);
-			const baseCaptured = baseHex && unitOnBase && unitOnBase.playerId !== p.id;
+			const baseCaptured = baseHex && unitOnBase && unitOnBase.playerId !== playerIdx;
 
 			// Annihilation mode: only eliminate when all dice are gone
 			// Normal mode: eliminate when all dice gone OR base captured
 			if (activeDice === 0 || (!this.options.includes('a') && baseCaptured)) {
 				p.isEliminated = true;
 				const reason = activeDice === 0 ? "annihilated" : "base captured";
-				this.addLog(`P${p.id + 1} (${p.color}) has been ${reason}!`, state);
+				this.addLog(`P${playerIdx + 1} (${p.color}) has been ${reason}!`, state);
 			}
 
 			if (baseCaptured && !this.options.includes('a')) {
@@ -5021,7 +5042,8 @@ function alpineHexDiceTacticGame() { return {
 
 		if (remainingPlayers.length === 1) {
 			const winner = remainingPlayers[0];
-			this.gameOver(winner.id, `P${winner.id + 1} claims final victory!`);
+			const winnerIdx = (state || this).players.indexOf(winner);
+			this.gameOver(winnerIdx, `P${winnerIdx + 1} claims final victory!`);
 		} else if (remainingPlayers.length === 0) {
 			this.gameOver(-1, "All players eliminated! It's a draw!");
 		}
