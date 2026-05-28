@@ -8,6 +8,10 @@
 		gainNode: null,
 		basePaths: ['/assets/sounds'],
 
+		isRemoteUrl(name) {
+			return /^(https?:)?\/\//.test(name) && /\.(mp3|ogg|flac|wav|aac|m4a|webm)$/i.test(name);
+		},
+
 		init() {
 			try {
 				if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -67,6 +71,14 @@
 				if (!this.audioCtx) this.init();
 				this.resume();
 
+				if (this.isRemoteUrl(name)) {
+					const a = new Audio(name);
+					a.volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
+					a.playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
+					a.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: remote playSfx failed', name, e); });
+					return;
+				}
+
 				const buf = this.buffers[name];
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
 				const playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
@@ -120,6 +132,15 @@
 				}
 
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.5;
+
+				if (this.isRemoteUrl(name)) {
+					this.musicEl = new Audio(name);
+					this.musicEl.loop = opts.loop !== false;
+					this.musicEl.volume = volume;
+					this.musicEl.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: remote music play failed', name, e); });
+					return;
+				}
+
 				for (const p of this.basePaths) {
 					for (const ext of EXT_SOUNDS) {
 						const url = `${p}/${name}${ext}`;
