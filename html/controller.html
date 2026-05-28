@@ -36,7 +36,7 @@
 
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="setupTerrain(true)">[Terrain]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[Deploy]</button>
-				<button class="cursor-pointer hover:bg-black hover:text-white" x-show="!players[0]?.initialRollDone && !players[1]?.initialRollDone" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[Random]</button>
 				<!-- <button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button> -->
 				<a :href="getUrl(null, {players: 2, preset: 'E_21'})" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">[Epic 21]</a>
