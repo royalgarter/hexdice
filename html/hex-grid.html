@@ -7,7 +7,7 @@
 			:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 			:data-id="hex.id"
 			@click="handleHexClick(hex.id)"
-			@mouseenter="hex.unit && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex)"
+			@mouseenter="hex.unit && (!isAutochessOnlinePrep || hex.unit?.playerId === autochessPlayerIndex) && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex)"
 			@mouseleave="unitPanelHoverLeave(hex.id); cursorSprite = null"
 		>
 			<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
@@ -15,7 +15,7 @@
 			<div class="hex-content text-xxs text-center relative">
 				<span style="top:-0.5rem;right:-0.5rem;color:#44444444" class="absolute" x-show="!hex.unit" x-text="hex.id"></span>
 
-				<div x-show="hex.unit" class="contents">
+				<div x-show="hex.unit && (!isAutochessOnlinePrep || hex.unit?.playerId === autochessPlayerIndex)" class="contents">
 					<span class="text-lg invisible"
 						:class="PLAYER_CONFIG[hex.unit?.playerId]?.logColor || ''"
 						x-text="hex.unit?.value"

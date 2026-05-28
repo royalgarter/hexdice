@@ -93,6 +93,9 @@ function alpineHexDiceTacticGame() { return {
 		if (this.online?.status === 'PLAYING') return this.online.playerIndex;
 		return 0;
 	},
+	get isAutochessOnlinePrep() {
+		return !!(this.online?.roomId && this.Autochess?.state?.enabled && this.Autochess?.state?.phase === 'PREPARATION');
+	},
 	showUnitInfo: false,
 	showCamp: false,
 	preset: null,
@@ -1691,40 +1694,46 @@ function alpineHexDiceTacticGame() { return {
 		if (filter?.length) style.push(`filter: ${filter};`);
 
 		if (unit) {
-			const unitUrl = unit.spriteUrl;
-			const isAutochess = !!(this.Autochess?.state?.enabled);
-			const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
+			const isCloaked = this.isAutochessOnlinePrep && unit.playerId !== this.autochessPlayerIndex;
 
-			let isPlayerDeploymentHex = false;
-			if (isPrep) {
-				const playerIdx = this.autochessPlayerIndex ?? 0;
-				const player = this.players[playerIdx];
-				const baseHex = this.getHex(player?.baseHexId);
-				if (baseHex) {
-					const dist = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
-					if (dist <= 2) isPlayerDeploymentHex = true;
-				}
-			}
+			if (!isCloaked) {
+				const unitUrl = unit.spriteUrl;
+				const isAutochess = !!(this.Autochess?.state?.enabled);
+				const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
 
-			const shouldSuppressBg = isAutochess && (Number.isFinite(hex.basePlayerId) || isPlayerDeploymentHex);
-
-			if (!shouldSuppressBg) {
-				style.push(`background-color: unset;`);
-			}
-
-			style.push(
-				`background-size: auto ${(this.isCampaign) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
-				`background-image: url("${unitUrl}")
-					${(Number.isFinite(hex.basePlayerId) && !isAutochess)
-						? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
-						: ``
+				let isPlayerDeploymentHex = false;
+				if (isPrep) {
+					const playerIdx = this.autochessPlayerIndex ?? 0;
+					const player = this.players[playerIdx];
+					const baseHex = this.getHex(player?.baseHexId);
+					if (baseHex) {
+						const dist = this.axialDistance(baseHex.q, baseHex.r, hex.q, hex.r);
+						if (dist <= 2) isPlayerDeploymentHex = true;
 					}
-					${(terrainStyle && !shouldSuppressBg)
-						? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
-						: ``
-					};`
-			);
-		} else {
+				}
+
+				const shouldSuppressBg = isAutochess && (Number.isFinite(hex.basePlayerId) || isPlayerDeploymentHex);
+
+				if (!shouldSuppressBg) {
+					style.push(`background-color: unset;`);
+				}
+
+				style.push(
+					`background-size: auto ${(this.isCampaign) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
+					`background-image: url("${unitUrl}")
+						${(Number.isFinite(hex.basePlayerId) && !isAutochess)
+							? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
+							: ``
+						}
+						${(terrainStyle && !shouldSuppressBg)
+							? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
+							: ``
+						};`
+				);
+			}
+		}
+
+		if (!unit || (this.isAutochessOnlinePrep && unit.playerId !== this.autochessPlayerIndex)) {
 			const isAutochess = !!(this.Autochess?.state?.enabled);
 			const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
 

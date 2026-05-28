@@ -34,9 +34,8 @@ const Autochess = {
 		GAME.generateHexGrid(GAME.getRadius());
 		GAME.Autochess.generateInitialArmy(GAME);
 		GAME.players.forEach((_, idx) => {
-			GAME.Autochess.deployPlayerUnits(GAME, idx, idx === 0);
+			GAME.Autochess.deployPlayerUnits(GAME, idx);
 		});
-		// GAME.Autochess.generateRecruits(GAME);
 	},
 
 	generateInitialArmy(GAME) {
@@ -50,19 +49,19 @@ const Autochess = {
 		});
 	},
 
-	deployPlayerUnits(GAME, playerIdx = 0, clear = true) {
+	deployPlayerUnits(GAME, playerIdx = 0) {
 		const player = GAME.players[playerIdx];
 		if (!player) return;
 		
-		// Clear existing player units from board
-		if (clear) {
-			GAME.hexes.forEach(h => {
+		// Clear only this player's units from board
+		GAME.hexes.forEach(h => {
+			if (h.unit && h.unit.playerId === playerIdx) {
 				h.unit = null;
 				h.unitId = null;
-			});
-		}
+			}
+		});
 
-		// Deploy first 6 units to valid base hexes
+		// Deploy first 6 units to valid base hexes (calcValidDeploymentHexes skips occupied hexes)
 		const unitsToDeploy = player.dice.slice(0, 6);
 		const validHexes = GAME.calcValidDeploymentHexes(playerIdx);
 		
@@ -235,7 +234,7 @@ const Autochess = {
 		GAME.Autochess.state.selectedUnitId = unitId1;
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
-		GAME.Autochess.deployPlayerUnits(GAME, playerId, idx === 0);
+		GAME.Autochess.deployPlayerUnits(GAME, playerId);
 
 		// If u1 is on board, its reference is already updated, but we might want to refresh its hexId just in case
 		// No full deployPlayerUnits here to preserve other units' positions.
@@ -999,7 +998,7 @@ const Autochess = {
 			GAME.generateRouletteTerrain();
 			GAME.Autochess.generateRecruits(GAME);
 			GAME.players.forEach((_, idx) => {
-				GAME.Autochess.deployPlayerUnits(GAME, idx, idx === 0);
+				GAME.Autochess.deployPlayerUnits(GAME, idx);
 			});
 			GAME.Autochess.state.phase = 'PREPARATION';
 			GAME.Autochess.state.ready = {}; // Reset ready for next round
