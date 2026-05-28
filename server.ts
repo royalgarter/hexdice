@@ -24,7 +24,7 @@ const roomEngines: Record<string, any> = {};
 
 mqttClient.on("connect", () => {
 	console.log("Connected to MQTT broker via esm.sh (v4)");
-	mqttClient.subscribe("hexdice/rooms/+/actions");
+	mqttClient.subscribe("hexdice/rooms/+");
 });
 
 mqttClient.on("message", (topic, message) => {
@@ -56,15 +56,30 @@ async function getOrInitEngine(roomId: string) {
 	const game = engine.createGame();
 
 	// Map DB players to game players
+	const PLAYER_CONFIG = [
+		{ id: 0, color: 'Blue', sprite: 'yellow' },
+		{ id: 1, color: 'Red', sprite: 'red' },
+		{ id: 2, color: 'Green', sprite: 'green' },
+		{ id: 3, color: 'Purple', sprite: 'purple' },
+		{ id: 4, color: 'Black', sprite: 'shadow' },
+		{ id: 5, color: 'Yellow', sprite: 'sepia' },
+	];
 	game.players = room.players.map((p: any, idx: number) => ({
 		id: p.id,
 		name: p.name,
 		color: p.color,
+		sprite: PLAYER_CONFIG[idx]?.sprite || 'yellow',
 		dice: [],
 		wins: 0
 	}));
 
-	game.Autochess.init(game);
+	game._engine = engine;
+	game._initialized = false;
+	game._isOnline = true;
+
+	// Generate hex grid and base locations so deployment works, but defer army generation until seed arrives
+	game.generateHexGrid(game.getRadius());
+	game.determineBaseLocations(game.getRadius());
 
 	roomEngines[roomId] = game;
 	return game;
@@ -148,6 +163,16 @@ async function handleRoomAction(roomId: string, payload: any) {
 			}
 			updated = true;
 		}
+	} else if (type === 'START_GAME') {
+		// Host published the shared seed; initialize the game with it
+		if (!game._initialized) {
+			const { seed } = data;
+			game._engine.setSeed(seed);
+			game.Autochess.init(game);
+			game._initialized = true;
+			updated = true;
+			console.log(`[Room ${roomId}] Game initialized with seed ${seed}`);
+		}
 	} else if (type === 'GUEST_JOINED') {
 		if (!game.players.find((p: any) => p.id === sender)) {
 			delete roomEngines[roomId];
@@ -187,7 +212,8 @@ function broadcastState(roomId: string, game: any, full = false) {
 		state.hexes = game.hexes.map((h: any) => ({
 			id: h.id,
 			unitId: h.unitId,
-			unit: h.unit
+			unit: h.unit,
+			terrainType: h.terrainType
 		}));
 	} else {
 		// Light update for COMBAT: Only send dynamic unit data
@@ -227,6 +253,35 @@ function startCombatStreaming(roomId: string, game: any) {
 			broadcastState(roomId, g);
 		}
 	};
+
+	// Hook resolveTimeout (catches time-out path)
+	const originalResolveTimeout = game.Autochess.resolveTimeout.bind(game.Autochess);
+	game.Autochess.resolveTimeout = (g: any) => {
+		originalResolveTimeout(g);
+		clearInterval(monitorInterval);
+		broadcastState(roomId, g, true);
+	};
+
+	// Monitor for combat end from winner-determination path (phase set in runSimulation
+	// after simulateStep returns, so the simulateStep hook doesn't catch it)
+	const monitorInterval = setInterval(() => {
+		if (game.Autochess.state.phase !== 'COMBAT') {
+			broadcastState(roomId, game, true);
+			clearInterval(monitorInterval);
+
+			// Auto-advance to next round after 5 seconds in RECAP,
+			// so game doesn't hang if no player clicks "Next Round"
+			if (game.Autochess.state.phase === 'RECAP') {
+				setTimeout(() => {
+					if (game.Autochess.state.phase === 'RECAP') {
+						game.Autochess.nextRound(game);
+						broadcastState(roomId, game, true);
+						console.log(`[Room ${roomId}] Auto-advanced to round ${game.Autochess.state.round}`);
+					}
+				}, 5000);
+			}
+		}
+	}, 50);
 }
 
 const getAppVersion = async () => {

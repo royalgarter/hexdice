@@ -33,7 +33,9 @@ const Autochess = {
 
 		GAME.generateHexGrid(GAME.getRadius());
 		GAME.Autochess.generateInitialArmy(GAME);
-		GAME.Autochess.deployPlayerUnits(GAME);
+		GAME.players.forEach((_, idx) => {
+			GAME.Autochess.deployPlayerUnits(GAME, idx, idx === 0);
+		});
 		// GAME.Autochess.generateRecruits(GAME);
 	},
 
@@ -41,23 +43,24 @@ const Autochess = {
 		GAME.players.forEach((p, idx) => {
 			p.dice = [];
 			for (let i = 0; i < 6; i++) {
-				const value = Math.floor(Math.random() * 6) + 1;
+				const value = Math.floor(random() * 6) + 1;
 				const unit = GAME.Autochess.createUnit(GAME, value, idx);
 				p.dice.push(unit);
 			}
 		});
 	},
 
-	deployPlayerUnits(GAME, playerIdx = 0) {
+	deployPlayerUnits(GAME, playerIdx = 0, clear = true) {
 		const player = GAME.players[playerIdx];
+		if (!player) return;
 		
 		// Clear existing player units from board
-		GAME.hexes.forEach(h => {
-			if (h.unit) {
+		if (clear) {
+			GAME.hexes.forEach(h => {
 				h.unit = null;
 				h.unitId = null;
-			}
-		});
+			});
+		}
 
 		// Deploy first 6 units to valid base hexes
 		const unitsToDeploy = player.dice.slice(0, 6);
@@ -98,7 +101,7 @@ const Autochess = {
 			GAME.Autochess.state.inventories[id] = [];
 			// Each round rewarded with 1 unit option
 			for (let i = 0; i < 1; i++) {
-				const value = Math.floor(Math.random() * 6) + 1;
+				const value = Math.floor(random() * 6) + 1;
 				GAME.Autochess.state.inventories[id].push(GAME.Autochess.createUnit(GAME, value, playerIdx));
 			}
 		});
@@ -232,7 +235,7 @@ const Autochess = {
 		GAME.Autochess.state.selectedUnitId = unitId1;
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
-		GAME.Autochess.deployPlayerUnits(GAME, playerId);
+		GAME.Autochess.deployPlayerUnits(GAME, playerId, idx === 0);
 
 		// If u1 is on board, its reference is already updated, but we might want to refresh its hexId just in case
 		// No full deployPlayerUnits here to preserve other units' positions.
@@ -270,7 +273,7 @@ const Autochess = {
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
 		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
-		unit.id = `unit_${Math.random().toString(36).substr(2, 9)}`;
+		unit.id = `unit_${random().toString(36).substr(2, 9)}`;
 
 		return unit;
 	},
@@ -371,16 +374,23 @@ const Autochess = {
 	},
 
 	prepareCombat(GAME) {
-		// Clear AI units only (Player 0 units are already placed and can be moved manually)
-		GAME.hexes.forEach(h => {
-			if (h.unit && h.unit.playerId !== 0) {
-				h.unit = null;
-				h.unitId = null;
-			}
-		});
+		const isOnline = !!(GAME._isOnline || GAME.online?.status === 'PLAYING');
+
+		if (!isOnline) {
+			// Clear AI units only (Player 0 units are already placed and can be moved manually)
+			// Skip in online multiplayer — both players placed their units manually
+			GAME.hexes.forEach(h => {
+				if (h.unit && h.unit.playerId !== 0) {
+					h.unit = null;
+					h.unitId = null;
+				}
+			});
+		}
 
 		// Dynamic veteran adjustment for AI players to match Player 0
-		GAME.Autochess.adjustAIVeterans(GAME);
+		if (!isOnline) {
+			GAME.Autochess.adjustAIVeterans(GAME);
+		}
 
 		GAME.players.forEach((player, playerIdx) => {
 			// Reset ALL units' state first to prevent stale isDeployed/isDeath flags
@@ -402,10 +412,11 @@ const Autochess = {
 				u.lastTargetId = null;
 			});
 
-			if (playerIdx === 0) {
-				// For human player, identify which units were manually placed on board
+			if (isOnline || playerIdx === 0) {
+				// For human player (or all players in online), identify which units
+				// were manually placed on board
 				GAME.hexes.forEach(h => {
-					if (h.unit && h.unit.playerId === 0) {
+					if (h.unit && h.unit.playerId === playerIdx) {
 						h.unit.isDeployed = true;
 						h.unit.hexId = h.id;
 					}
@@ -987,7 +998,9 @@ const Autochess = {
 		} else {
 			GAME.generateRouletteTerrain();
 			GAME.Autochess.generateRecruits(GAME);
-			GAME.Autochess.deployPlayerUnits(GAME);
+			GAME.players.forEach((_, idx) => {
+				GAME.Autochess.deployPlayerUnits(GAME, idx, idx === 0);
+			});
 			GAME.Autochess.state.phase = 'PREPARATION';
 			GAME.Autochess.state.ready = {}; // Reset ready for next round
 		}

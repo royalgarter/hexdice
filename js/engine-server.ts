@@ -8,6 +8,8 @@ export interface GameEngine {
 	createGame: () => any;
 	Autochess: any;
 	CampaignManager: any;
+	setSeed: (s: number) => void;
+	random: () => number;
 }
 
 export async function loadEngine(playerCount: number = 2, version: number = 2): Promise<GameEngine> {
@@ -61,7 +63,9 @@ export async function loadEngine(playerCount: number = 2, version: number = 2): 
 		return {
 			createGame: alpineHexDiceTacticGame,
 			Autochess: Autochess,
-			CampaignManager: CampaignManager
+			CampaignManager: CampaignManager,
+			setSeed,
+			random
 		};
 	`;
 

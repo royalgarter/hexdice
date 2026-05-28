@@ -1,6 +1,7 @@
 {
   "scripts": {
     "start": "deno run --unstable-kv --allow-net --allow-read --allow-env --env-file server.ts",
+    "start:mqtt": "deno run -A npm:aedes-cli --protos ws",
     "sprites:gen": "node -e \"require('fs').writeFileSync('./assets/sets.json',JSON.stringify(require('fs').readdirSync('./assets/sprites/sets/',{withFileTypes:true }).filter(d => d.isDirectory()).map(d => d.name),null,'\\t'));\"",
     "manifest:gen": "node js/generate-assets-manifest.js",
     "gen": "npm run sprites:gen;npm run manifest:gen",
