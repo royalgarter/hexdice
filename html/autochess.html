@@ -4,17 +4,30 @@
 			<h1 class="font-bold uppercase">Romance of the Dice Kingdom</h1>
 			<div class="flex items-center space-x-4">
 				<div class="ml-4 font-bold">[<span x-text="Autochess.state.round"></span>/<span x-text="Autochess.state.maxRound"></span>]</div>
-				<!-- <button class="p-1 text-sm hover:bg-black hover:text-white" @click="location.href='/'">[Home]</button> -->
 			</div>
+		</div>
+
+		<!-- ONLINE ROOM UI -->
+		<div x-show="auth.user && online.status === 'OFFLINE'" class="my-2 p-2 border border-dashed text-center pointer-events-auto">
+			<button @click="createRoom()" class="border px-2 py-1 hover:bg-black hover:text-white">New Room</button>
+			<button @click="joinRoom()" class="border px-2 py-1 hover:bg-black hover:text-white">Join</button>
+		</div>
+		<div x-show="online.status !== 'OFFLINE'" class="my-2 p-2 border border-dashed text-sm pointer-events-auto">
+			Room: <span x-text="online.roomId" class="font-bold select-all"></span>
+			<span x-show="online.status === 'LOBBY'">(waiting...)</span>
+			<div x-show="online.opponent">
+				Opponent: <span x-text="online.opponent?.name"></span>
+			</div>
+			<button @click="leaveRoom()" class="text-red-500 hover:underline cursor-pointer">[Leave]</button>
 		</div>
 
 		<!-- PREPARATION PHASE -->
 		<div style="display: none;" x-show="Autochess.state.phase === 'PREPARATION'" class="w-full space-y-2 pointer-events-auto">
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<div class="col-span-2 px-1 md:px-8 md:border-r">
-					<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[0]?.dice?.length"></span>) - <span class="text-xs italic text-gray-500">First 6 deployed</span></h2>
+					<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[autochessPlayerIndex]?.dice?.length"></span>) - <span class="text-xs italic text-gray-500">First 6 deployed</span></h2>
 					<div class="grid grid-cols-6 gap-1 text-xs">
-						<template x-for="(unit, index) in players[0]?.dice" :key="unit.id">
+						<template x-for="(unit, index) in players[autochessPlayerIndex]?.dice" :key="unit.id">
 							<div class="border text-center p-1 cursor-pointer transition-all hover:shadow-sm"
 								 :class="Autochess.state.selectedUnitId === unit.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 z-10' : (index < 6 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white')"
 								 @click="clickAutochessUnit(unit)">
@@ -32,99 +45,107 @@
 									ATK:<span x-text="unit.attack"></span> HP:<span x-text="unit.hp"></span>
 								</div>
 								<div class="flex justify-center mt-1 space-x-3 font-bold" x-show="Autochess.state.selectedUnitId === unit.id">
-									<button @click.stop="moveAutochessUnit(0, index, index - 1)" class="cursor-pointer px-1 bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
-									<button @click.stop="moveAutochessUnit(0, index, index + 1)" class="cursor-pointer px-1 bg-white hover:bg-black hover:text-white" :disabled="index === players[0].dice.length - 1">►</button>
+									<button @click.stop="moveAutochessUnit(autochessPlayerIndex, index, index - 1)" class="cursor-pointer px-1 bg-white hover:bg-black hover:text-white" :disabled="index === 0">◄</button>
+									<button @click.stop="moveAutochessUnit(autochessPlayerIndex, index, index + 1)" class="cursor-pointer px-1 bg-white hover:bg-black hover:text-white" :disabled="index === players[autochessPlayerIndex].dice.length - 1">►</button>
 								</div>
 							</div>
 						</template>
 					</div>
+
+					<div x-show="online.status === 'PLAYING'" class="mt-2 flex items-center justify-between text-xs">
+						<div>
+							<span class="font-bold">Opponent:</span> <span x-text="online.opponent?.name"></span>
+							<span x-show="Autochess.state.ready?.[online.opponent?.id]" class="text-green-600 ml-1">✓ Ready</span>
+							<span x-show="!Autochess.state.ready?.[online.opponent?.id]" class="text-gray-400 ml-1">preparing...</span>
+						</div>
+					</div>
 				</div>
-				<div class="" x-show="(window.innerWidth > 640) || Autochess.state.inventories[0]?.length">
+				<div class="" x-show="(window.innerWidth > 640) || Autochess.state.inventories[players[autochessPlayerIndex]?.id]?.length">
 					<h2 class="font-bold uppercase pb-1">Recruitment</h2>
-					<div class="flex flex-wrap justify-center gap-2" x-show="Autochess.state.inventories[0]?.length">
-						<template x-for="(unit, index) in Autochess.state.inventories[0]" :key="unit.id">
-							<button @click="recruitAutochessUnit(0, index)" class="border bg-white hover:bg-black hover:text-white transition-colors p-1 w-16 text-center">
+					<div class="flex flex-wrap justify-center gap-2" x-show="Autochess.state.inventories[players[autochessPlayerIndex]?.id]?.length">
+						<template x-for="(unit, index) in Autochess.state.inventories[players[autochessPlayerIndex]?.id]" :key="unit.id">
+							<button @click="recruitAutochessUnit(autochessPlayerIndex, index)" class="border bg-white hover:bg-black hover:text-white transition-colors p-1 w-16 text-center">
 								<img class="inline h-6 w-6" :src="unit.iconUrl" width="16" height="16">
 								<div class="text-sm mt-1 uppercase truncate" x-text="unit.name"></div>
 								<div class="text-xs text-gray-500">ATK:<span x-text="unit.attack"></span></div>
 							</button>
 						</template>
-						<template x-if="Autochess.state.inventories[0] && Autochess.state.inventories[0].length === 0">
+						<template x-if="Autochess.state.inventories[players[autochessPlayerIndex]?.id] && Autochess.state.inventories[players[autochessPlayerIndex]?.id].length === 0">
 							<div class="italic text-gray-500">No recruits available.</div>
 						</template>
 					</div>
-					<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="Autochess.state.inventories[0]?.length">
-						<button @click="rerollAutochessRecruits(0)" :disabled="Autochess.state.rerolls[0] <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
-							Reroll (<span x-text="Autochess.state.rerolls[0]"></span>)
+					<div class="text-center mt-2 pt-2 border-t border-dashed border-gray-400" x-show="Autochess.state.inventories[players[autochessPlayerIndex]?.id]?.length">
+						<button @click="rerollAutochessRecruits(autochessPlayerIndex)" :disabled="Autochess.state.rerolls[players[autochessPlayerIndex]?.id] <= 0" class="border px-3 py-1 text-sm hover:bg-black hover:text-white disabled:opacity-50 uppercase">
+							Reroll (<span x-text="Autochess.state.rerolls[players[autochessPlayerIndex]?.id]"></span>)
 						</button>
 					</div>
 				</div>
 			</div>
 
 			<!-- Selected Unit Details & Skill Tree Panel -->
-			<template x-if="Autochess.state.selectedUnitId && players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)">
+			<template x-if="Autochess.state.selectedUnitId && players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)">
 				<div class="mt-4 p-4 transition-all duration-300 w-full">
 					<div class="flex flex-wrap items-center justify-between mb-3">
 						<div class="flex items-center space-x-2">
-							<img class="h-8 w-8" :src="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.iconUrl">
+							<img class="h-8 w-8" :src="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.iconUrl">
 							<div>
-								<h3 class="text-md font-bold uppercase tracking-wider " x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.displayName"></h3>
+								<h3 class="text-md font-bold uppercase tracking-wider " x-text="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.displayName"></h3>
 								<span class="text-sm text-gray-500 font-bold uppercase">Unit Details & Skill Tree</span>
 							</div>
 						</div>
 						<div class="text-xs font-bold  space-x-2">
-							<span>HP: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.maxHP"></span></span>
+							<span>HP: <span x-text="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.maxHP"></span></span>
 							<span>•</span>
-							<span>ATK: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.attack"></span></span>
+							<span>ATK: <span x-text="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.attack"></span></span>
 							<span>•</span>
-							<span>ARMOR: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.currentArmor"></span></span>
+							<span>ARMOR: <span x-text="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.currentArmor"></span></span>
 							<span>•</span>
-							<span>SPEED: <span x-text="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.speed"></span></span>
+							<span>SPEED: <span x-text="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.speed"></span></span>
 						</div>
 					</div>
 
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
 						<template x-for="tier in ['tier1', 'tier2', 'tier3']" :key="tier">
 							<div class="p-3 border rounded relative flex flex-col justify-between"
-								 :class="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)
+								 :class="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)
 									? '' : 'border-gray-200 opacity-50'">
 
 								<div>
 									<div class="flex justify-between items-center mb-1">
 										<span class="text-sm font-black uppercase text-gray-500" x-text="tier.replace('tier', 'Tier ')"></span>
 										<span class="text-xs font-bold px-1 rounded"
-											  :class="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)
+											  :class="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)
 												? '' : 'bg-gray-200 text-gray-600'"
 											  x-text="tier === 'tier1' ? '★' : tier === 'tier2' ? '★★' : '★★★'"></span>
 									</div>
 
 									<!-- If Locked -->
-									<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel < (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)">
+									<template x-if="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel < (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3)">
 										<div class="text-center py-4 text-xs italic text-gray-600">
 											🔒 Requires level <span x-text="tier === 'tier1' ? '★1' : tier === 'tier2' ? '★2' : '★3'"></span>
 										</div>
 									</template>
 
 									<!-- If Unlocked and has chosen a skill -->
-									<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
+									<template x-if="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
 										<div class="py-1">
-											<div class="text-sm font-bold " x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.name"></div>
-											<div class="text-sm text-gray-600 mt-1 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.desc"></div>
+											<div class="text-sm font-bold " x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.name"></div>
+											<div class="text-sm text-gray-600 mt-1 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]]?.desc"></div>
 										</div>
 									</template>
 
 									<!-- If Unlocked but NOT chosen yet -->
-									<template x-if="players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && !players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
+									<template x-if="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && !players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
 										<div class="space-y-2 py-2">
 											<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'A')"
 													class="w-full text-left p-2 border rounded bg-white transition-all shadow-sm group">
-												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.name"></div>
-												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.desc"></div>
+												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.name"></div>
+												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.desc"></div>
 											</button>
 											<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'B')"
 													class="w-full text-left p-2 border rounded bg-white transition-all shadow-sm group">
-												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.name"></div>
-												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[players[0]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.desc"></div>
+												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.name"></div>
+												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.desc"></div>
 											</button>
 										</div>
 									</template>
@@ -136,30 +157,52 @@
 				</div>
 			</template>
 
-			<div class="text-center pt-2">
-				<div class="inline mb-2">
-					<!-- <label class="font-bold mr-2">Strategy:</label> -->
-					<select x-model="Autochess.state.selectedProfile" class="border px-2 py-1 uppercase">
-						<template x-for="p in getProfileNames()" :key="p">
-							<option :value="p" x-text="p"></option>
-						</template>
-					</select>
+			<div class="text-center pt-2 flex flex-col items-center space-y-2">
+				<div class="flex items-center space-x-3">
+					<div class="inline mb-2">
+						<select x-model="Autochess.state.selectedProfile" class="border px-2 py-1 uppercase">
+							<template x-for="p in getProfileNames()" :key="p">
+								<option :value="p" x-text="p"></option>
+							</template>
+						</select>
+					</div>
+					<div x-show="online.status !== 'PLAYING'">
+						<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase cursor-pointer">
+							Auto-Battle
+						</button>
+					</div>
 				</div>
-				<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase cursor-pointer">
-					Auto-Battle
-				</button>
+				<div x-show="online.status === 'PLAYING'">
+					<template x-if="Autochess.state.ready?.[players[autochessPlayerIndex]?.id]">
+						<div class="text-sm">
+							<span class="text-green-600 font-bold">✓ Ready!</span>
+							<span x-show="!Autochess.state.ready?.[online.opponent?.id]" class="text-gray-500 ml-2">Waiting for opponent...</span>
+						</div>
+					</template>
+					<button @click="toggleAutochessReady()"
+							class="px-4 py-2 font-bold uppercase cursor-pointer"
+							:class="Autochess.state.ready?.[players[autochessPlayerIndex]?.id] ? 'bg-gray-400 text-white' : 'bg-green-600 text-white hover:bg-green-700'">
+						<span x-show="!Autochess.state.ready?.[players[autochessPlayerIndex]?.id]">Ready</span>
+						<span x-show="Autochess.state.ready?.[players[autochessPlayerIndex]?.id]">Unready</span>
+					</button>
+				</div>
 			</div>
 		</div>
 
-		<!-- COMBAT PHASE UI (Board is behind) -->
+		<!-- COMBAT PHASE UI -->
 		<div style="display: none;" x-show="Autochess.state.phase === 'COMBAT'" class="w-full flex flex-col items-center">
 			<div class="w-full bg-gray-700 h-1 mb-2 rounded-full overflow-hidden" x-show="Autochess?.state?.roundTimer">
-				<div class="bg-green-500 h-1 rounded-full transition-all duration-100" :style="'width: ' + (Autochess.state.roundTimer / 60 * 100) + '%'"></div>
+				<div class="bg-blue-500 h-1 rounded-full transition-all" :style="'width: ' + (Autochess.state.roundTimer / 60 * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 100) + 'ms'"></div>
 			</div>
 			<div class="w-full flex justify-between mb-4 text-sm font-bold pointer-events-auto">
-				<div class="text-blue-700 uppercase">Player: <span x-text="players[0]?.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0"></span></div>
-				<!-- <div class="animate-pulse uppercase mx-2 ">Remain: <span x-text="Math.ceil(60 - Autochess.state.roundTimer)"></span>s</div> -->
-				<div class="text-red-700 uppercase">Enemy: <span x-text="players.slice(1).reduce((acc, p) => acc + (p.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0), 0)"></span></div>
+				<div class="text-blue-700 uppercase">
+					<span x-text="players[0]?.name || 'Player'"></span>:
+					<span x-text="players[0]?.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0"></span>
+				</div>
+				<div class="text-red-700 uppercase">
+					<span x-text="players[1]?.name || 'Enemy'"></span>:
+					<span x-text="players[1]?.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0"></span>
+				</div>
 			</div>
 		</div>
 
@@ -167,7 +210,14 @@
 		<div style="display: none;" x-show="Autochess.state.phase === 'RECAP'" class="w-full inset-0 flex items-center justify-center z-20 pointer-events-auto">
 			<div class="border p-2 max-w-sm w-full text-center">
 				<h2 class="text-lg font-black mb-2 uppercase italic" x-text="Autochess.state.lastResult"></h2>
-				<p class="mb-2 font-bold" x-text="Autochess.state.lastResult === 'DRAW' ? 'Round ended in a draw.' : (players[Autochess.state.lastWinnerId]?.name ? players[Autochess.state.lastWinnerId].name + ' won this round!' : (Autochess.state.lastWinnerId === 0 ? 'You won this round!' : (players[Autochess.state.lastWinnerId]?.isAI ? 'Enemy ' + Autochess.state.lastWinnerId + ' won this round!' : 'Player ' + Autochess.state.lastWinnerId + ' won this round!'))) "></p>
+				<p class="mb-2 font-bold">
+					<template x-if="Autochess.state.lastResult === 'DRAW'">
+						<span>Round ended in a draw.</span>
+					</template>
+					<template x-if="Autochess.state.lastResult !== 'DRAW'">
+						<span x-text="(players[Autochess.state.lastWinnerId]?.name || 'Player ' + (Autochess.state.lastWinnerId + 1)) + ' won this round!'"></span>
+					</template>
+				</p>
 				<button @click="nextAutochessRound()" class="w-full bg-black text-white py-2 font-black text-lg hover:bg-gray-800 transition-colors uppercase">
 					Continue
 				</button>

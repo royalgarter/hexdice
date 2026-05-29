@@ -8,6 +8,10 @@
 		gainNode: null,
 		basePaths: ['/assets/sounds'],
 
+		isRemoteUrl(name) {
+			return /^(https?:)?\/\//.test(name) && /\.(mp3|ogg|flac|wav|aac|m4a|webm)$/i.test(name);
+		},
+
 		init() {
 			try {
 				if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -56,10 +60,24 @@
 			try {
 				if (this.noSFX) return;
 
-				console.log('playSfx', name);
+				// console.log('playSfx', name);
+
+				switch (name) {
+					case 'bow': name = 'bow'+[1,2].random(); break;
+					case 'hit': name = 'hit'+[1,2,3,4,5,6].random(); break;
+					case 'sword': name = 'sword'+[1,2,3].random(); break;
+				}
 				
 				if (!this.audioCtx) this.init();
 				this.resume();
+
+				if (this.isRemoteUrl(name)) {
+					const a = new Audio(name);
+					a.volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
+					a.playbackRate = typeof opts.playbackRate === 'number' ? opts.playbackRate : 1;
+					a.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: remote playSfx failed', name, e); });
+					return;
+				}
 
 				const buf = this.buffers[name];
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.6;
@@ -133,10 +151,15 @@
 					name = `battles/${randomTrack}`;
 				}
 
+				if (name === 'queue') {
+					const randomTrack = QUEUE_PLAYLIST[Math.floor(Math.random() * QUEUE_PLAYLIST.length)];
+					name = `queue/${randomTrack}`;
+				}
+
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.5;
 
-				// Handle full URL
-				if (name.startsWith('http') || name.startsWith('/')) {
+				// Handle full URL or remote URL
+				if (this.isRemoteUrl(name) || name.startsWith('/')) {
 					this._playMusicUrl(name, volume, opts);
 					return;
 				}

@@ -26,6 +26,7 @@
 	<meta name="twitter:image" content="/assets/infographics/hexdice_recap.png">
 
 	<meta id="hexdice_version" name="hexdice_version" content="___VERSION___">
+	<meta id="hexdice_mqtt" name="hexdice_mqtt" content="___MQTT___">
 
 	<link rel="canonical" :href="host">
 	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
@@ -33,7 +34,7 @@
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
 	<link rel="stylesheet" type="text/css" href="/assets/style.css?v=___VERSION___" />
 
-	<script src="//accounts.google.com/gsi/client" async defer></script>
+	<script type="text/javascript" src="https://accounts.google.com/gsi/client"></script>
 	<script type="text/javascript" src="/assets/mqtt.min.js" async defer></script>
 	<script type="text/javascript" src="/assets/alpine.min.js" defer></script>
 
@@ -65,7 +66,6 @@
 </head>
 
 <body class="text-black min-h-screen flex flex-col items-center font-mono"
-	x-init="initAuth()"
 	x-data="alpineHexDiceTacticGame()"
 	@mousemove.window="cursorX = $event.clientX; cursorY = $event.clientY">
 

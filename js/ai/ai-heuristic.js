@@ -167,8 +167,9 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     
     // Identify all active opponents
     const opponentIndices = state.players
-        .filter(p => p.id !== state.currentPlayerIndex && !p.isEliminated)
-        .map(p => p.id);
+        .map((p, idx) => ({p, idx}))
+        .filter(({p, idx}) => idx !== state.currentPlayerIndex && !p.isEliminated)
+        .map(({idx}) => idx);
 
     const shouldExcludeBases = GAME.options && GAME.options.includes('a');
 
@@ -291,8 +292,9 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline') {
     }
 
     const opponentIndices = state.players
-        .filter(p => p.id !== state.currentPlayerIndex && !p.isEliminated)
-        .map(p => p.id);
+        .map((p, idx) => ({p, idx}))
+        .filter(({p, idx}) => idx !== state.currentPlayerIndex && !p.isEliminated)
+        .map(({idx}) => idx);
 
     const shouldExcludeBases = GAME.options && GAME.options.includes('a');
     const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
@@ -795,8 +797,9 @@ function orderMoves(GAME, state, moves, myPlayerIndex) {
         // Priority 1: Captures
         const targetHex = GAME.getHex(move.targetHexId, state);
         const opponentBases = state.players
-            .filter(p => p.id !== myPlayerIndex && !p.isEliminated)
-            .map(p => p.baseHexId);
+            .map((p, idx) => ({p, idx}))
+            .filter(({p, idx}) => idx !== myPlayerIndex && !p.isEliminated)
+            .map(({p}) => p.baseHexId);
             
         if (opponentBases.includes(move.targetHexId)) {
             priority += 10000;
