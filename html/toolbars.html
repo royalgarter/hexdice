@@ -10,7 +10,7 @@
 		:class="audioManager.noSFX ? 'text-gray-300' : 'text-gray-800'">♪</a>
 
 	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood text-xs"
-		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.('battle')"
+		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.(isCampaign ? 'campaign' : 'battle')"
 		:class="audioManager.musicEl ? 'text-gray-300' : 'text-gray-800'">𝄞</a>
 </div>
 

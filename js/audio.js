@@ -100,10 +100,33 @@
 		},
 
 		battlePlaylist: BATTLE_PLAYLIST,
+		campaignPlaylist: null,
 
-		playMusic(name, opts = {}) {
+		async loadCampaignPlaylist() {
+			if (this.campaignPlaylist) return;
+			try {
+				const res = await fetch('/assets/sounds/ragnarok.json');
+				if (res.ok) {
+					this.campaignPlaylist = await res.json();
+					if (this.debug) console.debug('AudioManager: loaded campaign playlist');
+				}
+			} catch (e) {
+				if (this.debug) console.warn('AudioManager: loadCampaignPlaylist failed', e);
+			}
+		},
+
+		async playMusic(name, opts = {}) {
 			try {
 				if (this.musicEl) this.stopMusic();
+
+				if (name === 'campaign') {
+					if (!this.campaignPlaylist) await this.loadCampaignPlaylist();
+					if (this.campaignPlaylist && this.campaignPlaylist.length > 0) {
+						name = this.campaignPlaylist[Math.floor(Math.random() * this.campaignPlaylist.length)];
+					} else {
+						name = 'battle'; // Fallback
+					}
+				}
 
 				if (name === 'battle') {
 					const randomTrack = BATTLE_PLAYLIST[Math.floor(Math.random() * BATTLE_PLAYLIST.length)];
@@ -111,24 +134,46 @@
 				}
 
 				const volume = typeof opts.volume === 'number' ? opts.volume : 0.5;
+
+				// Handle full URL
+				if (name.startsWith('http') || name.startsWith('/')) {
+					this._playMusicUrl(name, volume, opts);
+					return;
+				}
+
 				for (const p of this.basePaths) {
 					for (const ext of EXT_SOUNDS) {
 						const url = `${p}/${name}${ext}`;
 						try {
-							this.musicEl = new Audio(url);
-							this.musicEl.loop = opts.loop !== false && !name.includes('battles/');
-							this.musicEl.volume = volume;
-							this.musicEl.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: music play failed', url, e); });
-							if (name.includes('battles/')) {
-								this.musicEl.onended = () => this.playMusic('battle', opts);
-							}
-							if (this.debug) console.debug('AudioManager: music playing', url);
-							return;
+							if (this._playMusicUrl(url, volume, opts)) return;
 						} catch (e) { if (this.debug) console.debug('AudioManager: music error', url, e); }
 					}
 				}
 				if (this.debug) console.debug('AudioManager: no music found for', name);
 			} catch (e) { if (this.debug) console.warn(e); }
+		},
+
+		_playMusicUrl(url, volume, opts = {}) {
+			try {
+				this.musicEl = new Audio(url);
+				this.musicEl.loop = opts.loop !== false && !url.includes('battles/');
+				this.musicEl.volume = volume;
+				this.musicEl.play().catch((e)=>{ if (this.debug) console.debug('AudioManager: music play failed', url, e); });
+				
+				this.musicEl.onended = () => {
+					if (url.includes('battles/')) {
+						this.playMusic('battle', opts);
+					} else if (this.campaignPlaylist && this.campaignPlaylist.includes(url)) {
+						this.playMusic('campaign', opts);
+					}
+				};
+
+				if (this.debug) console.debug('AudioManager: music playing', url);
+				return true;
+			} catch (e) {
+				if (this.debug) console.warn('AudioManager: _playMusicUrl failed', url, e);
+				return false;
+			}
 		},
 
 		stopMusic() {

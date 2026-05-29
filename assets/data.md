@@ -20,3 +20,6 @@ https://www.101soundboards.com/boards/39871-combat-noises-fire-emblem-the-sacred
 https://feheroes.fandom.com/wiki/Sound_Effects
 https://sounds.spriters-resource.com/ms_dos/warcraftii/asset/393991/
 https://sounds.spriters-resource.com/game_boy_advance/fireemblemthesacredstones/
+
+
+https://cdn.rwatimes.io/hexdice/sounds/ragnarok/44.%20Ethnica.ogg

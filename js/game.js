@@ -1864,7 +1864,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("P1 turn.");
 
 		window?.AudioManager?.playSfx('capture');
-		window?.AudioManager?.playMusic('battle');
+		window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'battle');
 
 		if (this.gameplayVersion === 2) {
 			this.startFatesCall();
