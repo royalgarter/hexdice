@@ -1272,7 +1272,7 @@ function alpineHexDiceTacticGame() { return {
 			this.initAutochess();
 		}
 
-		setTimeout(() => window?.AudioManager?.playMusic('opening', {volume: 1}), 3e3);
+		setTimeout(() => window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'opening', {volume: 1}), 3e3);
 	},
 	async resetGame(opts) {
 		console.log("resetGame called, playerCount:", this.playerCount);
