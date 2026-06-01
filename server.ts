@@ -100,33 +100,53 @@ async function handleRoomAction(roomId: string, payload: any) {
 	if (type === 'AUTOCHESS_RECRUIT') {
 		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
-			game.Autochess.recruitUnit(game, playerIdx, data.index);
-			updated = true;
+			const inventory = game.Autochess.state.inventories[sender];
+			if (inventory && data.index >= 0 && data.index < inventory.length) {
+				game.Autochess.recruitUnit(game, playerIdx, data.index);
+				updated = true;
+			}
 		}
 	} else if (type === 'AUTOCHESS_REROLL') {
 		const playerIdx = findPlayerIdx(sender);
-		if (playerIdx !== -1) {
+		if (playerIdx !== -1 && game.Autochess.state.rerolls[sender] > 0) {
 			game.Autochess.rerollRecruits(game, playerIdx);
 			updated = true;
 		}
 	} else if (type === 'AUTOCHESS_MOVE') {
 		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
-			game.Autochess.moveUnit(game, playerIdx, data.fromIndex, data.toIndex);
-			updated = true;
+			const dice = game.players[playerIdx].dice;
+			if (data.fromIndex >= 0 && data.fromIndex < dice.length && data.toIndex >= 0 && data.toIndex < dice.length) {
+				game.Autochess.moveUnit(game, playerIdx, data.fromIndex, data.toIndex);
+				updated = true;
+			}
 		}
 	} else if (type === 'AUTOCHESS_MERGE') {
 		const playerIdx = findPlayerIdx(sender);
 		if (playerIdx !== -1) {
-			game.Autochess.mergeUnits(game, playerIdx, data.unitId1, data.unitId2);
-			updated = true;
+			const dice = game.players[playerIdx].dice;
+			const u1 = dice.find((u: any) => u.id === data.unitId1);
+			const u2 = dice.find((u: any) => u.id === data.unitId2);
+			if (u1 && u2 && u1.value === u2.value && u1.veteranLevel === u2.veteranLevel && u1.veteranLevel < 3) {
+				game.Autochess.mergeUnits(game, playerIdx, data.unitId1, data.unitId2);
+				updated = true;
+			}
 		}
 	} else if (type === 'AUTOCHESS_START_COMBAT') {
-		game.Autochess.startCombat(game);
-		updated = true;
-		startCombatStreaming(roomId, game);
+		// Only host can force start combat, or wait for both ready
+		const isHost = game.players[0]?.id === sender;
+		if (isHost || game.players.every((p: any) => game.Autochess.state.ready[p.id])) {
+			if (game.Autochess.state.phase !== 'COMBAT') {
+				game.Autochess.startCombat(game);
+				startCombatStreaming(roomId, game);
+			}
+			updated = true;
+		}
 	} else if (type === 'AUTOCHESS_NEXT_ROUND') {
-		game.Autochess.nextRound(game);
+		// Simple validation: any player can advance if in RECAP
+		if (game.Autochess.state.phase === 'RECAP') {
+			game.Autochess.nextRound(game);
+		}
 		updated = true;
 	} else if (type === 'AUTOCHESS_READY') {
 		const playerIdx = findPlayerIdx(sender);
@@ -139,29 +159,39 @@ async function handleRoomAction(roomId: string, payload: any) {
 			// Check if both (all) players are ready
 			if (game.players.every((p: any) => game.Autochess.state.ready[p.id])) {
 				game.Autochess.state.ready = {};
-				game.Autochess.startCombat(game);
-				startCombatStreaming(roomId, game);
+				if (game.Autochess.state.phase !== 'COMBAT') {
+					game.Autochess.startCombat(game);
+					startCombatStreaming(roomId, game);
+				}
 			}
 		}
 	} else if (type === 'AUTOCHESS_PLACE') {
 		const playerIdx = findPlayerIdx(sender);
-		if (playerIdx !== -1) {
+		if (playerIdx !== -1 && game.Autochess.state.phase === 'PREPARATION') {
 			const { unitId, toHexId, fromHexId } = data;
 			const unit = game.players[playerIdx].dice.find((d: any) => d.id === unitId);
-			if (unit) {
-				if (fromHexId) {
-					const fromHex = game.getHex(fromHexId);
-					if (fromHex) { fromHex.unit = null; fromHex.unitId = null; }
-				}
-				const toHex = game.getHex(toHexId);
-				if (toHex) {
+			const toHex = game.getHex(toHexId);
+			
+			// Basic validation: target hex must be within deployment zone or occupied by same player
+			if (unit && toHex && (!toHex.unit || toHex.unit.playerId === playerIdx)) {
+				const validHexes = game.calcValidDeploymentHexes(playerIdx);
+				if (validHexes.includes(toHexId)) {
+					if (fromHexId) {
+						const fromHex = game.getHex(fromHexId);
+						if (fromHex && fromHex.unit?.playerId === playerIdx) { fromHex.unit = null; fromHex.unitId = null; }
+					}
+					// If target hex had a unit, swap them or just overwrite? (Autochess usually overwrites/swaps)
+					if (toHex.unit) {
+						toHex.unit.hexId = null;
+						toHex.unit.isDeployed = false;
+					}
 					toHex.unit = unit;
 					toHex.unitId = unit.id;
 					unit.hexId = toHexId;
 					unit.isDeployed = true;
+					updated = true;
 				}
 			}
-			updated = true;
 		}
 	} else if (type === 'START_GAME') {
 		// Host published the shared seed; initialize the game with it
@@ -174,10 +204,18 @@ async function handleRoomAction(roomId: string, payload: any) {
 			console.log(`[Room ${roomId}] Game initialized with seed ${seed}`);
 		}
 	} else if (type === 'GUEST_JOINED') {
-		if (!game.players.find((p: any) => p.id === sender)) {
-			delete roomEngines[roomId];
-			await getOrInitEngine(roomId);
+		// If player already in game, just broadcast state to catch them up
+		if (game.players.find((p: any) => p.id === sender)) {
 			updated = true;
+		} else {
+			// New guest joining - only recreate if game hasn't started or room is waiting
+			const roomsColl = db.collection("rooms");
+			const room: any = await roomsColl.document(roomId);
+			if (room.status === 'WAITING') {
+				delete roomEngines[roomId];
+				await getOrInitEngine(roomId);
+				updated = true;
+			}
 		}
 	}
 

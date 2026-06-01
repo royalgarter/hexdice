@@ -164,3 +164,83 @@ Here is our comprehensive analysis of your design document and implementation, b
 - **Timeout and Tie-Breaker:**
     - Added a 1-minute round timer and UI display.
     - Added `resolveTimeout` which determines the winner based on remaining units and HP if time expires.
+
+
+---
+
+1. Current Status: "Hybrid Authoritative"
+  The system is in a functional state where the server acts as the source of truth for
+  game state and combat simulation. It uses MQTT for low-latency messaging and Deno to
+  run an authoritative instance of the same JS engine used by the client.
+
+   * What's working well:
+       * Code Reuse: Using js/engine-server.ts to sandbox the client-side logic on the
+         server is a brilliant way to ensure logic parity without double-writing code.
+       * Low Latency Sync: MQTT is well-suited for the "heartbeat" style updates used
+         during the combat phase.
+       * Preparation/Combat Split: The distinction between the "heavy" state updates
+         during Preparation and "light" streaming updates during Combat is efficient.
+
+  ---
+
+  2. Stability & Correctness Review
+
+  Pros (What we do good)
+   - Deterministic Combat: The server initializes the engine with a shared seed,
+     ensuring that both AI and random events (like Joust or Evasion) follow a
+     predictable path.
+   - UI Reactivity: Using Alpine.js allows the UI to stay in sync with the complex
+     Autochess.state object with minimal boilerplate.
+   - Resource Management: The server-side engine properly maps DB players to game
+     indices, ensuring actions like AUTOCHESS_RECRUIT affect the correct army.
+
+  Potential Bugs (Must Fix)
+   1. Destructive Reconnection: In server.ts, the GUEST_JOINED action deletes and
+      re-initializes the engine (delete roomEngines[roomId]). If a player's connection
+      flickers or a second guest joins, the entire game state is wiped.
+   2. Blind Trust (Validation): The server-side handleRoomAction performs actions like
+      recruitUnit or mergeUnits based on client-provided indices without validating if
+      those indices are valid for that specific player's state. A malicious or buggy
+      client could recruit units it doesn't have or merge unrelated units.
+   3. RNG Divergence: While a seed is used, some functions like simulateStep use
+      Math.random() - 0.5 for tie-breaking unit order. If the server and client RNG
+      states drift, they will diverge. Fix: Replace all Math.random() calls with the
+      seeded random() function within the engine.
+   4. UI Latency (Preparation): In js/autochess.js, actions like recruitUnit return
+      immediately after publishing to MQTT. The UI won't update until the server
+      broadcasts the state back. This "round-trip" delay makes the UI feel heavy or
+      unresponsive on slower connections.
+
+  ---
+
+  3. Recommended Improvements (Order of Stability)
+
+  Tier 1: Core Stability (High Priority)
+   * Seeded Sorting: Ensure all sort() operations in simulateStep use the seeded
+     random() function instead of Math.random().
+   * State Persistence: Modify GUEST_JOINED to check if an engine already exists before
+     recreating it, allowing for safe reconnections.
+   * Ready-State Reset: Ensure game.Autochess.state.ready is cleared explicitly at the
+     start of the Preparation phase, not just at the end of Combat, to prevent race
+     conditions.
+
+  Tier 2: Responsiveness (User Experience)
+   * Optimistic Updates: Implement "Optimistic UI" for Recruitment and Merging. Update
+     the local dice array immediately on the client and only "revert" if the server's
+     broadcast differs. This makes the game feel like a native app.
+   * Combat Smoothing: Instead of "snapping" units to hexes every 100ms, the client can
+     use CSS transitions or a simple interpolation lerp to move units smoothly between
+     server-sent hexId updates.
+
+  Tier 3: Robustness (Long-term)
+   * Server-Side Auth: Add checks in server.ts to verify that a player owns the unitId
+     they are trying to move or merge.
+   * State Delta: Instead of broadcasting the entire player array every time someone
+     moves a unit in Preparation, send a small "delta" or just the updated player
+     object to save bandwidth.
+
+  Final Verdict
+  The architecture is stable and clever. It avoids the biggest trap of multiplayer
+  games (logic desync) by using the same code on both ends. The main risks are lack of
+  input validation and fragile session management (reconnection). Fixing these will
+  transition the game from a "working prototype" to a "production-ready" online mode.
