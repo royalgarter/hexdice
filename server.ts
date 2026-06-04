@@ -201,6 +201,11 @@ async function handleRoomAction(roomId: string, payload: any) {
 			game.Autochess.init(game);
 			game._initialized = true;
 			updated = true;
+
+			// Update room status to PLAYING in DB
+			const roomsColl = db.collection("rooms");
+			roomsColl.update(roomId, { status: 'PLAYING' }).catch(e => console.error("Failed to update room status:", e));
+
 			console.log(`[Room ${roomId}] Game initialized with seed ${seed}`);
 		}
 	} else if (type === 'GUEST_JOINED') {
@@ -245,7 +250,8 @@ function broadcastState(roomId: string, game: any, full = false) {
 			id: p.id,
 			name: p.name,
 			wins: p.wins,
-			dice: p.dice
+			dice: p.dice,
+			sprite: p.sprite
 		}));
 		state.hexes = game.hexes.map((h: any) => ({
 			id: h.id,
@@ -524,13 +530,18 @@ async function handleRequest(req: Request) {
 			const roomsColl = db.collection("rooms");
 			const room: any = await roomsColl.document(roomId);
 
-			if (room.status !== 'WAITING' && !room.players.find((p: any) => p.id === userId)) {
-				return new Response(JSON.stringify({ error: "Room is not available" }), { status: 400 });
+			const isRejoin = room.players.find((p: any) => p.id === userId);
+
+			if (room.status !== 'WAITING' && !isRejoin) {
+				return new Response(JSON.stringify({ error: "Game already in progress" }), { status: 400 });
 			}
 
-			if (!room.players.find((p: any) => p.id === userId)) {
-				room.players.push({ id: userId, name, color: 'Red' });
-				room.status = 'PLAYING';
+			if (!isRejoin) {
+				if (room.players.length >= 6) {
+					return new Response(JSON.stringify({ error: "Room is full" }), { status: 400 });
+				}
+				const PLAYER_COLORS = ['Blue', 'Red', 'Green', 'Purple', 'Black', 'Yellow'];
+				room.players.push({ id: userId, name, color: PLAYER_COLORS[room.players.length] });
 				room.updatedAt = new Date().toISOString();
 				await roomsColl.update(roomId, room);
 			}

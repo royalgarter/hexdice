@@ -478,12 +478,23 @@ const Autochess = {
 
 	resolveTimeout(GAME) {
 		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.hexId && u.isDeployed && !u.isDeath));
-		const p0HP = aliveUnits[0].reduce((sum, u) => sum + u.hp, 0);
-		const p1HP = aliveUnits[1].reduce((sum, u) => sum + u.hp, 0);
+		const playerHPs = aliveUnits.map(units => units.reduce((sum, u) => sum + u.hp, 0));
 
-		let winner = null;
-		if (p0HP > p1HP) winner = GAME.players[0];
-		else if (p1HP > p0HP) winner = GAME.players[1];
+		let maxHP = -1;
+		let winnerIdx = -1;
+		let isDraw = true;
+
+		playerHPs.forEach((hp, idx) => {
+			if (hp > maxHP) {
+				maxHP = hp;
+				winnerIdx = idx;
+				isDraw = false;
+			} else if (hp === maxHP && hp > 0) {
+				isDraw = true;
+			}
+		});
+
+		let winner = isDraw ? null : GAME.players[winnerIdx];
 
 		GAME.addLog("TIME UP! Resolving by total HP...");
 

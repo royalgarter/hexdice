@@ -26,6 +26,7 @@ function alpineHexDiceTacticGame() { return {
 		roomId: null,
 		isHost: false,
 		status: 'OFFLINE', // OFFLINE, LOBBY, PLAYING
+		creator: null,
 		opponent: null,
 		mqttClient: null,
 		playerIndex: null, // 0 for host, 1 for guest
@@ -288,6 +289,11 @@ function alpineHexDiceTacticGame() { return {
 	rerollAutochessRecruits(playerId) { this.Autochess.rerollRecruits(this, playerId); },
 	createAutochessUnit(value, playerId) { return this.Autochess.createUnit(this, value, playerId); },
 	startAutochessCombat() { this.Autochess.startCombat(this); },
+	startOnlineAutochess() {
+		const seed = Math.floor(Math.random() * 1e9);
+		setSeed(seed);
+		this.publishAction('START_GAME', { seed, hostName: this.auth.user.name });
+	},
 	prepareAutochessCombat() { this.Autochess.prepareCombat(this); },
 	runAutochessSimulation() { this.Autochess.runSimulation(this); },
 	simulateAutochessStep() { this.Autochess.simulateStep(this); },
@@ -832,6 +838,7 @@ function alpineHexDiceTacticGame() { return {
 			const room = await res.json();
 			this.online.roomId = room._key;
 			this.online.isHost = true;
+			this.online.creator = room.creator;
 			this.online.status = 'LOBBY';
 			this.online.playerIndex = 0;
 			this.updateURLParams();
@@ -863,6 +870,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 			this.online.roomId = room._key;
 			this.online.isHost = room.creator === this.auth.user._key;
+			this.online.creator = room.creator;
 			this.online.status = room.status === 'WAITING' ? 'LOBBY' : 'PLAYING';
 			this.online.playerIndex = room.players.findIndex(p => p.id === this.auth.user._key);
 			this.online.opponent = room.players.find(p => p.id !== this.auth.user._key);
@@ -978,10 +986,15 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (state.players) {
+			this.playerCount = state.players.length;
+			const updatedPlayers = [];
+			
 			state.players.forEach(sp => {
 				let lp = this.players.find(p => p.id === sp.id);
 				if (lp) {
 					lp.wins = sp.wins;
+					lp.sprite = sp.sprite || lp.sprite;
+					lp.color = sp.color || lp.color;
 					// Surgical update for player dice list if lengths differ
 					if (lp.dice.length !== sp.dice.length) {
 						lp.dice = sp.dice;
@@ -994,13 +1007,22 @@ function alpineHexDiceTacticGame() { return {
 					lp.dice.forEach(d => {
 						d.spriteUrl = this.getUnitSpriteUrl(d);
 					});
+					updatedPlayers.push(lp);
 				} else {
-					this.players.push({
-						...sp,
-						color: PLAYER_CONFIG[this.players.length]?.color || 'Gray'
-					});
+					const config = PLAYER_CONFIG[updatedPlayers.length] || {};
+					const np = {
+						...config,
+						...sp
+					};
+					if (np.dice) {
+						np.dice.forEach(d => {
+							d.spriteUrl = this.getUnitSpriteUrl(d);
+						});
+					}
+					updatedPlayers.push(np);
 				}
 			});
+			this.players = updatedPlayers;
 		}
 
 		if (state.hexes) {
@@ -1108,21 +1130,14 @@ function alpineHexDiceTacticGame() { return {
 
 		switch (type) {
 			case 'GUEST_JOINED':
-				if (this.online.isHost) {
-					this.online.status = 'PLAYING';
-					this.online.opponent = { name: data.name, id: sender };
-					this.addLog(`Opponent joined: ${data.name}`);
-					
-					const seed = Math.floor(Math.random() * 1e9);
-					setSeed(seed);
-					this.publishAction('START_GAME', { seed, hostName: this.auth.user.name });
-					this.initOnlineGame();
-				}
+				this.addLog(`${data.name} joined the room.`);
+				// The server handles engine re-init and state broadcast
 				break;
 			case 'START_GAME':
 				setSeed(data.seed);
-				this.online.opponent = { name: data.hostName, id: sender };
-				this.initOnlineGame();
+				this.online.status = 'PLAYING';
+				this.addLog(`Game started by ${data.hostName}!`);
+				// Server handles game.Autochess.init() and broadcasts full state
 				break;
 			case 'GAME_ACTION':
 				this.applyRemoteAction(data, sender);
