@@ -64,25 +64,84 @@ async function getOrInitEngine(roomId: string) {
 		{ id: 4, color: 'Black', sprite: 'shadow' },
 		{ id: 5, color: 'Yellow', sprite: 'sepia' },
 	];
-	game.players = room.players.map((p: any, idx: number) => ({
-		id: p.id,
-		name: p.name,
-		color: p.color,
-		sprite: PLAYER_CONFIG[idx]?.sprite || 'yellow',
-		dice: [],
-		wins: 0
-	}));
-
 	game._engine = engine;
-	game._initialized = false;
 	game._isOnline = true;
 
 	// Generate hex grid and base locations so deployment works, but defer army generation until seed arrives
 	game.generateHexGrid(game.getRadius());
 	game.determineBaseLocations(game.getRadius());
 
+	if (room.gameState) {
+		console.log(`[Room ${roomId}] Restoring game state (Round ${room.gameState.autochess.round})`);
+		game._initialized = room.gameState._initialized;
+		Object.assign(game.Autochess.state, room.gameState.autochess);
+		
+		game.players = room.gameState.players.map((p: any) => ({
+			...p,
+			dice: p.dice || []
+		}));
+
+		room.gameState.hexes.forEach((sh: any) => {
+			const lh = game.hexes[sh.id];
+			if (lh) {
+				lh.unitId = sh.unitId;
+				lh.unit = sh.unit;
+				lh.terrainType = sh.terrainType;
+			}
+		});
+	} else {
+		game._initialized = false;
+		// Map DB players to game players
+		const PLAYER_CONFIG = [
+			{ id: 0, color: 'Blue', sprite: 'yellow' },
+			{ id: 1, color: 'Red', sprite: 'red' },
+			{ id: 2, color: 'Green', sprite: 'green' },
+			{ id: 3, color: 'Purple', sprite: 'purple' },
+			{ id: 4, color: 'Black', sprite: 'shadow' },
+			{ id: 5, color: 'Yellow', sprite: 'sepia' },
+		];
+		game.players = room.players.map((p: any, idx: number) => ({
+			id: p.id,
+			name: p.name,
+			color: p.color,
+			sprite: PLAYER_CONFIG[idx]?.sprite || 'yellow',
+			dice: [],
+			wins: 0
+		}));
+	}
+
 	roomEngines[roomId] = game;
 	return game;
+}
+
+async function saveRoomState(roomId: string, game: any) {
+	const state = {
+		players: game.players.map((p: any) => ({
+			id: p.id,
+			name: p.name,
+			wins: p.wins,
+			dice: p.dice,
+			sprite: p.sprite,
+			color: p.color
+		})),
+		hexes: game.hexes.map((h: any) => ({
+			id: h.id,
+			unitId: h.unitId,
+			unit: h.unit,
+			terrainType: h.terrainType
+		})),
+		autochess: {
+			...game.Autochess.state,
+			ready: {} // Don't persist ready state
+		},
+		_initialized: game._initialized
+	};
+	try {
+		const roomsColl = db.collection("rooms");
+		await roomsColl.update(roomId, { gameState: state, updatedAt: new Date().toISOString() });
+	} catch (e) {
+		console.error(`Failed to save room state for ${roomId}:`, e);
+	}
 }
 
 async function handleRoomAction(roomId: string, payload: any) {
@@ -226,6 +285,38 @@ async function handleRoomAction(roomId: string, payload: any) {
 
 	if (updated) {
 		broadcastState(roomId, game, true);
+		saveRoomState(roomId, game);
+
+		// Manage Preparation Timeout (60s) for Round 2+
+		if (game.Autochess.state.phase === 'PREPARATION' && game.Autochess.state.round > 1) {
+			if (!game._prepTimeoutStarted) {
+				game._prepTimeoutStarted = true;
+				game.Autochess.state.prepTimeLeft = 60;
+				
+				const prepInterval = setInterval(() => {
+					if (game.Autochess.state.phase !== 'PREPARATION') {
+						clearInterval(prepInterval);
+						game._prepTimeoutStarted = false;
+						return;
+					}
+					game.Autochess.state.prepTimeLeft--;
+					if (game.Autochess.state.prepTimeLeft <= 0) {
+						clearInterval(prepInterval);
+						game._prepTimeoutStarted = false;
+						if (game.Autochess.state.phase === 'PREPARATION') {
+							console.log(`[Room ${roomId}] Preparation timed out. Starting combat.`);
+							game.Autochess.state.ready = {};
+							game.Autochess.startCombat(game);
+							startCombatStreaming(roomId, game);
+							broadcastState(roomId, game, true);
+							saveRoomState(roomId, game);
+						}
+					} else {
+						broadcastState(roomId, game); // Periodic update of timer
+					}
+				}, 1000);
+			}
+		}
 	}
 }
 
@@ -238,6 +329,7 @@ function broadcastState(roomId: string, game: any, full = false) {
 			roundTimer: game.Autochess.state.roundTimer,
 			lastResult: game.Autochess.state.lastResult,
 			lastWinnerId: game.Autochess.state.lastWinnerId,
+			prepTimeLeft: game.Autochess.state.prepTimeLeft,
 			pulseMs: MQTT_PULSE_MS,
 			inventories: game.Autochess.state.inventories,
 			rerolls: game.Autochess.state.rerolls,
