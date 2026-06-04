@@ -3,6 +3,9 @@
 		<div class="text-xl w-full flex justify-between items-center pointer-events-auto">
 			<h1 class="font-bold uppercase">Romance of the Dice Kingdom</h1>
 			<div class="flex items-center space-x-4">
+				<div x-show="Autochess.state.phase === 'PREPARATION' && Autochess.state.prepTimeLeft > 0" class="text-red-600 font-mono font-bold animate-pulse">
+					T-<span x-text="Autochess.state.prepTimeLeft"></span>s
+				</div>
 				<div class="ml-4 font-bold">[<span x-text="Autochess.state.round"></span>/<span x-text="Autochess.state.maxRound"></span>]</div>
 			</div>
 		</div>
