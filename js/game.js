@@ -43,6 +43,7 @@ function alpineHexDiceTacticGame() { return {
 	fateRoll: null,
 	options: '', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
 	empiresModeEnabled: false,
+	terrainEnabled: false,
 	EMPIRES: EMPIRES,
 	hexGrid: {},
 	hexes: [],
@@ -355,6 +356,7 @@ function alpineHexDiceTacticGame() { return {
 		const radius = this.getRadius();
 
 		this.addLog("🎲 Generating Random Terrain...");
+		this.terrainEnabled = true;
 
 		if (this.campaignData?.rmi) {
 			await this.generateTerrainFromRMI(this.campaignData);
