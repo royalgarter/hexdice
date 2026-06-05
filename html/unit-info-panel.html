@@ -22,7 +22,10 @@
 				<div class="flex-grow">
 					<div class="text-base font-bold" x-text="d.u?.name"></div>
 					<div :class="PLAYER_CONFIG[d.u?.playerId]?.logColor"
-						 x-text="d.u ? ('P' + (d.u.playerId + 1) + ' ' + PLAYER_CONFIG[d.u.playerId]?.color) : ''"></div>
+						 x-text="d.u ? ('P' + (d.u.playerId + 1) + ' ' + PLAYER_CONFIG[d.u.playerId]?.color + (players[d.u.playerId]?.empire ? ' (' + players[d.u.playerId]?.empire + ')' : '')) : ''"></div>
+					<div class="text-xs italic text-yellow-800" x-show="players[d.u?.playerId]?.empire && EMPIRES[players[d.u?.playerId]?.empire]?.unit === d.u?.value">
+						<span x-text="EMPIRES[players[d.u?.playerId]?.empire]?.name + ': ' + EMPIRES[players[d.u?.playerId]?.empire]?.buff"></span>
+					</div>
 				</div>
 				<span x-show="unitstat != null" class="mr-2 cursor-pointer" title="Pinned">📌</span>
 				<span x-show="unitstat != null && showUnitInfo" @click="showUnitInfo = false" class="font-bold cursor-pointer" title="Close">✕</span>

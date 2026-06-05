@@ -77,6 +77,15 @@ const TERRAIN_CONFIG = {
 	'MOUNTAIN': { color: 'Mountain', bg: 'bg-hexmountain', logColor: 'text-gray-700' },
 };
 
+const EMPIRES = {
+	'Aztec': 	{ unit: 1, name: `🇲🇽 Jaguar Warrior [D1-${UNIT_STATS[1].name}]`, buff: '+1 Armor' },
+	'Briton': 	{ unit: 2, name: `🇬🇧 Longbow Ranger [D2-${UNIT_STATS[2].name}]`, buff: '+1 Range' },
+	'Mongol': 	{ unit: 3, name: `🇲🇳 Nomadic Raid [D3-${UNIT_STATS[3].name}]`, buff: 'Hit & Run' },
+	'Japan': 	{ unit: 4, name: `🇯🇵 Swift Samurai [D4-${UNIT_STATS[4].name}]`, buff: 'Evasion' },
+	'Roman': 	{ unit: 5, name: `🇮🇹 Testudo March [D5-${UNIT_STATS[5].name}]`, buff: 'Auto-Guard' },
+	'Egypt': 	{ unit: 6, name: `🇪🇬 Pharaoh Reach [D6-${UNIT_STATS[6].name}]`, buff: '+1 Spell Range' },
+};
+
 // Autochess Balance Configuration
 const AUTOCHESS_CONFIG = {
 	BASE_HP: 100,

@@ -42,6 +42,8 @@ function alpineHexDiceTacticGame() { return {
 	turnPhase: null, // For Version 2: 'FATE_CALL', 'TACTICAL_COMMAND'
 	fateRoll: null,
 	options: '', // 'a' = annihilation mode (base capture doesn't end game), 'r': reroll, 'm': merge
+	empiresModeEnabled: false,
+	EMPIRES: EMPIRES,
 	hexGrid: {},
 	hexes: [],
 	hexesQR: {},
@@ -352,7 +354,7 @@ function alpineHexDiceTacticGame() { return {
 	async setupTerrain(force) {
 		const radius = this.getRadius();
 
-		this.addLog("Setting up terrain");
+		this.addLog("🎲 Generating Random Terrain...");
 
 		if (this.campaignData?.rmi) {
 			await this.generateTerrainFromRMI(this.campaignData);
@@ -367,6 +369,31 @@ function alpineHexDiceTacticGame() { return {
 		if (radius === 8) {
 			this.generateR8Terrain();
 		}
+	},
+
+	toggleEmpiresMode() {
+		this.empiresModeEnabled = !this.empiresModeEnabled;
+		this.addLog(`👑 Empires Mode: ${this.empiresModeEnabled ? 'ENABLED' : 'DISABLED'}`);
+
+		if (this.empiresModeEnabled) {
+			this.assignEmpires();
+		} else {
+			this.players.forEach(p => p.empire = null);
+		}
+	},
+
+	assignEmpires() {
+		const empireNames = Object.keys(this.EMPIRES);
+		// Shuffle empire names
+		for (let i = empireNames.length - 1; i > 0; i--) {
+			const j = Math.floor(random() * (i + 1));
+			[empireNames[i], empireNames[j]] = [empireNames[j], empireNames[i]];
+		}
+
+		this.players.forEach((player, i) => {
+			player.empire = empireNames[i % empireNames.length];
+			this.addLog(`P${i + 1} assigned to the ${player.empire} Empire!`);
+		});
 	},
 
 	terrainByType(type) {
@@ -1886,17 +1913,29 @@ function alpineHexDiceTacticGame() { return {
 		const player = this.players[playerId];
 		player.dice = [];
 
+		if (this.empiresModeEnabled && !player.empire) {
+			this.assignEmpires();
+		}
+
 		const preset = this.preset && EPIC_PRESETS[this.preset];
 
 		for (let i = 0; i < this.rules.dicePerPlayer; i++) {
 			const roll = (preset && preset.dice) ? preset.dice[i] : (this.rollDice());
+			const baseStats = UNIT_STATS[roll];
+			let initialArmor = baseStats.armor;
+
+			// Aztec Buff: +1 Armor for D1
+			if (this.empiresModeEnabled && player.empire === 'Aztecs' && roll === 1) {
+				initialArmor += 1;
+			}
+
 			const die = {
 				id: `${playerId}_${i}`, // Unique ID for the die unit
 				originalIndex: i, // to link back to player.dice array
 				playerId: playerId,
 				value: roll,
-				...UNIT_STATS[roll], // Spread initial stats
-				currentArmor: UNIT_STATS[roll].armor,
+				...baseStats, // Spread initial stats
+				currentArmor: initialArmor,
 				armorReduction: 0,
 				isDeployed: false,
 				hexId: null,
@@ -1906,7 +1945,7 @@ function alpineHexDiceTacticGame() { return {
 				isDeath: false,
 				actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
 			};
-			die.effectiveArmor = die.armor;
+			die.effectiveArmor = die.currentArmor;
 			die.spriteUrl = this.getUnitSpriteUrl(die);
 			player.dice.push(die);
 		}
@@ -1969,6 +2008,13 @@ function alpineHexDiceTacticGame() { return {
 			// Update stats based on new roll
 			Object.assign(player.dice[diceIndex], UNIT_STATS[newRoll]);
 			player.dice[diceIndex].currentArmor = UNIT_STATS[newRoll].armor;
+
+			// Aztec Buff: +1 Armor for D1
+			if (this.empiresModeEnabled && player.empire === 'Aztecs' && newRoll === 1) {
+				player.dice[diceIndex].currentArmor += 1;
+			}
+
+			player.dice[diceIndex].effectiveArmor = player.dice[diceIndex].currentArmor;
 			player.dice[diceIndex].armorReduction = 0; // Reset this on reroll
 			rerolledValues.push(newRoll);
 
@@ -2739,6 +2785,12 @@ function alpineHexDiceTacticGame() { return {
 			this.trail.toHex = state ? null : toHex;
 			this.calcDefenderEffectiveArmor(toHex.id, state);
 
+			// Roman Buff: Auto-Guard for D5
+			if (this.empiresModeEnabled && this.players[unit.playerId].empire === 'Romans' && unit.value === 5) {
+				unit.isGuarding = 1;
+				this.addLog(`🛡️ Unstoppable Legion: ${this.logUnit(unit)} automatically enters Guard Mode.`, state);
+			}
+
 			// Hussar Tier 3 [A] Dragoon: Impact Landing
 			if (unit.value === 3 && this.hasPerk(unit, 'tier3', 'A') && unit.stepsMoved === 3) {
 				this.getNeighbors(toHex, state).forEach(neighbor => {
@@ -3415,7 +3467,13 @@ function alpineHexDiceTacticGame() { return {
 			reserveDie.maxHP = reserveDie.currentHP;
 			reserveDie.actionGauge = 100; // Immediate impact
 			reserveDie.currentArmor = stats.armor;
-			reserveDie.effectiveArmor = stats.armor;
+
+			// Aztec Buff: +1 Armor for D1
+			if (this.empiresModeEnabled && this.players[reserveDie.playerId].empire === 'Aztecs' && newRoll === 1) {
+				reserveDie.currentArmor += 1;
+			}
+
+			reserveDie.effectiveArmor = reserveDie.currentArmor;
 			reserveDie.armorReduction = 0;
 			reserveDie.isGuarding = 0;
 
@@ -3584,14 +3642,20 @@ function alpineHexDiceTacticGame() { return {
 			maxRange = 3;
 		}
 
+		// Briton Buff: +1 Range for D2
+		if (this.empiresModeEnabled && this.players[attackerUnit.playerId].empire === 'Britons' && attackerUnit.value === 2) {
+			maxRange += 1;
+		}
+
 		// Tanker Tier 2 [B] Heavy Ordinance: Range 2 attack
 		if (attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier2', 'B')) {
 			maxRange = 2;
 		}
 
-		// Ensure Archer max range does not exceed 3
+		// Ensure Archer max range does not exceed 3 (or 4 for Britons/Skirmish)
 		if (attackerUnit.value === 2 && !this.hasPerk(attackerUnit, 'tier3', 'A')) {
-			maxRange = Math.min(maxRange, 3);
+			const limit = (this.empiresModeEnabled && this.players[attackerUnit.playerId].empire === 'Britons') ? 4 : 3;
+			maxRange = Math.min(maxRange, limit);
 		}
 
 		let targets = [];
@@ -3760,6 +3824,11 @@ function alpineHexDiceTacticGame() { return {
 		if (attackerUnit.value === 6) {
 			let targets = [];
 			let range = attackerUnit.range; // Range 2 for Oracle
+
+			// Egyptian Buff: +1 Spell Range for D6
+			if (this.empiresModeEnabled && this.players[attackerUnit.playerId].empire === 'Egyptians') {
+				range += 1;
+			}
 			let minRange = 1;
 
 			// Engaged Spell Disablement: Oracle cannot cast spells when enemy is adjacent
@@ -4681,6 +4750,18 @@ function alpineHexDiceTacticGame() { return {
 		};
 		this.trailSpell = {};
 
+		// Japanese Buff: Shinobi Dodge
+		if (this.empiresModeEnabled && this.players[defenderUnit.playerId].empire === 'Japanese' && defenderUnit.value === 4) {
+			const dodgeRoll = this.rollDice();
+			if (dodgeRoll <= 2) {
+				if (!state) window?.AudioManager?.playSfx('move');
+				this.addLog(`💨 Shinobi Dodge! ${this.logUnit(defenderUnit)} (D${dodgeRoll}) evaded the attack.`, state);
+				attackerUnit.skirmishBuff = 0;
+				this.recordAction('COMBAT_DODGE', { fromHex: attackerHexId, toHex: defenderHexId, diceValue: dodgeRoll });
+				return;
+			}
+		}
+
 		// console.log('handleCombat', this.isCampaign, this.autochess, this.gameplayVersion)
 		// let sfxSword = 'sword'+[1,2,3].random();
 
@@ -4717,6 +4798,9 @@ function alpineHexDiceTacticGame() { return {
 						
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
 					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
+				} else if (this.empiresModeEnabled && this.players[attackerUnit.playerId].empire === 'Mongols' && attackerUnit.value === 3 && (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER')) {
+					this.handleNomadicRaidSuccess(attackerHexId, defenderHexId, state);
+					return;
 				} else if (!this.autochess && (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER')) {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 				}
@@ -4775,6 +4859,9 @@ function alpineHexDiceTacticGame() { return {
 				if (isSkirmishing) {
 					this.handleSkirmishSuccess(attackerHexId, defenderHexId, state);
 					if (this.actionMode === 'SKIRMISH_POST_MOVE') return; // Wait for user input
+				} else if (this.empiresModeEnabled && this.players[attackerUnit.playerId].empire === 'Mongols' && attackerUnit.value === 3 && (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER')) {
+					this.handleNomadicRaidSuccess(attackerHexId, defenderHexId, state);
+					return;
 				} else if (combatType === 'MELEE' || combatType === 'COMMAND_CONQUER') {
 					this.move(attackerUnit, attackerHex, defenderHex, state);
 					this.addLog(`⚔️ ${this.logUnit(attackerUnit)} ${combatType.toLowerCase()} attacked ${this.logUnit(defenderUnit)} [${attackerHex.id}]->[${defenderHex.id}].`, state);
@@ -4844,6 +4931,28 @@ function alpineHexDiceTacticGame() { return {
 				.map(n => n.id);
 			if (!this.validMoves.includes(defenderHexId)) this.validMoves.push(defenderHexId);
 			if (!this.validMoves.includes(attackerHexId)) this.validMoves.push(attackerHexId);
+		}
+	},
+
+	handleNomadicRaidSuccess(attackerHexId, defenderHexId, state) {
+		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
+		const defenderHex = this.getHex(defenderHexId, state);
+		const attackerHex = this.getHex(attackerHexId, state);
+		
+		if (!state) window?.AudioManager?.playSfx('horse');
+		this.addLog(`🐎 Nomadic Raid! Choose a destination adjacent to the target.`, state);
+
+		if (!state) {
+			// First, move to the target hex (standard melee win behavior)
+			this.move(attackerUnit, attackerHex, defenderHex);
+			
+			this.actionMode = 'SKIRMISH_POST_MOVE';
+			this.selectedUnitHexId = defenderHexId; // Attacker is now here
+			const neighbors = this.getNeighbors(defenderHex);
+			this.validMoves = neighbors
+				.filter(n => !this.getUnitOnHex(n.id) || n.id === defenderHexId)
+				.map(n => n.id);
+			if (!this.validMoves.includes(defenderHexId)) this.validMoves.push(defenderHexId);
 		}
 	},
 	/**

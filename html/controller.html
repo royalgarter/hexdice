@@ -34,6 +34,7 @@
 			</div>
 			<div class="">
 
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="toggleEmpiresMode()">[Empires]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="setupTerrain(true)">[Terrain]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[Deploy]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[Practice]</button>
@@ -249,6 +250,10 @@
 		<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 			<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
 			Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + players[currentPlayerIndex].name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+			<span x-show="players[currentPlayerIndex]?.empire" x-text="' - Empire: ' + players[currentPlayerIndex]?.empire"></span>
+		</p>
+		<p class="text-xs italic" x-show="players[currentPlayerIndex]?.empire" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
+			<span x-text="EMPIRES[players[currentPlayerIndex]?.empire]?.name + ': ' + EMPIRES[players[currentPlayerIndex]?.empire]?.buff"></span>
 		</p>
 	</div>
 </div>
