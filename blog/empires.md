@@ -30,7 +30,7 @@ Each Empire provides a unique, independent buff to a specific unit type.
 
 | Empire | Unit Type | Buff Name | Effect |
 | :--- | :---: | :--- | :--- |
-| **Aztecs** | **D1 (Fencer)** | *Eagle Warrior* | **+1 Armor.** Base Armor increases from 2 to 3. |
+| **Aztecs** | **D1 (Fencer)** | *Jarguar Warrior* | **+1 Armor.** Base Armor increases from 2 to 3. |
 | **Britons** | **D2 (Archer)** | *Longbowmen* | **+1 Range.** Range increases from 2 to 1-3. (Range 3 attacks suffer -1 Power). |
 | **Mongols** | **D3 (Hussar)** | *Nomadic Raid* | **Hit & Run.** After winning a melee combat, the unit may immediately move 1 hex to an adjacent empty hex. |
 | **Japanese** | **D4 (Knight)** | *Shinobi Dodge* | **Evasion.** When attacked, attacker rolls 1D6. On a **1 or 2**, the attack misses completely (no damage/AR to either side). |
