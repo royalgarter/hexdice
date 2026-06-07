@@ -113,7 +113,6 @@ const Autochess = {
 
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_RECRUIT', { index });
-			return;
 		}
 		const unit = GAME.Autochess.state.inventories[pid]?.splice(index, 1)?.[0];
 		if (unit) {
@@ -182,7 +181,6 @@ const Autochess = {
 	mergeUnits(GAME, playerId, unitId1, unitId2) {
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_MERGE', { unitId1, unitId2 });
-			return;
 		}
 		const player = GAME.players[playerId];
 		const u1Index = player.dice.findIndex(u => u.id === unitId1);
@@ -480,12 +478,23 @@ const Autochess = {
 
 	resolveTimeout(GAME) {
 		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.hexId && u.isDeployed && !u.isDeath));
-		const p0HP = aliveUnits[0].reduce((sum, u) => sum + u.hp, 0);
-		const p1HP = aliveUnits[1].reduce((sum, u) => sum + u.hp, 0);
+		const playerHPs = aliveUnits.map(units => units.reduce((sum, u) => sum + u.hp, 0));
 
-		let winner = null;
-		if (p0HP > p1HP) winner = GAME.players[0];
-		else if (p1HP > p0HP) winner = GAME.players[1];
+		let maxHP = -1;
+		let winnerIdx = -1;
+		let isDraw = true;
+
+		playerHPs.forEach((hp, idx) => {
+			if (hp > maxHP) {
+				maxHP = hp;
+				winnerIdx = idx;
+				isDraw = false;
+			} else if (hp === maxHP && hp > 0) {
+				isDraw = true;
+			}
+		});
+
+		let winner = isDraw ? null : GAME.players[winnerIdx];
 
 		GAME.addLog("TIME UP! Resolving by total HP...");
 
@@ -507,7 +516,7 @@ const Autochess = {
 		const targetPlayers = (state || GAME).players;
 		const allUnits = targetPlayers.flatMap(p => p.dice)
 			.filter(u => u.hexId && u.isDeployed && !u.isDeath)
-			.sort((a, b) => (b.actionGauge - a.actionGauge) || (Math.random() - 0.5));
+			.sort((a, b) => (b.actionGauge - a.actionGauge) || (random() - 0.5));
 
 		allUnits.forEach(unit => {
 			if (unit.isDeath || !unit.hexId) return;
@@ -860,7 +869,7 @@ const Autochess = {
 		}
 		// Hussar Tier 1 [B] Evasion
 		if (defenderUnit.value === 3 && GAME.hasPerk(defenderUnit, 'tier1', 'B') && defenderUnit.actionGauge > 50) {
-			if (Math.random() < 0.3) {
+			if (random() < 0.3) {
 				damage = 0;
 				GAME.addLog(`💨 Evaded!`, state);
 			}
@@ -985,6 +994,10 @@ const Autochess = {
 		window?.AudioManager?.playMusic('queue');
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_NEXT_ROUND', {});
+			// Optimistic UI: Proceed to PREPARATION if we are in RECAP
+			if (GAME.Autochess.state.phase === 'RECAP' && GAME.Autochess.state.round < AUTOCHESS_CONFIG.MAX_ROUND) {
+				GAME.Autochess.state.phase = 'PREPARATION';
+			}
 			return;
 		}
 		GAME.Autochess.state.round++;
@@ -1008,6 +1021,12 @@ const Autochess = {
 	toggleReady(GAME) {
 		if (GAME.online?.roomId) {
 			GAME.publishAction('AUTOCHESS_READY', {});
+			// Optimistic UI
+			const pid = GAME.players[GAME.autochessPlayerIndex]?.id;
+			if (pid) {
+				GAME.Autochess.state.ready = GAME.Autochess.state.ready || {};
+				GAME.Autochess.state.ready[pid] = !GAME.Autochess.state.ready[pid];
+			}
 			return;
 		}
 		// Single-player: start combat immediately
@@ -1026,3 +1045,4 @@ const Autochess = {
 	},
 
 };
+
