@@ -1,442 +1,127 @@
 [
 	[
-		"lasa_fild01",
+		["prt_fild08", "prt_fild05", "prt_fild07", "prt_fild01", "prt_fild02"],
 		"1",
 		"15"
 	],
 	[
-		"prt_fild07",
-		"1",
+		["prt_fild00", "prt_fild03", "prt_fild04", "prt_fild06", "prt_fild09", "prt_fild10", "prt_fild11"],
+		"15",
+		"30"
+	],
+	[
+		["pay_fild01", "pay_fild02", "pay_fild03", "pay_fild08", "pay_fild10"],
+		"10",
 		"35"
 	],
 	[
-		"pay_fild08",
-		"3",
-		"37"
+		["pay_fild04", "pay_fild05", "pay_fild06", "pay_fild07", "pay_fild09", "pay_fild11"],
+		"35",
+		"60"
 	],
 	[
-		"moc_fild01",
+		["moc_fild01", "moc_fild02", "moc_fild03", "moc_fild07", "moc_fild11", "moc_fild12", "moc_fild13", "moc_fild18"],
 		"10",
-		"43"
+		"40"
 	],
 	[
-		"gef_fild04",
-		"1",
-		"43"
+		["moc_fild16", "moc_fild17", "moc_fild19", "moc_fild20", "moc_fild22b"],
+		"40",
+		"75"
 	],
 	[
-		"gef_fild01",
-		"4",
-		"28"
+		["gef_fild00", "gef_fild01", "gef_fild02", "gef_fild03", "gef_fild04", "gef_fild05", "gef_fild07", "gef_fild09", "gef_fild11", "gef_fild12", "gef_fild13"],
+		"10",
+		"40"
 	],
 	[
-		"pay_dun00",
-		"12",
-		"47"
+		["gef_fild06", "gef_fild08", "gef_fild10", "gef_fild14"],
+		"40",
+		"75"
 	],
 	[
-		"anthell01",
-		"13",
-		"48"
+		["mjolnir_01", "mjolnir_02", "mjolnir_04", "mjolnir_05", "mjolnir_06", "mjolnir_07", "mjolnir_08", "mjolnir_09", "mjolnir_10", "mjolnir_12"],
+		"15",
+		"50"
 	],
 	[
-		"pay_fild07",
-		"14",
-		"41"
-	],
-	[
-		"mjolnir_06",
-		"14",
-		"46"
-	],
-	[
-		"pay_fild09",
-		"23",
-		"52"
-	],
-	[
-		"gef_fild10",
-		"30",
-		"65"
-	],
-	[
-		"orcsdun01",
-		"38",
-		"71"
-	],
-	[
-		"iz_dun00",
-		"31",
-		"72"
-	],
-	[
-		"iz_dun01",
-		"31",
-		"72"
-	],
-	[
-		"iz_dun02",
-		"31",
-		"72"
-	],
-	[
-		"iz_dun03",
-		"31",
-		"72"
-	],
-	[
-		"iz_dun04",
-		"31",
-		"72"
-	],
-	[
-		"treasure01",
-		"33",
-		"68"
-	],
-	[
-		"moc_fild17",
-		"48",
-		"77"
-	],
-	[
-		"moc_fild16",
-		"48",
-		"77"
-	],
-	[
-		"pay_dun03",
-		"49",
-		"84"
-	],
-	[
-		"in_sphinx2",
-		"56",
-		"90"
-	],
-	[
-		"mjolnir_03",
-		"55",
+		["mjolnir_03", "mjolnir_11"],
+		"50",
 		"85"
 	],
 	[
-		"mjolnir_11",
+		["cmd_fild01", "cmd_fild02", "cmd_fild03", "cmd_fild04", "cmd_fild05", "cmd_fild06", "cmd_fild07", "cmd_fild08", "cmd_fild09"],
 		"60",
 		"95"
 	],
 	[
-		"gef_fild08",
-		"64",
-		"85"
+		["um_fild01", "um_fild02", "um_fild03", "um_fild04"],
+		"60",
+		"95"
 	],
 	[
-		"bra_fild01",
-		"65",
-		"88"
+		["yuno_fild01", "yuno_fild02", "yuno_fild03", "yuno_fild04", "yuno_fild05", "yuno_fild06", "yuno_fild07", "yuno_fild08", "yuno_fild09", "yuno_fild10", "yuno_fild11", "yuno_fild12", "yuno_fild02_re"],
+		"70",
+		"105"
 	],
 	[
-		"yuno_fild04",
-		"68",
-		"100"
+		["ein_fild01", "ein_fild02", "ein_fild03", "ein_fild04", "ein_fild05", "ein_fild06", "ein_fild07", "ein_fild08", "ein_fild09", "ein_fild10"],
+		"70",
+		"110"
 	],
 	[
-		"c_tower2",
-		"71",
-		"101"
+		["hu_fild01", "hu_fild02", "hu_fild03", "hu_fild04", "hu_fild05", "hu_fild06", "hu_fild07"],
+		"70",
+		"105"
 	],
 	[
-		"gef_fild06",
-		"71",
-		"106"
-	],
-	[
-		"gl_prison1",
+		["lhz_fild01", "lhz_fild02", "lhz_fild03"],
 		"80",
-		"111"
-	],
-	[
-		"ra_fild12",
-		"81",
 		"115"
 	],
 	[
-		"ra_fild01",
-		"88",
-		"123"
+		["ra_fild01", "ra_fild02", "ra_fild03", "ra_fild04", "ra_fild05", "ra_fild06", "ra_fild07", "ra_fild08", "ra_fild09", "ra_fild10", "ra_fild11", "ra_fild12", "ra_fild13"],
+		"85",
+		"125"
 	],
 	[
-		"gl_chyard",
-		"83",
-		"118"
-	],
-	[
-		"beach_dun",
-		"83",
-		"118"
-	],
-	[
-		"mag_dun02",
-		"92",
-		"121"
-	],
-	[
-		"ra_fild05",
-		"92",
-		"121"
-	],
-	[
-		"ve_fild03",
-		"95",
+		["ve_fild01", "ve_fild02", "ve_fild03", "ve_fild04", "ve_fild05", "ve_fild07"],
+		"85",
 		"130"
 	],
 	[
-		"juperos_01",
-		"98",
-		"133"
-	],
-	[
-		"pay_d03_i",
+		["spl_fild01", "spl_fild02", "spl_fild03", "man_fild01", "man_fild02", "man_fild03", "dic_fild01", "dic_fild02", "bif_fild01", "bif_fild02", "ecl_fild01"],
 		"100",
-		"250"
-	],
-	[
-		"ra_san01",
-		"109",
-		"143"
-	],
-	[
-		"abyss_01",
-		"111",
 		"150"
 	],
 	[
-		"abyss_02",
-		"111",
-		"150"
+		["lasa_fild01", "lasa_fild02"],
+		"100",
+		"160"
 	],
 	[
-		"abyss_03",
-		"111",
-		"150"
+		["ma_fild01", "ma_fild02"],
+		"100",
+		"140"
 	],
 	[
-		"spl_fild01",
-		"105",
-		"121"
+		["ama_fild01", "gon_fild01", "ayo_fild01", "ayo_fild02", "bra_fild01", "dew_fild01", "lou_fild01", "mu_fild01"],
+		"50",
+		"90"
 	],
 	[
-		"man_fild03",
-		"113",
-		"143"
+		["xmas_fild01"],
+		"30",
+		"60"
 	],
 	[
-		"dic_fild01",
-		"117",
-		"138"
-	],
-	[
-		"lhz_dun02",
-		"121",
-		"152"
-	],
-	[
-		"dic_dun02",
-		"124",
-		"156"
-	],
-	[
-		"lasa_dun02",
-		"125",
-		"159"
-	],
-	[
-		"gef_d01_i",
-		"130",
-		"250"
-	],
-	[
-		"ice_d03_i",
-		"130",
-		"250"
-	],
-	[
-		"iz_d04_i",
-		"140",
-		"250"
-	],
-	[
-		"lasa_dun03",
-		"141",
-		"165"
-	],
-	[
-		"lhz_dun04",
-		"141",
-		"165"
-	],
-	[
-		"prt_prison",
-		"141",
-		"165"
-	],
-	[
-		"prt_q",
-		"143",
-		"165"
-	],
-	[
-		"1@face",
-		"140",
-		"155"
-	],
-	[
-		"c_tower3_",
-		"150",
-		"180"
-	],
-	[
-		"ein_d02_i",
-		"150",
-		"250"
-	],
-	[
-		"tur_d04_i",
-		"150",
-		"250"
-	],
-	[
-		"com_d02_i",
+		["gw_fild01", "gw_fild02"],
 		"160",
-		"250"
-	],
-	[
-		"ant_d02_i",
-		"160",
-		"250"
-	],
-	[
-		"ba_2whs01",
-		"160",
-		"195"
-	],
-	[
-		"prt_mz03_i",
-		"170",
-		"250"
-	],
-	[
-		"oz_dun01",
-		"163",
-		"180"
-	],
-	[
-		"gw_fild01",
-		"163",
-		"180"
-	],
-	[
-		"oz_dun02",
-		"170",
-		"225"
-	],
-	[
-		"gw_fild01",
-		"170",
-		"225"
-	],
-	[
-		"mag_dun03",
-		"175",
-		"190"
-	],
-	[
-		"gl_cas01_",
-		"175",
-		"200"
-	],
-	[
-		"tha_t09",
-		"180",
 		"220"
 	],
 	[
-		"tha_t10",
-		"180",
-		"220"
-	],
-	[
-		"tha_t11",
-		"180",
-		"220"
-	],
-	[
-		"tha_t12",
-		"180",
-		"220"
-	],
-	[
-		"nif_dun01",
-		"200\n240",
-		"230\n250"
-	],
-	[
-		"nif_dun02",
-		"200\n240",
-		"230\n250"
-	],
-	[
-		"1@mjo2",
+		["nif_fild01", "nif_fild02", "nif_fild03", "bl_death", "bl_lava", "bl_grass", "bl_ice"],
 		"200",
-		"230"
-	],
-	[
-		"sp_rudus4",
-		"200",
-		"230"
-	],
-	[
-		"amicitia1",
-		"215\n230",
-		"245\n250"
-	],
-	[
-		"amicitia2",
-		"215\n230",
-		"245\n250"
-	],
-	[
-		"bl_death",
-		"240",
-		"250"
-	],
-	[
-		"bl_lava",
-		"240",
-		"250"
-	],
-	[
-		"bl_grass",
-		"240",
-		"250"
-	],
-	[
-		"bl_ice",
-		"240",
-		"250"
-	],
-	[
-		"clock_01",
-		"240",
-		"250"
-	],
-	[
-		"mjo_wst01",
-		"250",
-		"260"
-	],
-	[
-		"ra_pol01",
-		"250",
 		"260"
 	]
 ]
