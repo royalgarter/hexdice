@@ -6,9 +6,10 @@
 			:class="hexColor(hex) + ' hex-' + hex.id"
 			:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 			:data-id="hex.id"
+			:data-sprite-gif="empiresModeEnabled && hex.unit?.spriteUrl?.endsWith('.gif') ? hex.unit.spriteUrl : null"
 			@click="handleHexClick(hex.id)"
-			@mouseenter="hex.unit && (!isAutochessOnlinePrep || hex.unit?.playerId === autochessPlayerIndex) && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex)"
-			@mouseleave="unitPanelHoverLeave(hex.id); cursorSprite = null"
+			@mouseenter="hex.unit && (!isAutochessOnlinePrep || hex.unit?.playerId === autochessPlayerIndex) && unitPanelHoverEnter(hex.id); cursorSprite = hexCursorSprite(hex); if ($el.dataset.spriteGif) { const g = $el.dataset.spriteGif, s = g.replace('.gif','.png'); $el.style.backgroundImage = $el.style.backgroundImage.replace(s, g); }"
+			@mouseleave="unitPanelHoverLeave(hex.id); cursorSprite = null; if ($el.dataset.spriteGif) { const g = $el.dataset.spriteGif, s = g.replace('.gif','.png'); $el.style.backgroundImage = $el.style.backgroundImage.replace(g, s); }"
 		>
 			<div class="hex-id fixed self-start text-xs text-gray-300" x-show="debug?.coordinate" x-text="[hex.id].join(' ')"></div>
 			<div class="hex-coordinate fixed self-end text-sm text-gray-400" x-show="debug?.coordinate" x-text="[hex.q, hex.r].join(', ')"></div>

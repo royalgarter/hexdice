@@ -9,7 +9,7 @@ EMPIRES=("aztecs" "britons" "mongols" "japanese" "romans" "egyptians")
 COLORS=("blue" "red" "green" "yellow" "purple" "gray")
 
 # EMPIRES=("aztecs")
-# COLORS=("blue")
+# COLORS=("gray")
 
 OUTDIR="assets/sprites/empires"
 
@@ -28,9 +28,16 @@ for emp in "${EMPIRES[@]}"; do
   for color in "${COLORS[@]}"; do
     # Map friendly names to ImageMagick colors
     tc=$color
-    [ "$color" = "yellow" ] && tc="gold"
-    [ "$color" = "purple" ] && tc="magenta"
-    [ "$color" = "gray" ] && tc="grey30"
+    tint="50"
+
+    cl="-fill $tc -tint $tint"
+
+    [ "$color" = "blue" ] && cl="-fill blue -tint 10"
+    [ "$color" = "red" ] && cl="-fill red -tint 60"
+    [ "$color" = "yellow" ] && cl="-fill yellow -tint 80"
+    [ "$color" = "green" ] && cl="-fill green -tint 40"
+    [ "$color" = "purple" ] && cl="-fill magenta -tint 40"
+    [ "$color" = "gray" ] && cl="-colorspace gray"
 
     mkdir -p "$OUTDIR/emp_${emp}_${color}"
 
@@ -58,23 +65,19 @@ for emp in "${EMPIRES[@]}"; do
         #   -dispose background \
         #   -layers optimize "$dst"
 
-        # magick "$src" \
-        #   -coalesce \
+        magick "$src" \
+          -coalesce -gravity center -crop 50%x60%+0+0 +repage \
+          $cl \
+          -layers optimize "$dst"
+
+        # magick "${src}[0]" \
         #   -gravity center \
         #   -crop 60%x60%+0+0 +repage \
         #   -fill "$tc" \
-        #   -tint 30 \
-        #   -dispose background \
-        #   -layers optimize "$dst" & sleep 1
-
-        magick "${src}[0]" \
-          -gravity center \
-          -crop 60%x60%+0+0 +repage \
-          -fill "$tc" \
-          -tint 20 \
-          -fuzz 20% \
-          -transparent white \
-          "$dst"
+        #   -tint 20 \
+        #   -fuzz 20% \
+        #   -transparent white \
+        #   "$dst"
       else
         echo "Warning: Source $src not found."
       fi

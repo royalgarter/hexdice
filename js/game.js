@@ -1759,7 +1759,9 @@ function alpineHexDiceTacticGame() { return {
 			const isCloaked = this.isAutochessOnlinePrep && unit.playerId !== this.autochessPlayerIndex;
 
 			if (!isCloaked) {
-				const unitUrl = unit.spriteUrl;
+				const unitUrl = (this.empiresModeEnabled && unit.spriteUrl?.endsWith('.gif'))
+					? unit.spriteUrl.replace('.gif', '.png')
+					: unit.spriteUrl;
 				const isAutochess = !!(this.Autochess?.state?.enabled);
 				const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
 
@@ -1781,7 +1783,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 
 				style.push(
-					`background-size: auto ${(this.isCampaign || this.empiresModeEnabled) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
+					`background-size: auto ${this.isCampaign ? '90%' : this.empiresModeEnabled ? '100%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
 					`background-image: url("${unitUrl}")
 						${(Number.isFinite(hex.basePlayerId) && !isAutochess)
 							? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
