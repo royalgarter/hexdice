@@ -12,6 +12,24 @@ let random = () => {
 };
 // const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
 
+const EMPIRE_DIR_MAP = {
+	'Aztec': 'aztecs',
+	'Briton': 'britons',
+	'Mongol': 'mongols',
+	'Japan': 'japanese',
+	'Roman': 'romans',
+	'Egypt': 'egyptians',
+};
+
+const PLAYER_EMPIRE_COLOR_MAP = {
+	'blue': 'blue',
+	'red': 'red',
+	'green': 'green',
+	'purple': 'purple',
+	'black': 'gray',
+	'yellow': 'yellow',
+};
+
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
 	Autochess: Autochess,
@@ -1763,7 +1781,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 
 				style.push(
-					`background-size: auto ${(this.isCampaign) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
+					`background-size: auto ${(this.isCampaign || this.empiresModeEnabled) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
 					`background-image: url("${unitUrl}")
 						${(Number.isFinite(hex.basePlayerId) && !isAutochess)
 							? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
@@ -1901,6 +1919,14 @@ function alpineHexDiceTacticGame() { return {
 		const value = unit.value;
 
 		if (player.sprites?.[value]) return player.sprites[value];
+
+		if (this.empiresModeEnabled && player.empire && player.color) {
+			const empireDir = EMPIRE_DIR_MAP[player.empire];
+			const colorDir = PLAYER_EMPIRE_COLOR_MAP[player.color.toLowerCase()];
+			if (empireDir && colorDir) {
+				return `/assets/sprites/empires/emp_${empireDir}_${colorDir}/${value}.gif`;
+			}
+		}
 
 		if (player.selectedSpriteSet) {
 			return `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`;

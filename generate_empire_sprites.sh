@@ -2,48 +2,79 @@
 
 # This script generates 216 empire-themed sprites across 6 colors.
 # It uses ImageMagick to convert the base blue sprites into uniform tints.
+# Output: assets/sprites/empires/emp_{empire}_{color}/{value}.gif
+# Post-processing: makes white background transparent and crops 20% from each side.
 
 EMPIRES=("aztecs" "britons" "mongols" "japanese" "romans" "egyptians")
 COLORS=("blue" "red" "green" "yellow" "purple" "gray")
 
+# EMPIRES=("aztecs")
+# COLORS=("blue")
+
+OUTDIR="assets/sprites/empires"
+
 for emp in "${EMPIRES[@]}"; do
   echo "Processing Empire: $emp..."
-  
+
+  # Save originals (grayscale, pre-tint) to _origin subdirectory
+  ORIGIN_DIR="$OUTDIR/_origin/$emp"
+  mkdir -p "$ORIGIN_DIR"
+
   # Create a temporary directory for the original base sprites
-  TEMP_DIR="assets/sprites/sets/tmp_${emp}"
+  TEMP_DIR="/tmp/hexdice/emp_${emp}"
   mkdir -p "$TEMP_DIR"
-  cp assets/sprites/sets/aoe2_standard/*.gif "$TEMP_DIR/"
-  
-  # Apply empire-specific unit overrides to the temporary base
-  case $emp in
-    "aztecs")   cp assets/sprites/aoe2/g_eagle_warrior.gif "$TEMP_DIR/1.gif" ;;
-    "britons")  cp assets/sprites/aoe2/g_longbowman.gif "$TEMP_DIR/2.gif" ;;
-    "mongols")  cp assets/sprites/aoe2/g_mangudai.gif "$TEMP_DIR/3.gif" ;;
-    "japanese") cp assets/sprites/aoe2/g_samurai.gif "$TEMP_DIR/4.gif" ;;
-    "romans")   cp assets/sprites/aoe2/g_legionary.gif "$TEMP_DIR/5.gif" ;;
-    "egyptians") cp assets/sprites/aoe2/g_warrior_priest.gif "$TEMP_DIR/6.gif" ;;
-  esac
+  cp assets/sprites/empires/_origin/$emp/*.gif "$TEMP_DIR/"
 
   for color in "${COLORS[@]}"; do
     # Map friendly names to ImageMagick colors
     tc=$color
+    [ "$color" = "yellow" ] && tc="gold"
     [ "$color" = "purple" ] && tc="magenta"
-    [ "$color" = "gray" ] && tc="gray50"
-    
-    mkdir -p "assets/sprites/sets/emp_${emp}_${color}"
-    
+    [ "$color" = "gray" ] && tc="grey30"
+
+    mkdir -p "$OUTDIR/emp_${emp}_${color}"
+
     for i in {1..6}; do
       src="$TEMP_DIR/$i.gif"
-      dst="assets/sprites/sets/emp_${emp}_${color}/$i.gif"
-      
+      dst="$OUTDIR/emp_${emp}_${color}/$i.gif"
+      origin_dst="$ORIGIN_DIR/$i.gif"
+
       if [ -f "$src" ]; then
         echo "  - Unit $i -> $color"
-        # Transform: Coalesce -> Grayscale -> Normalize -> Tint -> Optimize
-        if [ "$color" = "gray" ]; then
-          convert "$src" -coalesce -colorspace gray -normalize -layers optimize "$dst"
-        else
-          convert "$src" -coalesce -colorspace gray -normalize -fill "$tc" -tint 100 -layers optimize "$dst"
+
+        # Save an untinted grayscale copy as the _origin reference (first time only)
+        if [ ! -f "$origin_dst" ]; then
+          magick "$src" -coalesce -colorspace gray -normalize -layers optimize "$origin_dst"
         fi
+
+        # Single pipeline: Grayscale → Normalize → Tint → Transparent bg → Center-crop → Optimize
+        # magick "$src" \
+        #   -coalesce \
+        #   -gravity center \
+        #   -crop 60%x60%+0+0 +repage \
+        #   -fill "$tc" \
+        #   -tint 20 \
+        #   -transparent white \
+        #   -dispose background \
+        #   -layers optimize "$dst"
+
+        # magick "$src" \
+        #   -coalesce \
+        #   -gravity center \
+        #   -crop 60%x60%+0+0 +repage \
+        #   -fill "$tc" \
+        #   -tint 30 \
+        #   -dispose background \
+        #   -layers optimize "$dst" & sleep 1
+
+        magick "${src}[0]" \
+          -gravity center \
+          -crop 60%x60%+0+0 +repage \
+          -fill "$tc" \
+          -tint 20 \
+          -fuzz 20% \
+          -transparent white \
+          "$dst"
       else
         echo "Warning: Source $src not found."
       fi
