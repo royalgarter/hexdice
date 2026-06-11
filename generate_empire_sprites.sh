@@ -78,6 +78,8 @@ for emp in "${EMPIRES[@]}"; do
         #   -fuzz 20% \
         #   -transparent white \
         #   "$dst"
+
+        magick "$src" -fuzz 40% -fill magenta -opaque blue $dst
       else
         echo "Warning: Source $src not found."
       fi
