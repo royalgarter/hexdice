@@ -86,6 +86,33 @@ const EMPIRES = {
 	'Egypt': 	{ unit: 6, name: `🇪🇬 Pharaoh Reach [D6-${UNIT_STATS[6].name}]`, buff: '+1 Spell Range' },
 };
 
+const EMPIRE_STATIC_DIR_MAP = {
+	'Aztec': 'emp_d1persian',
+	'Briton': 'emp_d2celtic',
+	'Mongol': 'emp_d3greek',
+	'Japan': 'emp_d4babylon',
+	'Roman': 'emp_d5roman',
+	'Egypt': 'emp_d6egyptian',
+};
+
+const EMPIRE_DIR_MAP = {
+	'Aztec': 'aztecs',
+	'Briton': 'britons',
+	'Mongol': 'mongols',
+	'Japan': 'japanese',
+	'Roman': 'romans',
+	'Egypt': 'egyptians',
+};
+
+const PLAYER_EMPIRE_COLOR_MAP = {
+	'blue': 'blue',
+	'red': 'red',
+	'green': 'green',
+	'purple': 'purple',
+	'black': 'gray',
+	'yellow': 'yellow',
+};
+
 // Autochess Balance Configuration
 const AUTOCHESS_CONFIG = {
 	BASE_HP: 100,

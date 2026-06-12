@@ -1741,7 +1741,9 @@ function alpineHexDiceTacticGame() { return {
 			const isCloaked = this.isAutochessOnlinePrep && unit.playerId !== this.autochessPlayerIndex;
 
 			if (!isCloaked) {
-				const unitUrl = unit.spriteUrl;
+				const unitUrl = (this.empiresModeEnabled && unit.spriteUrl?.endsWith('.gif'))
+					? unit.spriteUrl.replace('.gif', '.png')
+					: unit.spriteUrl;
 				const isAutochess = !!(this.Autochess?.state?.enabled);
 				const isPrep = isAutochess && this.Autochess.state.phase === 'PREPARATION';
 
@@ -1763,7 +1765,7 @@ function alpineHexDiceTacticGame() { return {
 				}
 
 				style.push(
-					`background-size: auto ${(this.isCampaign) ? '90%' : '66%'}, ${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'};`,
+					`background-size: auto ${this.isCampaign?'90%':this.empiresModeEnabled?'80%':'66%'}, ${Number.isFinite(hex.basePlayerId)?'auto 90%':'cover'};`,
 					`background-image: url("${unitUrl}")
 						${(Number.isFinite(hex.basePlayerId) && !isAutochess)
 							? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
@@ -1901,6 +1903,18 @@ function alpineHexDiceTacticGame() { return {
 		const value = unit.value;
 
 		if (player.sprites?.[value]) return player.sprites[value];
+
+		if (this.empiresModeEnabled && player.empire && player.color) {
+			const empireDir = EMPIRE_DIR_MAP[player.empire];
+			const empDir = EMPIRE_STATIC_DIR_MAP[player.empire];
+			const colorDir = PLAYER_EMPIRE_COLOR_MAP[player.color.toLowerCase()];
+
+			return `/assets/sprites/empires/${empDir}_${colorDir}/${value}.png`;
+
+			if (empireDir && colorDir) {
+				return `/assets/sprites/empires/emp_${empireDir}_${colorDir}/${value}.gif`;
+			}
+		}
 
 		if (player.selectedSpriteSet) {
 			return `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`;
