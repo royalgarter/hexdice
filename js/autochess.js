@@ -232,10 +232,10 @@ const Autochess = {
 		GAME.Autochess.state.selectedUnitId = unitId1;
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
-		GAME.Autochess.deployPlayerUnits(GAME, playerId);
-
-		// If u1 is on board, its reference is already updated, but we might want to refresh its hexId just in case
-		// No full deployPlayerUnits here to preserve other units' positions.
+		// Only redeploy if u1 was not already on the board (needs deployment after u2 removal shifted indices)
+		if (!u1.hexId) {
+			GAME.Autochess.deployPlayerUnits(GAME, playerId);
+		}
 	},
 
 	createUnit(GAME, value, playerId) {
@@ -513,7 +513,26 @@ const Autochess = {
 	},
 
 	simulateStep(GAME, state) {
-		const targetPlayers = (state || GAME).players;
+		const target = state || GAME;
+		const targetPlayers = target.players;
+
+		// Precompute per-player AI data once per tick (much cheaper than per-unit-action)
+		const playerAIData = {};
+		targetPlayers.forEach((p, idx) => {
+			playerAIData[idx] = {
+				pressureMap: calculatePressureMap(GAME, target, idx),
+				predictedThreats: predictEnemyThreats(GAME, target, idx),
+			};
+		});
+
+		// Precompute which players have a Templar with T3A aura (skip expensive hex scan if none)
+		const templarT3APlayers = new Set();
+		targetPlayers.forEach((p, idx) => {
+			if (p.dice.some(u => u.value === 4 && GAME.hasPerk(u, 'tier3', 'A'))) {
+				templarT3APlayers.add(idx);
+			}
+		});
+
 		const allUnits = targetPlayers.flatMap(p => p.dice)
 			.filter(u => u.hexId && u.isDeployed && !u.isDeath)
 			.sort((a, b) => (b.actionGauge - a.actionGauge) || (random() - 0.5));
@@ -561,8 +580,8 @@ const Autochess = {
 				}
 				// Oracle T1B Hex
 				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'B')) {
-					const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
-					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId).r));
+					const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
+					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 					enemies.slice(0, 2).forEach(e => {
 						e.currentArmor = Math.max(0, (e.currentArmor || e.armor) - 10);
 						GAME.addLog(`🔮 Hex! ${GAME.logUnit(e, state)} lost 10 DEF.`, true, state);
@@ -573,7 +592,7 @@ const Autochess = {
 			// Tanker T1B Magnetic (Every 15 ticks)
 			if (unit.ticksInCombat % 15 === 0 && unit.hexId && unit.value === 5 && GAME.hasPerk(unit, 'tier1', 'B')) {
 				const hex = GAME.getHex(unit.hexId, state);
-				const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+				const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
 				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 				const target = enemies[0];
 				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId, state).q, GAME.getHex(target.hexId, state).r) <= 3) {
@@ -605,15 +624,17 @@ const Autochess = {
 					}
 				});
 
-				// Templar T3A Speed Aura
-				(state || GAME).hexes.forEach(h => {
-					const templar = h.unit;
-					if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
-						if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
-							currentSpeed += templar.speed * 0.2;
+				// Templar T3A Speed Aura (only scan hexes if this player has a Templar with T3A)
+				if (templarT3APlayers.has(unit.playerId)) {
+					(state || GAME).hexes.forEach(h => {
+						const templar = h.unit;
+						if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
+							if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
+								currentSpeed += templar.speed * 0.2;
+							}
 						}
-					}
-				});
+					});
+				}
 			}
 
 			unit.actionGauge += Math.max(1, currentSpeed);
@@ -629,7 +650,7 @@ const Autochess = {
 					GAME.addLog(`🛡️ Entrench! ${GAME.logUnit(unit, state)} gains DEF (Stack: ${unit.entrenchStacks})`, true, state);
 				}
 
-				GAME.Autochess.executeAction(GAME, unit, state);
+				GAME.Autochess.executeAction(GAME, unit, state, playerAIData[unit.playerId]);
 				unit.actionGauge -= 100;
 			}
 		});
@@ -685,6 +706,56 @@ const Autochess = {
 		});
 	},
 
+	_saveEvalSnapshot(state) {
+		const units = [];
+		state.players.forEach(p => {
+			p.dice.forEach(u => {
+				units.push({
+					ref: u,
+					hp: u.hp, actionGauge: u.actionGauge, isDeath: u.isDeath,
+					hexId: u.hexId, isDeployed: u.isDeployed, frozenTicks: u.frozenTicks,
+					currentArmor: u.currentArmor, speedBuff: u.speedBuff,
+					speedBuffDuration: u.speedBuffDuration, attack: u.attack,
+					hasMovedOrAttackedThisTurn: u.hasMovedOrAttackedThisTurn,
+					actionsTakenThisTurn: u.actionsTakenThisTurn,
+					consecutiveHits: u.consecutiveHits, lastTargetId: u.lastTargetId,
+					sniperCount: u.sniperCount, entrenchStacks: u.entrenchStacks,
+					parryShield: u.parryShield, oncePerBattleUsed: u.oncePerBattleUsed,
+					lastWindriderTick: u.lastWindriderTick, isGuarding: u.isGuarding,
+					skirmishBuff: u.skirmishBuff, venomDuration: u.venomDuration,
+					ticksInCombat: u.ticksInCombat,
+				});
+			});
+		});
+		const hexes = state.hexes.map(h => ({
+			ref: h, unit: h.unit, unitId: h.unitId,
+		}));
+		return { units, hexes };
+	},
+
+	_restoreEvalSnapshot(state, snapshot) {
+		for (const us of snapshot.units) {
+			Object.assign(us.ref, {
+				hp: us.hp, actionGauge: us.actionGauge, isDeath: us.isDeath,
+				hexId: us.hexId, isDeployed: us.isDeployed, frozenTicks: us.frozenTicks,
+				currentArmor: us.currentArmor, speedBuff: us.speedBuff,
+				speedBuffDuration: us.speedBuffDuration, attack: us.attack,
+				hasMovedOrAttackedThisTurn: us.hasMovedOrAttackedThisTurn,
+				actionsTakenThisTurn: us.actionsTakenThisTurn,
+				consecutiveHits: us.consecutiveHits, lastTargetId: us.lastTargetId,
+				sniperCount: us.sniperCount, entrenchStacks: us.entrenchStacks,
+				parryShield: us.parryShield, oncePerBattleUsed: us.oncePerBattleUsed,
+				lastWindriderTick: us.lastWindriderTick, isGuarding: us.isGuarding,
+				skirmishBuff: us.skirmishBuff, venomDuration: us.venomDuration,
+				ticksInCombat: us.ticksInCombat,
+			});
+		}
+		for (const hs of snapshot.hexes) {
+			hs.ref.unit = hs.unit;
+			hs.ref.unitId = hs.unitId;
+		}
+	},
+
 	PERK_DESCRIPTIONS: {
 		1: {
 			tier1: { A: { name: "Parry", desc: "Negates 15 damage every Gauge reset." }, B: { name: "Lunge", desc: "+20 DMG if Gauge > Target Gauge." } },
@@ -732,14 +803,14 @@ const Autochess = {
 		});
 	},
 
-	executeAction(GAME, unit, state) {
+	executeAction(GAME, unit, state, cachedAIData) {
 		// Store original turn index to restore after action
 		const originalPlayerIndex = GAME.currentPlayerIndex;
 
 		// Oracle T3B Warlock
 		if (unit.value === 6 && GAME.hasPerk(unit, 'tier3', 'B') && !unit.oncePerBattleUsed && unit.hp > 60) {
 			const targetPlayers = (state || GAME).players;
-			const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+			const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
 			if (enemies.length > 2) {
 				GAME.Autochess.triggerOracleWarlock(GAME, unit, state);
 				unit.actionGauge = 0;
@@ -763,7 +834,8 @@ const Autochess = {
 		const profileName = (state || GAME).players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
 
 		const evaluationState = state || GAME.cloneState();
-		const move = evaluateBestMoveForUnit(GAME, evaluationState, unit, profileName);
+		evaluationState._autochessEval = true;
+		const move = evaluateBestMoveForUnit(GAME, evaluationState, unit, profileName, cachedAIData);
 
 		if (move && move.actionType !== 'END_TURN') {
 			// If it's a spell, we need to set oracleSelectedSpell

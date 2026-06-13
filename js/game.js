@@ -1643,7 +1643,7 @@ function alpineHexDiceTacticGame() { return {
 
 		let unit = hex.unit;
 
-		if (!unit || state) {
+		if (!unit) {
 			const parts = hex.unitId.split('_');
 			const playerId = parseInt(parts[0]);
 			const diceIndex = parseInt(parts[1]);
@@ -5298,9 +5298,11 @@ function alpineHexDiceTacticGame() { return {
 		this.messageLog.unshift({ id: this.logCounter++, message });
 		if (this.messageLog.length > 50) this.messageLog.pop();
 		
-		// Auto-scroll log
-		if (typeof this.$nextTick === 'function') {
+		// Auto-scroll log (debounced — one DOM query per microtask burst)
+		if (!this._logScrollPending && typeof this.$nextTick === 'function') {
+			this._logScrollPending = true;
 			this.$nextTick(() => {
+				this._logScrollPending = false;
 				const logContainer = document.querySelector('#game-log');
 				if (logContainer) logContainer.scrollTop = 0;
 			});

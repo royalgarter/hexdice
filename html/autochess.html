@@ -11,7 +11,7 @@
 		</div>
 
 		<!-- ONLINE ROOM UI -->
-		<div x-show="auth.user && online.status === 'OFFLINE'" class="p-2 text-center pointer-events-auto">
+		<div x-show="auth.user && online.status === 'OFFLINE' && Autochess.state.phase === 'PREPARATION' && Autochess.state.round < 2" class="p-2 text-center pointer-events-auto">
 			<button @click="createRoom()" class="border border-dashed px-2 py-1 hover:bg-black hover:text-white">New Room</button>
 			<button @click="joinRoom()" class="border border-dashed px-2 py-1 hover:bg-black hover:text-white">Join</button>
 		</div>
@@ -215,7 +215,7 @@
 		<!-- COMBAT PHASE UI -->
 		<div style="display: none;" x-show="Autochess.state.phase === 'COMBAT'" class="w-full flex flex-col items-center">
 			<div class="w-full bg-gray-700 h-1 mb-2 rounded-full overflow-hidden" x-show="Autochess?.state?.roundTimer">
-				<div class="bg-blue-500 h-1 rounded-full transition-all" :style="'width: ' + (Autochess.state.roundTimer / 60 * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 100) + 'ms'"></div>
+				<div class="bg-blue-500 h-1 rounded-full transition-all" :style="'width: ' + (Autochess.state.roundTimer / 60 * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'"></div>
 			</div>
 			<div class="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4 text-[10px] md:text-xs font-bold pointer-events-auto">
 				<template x-for="p in players" :key="p.id">

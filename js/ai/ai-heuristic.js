@@ -282,7 +282,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 /**
  * Evaluate and return the best move for a specific unit (used in Autochess).
  */
-function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline') {
+function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline', cachedData) {
     // Load profile
     let profile = DEFAULT_PROFILE;
     if (typeof getProfile === 'function') {
@@ -300,8 +300,8 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline') {
     const dynamicProfile = calculatePhaseWeights(GAME, state, profile);
     profile = dynamicProfile;
 
-    const pressureMap = calculatePressureMap(GAME, state, state.currentPlayerIndex);
-    const predictedThreats = predictEnemyThreats(GAME, state, state.currentPlayerIndex);
+    const pressureMap = cachedData?.pressureMap || calculatePressureMap(GAME, state, state.currentPlayerIndex);
+    const predictedThreats = cachedData?.predictedThreats || predictEnemyThreats(GAME, state, state.currentPlayerIndex);
 
     const opponentBases = shouldExcludeBases ? [] : opponentIndices
         .filter(idx => !state.players[idx].isEliminated)
@@ -946,8 +946,13 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id);
     analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill);
 
-    // Simulate the move
-    const nextState = applyMove(GAME, move, state);
+    // Simulate the move (use save/restore in autochess eval to avoid per-move structuredClone)
+    let snapshot = null;
+    try {
+    if (GAME.autochess && state._autochessEval && GAME.Autochess?._saveEvalSnapshot) {
+        snapshot = GAME.Autochess._saveEvalSnapshot(state);
+    }
+    const nextState = applyMove(GAME, move, state, snapshot ? { noClone: true } : undefined);
     if (!nextState) return analysis;
 
     // Get unit's position after move
@@ -1445,6 +1450,11 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     }
 
     return analysis;
+    } finally {
+        if (snapshot) {
+            GAME.Autochess._restoreEvalSnapshot(state, snapshot);
+        }
+    }
 }
 
 /**

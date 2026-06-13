@@ -18,7 +18,7 @@ const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
 const MQTT = Deno.env.get("MQTT") || "wss://broker.emqx.io:8084/mqtt";
 const mqttClient = mqtt.connect(MQTT);
 
-const MQTT_PULSE_MS = Number(Deno.env.get("MQTT_PULSE_MS")) || 100;
+const MQTT_PULSE_MS = Number(Deno.env.get("MQTT_PULSE_MS")) || 90;
 
 const roomEngines: Record<string, any> = {};
 
@@ -375,7 +375,7 @@ function startCombatStreaming(roomId: string, game: any) {
 	// Use a throttled broadcast during simulation
 	let stepCount = 0;
 	let lastPhase = game.Autochess.state.phase;
-	const broadcastEvery = Math.max(1, Math.floor(MQTT_PULSE_MS / 100));
+	const broadcastEvery = Math.max(3, Math.floor(MQTT_PULSE_MS / 100));
 
 	const originalSimStep = game.Autochess.simulateStep.bind(game.Autochess);
 	game.Autochess.simulateStep = (g: any) => {

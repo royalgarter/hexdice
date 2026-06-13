@@ -109,8 +109,8 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 	return moves;
 }
 
-function applyMove(GAME, move, state) {
-	const applyState = state ? structuredClone(state) : undefined;
+function applyMove(GAME, move, state, options) {
+	const applyState = (state && !(options && options.noClone)) ? structuredClone(state) : state;
 
 	// Autochess Hook: Redirect combat actions to Autochess.handleCombat
 	if (GAME.autochess) {
