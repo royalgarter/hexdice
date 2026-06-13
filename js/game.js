@@ -1956,6 +1956,7 @@ function alpineHexDiceTacticGame() { return {
 				currentArmor: initialArmor,
 				armorReduction: 0,
 				isDeployed: false,
+				isHit: false,
 				hexId: null,
 				hasMovedOrAttackedThisTurn: false,
 				isGuarding: 0,
@@ -3191,7 +3192,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		// Play spell SFX if available
-		if (!state) window?.AudioManager?.playSfx('spell');
+		if (!state && !this.autochess) window?.AudioManager?.playSfx('spell');
 
 		// Oracle Tier 2 [B] Twin Cast
 		if (this.hasPerk(oracleUnit, 'tier2', 'B') && ['SHIELD', 'SKIRMISH'].includes(spellType)) {

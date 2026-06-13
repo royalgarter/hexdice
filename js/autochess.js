@@ -255,18 +255,21 @@ const Autochess = {
 			veteranLevel: 0,
 			perks: { tier1: null, tier2: null, tier3: null },
 
-			// Autochess-specific tracking
-			ticksInCombat: 0,
-			oncePerBattleUsed: false,
-			lastWindriderTick: 0,
-			consecutiveHits: 0,
-			lastTargetId: null,
-			entrenchStacks: 0,
-			parryShield: 0,
-			frozenTicks: 0,
-			speedBuff: 0,
-			speedBuffDuration: 0,
-			sniperCount: 0,
+		// Autochess-specific tracking
+		ticksInCombat: 0,
+		oncePerBattleUsed: false,
+		lastWindriderTick: 0,
+		consecutiveHits: 0,
+		lastTargetId: null,
+		entrenchStacks: 0,
+		parryShield: 0,
+		frozenTicks: 0,
+		speedBuff: 0,
+		speedBuffDuration: 0,
+		sniperCount: 0,
+		isHit: false,
+		isHitDx: 0,
+		isHitDy: 0,
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
 		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
@@ -689,6 +692,23 @@ const Autochess = {
 		}
 	},
 
+	setHitEffect(GAME, targetUnit, sourceUnit, state) {
+		if (state || !targetUnit.hexId || !sourceUnit.hexId) return;
+		const targetHex = GAME.getHex(targetUnit.hexId);
+		const sourceHex = GAME.getHex(sourceUnit.hexId);
+		if (!targetHex || !sourceHex) return;
+		const dq = sourceHex.q - targetHex.q;
+		const dr = sourceHex.r - targetHex.r;
+		const dx = dq + dr / 2;
+		const dy = dr * 0.866;
+		const len = Math.sqrt(dx * dx + dy * dy) || 1;
+		targetUnit.isHit = true;
+		targetUnit.isHitDx = Math.round((dx / len) * 10);
+		targetUnit.isHitDy = Math.round((dy / len) * 10);
+		const ref = targetUnit;
+		setTimeout(() => { ref.isHit = false; ref.isHitDx = 0; ref.isHitDy = 0; }, 500);
+	},
+
 	triggerDreadnoughtDeath(GAME, unit, hexId, state) {
 		const hex = GAME.getHex(hexId, state);
 		if (!hex) return;
@@ -700,6 +720,7 @@ const Autochess = {
 				if (target) {
 					target.hp -= 100;
 					target.actionGauge = 0;
+					GAME.Autochess.setHitEffect(GAME, target, unit, state);
 					if (target.hp <= 0) GAME.Autochess.killUnit(GAME, target, state);
 				}
 			}
@@ -724,6 +745,7 @@ const Autochess = {
 					lastWindriderTick: u.lastWindriderTick, isGuarding: u.isGuarding,
 					skirmishBuff: u.skirmishBuff, venomDuration: u.venomDuration,
 					ticksInCombat: u.ticksInCombat,
+					isHit: u.isHit, isHitDx: u.isHitDx, isHitDy: u.isHitDy,
 				});
 			});
 		});
@@ -748,6 +770,7 @@ const Autochess = {
 				lastWindriderTick: us.lastWindriderTick, isGuarding: us.isGuarding,
 				skirmishBuff: us.skirmishBuff, venomDuration: us.venomDuration,
 				ticksInCombat: us.ticksInCombat,
+				isHit: us.isHit, isHitDx: us.isHitDx, isHitDy: us.isHitDy,
 			});
 		}
 		for (const hs of snapshot.hexes) {
@@ -862,6 +885,7 @@ const Autochess = {
 					if (enemy && enemy.playerId !== unit.playerId) {
 						enemy.hp -= 30;
 						enemy.actionGauge = 0;
+						GAME.Autochess.setHitEffect(GAME, enemy, unit, state);
 						GAME.addLog(`🐉 Dragoon Landing! ${GAME.logUnit(enemy, state)} crushed.`, true, state);
 						if (enemy.hp <= 0) GAME.Autochess.killUnit(GAME, enemy, state);
 					}
@@ -950,6 +974,7 @@ const Autochess = {
 		if (defenderUnit.value === 5 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
 			const reflect = 20;
 			attackerUnit.hp -= reflect;
+			GAME.Autochess.setHitEffect(GAME, attackerUnit, defenderUnit, state);
 			GAME.addLog(`💥 Spiked Armor! ${GAME.logUnit(attackerUnit, state)} takes ${reflect} reflect damage.`, state);
 		}
 
@@ -968,6 +993,11 @@ const Autochess = {
 		}
 
 		defenderUnit.hp -= damage;
+
+		// --- Hit visual effect ---
+		if (damage > 0) {
+			GAME.Autochess.setHitEffect(GAME, defenderUnit, attackerUnit, state);
+		}
 
 		// --- Post-Damage Perks ---
 		// Archer Tier 2 [B] Slowing Shot
@@ -988,6 +1018,7 @@ const Autochess = {
 			defenderUnit.actionGauge = Math.min(100, defenderUnit.actionGauge + 20);
 			const counterDamage = Math.floor(defenderUnit.attack * 0.5);
 			attackerUnit.hp -= counterDamage;
+			GAME.Autochess.setHitEffect(GAME, attackerUnit, defenderUnit, state);
 			GAME.addLog(`↩️ Riposte! Countered for ${counterDamage} damage.`, state);
 		}
 		// Fencer Tier 2 [B] Flurry
