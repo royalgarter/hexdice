@@ -1318,7 +1318,7 @@ function alpineHexDiceTacticGame() { return {
 			this.initAutochess();
 		}
 
-		setTimeout(() => window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'opening', {volume: 1}), 3e3);
+		setTimeout(() => window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'opening', {volume: 1, mapName: this.campaignData?.rmi || ''}), 3e3);
 	},
 	async resetGame(opts) {
 		console.log("resetGame called, playerCount:", this.playerCount);
@@ -2145,7 +2145,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("P1 turn.");
 
 		window?.AudioManager?.playSfx('capture');
-		window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'battle');
+		window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'battle', { mapName: this.campaignData?.rmi || '' });
 
 		if (this.gameplayVersion === 2) {
 			this.startFatesCall();
