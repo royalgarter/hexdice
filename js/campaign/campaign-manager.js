@@ -730,6 +730,15 @@ const CampaignManager = {
 			unit.currentHP = 0;
 			game.removeUnit(hexId, state);
 		}
+
+		// Queue game renderer update for campaign mode
+		if (!state && game.gameRenderer?._hexCache.has(hexId)) {
+			game.gameRenderer.queueUpdate(
+				hexId, unit.currentHP, unit.maxHP,
+				unit.currentArmor, unit.effectiveArmor || unit.currentArmor, unit.attack, unit.veteranLevel
+			);
+		}
+
 		return true;
 	},
 

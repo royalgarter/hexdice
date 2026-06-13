@@ -973,7 +973,16 @@ function alpineHexDiceTacticGame() { return {
 
 	handleAuthoritativeState(state) {
 		if (state.autochess) {
+			const wasCombat = this.Autochess.state.phase === 'COMBAT';
 			Object.assign(this.Autochess.state, state.autochess);
+			// Init combat renderer when entering combat phase (online mode)
+			if (!wasCombat && this.Autochess.state.phase === 'COMBAT' && this.Autochess?.combatRenderer) {
+				this.Autochess.combatRenderer.init();
+			}
+			// Destroy renderer when leaving combat
+			if (wasCombat && this.Autochess.state.phase !== 'COMBAT' && this.Autochess?.combatRenderer) {
+				this.Autochess.combatRenderer.destroy();
+			}
 			// Merge nested state objects keyed by playerId
 			if (state.autochess.inventories) {
 				Object.assign(this.Autochess.state.inventories, state.autochess.inventories);
@@ -1011,6 +1020,13 @@ function alpineHexDiceTacticGame() { return {
 							const hex = this.getHex(lu.hexId);
 							if (hex) { hex.unit = null; hex.unitId = null; }
 						}
+					}
+					// Queue combat renderer update for online mode
+					if (this.autochess && lu.hexId && lu.isDeployed && !lu.isDeath && this.Autochess?.combatRenderer) {
+						this.Autochess.combatRenderer.queueUpdate(
+							lu.hexId, lu.hp, lu.maxHP, lu.actionGauge,
+							lu.isHit, lu.isHitDx, lu.isHitDy
+						);
 					}
 				}
 			});
@@ -1306,6 +1322,9 @@ function alpineHexDiceTacticGame() { return {
 		const radius = campaignData?.radius || this.getRadius();
 		this.generateHexGrid(radius);
 
+		// Init game renderer for direct DOM updates
+		setTimeout(() => this.gameRenderer.init(), 0);
+
 		this.determineBaseLocations(radius);
 		this.options = new URLSearchParams(location.search).get('options') || this.options || '';
 
@@ -1531,6 +1550,11 @@ function alpineHexDiceTacticGame() { return {
 
 				id++;
 			}
+		}
+
+		// Re-init game renderer after hex grid regeneration
+		if (this.gameRenderer) {
+			setTimeout(() => this.gameRenderer.init(), 0);
 		}
 
 		let allX = this.hexes.map(h => h.visualX);
@@ -4987,6 +5011,10 @@ function alpineHexDiceTacticGame() { return {
 		if (!state) {
 			window?.AudioManager?.playSfx('death');
 			this.addLog(`💀 ${this.logUnit(unit)} removed [${this.getHex(hexId, state).id}].`);
+			// Queue game renderer update
+			if (this.gameRenderer?._hexCache.has(hexId)) {
+				this.gameRenderer.queueUpdate(hexId, 0, unit.maxHP || 1, 0, 0, unit.attack, unit.veteranLevel);
+			}
 		}
 		
 		const targetPlayer = (state || this).players[unit.playerId];
@@ -5014,6 +5042,14 @@ function alpineHexDiceTacticGame() { return {
 
 		unit.armorReduction += damage;
 		const effectiveArmor = this.calcDefenderEffectiveArmor(hexId, state); // Recalculate effective armor
+
+		// Queue game renderer update (only for real execution, not simulation)
+		if (!state && this.gameRenderer?._hexCache.has(hexId)) {
+			this.gameRenderer.queueUpdate(
+				hexId, unit.currentHP || 0, unit.maxHP || 1,
+				unit.currentArmor, effectiveArmor, unit.attack, unit.veteranLevel
+			);
+		}
 
 		if (isKillOnZero) {
 			if (effectiveArmor <= 0) this.removeUnit(hexId, state); // Remove if armor drops to 0 or less
@@ -5415,5 +5451,77 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		return roll;
+	},
+
+	gameRenderer: {
+		_rafId: null,
+		_hexCache: new Map(),
+
+		init() {
+			this.destroy();
+			document.querySelectorAll('[data-game-hp]').forEach(el => {
+				const hex = el.closest('.hexagon');
+				if (hex) {
+					const id = parseInt(hex.dataset.id);
+					if (!isNaN(id)) {
+						this._hexCache.set(id, {
+							hpBar: el,
+							armorEl: hex.querySelector('[data-game-armor]'),
+							attackEl: hex.querySelector('[data-game-attack]'),
+							hexEl: hex,
+						});
+					}
+				}
+			});
+		},
+
+		queueUpdate(hexId, hp, maxHp, armor, effectiveArmor, attack, veteranLevel) {
+			const entry = this._hexCache.get(hexId);
+			if (!entry) return;
+			entry._hp = hp;
+			entry._maxHp = maxHp;
+			entry._armor = armor;
+			entry._effectiveArmor = effectiveArmor;
+			entry._attack = attack;
+			entry._veteranLevel = veteranLevel;
+			if (!this._rafId) {
+				this._rafId = requestAnimationFrame(() => this.flush());
+			}
+		},
+
+		flush() {
+			this._rafId = null;
+			for (const [, e] of this._hexCache) {
+				if (e._hp === undefined) continue;
+
+				// HP bar
+				if (e.hpBar && e._maxHp > 0) {
+					const hpPct = Math.max(0, Math.min(100, (e._hp / e._maxHp) * 100));
+					e.hpBar.style.width = hpPct + '%';
+					if (hpPct < 25) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-red-500'); }
+					else if (hpPct < 50) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-yellow-500'); }
+					else { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-green-500'); }
+				}
+
+				// Armor text
+				if (e.armorEl) {
+					e.armorEl.textContent = e._effectiveArmor;
+					if (e._effectiveArmor > e._armor) { e.armorEl.classList.add('font-bold'); }
+					else { e.armorEl.classList.remove('font-bold'); }
+				}
+
+				// Attack text
+				if (e.attackEl) {
+					e.attackEl.textContent = e._attack + (e._veteranLevel ? '★'.repeat(e._veteranLevel) : '');
+				}
+
+				delete e._hp;
+			}
+		},
+
+		destroy() {
+			if (this._rafId) { cancelAnimationFrame(this._rafId); this.rafId = null; }
+			for (const [, e] of this._hexCache) { delete e._hp; }
+		},
 	},
 };}

@@ -307,6 +307,9 @@ const Autochess = {
 		GAME.Autochess.state.roundTimer = 0;
 		GAME.messageLog = [];
 
+		// Init combat renderer for direct DOM updates (bypasses Alpine reactivity)
+		GAME.Autochess.combatRenderer.init();
+
 		// For single-player mode, ensure Player 0 profile is set
 		if (GAME.players[0] && !GAME.players[0].isAI) {
 			GAME.players[0].profileName = GAME.Autochess.state.selectedProfile;
@@ -443,12 +446,14 @@ const Autochess = {
 	runSimulation(GAME) {
 		const combatInterval = setInterval(() => {
 			if (GAME.Autochess.state.phase !== 'COMBAT') {
+				GAME.Autochess.combatRenderer.destroy();
 				clearInterval(combatInterval);
 				return;
 			}
 
 			GAME.Autochess.state.roundTimer += 0.1;
 			if (GAME.Autochess.state.roundTimer >= AUTOCHESS_CONFIG.ROUND_TIME_LIMIT) {
+				GAME.Autochess.combatRenderer.destroy();
 				GAME.Autochess.resolveTimeout(GAME);
 				clearInterval(combatInterval);
 				return;
@@ -456,11 +461,24 @@ const Autochess = {
 
 			GAME.Autochess.simulateStep(GAME);
 
+			// Queue rAF updates for all deployed units (bypasses Alpine reactivity)
+			GAME.players.forEach(p => {
+				p.dice.forEach(u => {
+					if (u.hexId && u.isDeployed && !u.isDeath) {
+						GAME.Autochess.combatRenderer.queueUpdate(
+							u.hexId, u.hp, u.maxHP, u.actionGauge,
+							u.isHit, u.isHitDx, u.isHitDy
+						);
+					}
+				});
+			});
+
 			const alivePlayers = GAME.players.filter(p => p.dice.some(u => u.hexId && u.isDeployed && !u.isDeath));
 
 			if (alivePlayers.length > 1) return;
 
 			clearInterval(combatInterval);
+			GAME.Autochess.combatRenderer.destroy();
 			const winner = alivePlayers[0];
 
 			GAME.players.forEach(p => {
@@ -480,6 +498,7 @@ const Autochess = {
 	},
 
 	resolveTimeout(GAME) {
+		GAME.Autochess.combatRenderer.destroy();
 		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.hexId && u.isDeployed && !u.isDeath));
 		const playerHPs = aliveUnits.map(units => units.reduce((sum, u) => sum + u.hp, 0));
 
@@ -513,6 +532,73 @@ const Autochess = {
 		GAME.Autochess.state.lastResult = (winner && !winner.isAI) ? 'WIN' : (winner ? 'LOSS' : 'DRAW');
 		GAME.Autochess.state.lastWinnerId = winner ? winner.id : null;
 		GAME.Autochess.state.phase = 'RECAP';
+	},
+
+	combatRenderer: {
+		_rafId: null,
+		_hexCache: new Map(),
+
+		init() {
+			this.destroy();
+			document.querySelectorAll('[data-combat-hp]').forEach(el => {
+				const hex = el.closest('.hexagon');
+				if (hex) {
+					const id = parseInt(hex.dataset.id);
+					if (!isNaN(id)) {
+						this._hexCache.set(id, {
+							hpBar: el,
+							gaugeBar: hex.querySelector('[data-combat-gauge]'),
+							hitIcon: hex.querySelector('[data-combat-hit]'),
+							hexEl: hex,
+						});
+					}
+				}
+			});
+		},
+
+		queueUpdate(hexId, hp, maxHp, actionGauge, isHit, isHitDx, isHitDy) {
+			const entry = this._hexCache.get(hexId);
+			if (!entry) return;
+			entry._hp = hp;
+			entry._maxHp = maxHp;
+			entry._gauge = actionGauge;
+			entry._isHit = isHit;
+			entry._hitDx = isHitDx;
+			entry._hitDy = isHitDy;
+			if (!this._rafId) {
+				this._rafId = requestAnimationFrame(() => this.flush());
+			}
+		},
+
+		flush() {
+			this._rafId = null;
+			for (const [, e] of this._hexCache) {
+				if (e._hp === undefined) continue;
+				const hpPct = Math.max(0, Math.min(100, (e._hp / e._maxHp) * 100));
+				e.hpBar.style.width = hpPct + '%';
+				e.hpBar.style.transitionDuration = '0ms';
+				if (hpPct < 25) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-red-500'); }
+				else if (hpPct < 50) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-yellow-500'); }
+				else { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-green-500'); }
+
+				e.gaugeBar.style.width = Math.max(0, Math.min(100, e._gauge)) + '%';
+				e.gaugeBar.style.transitionDuration = '0ms';
+
+				if (e._isHit) {
+					e.hitIcon.classList.remove('hidden');
+					e.hitIcon.style.top = e._hitDy + 'px';
+					e.hitIcon.style.right = (-e._hitDx) + 'px';
+				} else {
+					e.hitIcon.classList.add('hidden');
+				}
+				delete e._hp;
+			}
+		},
+
+		destroy() {
+			if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+			for (const [, e] of this._hexCache) { delete e._hp; }
+		},
 	},
 
 	simulateStep(GAME, state) {

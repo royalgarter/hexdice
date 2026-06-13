@@ -1,8 +1,7 @@
 <!-- Hex Grid -->
 <div class="hex-grid-container relative" :class="'radius-' + (hexGrid.radius || 5)" :style="hexGrid.style">
 	<template x-for="hex in hexes" :key="hex.id">
-		<div x-memo="[hex.unitId, hex.terrainType, hex.basePlayerId, phase, selectedUnitHexId === hex.id, hovering.hexId === hex.id, validMovesSet.has(hex.id), validMergesSet.has(hex.id), validTargetsSet.has(hex.id), hovering.validMovesSet?.has(hex.id), hovering.validMergesSet?.has(hex.id), hovering.validTargetsSet?.has(hex.id), debug.coordinate, Autochess.state.enabled, Autochess.state.phase, hex.unit?.hp, hex.unit?.actionGauge, hex.unit?.hexId, hex.unit?.isDeath, hex.unit?.isHit]"
-		class="hexagon absolute select-none flex items-center justify-center"
+		<div class="hexagon absolute select-none flex items-center justify-center"
 			:class="hexColor(hex) + ' hex-' + hex.id"
 			:style="hexStyle(hex) + ';cursor:' + hexCursor(hex)"
 			:data-id="hex.id"
@@ -23,12 +22,12 @@
 					>
 					</span>
 
-					<span style="top:-0.5rem;right:0.6rem;" class="absolute cursor-not-allowed z-10 text-red-700"
+					<span data-game-attack style="top:-0.5rem;right:0.6rem;" class="absolute cursor-not-allowed z-10 text-red-700"
 						x-text="hex.unit?.attack + (hex.unit?.veteranLevel ? '★'.repeat(hex.unit.veteranLevel) : '')">
 					</span>
 					<span style="top:-0.7rem;right:-0.1rem;" class="absolute cursor-not-allowed z-10 text-yellow-600 font-bold text-sm"
 						x-show="empiresModeEnabled && hex.unit && EMPIRES[players[hex.unit.playerId]?.empire]?.unit === hex.unit.value">★</span>
-					<span style="top:-0.5rem;right:-0.4rem;" class="absolute cursor-not-allowed z-10 text-gray-700"
+					<span data-game-armor style="top:-0.5rem;right:-0.4rem;" class="absolute cursor-not-allowed z-10 text-gray-700"
 						:class="(hex.unit?.effectiveArmor > hex.unit?.armor) ? 'font-bold' : ''"
 						x-text="hex.unit?.effectiveArmor">
 					</span>
@@ -41,30 +40,29 @@
 					<span style="top:0.25rem;right:0.8rem;" class="absolute cursor-not-allowed text-red-900 font-bold"
 						x-show="hex.unit?.skirmishBuff">⚡
 					</span>
-					<span class="absolute cursor-not-allowed text-red-900 font-bold text-lg z-20 transition-all duration-300"
-						x-show="hex.unit?.isHit" style="display: none;"
+				<span data-combat-hit class="absolute cursor-not-allowed text-red-900 font-bold text-lg z-20 transition-all duration-300 hidden"
 						:style="'top:' + (hex.unit?.isHitDy || 0) + 'px;right:' + -(hex.unit?.isHitDx || 0) + 'px'"
 					>💢
 					</span>
 
-					<!-- Campaign HP Bar -->
-					<div x-show="isCampaign" style="bottom:-0.25rem;left:-0.45rem" class="absolute cursor-not-allowed w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
-						<div class="h-full bg-green-500 "
-							:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
-							:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
-						</div>
+				<!-- Campaign HP Bar -->
+				<div x-show="isCampaign" style="bottom:-0.25rem;left:-0.45rem" class="absolute cursor-not-allowed w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden">
+					<div data-game-hp class="h-full bg-green-500 "
+						:style="'width: ' + (hex.unit?.currentHP / hex.unit?.maxHP * 100) + '%'"
+						:class="{'bg-yellow-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.currentHP / hex.unit?.maxHP < 0.25}">
 					</div>
+				</div>
 
-					<!-- Autochess HP Bar -->
-					<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute cursor-not-allowed w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
-						<div class="h-1.5 bg-green-500 rounded-full transition-all"
-							:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'"
-							:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHP < 0.25}">
-						</div>
-						<div class="h-1 bg-blue-400 rounded-full mt-0.5 transition-all"
-							:style="'width: ' + (hex.unit?.actionGauge || 0) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'">
-						</div>
+				<!-- Autochess HP Bar -->
+				<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute cursor-not-allowed w-6 h-2.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
+					<div data-combat-hp class="h-1.5 bg-green-500 rounded-full transition-all"
+						:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'"
+						:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHP < 0.25}">
 					</div>
+					<div data-combat-gauge class="h-1 bg-blue-400 rounded-full mt-0.5 transition-all"
+						:style="'width: ' + (hex.unit?.actionGauge || 0) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'">
+					</div>
+				</div>
 				</div>
 			</div>
 		</div>
