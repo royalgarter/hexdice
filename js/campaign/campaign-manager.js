@@ -891,6 +891,7 @@ const CampaignManager = {
 			rmi: `${map}.gif`,
 			level: levelNum,
 			radius: 5,
+			baseDeploymentLimit: 3,
 			deploymentLimit: 3,
 			player1Dice: [1, 2, 3, 4, 5, 6],
 			enemyDice: enemyDice,

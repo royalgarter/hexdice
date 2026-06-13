@@ -55,13 +55,13 @@
 										<div class="flex w-full gap-2">
 											<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border hover:text-white p-1 group relative">
 												<div class="font-bold">PATH A</div>
-												<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
-												<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
+												<div class="text-sm leading-tight font-bold uppercase" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
+												<div class="text-xs leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
 											</button>
 											<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border hover:text-white p-1 group relative">
 												<div class="font-bold">PATH B</div>
-												<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
-												<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
+												<div class="text-sm leading-tight font-bold uppercase" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
+												<div class="text-xs leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
 											</button>
 										</div>
 									</template>

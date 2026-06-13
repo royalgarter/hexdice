@@ -10,12 +10,12 @@ const EPIC_PRESETS = {
 		radius: R,
 		noReroll: true,
 		dice: [
-		     3,
+		     2,
 		    3,3,
-		   4,6,4,
+		   3,6,3,
 		  2,2,2,2,
-		 4,1,2,1,4,
-		1,1,5,5,1,1
+		 4,1,4,1,4,
+		1,5,1,1,5,1
 		],
 	},
 	'E_15': {
@@ -78,12 +78,12 @@ const TERRAIN_CONFIG = {
 };
 
 const EMPIRES = {
-	'Aztec': 	{ unit: 1, name: `🇲🇽 Jaguar Warrior [D1-${UNIT_STATS[1].name}]`, buff: '+1 Armor' },
-	'Briton': 	{ unit: 2, name: `🇬🇧 Longbow Ranger [D2-${UNIT_STATS[2].name}]`, buff: '+1 Range' },
-	'Mongol': 	{ unit: 3, name: `🇲🇳 Nomadic Raid [D3-${UNIT_STATS[3].name}]`, buff: 'Hit & Run' },
-	'Japan': 	{ unit: 4, name: `🇯🇵 Swift Samurai [D4-${UNIT_STATS[4].name}]`, buff: 'Evasion' },
-	'Roman': 	{ unit: 5, name: `🇮🇹 Testudo March [D5-${UNIT_STATS[5].name}]`, buff: 'Auto-Guard' },
-	'Egypt': 	{ unit: 6, name: `🇪🇬 Pharaoh Reach [D6-${UNIT_STATS[6].name}]`, buff: '+1 Spell Range' },
+	'Aztec': 	{ unit: 1, flag: '🇲🇽', alias: 'Persian 🇮🇷', name: `Taka Warrior [D1-${UNIT_STATS[1].name}]`, buff: '+1 Armor' },
+	'Briton': 	{ unit: 2, flag: '🇬🇧', alias: 'Celtic 🇬🇧', name: `Longbow Ranger [D2-${UNIT_STATS[2].name}]`, buff: '+1 Range' },
+	'Mongol': 	{ unit: 3, flag: '🇲🇳', alias: 'Greek 🇬🇷', name: `Thessalian Wings [D3-${UNIT_STATS[3].name}]`, buff: 'Hit & Run' },
+	'Japan': 	{ unit: 4, flag: '🇯🇵', alias: 'Babylon 🇮🇶', name: `Charging Chariot [D4-${UNIT_STATS[4].name}]`, buff: 'Evasion' },
+	'Roman': 	{ unit: 5, flag: '🇮🇹', alias: 'Roman 🇮🇹', name: `Testudo March [D5-${UNIT_STATS[5].name}]`, buff: 'Auto-Guard' },
+	'Egypt': 	{ unit: 6, flag: '🇪🇬', alias: 'Egyptian 🇪🇬', name: `Pharaoh Reach [D6-${UNIT_STATS[6].name}]`, buff: '+1 Spell Range' },
 };
 
 const EMPIRE_STATIC_DIR_MAP = {
