@@ -220,7 +220,7 @@
 			<div class="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4 text-[10px] md:text-xs font-bold pointer-events-auto">
 				<template x-for="p in players" :key="p.id">
 					<div class="uppercase px-1 border-l-2" :class="p.id === auth.user._key ? 'border-blue-500' : 'border-gray-400'">
-						<span x-text="p.name" class="truncate block"></span>
+						<span x-text="p.name || ('P' + (p.id+1))" class="truncate block"></span>
 						<span class="text-gray-500">Alive: <span x-text="p.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0"></span></span>
 					</div>
 				</template>
