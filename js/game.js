@@ -115,7 +115,7 @@ function alpineHexDiceTacticGame() { return {
 
 	async loadComponent(el, name) {
 		try {
-			const response = await fetch(`/html/${name}.html`);
+			const response = await fetch(`/html/${name}.html?v=${document.querySelector('#hexdice_version')?.content}`);
 			el.innerHTML = await response.text();
 			Alpine.initTree(el);
 			if (name === 'auth') this.renderGoogleButtons();
@@ -719,7 +719,7 @@ function alpineHexDiceTacticGame() { return {
 	/* --- AUTH METHODS --- */
 	async initAuth() {
 		try {
-			const res = await fetch('/api/config');
+			const res = await fetch(`/api/config?v=${document.querySelector('#hexdice_version')?.content}`);
 			const config = await res.json();
 			console.log('/api/config', config);
 			this.auth.clientId = config.GOOGLE_CLIENT_ID;
@@ -1295,7 +1295,7 @@ function alpineHexDiceTacticGame() { return {
 		await this.CampaignManager.init();
 
 		try {
-			const response = await fetch('/assets/sets.json');
+			const response = await fetch(`/assets/sets.json?v=${document.querySelector('#hexdice_version')?.content}`);
 			this.spriteSets = await response.json();
 		} catch (e) {
 			console.error("Failed to load sprite sets", e);
@@ -1479,7 +1479,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (player.selectedSpriteSet?.includes('mix')) {
-			fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json`)
+			fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json?v=${document.querySelector('#hexdice_version')?.content}`)
 				.then(r => r.json())
 				.then(json => {
 					player.selectedSpriteMix = json;

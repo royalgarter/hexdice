@@ -48,7 +48,7 @@
 					<h2 class="font-bold uppercase pb-1">Your Army (<span x-text="players[autochessPlayerIndex]?.dice?.length"></span>) - <span class="text-xs italic text-gray-500">First 6 deployed</span></h2>
 					<div class="grid grid-cols-6 gap-1 text-xs">
 						<template x-for="(unit, index) in players[autochessPlayerIndex]?.dice" :key="unit.id">
-							<div class="border text-center p-1 cursor-pointer transition-all hover:shadow-sm"
+							<div class="border text-center p-1 cursor-pointer transition-all"
 								 :class="Autochess.state.selectedUnitId === unit.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 z-10' : (index < 6 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white')"
 								 @click="clickAutochessUnit(unit)">
 								<div class="flex justify-between items-start">
@@ -161,12 +161,12 @@
 									<template x-if="players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.veteranLevel >= (tier === 'tier1' ? 1 : tier === 'tier2' ? 2 : 3) && !players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.perks?.[tier]">
 										<div class="space-y-2 py-2">
 											<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'A')"
-													class="w-full text-left p-2 border rounded bg-white transition-all shadow-sm group">
+													class="w-full text-left p-2 border rounded bg-white transition-all group">
 												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.name"></div>
 												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['A']?.desc"></div>
 											</button>
 											<button @click="selectAutochessUnitSkill(Autochess.state.selectedUnitId, tier, 'B')"
-													class="w-full text-left p-2 border rounded bg-white transition-all shadow-sm group">
+													class="w-full text-left p-2 border rounded bg-white transition-all group">
 												<div class="text-xs font-bold uppercase  group-hover:text-white" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.name"></div>
 												<div class="text-sm text-gray-500 group-hover: mt-0.5 leading-tight" x-text="Autochess.PERK_DESCRIPTIONS[players[autochessPlayerIndex]?.dice?.find(u => u.id === Autochess.state.selectedUnitId)?.value]?.[tier]?.['B']?.desc"></div>
 											</button>

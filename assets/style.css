@@ -26,6 +26,7 @@
 	background-color: #33333366;   /* Control opacity */
 	background-repeat: no-repeat;
 	background-position: center;
+	contain: layout style paint;   /* Isolate each hex — changes inside don't trigger re-layout on neighbors */
 }
 .hexagon::before {
 	content: "";
