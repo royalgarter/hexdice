@@ -34,6 +34,8 @@ function alpineHexDiceTacticGame() { return {
 		lastRecvSeq: 0,
 		turnTimer: 60,
 		timerInterval: null,
+		_stateApplyPending: false,
+		_queuedState: null,
 	},
 	rules: {
 		dicePerPlayer: 12,
@@ -959,7 +961,17 @@ function alpineHexDiceTacticGame() { return {
 				if (topic.endsWith('/status')) {
 					this.handleStatusMessage(payload);
 				} else if (topic.endsWith('/state')) {
-					this.handleAuthoritativeState(payload);
+					// Debounce: queue state, apply latest on next microtask
+					this.online._queuedState = payload;
+					if (!this.online._stateApplyPending) {
+						this.online._stateApplyPending = true;
+						queueMicrotask(() => {
+							this.online._stateApplyPending = false;
+							const latest = this.online._queuedState;
+							this.online._queuedState = null;
+							if (latest) this.handleAuthoritativeState(latest);
+						});
+					}
 				} else if (topic.endsWith('/logs')) {
 					this.addLog(payload.message);
 				} else {

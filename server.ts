@@ -352,16 +352,28 @@ function broadcastState(roomId: string, game: any, full = false) {
 			terrainType: h.terrainType
 		}));
 	} else {
-		// Light update for COMBAT: Only send dynamic unit data
-		state.units = game.players.flatMap((p: any) => p.dice.map((d: any) => ({
-			id: d.id,
-			hexId: d.hexId,
-			hp: d.hp,
-			actionGauge: d.actionGauge,
-			isDeath: d.isDeath
-		})));
+		// Delta update for COMBAT: Only send units whose state changed since last broadcast
+		const dirty: any[] = [];
+		game.players.forEach((p: any) => p.dice.forEach((d: any) => {
+			const prevHp = d._bcastHp;
+			const prevGauge = d._bcastGauge;
+			const prevDeath = d._bcastDeath;
+			const prevHex = d._bcastHexId;
+			if (d.hp !== prevHp || d.actionGauge !== prevGauge || d.isDeath !== prevDeath || d.hexId !== prevHex) {
+				dirty.push({ id: d.id, hexId: d.hexId, hp: d.hp, actionGauge: d.actionGauge, isDeath: d.isDeath });
+				d._bcastHp = d.hp;
+				d._bcastGauge = d.actionGauge;
+				d._bcastDeath = d.isDeath;
+				d._bcastHexId = d.hexId;
+			}
+		}));
+		if (dirty.length > 0) state.units = dirty;
 	}
-	mqttClient.publish(topic, JSON.stringify(state));
+	// Skip publish if only autochess state with no unit changes
+	if (!full && game.Autochess.state.phase === 'COMBAT' && !state.units) return;
+	// qos:0 for combat streaming (loss-tolerant, next tick overwrites), qos:1 for critical state
+	const qos = (!full && game.Autochess.state.phase === 'COMBAT') ? 0 : 1;
+	mqttClient.publish(topic, JSON.stringify(state), { qos });
 }
 
 function startCombatStreaming(roomId: string, game: any) {
@@ -369,7 +381,7 @@ function startCombatStreaming(roomId: string, game: any) {
 	const originalAddLog = game.addLog.bind(game);
 	game.addLog = (msg: string) => {
 		originalAddLog(msg);
-		mqttClient.publish(`hexdice/rooms/${roomId}/logs`, JSON.stringify({ message: msg }));
+		mqttClient.publish(`hexdice/rooms/${roomId}/logs`, JSON.stringify({ message: msg }), { qos: 0 });
 	};
 
 	// Use a throttled broadcast during simulation
