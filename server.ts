@@ -435,9 +435,13 @@ function startCombatStreaming(roomId: string, game: any) {
 const getAppVersion = async () => {
 	try {
 		const files = [];
-		for await (const entry of Deno.readDir(".")) {
-			if (entry.isFile && (entry.name.endsWith(".js") || entry.name.endsWith(".html") || entry.name.endsWith(".css"))) {
-				files.push(entry.name);
+
+		const DIRS = [".", "./html", "./js"]
+		for (const dir of DIRS) {
+			for await (const entry of Deno.readDir(dir)) {
+				if (entry.isFile && (entry.name.endsWith(".js") || entry.name.endsWith(".html") || entry.name.endsWith(".css"))) {
+					files.push(dir + '/' + entry.name);
+				}
 			}
 		}
 		files.sort();
