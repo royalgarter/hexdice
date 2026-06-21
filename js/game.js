@@ -104,6 +104,8 @@ function alpineHexDiceTacticGame() { return {
 	},
 	showUnitInfo: false,
 	showCamp: false,
+	showStoryIntro: false,
+	showStoryOutro: false,
 	preset: null,
 	spriteSets: [],
 	selectedSpriteSet: '', // DEPRECATED: use player.selectedSpriteSet instead
@@ -1375,6 +1377,10 @@ function alpineHexDiceTacticGame() { return {
 
 		// Crucible Scaling: Every 10 levels, enemy deployment limit increases by 1
 		this.deploymentLimit = this.CampaignManager.getDeploymentLimit(campaignData?.deploymentLimit || opts?.deploymentLimit);
+
+		// Show story intro at start of campaign levels
+		this.showStoryIntro = !!(this.isCampaign && campaignData?.story);
+		this.showStoryOutro = false;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];		if (preset) {
 			this.rules.dicePerPlayer = preset.dice.length;
@@ -5292,6 +5298,9 @@ function alpineHexDiceTacticGame() { return {
 
 		if (this.isCampaign) {
 			this.CampaignManager.handleGameOver(this, winnerPlayerIndex);
+			if (winnerPlayerIndex === 0 && this.campaignData?.story) {
+				this.showStoryOutro = true;
+			}
 		}
 
 		if (winnerPlayerIndex === -1) { // Draw
