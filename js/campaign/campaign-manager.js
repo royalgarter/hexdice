@@ -93,7 +93,7 @@ const CampaignManager = {
 			},
 			tier3: {
 				A: { name: "Sniper", desc: "Base Range +1. If it doesn't move before attacking, deals +30 damage." },
-				B: { name: "Ranger", desc: "Run & Gun: Can move 1 step, shoot, and move 1 step again." }
+				B: { name: "Ranger", desc: "Run & Gun: Can move 1 step, shoot, and move 1 step again." } // TODO: implement — requires split-move action sequence not yet supported by the engine
 			}
 		},
 		3: {
@@ -238,10 +238,13 @@ const CampaignManager = {
 				});
 				const data = await res.json();
 				if (data.value) {
-					// Merge server state into local state
-					// We might want more sophisticated merging, but for now server wins
-					Object.assign(this.state, data.value);
-					localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+					// Only apply server state if it's further ahead than local progress
+					const serverLevel = data.value.currentLevel || 1;
+					const localLevel = this.state.currentLevel || 1;
+					if (serverLevel >= localLevel) {
+						Object.assign(this.state, data.value);
+						localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+					}
 				}
 			}
 		} catch (e) {
@@ -426,6 +429,22 @@ const CampaignManager = {
 		// If the user buys an upgrade during camp, the current game session needs the updated stats.
 		// Wait, the current game session reloads units only when a new game or level starts.
 		
+		// Knight Tier 2 [B] Vanguard: attacker gets -10 ATK if adjacent to an enemy Knight with this perk (and target is not that Knight)
+		const attackerHex = gameInstance.getHex(attacker.hexId, state);
+		if (attackerHex) {
+			const vanguardDebuff = AXES.some(([dq, dr]) => {
+				const adjHex = gameInstance.getHexByQR(attackerHex.q + dq, attackerHex.r + dr, state);
+				if (!adjHex) return false;
+				const adjUnit = gameInstance.getUnitOnHex(adjHex.id, state);
+				return adjUnit && adjUnit.value === 4 && adjUnit.playerId !== attacker.playerId
+					&& adjUnit.hexId !== defender.hexId && gameInstance.hasPerk(adjUnit, 'tier2', 'B');
+			});
+			if (vanguardDebuff) {
+				attackMod -= 10;
+				gameInstance.addLog(`🛡 Vanguard! ${gameInstance.logUnit(attacker)} -10 ATK.`);
+			}
+		}
+
 		let defenderDef = gameInstance.calcDefenderEffectiveArmor(defender.hexId, state);
 
 		// Archer Tier 2 [A] Piercing Arrow
@@ -747,10 +766,15 @@ const CampaignManager = {
 			game.addLog(`💨 Evasion! ${game.logUnit(unit)} takes half damage from ranged attack.`);
 		}
 
+		const wasAboveHalf = unit.currentHP > unit.maxHP / 2;
 		unit.currentHP -= damage;
 		if (unit.currentHP <= 0) {
 			unit.currentHP = 0;
 			game.removeUnit(hexId, state);
+		} else if (!state && wasAboveHalf && unit.currentHP <= unit.maxHP / 2 && !unit._halfHpDialogueFired && unit.playerId !== 0) {
+			unit._halfHpDialogueFired = true;
+			const levelNum = game.campaignData?.level || this.state.currentLevel;
+			game.showStoryDialogue(levelNum, 'half_hp');
 		}
 
 		// Queue game renderer update for campaign mode
@@ -775,13 +799,6 @@ const CampaignManager = {
 
 	/**
 	 * Check if a player index should be AI based on current campaign state.
-	 */
-	isAIPlayer(playerIndex, opts, campaignData) {
-		return playerIndex > 0 && (opts?.isCampaign || this.state.isCampaignActive || campaignData?.config?.p2AI);
-	},
-
-	/**
-	 * Check if a player needs an initial roll.
 	 */
 	isAIPlayer(playerIndex, opts, campaignData) {
 		return playerIndex > 0 && (opts?.isCampaign || this.state.isCampaignActive || campaignData?.config?.p2AI);
@@ -842,6 +859,7 @@ const CampaignManager = {
 	},
 
 	applyUpgradeToActiveUnits(classId) {
+		// TODO: replace Alpine.$data(body) with a stored game reference once one exists globally
 		const game = Alpine.$data(document.querySelector('body'));
 		if (!game || !game.players) return;
 		
@@ -967,7 +985,9 @@ const CampaignManager = {
 				arc: StoryEngine.getArcName(levelNumInt),
 				enemyFlavor: StoryEngine.getEnemyFlavor(levelNumInt),
 				isBoss: isBoss,
-				boss: StoryEngine.getBossForLevel(levelNumInt)
+				boss: StoryEngine.getBossForLevel(levelNumInt),
+				npcDialogue: StoryEngine.getNPCDialogue(levelNumInt),
+				rewardHint: StoryEngine.getRewardHint(levelNumInt)
 			}
 		}
 	}

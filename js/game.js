@@ -106,6 +106,9 @@ function alpineHexDiceTacticGame() { return {
 	showCamp: false,
 	showStoryIntro: false,
 	showStoryOutro: false,
+	showWorldMap: false,
+	storyToast: null, // { speaker, text } — mid-battle dialogue notification
+	_storyToastTimer: null,
 	preset: null,
 	spriteSets: [],
 	selectedSpriteSet: '', // DEPRECATED: use player.selectedSpriteSet instead
@@ -1381,6 +1384,8 @@ function alpineHexDiceTacticGame() { return {
 		// Show story intro at start of campaign levels
 		this.showStoryIntro = !!(this.isCampaign && campaignData?.story);
 		this.showStoryOutro = false;
+		this.storyToast = null;
+		this._storyFirstBloodFired = false;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];		if (preset) {
 			this.rules.dicePerPlayer = preset.dice.length;
@@ -1457,7 +1462,12 @@ function alpineHexDiceTacticGame() { return {
 
 		this.determineBaseLocations(radius);
 		this.phase = (this.isCampaign && !!campaignData) ? 'SETUP_DEPLOY' : 'SETUP_ROLL';
-		if (this.phase === 'SETUP_DEPLOY') this.refreshValidDeploymentHexes();
+		if (this.phase === 'SETUP_DEPLOY') {
+			this.refreshValidDeploymentHexes();
+			if (campaignData?.story?.isBoss) {
+				setTimeout(() => this.showStoryDialogue(campaignData.level, 'boss_entry'), 5000);
+			}
+		}
 		if (this.isCampaign && campaignData) {
 			this.CampaignManager.autoDeployEnemy(this, campaignData);
 		}
@@ -5033,6 +5043,11 @@ function alpineHexDiceTacticGame() { return {
 			if (this.gameRenderer?._hexCache.has(hexId)) {
 				this.gameRenderer.queueUpdate(hexId, 0, unit.maxHP || 1, 0, 0, unit.attack, unit.veteranLevel);
 			}
+			// Mid-battle story: first_blood (fires once per battle on first enemy kill)
+			if (this.isCampaign && !this._storyFirstBloodFired) {
+				this._storyFirstBloodFired = true;
+				this.showStoryDialogue(this.campaignData?.level || this.CampaignManager.state.currentLevel, 'first_blood');
+			}
 		}
 		
 		const targetPlayer = (state || this).players[unit.playerId];
@@ -5279,6 +5294,15 @@ function alpineHexDiceTacticGame() { return {
 			this.gameOver(-1, "All players eliminated! It's a draw!");
 		}
 	},
+	showStoryDialogue(levelNum, type) {
+		if (!this.isCampaign) return;
+		const d = StoryEngine.getDialogue(levelNum, type);
+		if (!d) return;
+		this.storyToast = d;
+		clearTimeout(this._storyToastTimer);
+		this._storyToastTimer = setTimeout(() => { this.storyToast = null; }, 4000);
+	},
+
 	gameOver(winnerPlayerIndex, message) {
 		this.phase = 'GAME_OVER';
 		this.winnerPlayerId = winnerPlayerIndex;
@@ -5297,8 +5321,10 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (this.isCampaign) {
+			const levelBeforeAdvance = this.CampaignManager.state.currentLevel;
 			this.CampaignManager.handleGameOver(this, winnerPlayerIndex);
 			if (winnerPlayerIndex === 0 && this.campaignData?.story) {
+				this.showStoryDialogue(levelBeforeAdvance, 'victory');
 				this.showStoryOutro = true;
 			}
 		}

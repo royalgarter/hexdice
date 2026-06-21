@@ -54,7 +54,13 @@
         "The capital's guards thank you. The path south lies open."
       ],
       "enemyFlavor": "wild creatures driven from their habitats",
-      "npc": "Kafra Guide"
+      "npc": "Kafra Guide",
+      "npcDialogue": [
+        "The road ahead is dangerous. Rest here, and take what supplies you can.",
+        "I've seen your kind before — brave enough to march into the unknown. Try not to die.",
+        "The Kafra Corporation covers these roads. If you see our waypoints, you're still on the right path."
+      ],
+      "rewardHint": "The grateful merchants offer a Pegasus Rune for your trouble."
     },
     {
       "id": "payon_forest",
@@ -70,7 +76,13 @@
         "The forest grows quiet, for now. The trail leads into the desert."
       ],
       "enemyFlavor": "corrupted forest spirits and enraged beasts",
-      "npc": "Archer Guildmaster"
+      "npc": "Archer Guildmaster",
+      "npcDialogue": [
+        "The forest has a memory. Whatever entered it recently — it does not belong.",
+        "Archers speak in whispers here. The trees have ears.",
+        "Return with proof of your deeds. The Guild does not reward words."
+      ],
+      "rewardHint": "The Archer Guildmaster gifts you an Aegis Rune — a shield for the road ahead."
     },
     {
       "id": "morroc_desert",
@@ -86,7 +98,13 @@
         "The desert yields its secrets reluctantly. But you are not done with it yet."
       ],
       "enemyFlavor": "desert monstrosities and ancient undead",
-      "npc": "Desert Guide"
+      "npc": "Desert Guide",
+      "npcDialogue": [
+        "The sands hide more than treasure. They hide what those treasures cost.",
+        "Don't drink the water near the ruins. It remembers what bled into it.",
+        "No map survives the desert. Only instinct does."
+      ],
+      "rewardHint": "A desert relic trader leaves behind a Forge Rune — tempered by the sands."
     },
     {
       "id": "geffen_plains",
@@ -102,7 +120,13 @@
         "Geffen's gratitude is measured in knowledge. The path forward is clearer now."
       ],
       "enemyFlavor": "magically mutated creatures and arcane anomalies",
-      "npc": "Wizard Guildmaster"
+      "npc": "Wizard Guildmaster",
+      "npcDialogue": [
+        "Magic in excess becomes a cancer. We learned that the hard way.",
+        "Every spell leaves a scar on reality. We've made quite a few scars here.",
+        "Geffen's towers were built to channel power, not contain it. There's a difference."
+      ],
+      "rewardHint": "The Academy rewards competence with an Aegis Rune, calibrated to absorb magical impact."
     },
     {
       "id": "payon_frontier",
@@ -118,7 +142,13 @@
         "The frontier holds, but for how long?"
       ],
       "enemyFlavor": "territorial predators and rogue hunters",
-      "npc": "Frontier Scout"
+      "npc": "Frontier Scout",
+      "npcDialogue": [
+        "The frontier doesn't ask if you're ready. It just starts.",
+        "I've been scouting these roads for a decade. Things are worse than I've ever seen.",
+        "Stay off the low ground after dark. Trust me on this."
+      ],
+      "rewardHint": "The frontier settlement pools their savings for a Pegasus Rune — swift passage for a swift hero."
     },
     {
       "id": "mjolnir_pass",
@@ -133,7 +163,13 @@
         "The pass is clear, but the mountain's secrets remain buried."
       ],
       "enemyFlavor": "mountain predators and cave-dwelling horrors",
-      "npc": "Mountain Guide"
+      "npc": "Mountain Guide",
+      "npcDialogue": [
+        "Mjolnir breaks everyone eventually. The question is whether it breaks you before or after you're through.",
+        "The dwarves who came here looking for ore found something they couldn't put back.",
+        "Don't stop moving. The cold doesn't take you quickly, but it takes you completely."
+      ],
+      "rewardHint": "The dwarven survivors gift you a Forge Rune — forged deep in these same mountains."
     },
     {
       "id": "southern_reaches",
@@ -149,7 +185,13 @@
         "The south grows darker. But you push onward."
       ],
       "enemyFlavor": "plague-ridden creatures and desperate bandits",
-      "npc": "Traveling Merchant"
+      "npc": "Traveling Merchant",
+      "npcDialogue": [
+        "I've traded goods from Prontera to Comodo. This road? I won't walk it anymore.",
+        "The villages went quiet in order. First Orendio, then Kokomo. Something moves south to north.",
+        "Pay me and I'll tell you what I know. Don't, and you'll find out anyway — the hard way."
+      ],
+      "rewardHint": "The merchant, grateful for safe passage, parts with a Pegasus Rune from his last delivery."
     },
     {
       "id": "deep_desert",
@@ -165,7 +207,13 @@
         "The desert claims its secrets back. But you have seen what lies beneath."
       ],
       "enemyFlavor": "awakened mummies and sand-elemental beings",
-      "npc": "Desert Shaman"
+      "npc": "Desert Shaman",
+      "npcDialogue": [
+        "The desert remembers every tomb, every prayer, every drop of blood shed here. It does not forgive.",
+        "The king who sleeps in these sands chose that sleep. That is what makes him dangerous.",
+        "I can read the dunes. They say something is coming. Something that was never meant to rise."
+      ],
+      "rewardHint": "The desert shaman bestows an Aegis Rune — ancient protection against forces that refuse to die."
     },
     {
       "id": "geffen_borderlands",
@@ -180,7 +228,13 @@
         "The borderlands fall silent. The sea beckons."
       ],
       "enemyFlavor": "arcane aberrations and territorial beasts",
-      "npc": "Border Warden"
+      "npc": "Border Warden",
+      "npcDialogue": [
+        "My post is six leagues from Geffen. I can still hear the explosions.",
+        "The magic dead zone is expanding. Three inches a day. I've measured it.",
+        "Cross the border at dawn. Whatever hunts here doesn't like the light."
+      ],
+      "rewardHint": "The warden presses a Forge Rune into your hand — confiscated from a smuggler, now yours."
     },
     {
       "id": "brasilis_coast",
@@ -195,7 +249,13 @@
         "The tides carry you onward. Yuno's spires pierce the clouds to the east."
       ],
       "enemyFlavor": "salt-crusted pirates and deep-sea horrors",
-      "npc": "Coastal Warden"
+      "npc": "Coastal Warden",
+      "npcDialogue": [
+        "Brasilis is paradise — which means anything that disturbs it is especially wrong.",
+        "The ruins offshore predate the city. We don't know who built them. We're not sure we want to.",
+        "The tide brings things in at night. Whatever it is, it doesn't float."
+      ],
+      "rewardHint": "Coastal traders reward your deeds with a Pegasus Rune — for those who need to move fast on water or land."
     },
     {
       "id": "yuno_heights",
@@ -211,7 +271,13 @@
         "Yuno's secrets remain locked in its floating spires. Your descent into Rachel begins."
       ],
       "enemyFlavor": "alchemical constructs and rogue scholars",
-      "npc": "High Scholar"
+      "npc": "High Scholar",
+      "npcDialogue": [
+        "Forbidden knowledge isn't forbidden because it's useless. It's forbidden because it works.",
+        "The thief who stole from our archives wasn't a thief. They knew exactly what they were looking for.",
+        "Yuno floats because of a principle we discovered, then immediately classified. Some things shouldn't be weaponized."
+      ],
+      "rewardHint": "The Academy archives yield an Aegis Rune — once assigned to a scholar who never returned."
     },
     {
       "id": "holy_lands",
@@ -228,7 +294,13 @@
         "The holy lands breathe easier. But the corruption has not been stopped — only delayed."
       ],
       "enemyFlavor": "fanatical heretics, vampire nobles, and aquatic predators",
-      "npc": "Pilgrim Guide"
+      "npc": "Pilgrim Guide",
+      "npcDialogue": [
+        "Faith is a weapon here. The heretics have sharpened theirs.",
+        "Rachel Sanctuary is holy ground — but holiness doesn't stop a blade.",
+        "The Veins court smiles and smiles. I've learned not to smile back."
+      ],
+      "rewardHint": "The Pilgrim Guide offers a Forge Rune — blessed by the Sanctuary before it was besieged."
     },
     {
       "id": "dicastes_plains",
@@ -243,7 +315,13 @@
         "The plains fall silent. You press onward through ancient lands."
       ],
       "enemyFlavor": "prehistoric beasts and territorial megafauna",
-      "npc": "Dicastes Chieftain"
+      "npc": "Dicastes Chieftain",
+      "npcDialogue": [
+        "The great beasts have hunted these plains since before your civilization existed. Respect that.",
+        "Something drove the herds mad. Even apex predators don't act like this without cause.",
+        "We honor the land by fighting only what the land cannot handle itself."
+      ],
+      "rewardHint": "The chieftain rewards you with a Pegasus Rune — earned by those swift enough to survive the plains."
     },
     {
       "id": "lasagna_village",
@@ -258,7 +336,13 @@
         "Lasagna breathes easier — but the earth remembers what sleeps below."
       ],
       "enemyFlavor": "earth elementals and subterranean predators",
-      "npc": "Village Elder"
+      "npc": "Village Elder",
+      "npcDialogue": [
+        "We have lived above these gods for generations. We know their moods. This is not a mood — this is anger.",
+        "The temple below is not a ruin. It was deliberately sealed. Someone has opened it.",
+        "Leave offerings before you descend. The earth-gods are old, but they notice."
+      ],
+      "rewardHint": "The elder offers a Forge Rune — pulled from the sealed temple's antechamber decades ago."
     },
     {
       "id": "manuk_jungle",
@@ -274,7 +358,13 @@
         "The jungle reclaims the ruins. But you carry their memory."
       ],
       "enemyFlavor": "ancient war machines and awakened guardians",
-      "npc": "Ruins Scholar"
+      "npc": "Ruins Scholar",
+      "npcDialogue": [
+        "The Manuk didn't fall to war. They fell to their own creations. Sound familiar?",
+        "Every guardian still running has a kill order that was never rescinded. We're all still valid targets.",
+        "I've translated enough of their script to know they were proud. I've seen enough of their ruins to know pride doesn't protect you."
+      ],
+      "rewardHint": "The scholar locates an Aegis Rune among the ruins — Manuk tech, adapted for modern use."
     },
     {
       "id": "lasagna_canyon",
@@ -289,7 +379,13 @@
         "The canyon falls quiet. The path forward leads to industry and fire."
       ],
       "enemyFlavor": "wind spirits and territorial raptors",
-      "npc": "Canyon Guide"
+      "npc": "Canyon Guide",
+      "npcDialogue": [
+        "The canyon echoes everything. You'll hear the enemy before you see them.",
+        "Those carvings? The people who made them evacuated. They knew what was coming.",
+        "The whispers aren't spirits. It's air pressure through old tunnels. Probably."
+      ],
+      "rewardHint": "A hidden cache in the canyon walls yields a Pegasus Rune, left by a traveler who didn't make it through."
     },
     {
       "id": "einbroch_outskirts",
@@ -305,7 +401,13 @@
         "The outskirts are secured. The industrial heart of Einbroch awaits."
       ],
       "enemyFlavor": "industrial monstrosities and chemical abominations",
-      "npc": "Einbroch Resistance Leader"
+      "npc": "Einbroch Resistance Leader",
+      "npcDialogue": [
+        "We tried to warn the city council three years ago. They called us alarmists.",
+        "The factories run at night now. They don't want you to see what they're making.",
+        "Every resistance cell we set up gets found within a week. There's an informant — or something worse."
+      ],
+      "rewardHint": "The resistance leader hands over a Forge Rune — stolen from the factory's own stores."
     },
     {
       "id": "einbroch_industrial",
@@ -322,7 +424,13 @@
         "Einbroch's gears grind on. But you have slowed the machine."
       ],
       "enemyFlavor": "vat-grown horrors and demonic soldiers",
-      "npc": "Factory Defector"
+      "npc": "Factory Defector",
+      "npcDialogue": [
+        "I built some of what they're using against you. I'm sorry. I didn't know.",
+        "The vats run on something they won't tell us the name of. The workers call it 'the feed.'",
+        "The Gates of Hell aren't a metaphor. I've seen them. The smell doesn't leave you."
+      ],
+      "rewardHint": "The defector provides an Aegis Rune — factory-grade protection, originally for their own soldiers."
     },
     {
       "id": "odin_temple",
@@ -337,7 +445,13 @@
         "The temple falls silent. The gods are watching."
       ],
       "enemyFlavor": "divine constructs and fallen Valkyries",
-      "npc": "Odin Priestess"
+      "npc": "Odin Priestess",
+      "npcDialogue": [
+        "The All-Father does not intervene. He observes. Whether that is mercy or cruelty, I have never decided.",
+        "Valkyries are not soldiers. They are judges. Whatever corrupted them changed what they judge you worthy of.",
+        "The trial ahead was designed to kill heroes. That is the point. Only the unkillable deserve what lies beyond."
+      ],
+      "rewardHint": "The Odin Priestess grants a Forge Rune — sanctified in the All-Father's flame."
     },
     {
       "id": "einbroch_wastes",
@@ -353,7 +467,13 @@
         "The wasteland stretches behind you. Death lies ahead."
       ],
       "enemyFlavor": "toxic mutants and industrial undead",
-      "npc": "Wasteland Guide"
+      "npc": "Wasteland Guide",
+      "npcDialogue": [
+        "Don't breathe the yellow air. The grey air is fine. Mostly.",
+        "People survive out here. You'd be surprised what humans adapt to, given no choice.",
+        "The Genesis Project's waste has been dumping here for decades. Everything that lives here was changed by it."
+      ],
+      "rewardHint": "A wasteland survivor trades a Pegasus Rune for safe passage — fastest legs in a dead land."
     },
     {
       "id": "nifflheim",
@@ -369,7 +489,13 @@
         "Death is patient. But you are not done living yet."
       ],
       "enemyFlavor": "undead legions and soul-devouring wraiths",
-      "npc": "Death's Gatekeeper"
+      "npc": "Death's Gatekeeper",
+      "npcDialogue": [
+        "I have held this gate since before your civilization had a name for death. Be brief.",
+        "The dead do not rest here. Something is keeping them awake.",
+        "You carry the living world on your back. Do not let that weight make you slow."
+      ],
+      "rewardHint": "The Gatekeeper permits one relic to pass back with you — an Aegis Rune, pulled from a fallen Valkyrie."
     },
     {
       "id": "biolabs",
@@ -386,7 +512,13 @@
         "The facility falls silent. But was the Genesis Project truly stopped?"
       ],
       "enemyFlavor": "genetic abominations and failed experiments",
-      "npc": "Survivor Scientist"
+      "npc": "Survivor Scientist",
+      "npcDialogue": [
+        "I've been in here for three years. I've run out of things to be afraid of.",
+        "Genesis was never meant to be a weapon. It was meant to be perfect life. They made it both.",
+        "If you shut down the Genesis Project, you'll save thousands. If you don't, you'll lose millions. Move fast."
+      ],
+      "rewardHint": "The scientist's last recorded notes reference a Forge Rune — the only weapon that can scratch what's ahead."
     }
   ],
   "levels": {
@@ -522,5 +654,37 @@
       "intro": "At the heart of the Biolabs, the Genesis Project awaits. It is not a monster — it is the template from which all monsters were made. The origin of the corruption. The end of your journey.",
       "outro": "Genesis falls. The Biolabs fall silent. The corruption's source is severed — but the scars remain."
     }
-  }
+  },
+  "dialogue": [
+    { "level": 5,  "type": "boss_entry",  "speaker": "Arcane Anomaly", "text": "You cannot kill a spell. You can only outlast it." },
+    { "level": 5,  "type": "half_hp",     "speaker": "Wizard Guildmaster", "text": "Hold your ground! The anomaly feeds on panic!" },
+    { "level": 10, "type": "boss_entry",  "speaker": "Maya", "text": "..." },
+    { "level": 10, "type": "first_blood", "speaker": "Mountain Guide", "text": "Don't celebrate yet. That thing has a queen." },
+    { "level": 10, "type": "half_hp",     "speaker": "Mountain Guide", "text": "Its shell is cracking! Push through!" },
+    { "level": 15, "type": "boss_entry",  "speaker": "Orc Hero", "text": "Small ones come to die on the peak. The mountain approves." },
+    { "level": 15, "type": "half_hp",     "speaker": "Orc Hero", "text": "You bleed. Good. Now we are even." },
+    { "level": 20, "type": "boss_entry",  "speaker": "Pharaoh", "text": "Millennia of patience. You are not the first to disturb my rest. You will be the last." },
+    { "level": 20, "type": "first_blood", "speaker": "Desert Shaman", "text": "The sand remembers every wound. Make it remember yours." },
+    { "level": 20, "type": "half_hp",     "speaker": "Pharaoh", "text": "You cannot kill what already rules over death." },
+    { "level": 25, "type": "boss_entry",  "speaker": "Corrupted Priestess", "text": "I prayed for guidance. The corruption answered. Who are you to say it was wrong?" },
+    { "level": 25, "type": "half_hp",     "speaker": "Pilgrim Guide", "text": "The sanctuary's bells are silent. We must end this quickly." },
+    { "level": 30, "type": "boss_entry",  "speaker": "Moonlight Flower", "text": "What you fear most is already here. I simply make it visible." },
+    { "level": 30, "type": "first_blood", "speaker": "Pilgrim Guide", "text": "Don't look at its petals. Focus on the roots." },
+    { "level": 35, "type": "boss_entry",  "speaker": "Elemental Titan", "text": "..." },
+    { "level": 35, "type": "half_hp",     "speaker": "Ruins Scholar", "text": "The elemental matrix is destabilizing — our attacks are working!" },
+    { "level": 40, "type": "boss_entry",  "speaker": "Earth Abomination", "text": "GGRRAAHHH" },
+    { "level": 40, "type": "first_blood", "speaker": "Einbroch Resistance Leader", "text": "Good hit. Now don't stop — it regenerates." },
+    { "level": 40, "type": "half_hp",     "speaker": "Einbroch Resistance Leader", "text": "It's slowing down. The earth can't sustain it above ground!" },
+    { "level": 45, "type": "boss_entry",  "speaker": "Chemical Behemoth", "text": "Subjects detected. Initiating containment protocol." },
+    { "level": 45, "type": "half_hp",     "speaker": "Factory Defector", "text": "The toxin sacs are rupturing — don't let it spray you!" },
+    { "level": 50, "type": "boss_entry",  "speaker": "Valkyrie Randgris", "text": "I judged ten thousand warriors. I found them all unworthy. I judge you now." },
+    { "level": 50, "type": "first_blood", "speaker": "Odin Priestess", "text": "She still fights like a Valkyrie — even corrupted. We must match her discipline." },
+    { "level": 50, "type": "half_hp",     "speaker": "Valkyrie Randgris", "text": "...Perhaps I misjudged." },
+    { "level": 55, "type": "boss_entry",  "speaker": "Ifrit", "text": "Every fire that ever burned remembers my name." },
+    { "level": 55, "type": "half_hp",     "speaker": "Ifrit", "text": "Impossible. The bound one cannot be hurt!" },
+    { "level": 58, "type": "boss_entry",  "speaker": "Genesis", "text": "You reached the end. Most don't. I have been waiting. I always wait." },
+    { "level": 58, "type": "first_blood", "speaker": "Survivor Scientist", "text": "It's actually bleeding. I didn't think that was possible." },
+    { "level": 58, "type": "half_hp",     "speaker": "Genesis", "text": "Fascinating. You exceed the projected parameters." },
+    { "level": 58, "type": "victory",     "speaker": "Survivor Scientist", "text": "It's over. After everything... it's over." }
+  ]
 }

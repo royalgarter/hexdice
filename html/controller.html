@@ -45,7 +45,10 @@
 				<div class="text-xl font-bold mt-1" x-text="campaignData?.story?.title"></div>
 			</div>
 			<div class="text-sm leading-relaxed whitespace-pre-line mb-4" x-text="campaignData?.story?.outro"></div>
-			<div class="border-t pt-3 text-center text-xs opacity-60 italic">
+			<template x-if="campaignData?.story?.rewardHint">
+				<div class="border-t pt-3 mt-3 text-xs opacity-70 italic text-center" x-text="campaignData?.story?.rewardHint"></div>
+			</template>
+			<div class="mt-2 text-center text-xs opacity-40 italic">
 				Proceed to the Camp screen to spend Devotion Points.
 			</div>
 			<button @click="showStoryOutro = false" class="mt-3 w-full border py-2 font-bold cursor-pointer hover:bg-black hover:text-white transition-colors">
@@ -53,6 +56,14 @@
 			</button>
 		</div>
 	</div>
+
+	<!-- Mid-Battle Story Toast -->
+	<template x-if="isCampaign && storyToast">
+		<div class="fixed bottom-16 right-2 z-20 max-w-xs bg-black/90 border border-yellow-800 p-3 text-sm pointer-events-none">
+			<div class="text-yellow-400 font-bold text-xs uppercase tracking-wide mb-1" x-text="storyToast?.speaker || ''"></div>
+			<div class="text-white leading-snug italic" x-text="storyToast?.text || ''"></div>
+		</div>
+	</template>
 
 	<!-- Quest Log HUD -->
 	<div x-show="isCampaign && campaignData?.story && !phase.startsWith('SETUP') && phase !== 'GAME_OVER'"

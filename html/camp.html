@@ -2,11 +2,22 @@
 	<div class="border w-full max-w-4xl overflow-y-auto p-2 relative bg-hardwood" style="max-height: 90vh;">
 		<button @click="showCamp = false" class="absolute top-4 right-4 text-lg font-bold cursor-pointer">✕</button>
 
-		<div class="text-center mb-2">
+		<div class="text-center mb-2 flex items-center justify-center gap-4">
 			<div class="mt-4 inline-block px-4 py-2 font-bold">
 				POINTS: <span x-text="CampaignManager.state.devotionPoints" class="text-lg text-red-700"></span>
 			</div>
+			<button @click="showWorldMap = true; showCamp = false" class="mt-4 border px-3 py-1.5 text-xs font-bold uppercase tracking-wide cursor-pointer hover:bg-black hover:text-white transition-colors">
+				World Map
+			</button>
 		</div>
+
+		<!-- NPC Dialogue -->
+		<template x-if="campaignData?.story?.npcDialogue">
+			<div class="mb-3 p-3 border-l-4 border-yellow-800 bg-black/10">
+				<div class="text-xs uppercase tracking-wide opacity-50 mb-1" x-text="campaignData?.story?.npcDialogue?.speaker + ' says:'"></div>
+				<div class="text-sm italic leading-relaxed" x-text="campaignData?.story?.npcDialogue?.text"></div>
+			</div>
+		</template>
 
 		<!-- Story Arc Progress -->
 		<div class="mb-3 p-2 border bg-black/10 text-center">
