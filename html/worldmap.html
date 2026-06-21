@@ -48,9 +48,9 @@
 
 			<!-- Stats footer -->
 			<div class="mt-6 pt-4 border-t text-[10px] opacity-40 flex gap-4 justify-center">
-				<span>Level: <span x-text="CampaignManager.state.currentLevel"></span>/58</span>
+				<span>Level: <span x-text="CampaignManager.state.currentLevel"></span>/<span x-text="StoryEngine.db ? Object.keys(StoryEngine.db.levels).length : 58"></span></span>
 				<span>Quests: <span x-text="Object.keys(CampaignManager.state.storyState?.completedQuests || {}).length"></span></span>
-				<span>Bosses: <span x-text="CampaignManager.state.storyState?.bossesDefeated?.length || 0"></span>/12</span>
+				<span>Bosses: <span x-text="CampaignManager.state.storyState?.bossesDefeated?.length || 0"></span>/<span x-text="StoryEngine.db ? Object.keys(StoryEngine.db.bosses).length : 12"></span></span>
 			</div>
 		</div>
 	</div>

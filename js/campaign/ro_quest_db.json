@@ -1,690 +1,1510 @@
 {
-  "version": "1.0",
-  "arcs": [
-    {
-      "id": 1,
-      "name": "The Awakening",
-      "levels": [1, 10],
-      "summary": "Six strangers answer the call. The land groans under strange new monsters and the kingdoms cry for deliverance. Your journey begins on the roads of Prontera."
-    },
-    {
-      "id": 2,
-      "name": "The Crossroads",
-      "levels": [11, 20],
-      "summary": "The wilderness deepens. Ancient forces stir beneath Mjolnir's peaks and Morroc's endless sands. Every step forward unearths new threats and older mysteries."
-    },
-    {
-      "id": 3,
-      "name": "Beyond the Seas",
-      "levels": [21, 30],
-      "summary": "The world opens before you. From the beaches of Brasilis to the floating spires of Yuno, a greater conspiracy reveals itself. The Sanctuary of Rachel holds the key."
-    },
-    {
-      "id": 4,
-      "name": "The Ancient World",
-      "levels": [31, 40],
-      "summary": "Lost civilizations whisper from crumbling stones. Dicastes, Manuk, Splendide — buried secrets of a forgotten age. The earth itself remembers what was."
-    },
-    {
-      "id": 5,
-      "name": "Iron and Faith",
-      "levels": [41, 49],
-      "summary": "Industry chokes the skies of Einbroch. Below, the Gates of Hell smolder. At the Temple of Odin, the line between mortal and divine grows thin."
-    },
-    {
-      "id": 6,
-      "name": "The End of All Things",
-      "levels": [50, 58],
-      "summary": "Beyond the veil of death lies Nifflheim. Below the frozen wastes, the Biolabs hum with unspeakable purpose. The source of the corruption awaits."
-    }
-  ],
-  "regions": [
-    {
-      "id": "prontera_fields",
-      "name": "Prontera Fields",
-      "levelRange": [1, 2],
-      "intro": "The sun rises over the plains outside the capital. The grass is trampled — something passed through here recently.",
-      "quests": [
-        "Investigate strange disturbances at the Prontera farmlands.",
-        "A merchant caravan was ambushed on the eastern road. Find survivors.",
-        "Farmers report livestock driven mad by unknown creatures."
-      ],
-      "outros": [
-        "The road ahead stretches toward Payon. Rumors of a forest blight reach your ears.",
-        "The capital's guards thank you. The path south lies open."
-      ],
-      "enemyFlavor": "wild creatures driven from their habitats",
-      "npc": "Kafra Guide",
-      "npcDialogue": [
-        "The road ahead is dangerous. Rest here, and take what supplies you can.",
-        "I've seen your kind before — brave enough to march into the unknown. Try not to die.",
-        "The Kafra Corporation covers these roads. If you see our waypoints, you're still on the right path."
-      ],
-      "rewardHint": "The grateful merchants offer a Pegasus Rune for your trouble."
-    },
-    {
-      "id": "payon_forest",
-      "name": "Payon Forest",
-      "levelRange": [3, 3],
-      "intro": "The bamboo groves of Payon sway in an uneasy wind. The archers who guard these woods are nowhere to be seen.",
-      "quests": [
-        "The Archer Guild has lost contact with its western outpost.",
-        "A dark influence spreads through the Payon woodlands.",
-        "The forest whispers your name — though you have never been here before."
-      ],
-      "outros": [
-        "The forest grows quiet, for now. The trail leads into the desert."
-      ],
-      "enemyFlavor": "corrupted forest spirits and enraged beasts",
-      "npc": "Archer Guildmaster",
-      "npcDialogue": [
-        "The forest has a memory. Whatever entered it recently — it does not belong.",
-        "Archers speak in whispers here. The trees have ears.",
-        "Return with proof of your deeds. The Guild does not reward words."
-      ],
-      "rewardHint": "The Archer Guildmaster gifts you an Aegis Rune — a shield for the road ahead."
-    },
-    {
-      "id": "morroc_desert",
-      "name": "Morroc Desert",
-      "levelRange": [4, 4],
-      "intro": "Heat shimmers over the endless dunes. The ruins of an older civilization lie half-buried in the sand.",
-      "quests": [
-        "Sandstorms have unearthed an ancient tomb — and something within has awakened.",
-        "Desert merchants whisper of a wraith picking off caravans one by one.",
-        "The dunes shift in patterns that are not natural."
-      ],
-      "outros": [
-        "The desert yields its secrets reluctantly. But you are not done with it yet."
-      ],
-      "enemyFlavor": "desert monstrosities and ancient undead",
-      "npc": "Desert Guide",
-      "npcDialogue": [
-        "The sands hide more than treasure. They hide what those treasures cost.",
-        "Don't drink the water near the ruins. It remembers what bled into it.",
-        "No map survives the desert. Only instinct does."
-      ],
-      "rewardHint": "A desert relic trader leaves behind a Forge Rune — tempered by the sands."
-    },
-    {
-      "id": "geffen_plains",
-      "name": "Geffen Plains",
-      "levelRange": [5, 6],
-      "intro": "The magical spires of Geffen crackle on the horizon. The very air tastes of ozone and arcane residue.",
-      "quests": [
-        "Arcane experiments at Geffen Tower have gone catastrophically wrong.",
-        "Wild magic surges across the plains, warping local wildlife into horrors.",
-        "The Wizards' Academy requests assistance with a containment breach."
-      ],
-      "outros": [
-        "Geffen's gratitude is measured in knowledge. The path forward is clearer now."
-      ],
-      "enemyFlavor": "magically mutated creatures and arcane anomalies",
-      "npc": "Wizard Guildmaster",
-      "npcDialogue": [
-        "Magic in excess becomes a cancer. We learned that the hard way.",
-        "Every spell leaves a scar on reality. We've made quite a few scars here.",
-        "Geffen's towers were built to channel power, not contain it. There's a difference."
-      ],
-      "rewardHint": "The Academy rewards competence with an Aegis Rune, calibrated to absorb magical impact."
-    },
-    {
-      "id": "payon_frontier",
-      "name": "Payon Frontier",
-      "levelRange": [7, 9],
-      "intro": "Beyond the bamboo fences, the frontier stretches wild and untamed. The village walls grow distant behind you.",
-      "quests": [
-        "Settlers on the frontier have been driven from their homesteads.",
-        "Strange lights dance in the Payon night. The villagers speak of fox spirits.",
-        "A rogue band of hunters has been poaching protected forest creatures."
-      ],
-      "outros": [
-        "The frontier holds, but for how long?"
-      ],
-      "enemyFlavor": "territorial predators and rogue hunters",
-      "npc": "Frontier Scout",
-      "npcDialogue": [
-        "The frontier doesn't ask if you're ready. It just starts.",
-        "I've been scouting these roads for a decade. Things are worse than I've ever seen.",
-        "Stay off the low ground after dark. Trust me on this."
-      ],
-      "rewardHint": "The frontier settlement pools their savings for a Pegasus Rune — swift passage for a swift hero."
-    },
-    {
-      "id": "mjolnir_pass",
-      "name": "Mjolnir Dead Pass",
-      "levelRange": [10, 10],
-      "intro": "The jagged peaks of Mjolnir tear at the clouds. This mountain pass has claimed more lives than any war.",
-      "quests": [
-        "The mountain pass is blocked by a monstrous territorial beast.",
-        "A dwarven excavation team has gone silent in the deep tunnels beneath the pass."
-      ],
-      "outros": [
-        "The pass is clear, but the mountain's secrets remain buried."
-      ],
-      "enemyFlavor": "mountain predators and cave-dwelling horrors",
-      "npc": "Mountain Guide",
-      "npcDialogue": [
-        "Mjolnir breaks everyone eventually. The question is whether it breaks you before or after you're through.",
-        "The dwarves who came here looking for ore found something they couldn't put back.",
-        "Don't stop moving. The cold doesn't take you quickly, but it takes you completely."
-      ],
-      "rewardHint": "The dwarven survivors gift you a Forge Rune — forged deep in these same mountains."
-    },
-    {
-      "id": "southern_reaches",
-      "name": "Southern Reaches",
-      "levelRange": [11, 16],
-      "intro": "The roads grow rougher south of the capital. Abandoned villages and scorched earth tell a story of slow decline.",
-      "quests": [
-        "Villages along the southern trade route have gone silent one by one.",
-        "A plague is spreading — but it is no ordinary sickness.",
-        "Refugees stream north with tales of a creeping darkness."
-      ],
-      "outros": [
-        "The south grows darker. But you push onward."
-      ],
-      "enemyFlavor": "plague-ridden creatures and desperate bandits",
-      "npc": "Traveling Merchant",
-      "npcDialogue": [
-        "I've traded goods from Prontera to Comodo. This road? I won't walk it anymore.",
-        "The villages went quiet in order. First Orendio, then Kokomo. Something moves south to north.",
-        "Pay me and I'll tell you what I know. Don't, and you'll find out anyway — the hard way."
-      ],
-      "rewardHint": "The merchant, grateful for safe passage, parts with a Pegasus Rune from his last delivery."
-    },
-    {
-      "id": "deep_desert",
-      "name": "Deep Desert",
-      "levelRange": [17, 20],
-      "intro": "The desert deepens. These sands have not seen civilization in centuries. What they hide, they hide well.",
-      "quests": [
-        "An ancient city has emerged from the shifting dunes. Something inside still lives.",
-        "The desert tribes speak of a king who never died — only slept.",
-        "Sand storms carry whispers in a language older than humanity."
-      ],
-      "outros": [
-        "The desert claims its secrets back. But you have seen what lies beneath."
-      ],
-      "enemyFlavor": "awakened mummies and sand-elemental beings",
-      "npc": "Desert Shaman",
-      "npcDialogue": [
-        "The desert remembers every tomb, every prayer, every drop of blood shed here. It does not forgive.",
-        "The king who sleeps in these sands chose that sleep. That is what makes him dangerous.",
-        "I can read the dunes. They say something is coming. Something that was never meant to rise."
-      ],
-      "rewardHint": "The desert shaman bestows an Aegis Rune — ancient protection against forces that refuse to die."
-    },
-    {
-      "id": "geffen_borderlands",
-      "name": "Geffen Borderlands",
-      "levelRange": [21, 21],
-      "intro": "The borderlands between Geffen and the eastern territories are a no-man's land of arcane fallout and monstrous regrowth.",
-      "quests": [
-        "A magical dead zone has expanded, strangling the life from the land.",
-        "Border patrols report seeing their own worst fears made flesh."
-      ],
-      "outros": [
-        "The borderlands fall silent. The sea beckons."
-      ],
-      "enemyFlavor": "arcane aberrations and territorial beasts",
-      "npc": "Border Warden",
-      "npcDialogue": [
-        "My post is six leagues from Geffen. I can still hear the explosions.",
-        "The magic dead zone is expanding. Three inches a day. I've measured it.",
-        "Cross the border at dawn. Whatever hunts here doesn't like the light."
-      ],
-      "rewardHint": "The warden presses a Forge Rune into your hand — confiscated from a smuggler, now yours."
-    },
-    {
-      "id": "brasilis_coast",
-      "name": "Brasilis Coast",
-      "levelRange": [22, 22],
-      "intro": "Salt spray and the cry of tropical birds. The beaches of Brasilis are pristine — but something dark washes ashore at night.",
-      "quests": [
-        "Pirates have been raiding coastal villages with unnerving precision.",
-        "Something ancient stirs in the sunken ruins off the coast."
-      ],
-      "outros": [
-        "The tides carry you onward. Yuno's spires pierce the clouds to the east."
-      ],
-      "enemyFlavor": "salt-crusted pirates and deep-sea horrors",
-      "npc": "Coastal Warden",
-      "npcDialogue": [
-        "Brasilis is paradise — which means anything that disturbs it is especially wrong.",
-        "The ruins offshore predate the city. We don't know who built them. We're not sure we want to.",
-        "The tide brings things in at night. Whatever it is, it doesn't float."
-      ],
-      "rewardHint": "Coastal traders reward your deeds with a Pegasus Rune — for those who need to move fast on water or land."
-    },
-    {
-      "id": "yuno_heights",
-      "name": "Yuno Heights",
-      "levelRange": [23, 24],
-      "intro": "The floating city of Yuno casts a shadow across the clouds. Scholars say knowledge is power — here, it is both weapon and curse.",
-      "quests": [
-        "The Yuno Academy archives have been breached. Forbidden knowledge was stolen.",
-        "The airship docks report sabotage. The culprit is still at large.",
-        "A tome of summoning has gone missing from the restricted section."
-      ],
-      "outros": [
-        "Yuno's secrets remain locked in its floating spires. Your descent into Rachel begins."
-      ],
-      "enemyFlavor": "alchemical constructs and rogue scholars",
-      "npc": "High Scholar",
-      "npcDialogue": [
-        "Forbidden knowledge isn't forbidden because it's useless. It's forbidden because it works.",
-        "The thief who stole from our archives wasn't a thief. They knew exactly what they were looking for.",
-        "Yuno floats because of a principle we discovered, then immediately classified. Some things shouldn't be weaponized."
-      ],
-      "rewardHint": "The Academy archives yield an Aegis Rune — once assigned to a scholar who never returned."
-    },
-    {
-      "id": "holy_lands",
-      "name": "Holy Lands",
-      "levelRange": [25, 30],
-      "intro": "The white paths of Rachel, the pale courts of Veins, the turquoise waters of Comodo — beauty masks the rot beneath.",
-      "quests": [
-        "The High Priestess has foreseen a cataclysm. The source lies beneath the sanctuary.",
-        "The Veins nobility hide something in their catacombs.",
-        "Tourists vanish from Comodo's beaches. The locals blame sea monsters.",
-        "A schism has erupted within the faithful. Heretics guard the lower catacombs."
-      ],
-      "outros": [
-        "The holy lands breathe easier. But the corruption has not been stopped — only delayed."
-      ],
-      "enemyFlavor": "fanatical heretics, vampire nobles, and aquatic predators",
-      "npc": "Pilgrim Guide",
-      "npcDialogue": [
-        "Faith is a weapon here. The heretics have sharpened theirs.",
-        "Rachel Sanctuary is holy ground — but holiness doesn't stop a blade.",
-        "The Veins court smiles and smiles. I've learned not to smile back."
-      ],
-      "rewardHint": "The Pilgrim Guide offers a Forge Rune — blessed by the Sanctuary before it was besieged."
-    },
-    {
-      "id": "dicastes_plains",
-      "name": "Dicastes Plains",
-      "levelRange": [31, 31],
-      "intro": "The great plains of Dicastes stretch into eternity. Herds of wild dinosaurs roam freely — but they are not the apex predators here.",
-      "quests": [
-        "The Dicastes hunters speak of a great beast slaughtering entire herds.",
-        "An expedition from the capital has gone missing in the tallgrass."
-      ],
-      "outros": [
-        "The plains fall silent. You press onward through ancient lands."
-      ],
-      "enemyFlavor": "prehistoric beasts and territorial megafauna",
-      "npc": "Dicastes Chieftain",
-      "npcDialogue": [
-        "The great beasts have hunted these plains since before your civilization existed. Respect that.",
-        "Something drove the herds mad. Even apex predators don't act like this without cause.",
-        "We honor the land by fighting only what the land cannot handle itself."
-      ],
-      "rewardHint": "The chieftain rewards you with a Pegasus Rune — earned by those swift enough to survive the plains."
-    },
-    {
-      "id": "lasagna_village",
-      "name": "Lasagna Village",
-      "levelRange": [32, 32],
-      "intro": "A sleepy village nestled between canyons. The people speak of earth-gods that slumber beneath their feet.",
-      "quests": [
-        "The ground trembles constantly. The villagers say the earth-gods are restless.",
-        "A canyon collapse has revealed an underground temple sealed for millennia."
-      ],
-      "outros": [
-        "Lasagna breathes easier — but the earth remembers what sleeps below."
-      ],
-      "enemyFlavor": "earth elementals and subterranean predators",
-      "npc": "Village Elder",
-      "npcDialogue": [
-        "We have lived above these gods for generations. We know their moods. This is not a mood — this is anger.",
-        "The temple below is not a ruin. It was deliberately sealed. Someone has opened it.",
-        "Leave offerings before you descend. The earth-gods are old, but they notice."
-      ],
-      "rewardHint": "The elder offers a Forge Rune — pulled from the sealed temple's antechamber decades ago."
-    },
-    {
-      "id": "manuk_jungle",
-      "name": "Manuk Jungle",
-      "levelRange": [33, 36],
-      "intro": "Crumbling stone monuments rise from the jungle floor. The Manuk civilization achieved wonders — and committed atrocities.",
-      "quests": [
-        "The ruins are guarded by automatons that still follow ancient kill-orders.",
-        "A relic of power lies at the heart of the Manuk citadel — if you can survive the traps.",
-        "The jungle itself seems to resist your passage. Vines move when there is no wind."
-      ],
-      "outros": [
-        "The jungle reclaims the ruins. But you carry their memory."
-      ],
-      "enemyFlavor": "ancient war machines and awakened guardians",
-      "npc": "Ruins Scholar",
-      "npcDialogue": [
-        "The Manuk didn't fall to war. They fell to their own creations. Sound familiar?",
-        "Every guardian still running has a kill order that was never rescinded. We're all still valid targets.",
-        "I've translated enough of their script to know they were proud. I've seen enough of their ruins to know pride doesn't protect you."
-      ],
-      "rewardHint": "The scholar locates an Aegis Rune among the ruins — Manuk tech, adapted for modern use."
-    },
-    {
-      "id": "lasagna_canyon",
-      "name": "Lasagna Canyon",
-      "levelRange": [37, 37],
-      "intro": "The canyon pass winds through cliffs that howl when the wind blows. Old carvings on the walls tell a story of sacrifice.",
-      "quests": [
-        "The canyon pass must be cleared for the village's evacuation.",
-        "Wind-carved caves echo with whispers. Something is calling."
-      ],
-      "outros": [
-        "The canyon falls quiet. The path forward leads to industry and fire."
-      ],
-      "enemyFlavor": "wind spirits and territorial raptors",
-      "npc": "Canyon Guide",
-      "npcDialogue": [
-        "The canyon echoes everything. You'll hear the enemy before you see them.",
-        "Those carvings? The people who made them evacuated. They knew what was coming.",
-        "The whispers aren't spirits. It's air pressure through old tunnels. Probably."
-      ],
-      "rewardHint": "A hidden cache in the canyon walls yields a Pegasus Rune, left by a traveler who didn't make it through."
-    },
-    {
-      "id": "einbroch_outskirts",
-      "name": "Einbroch Outskirts",
-      "levelRange": [38, 40],
-      "intro": "The sky ahead is black with smog. The ground vibrates with industrial machinery. Einbroch's outskirts are a graveyard of failed experiments.",
-      "quests": [
-        "Factory foremen report workers going missing in the lower levels.",
-        "A chemical leak has mutated the wildlife beyond recognition.",
-        "The mining operation at Rock Ridge has breached something ancient."
-      ],
-      "outros": [
-        "The outskirts are secured. The industrial heart of Einbroch awaits."
-      ],
-      "enemyFlavor": "industrial monstrosities and chemical abominations",
-      "npc": "Einbroch Resistance Leader",
-      "npcDialogue": [
-        "We tried to warn the city council three years ago. They called us alarmists.",
-        "The factories run at night now. They don't want you to see what they're making.",
-        "Every resistance cell we set up gets found within a week. There's an informant — or something worse."
-      ],
-      "rewardHint": "The resistance leader hands over a Forge Rune — stolen from the factory's own stores."
-    },
-    {
-      "id": "einbroch_industrial",
-      "name": "Einbroch Industrial Zone",
-      "levelRange": [41, 47],
-      "intro": "The factories of Einbroch churn day and night. Smoke, steam, and screams rise from the chimneys. This is where the corruption is manufactured.",
-      "quests": [
-        "A biological weapon has been leaked into the city's water supply.",
-        "The factory overseers are creating monsters in vats. Shut them down.",
-        "An entire district has been quarantined. Something is hunting within.",
-        "Demonic forces pour from a chasm at the city's edge — the Gates of Hell."
-      ],
-      "outros": [
-        "Einbroch's gears grind on. But you have slowed the machine."
-      ],
-      "enemyFlavor": "vat-grown horrors and demonic soldiers",
-      "npc": "Factory Defector",
-      "npcDialogue": [
-        "I built some of what they're using against you. I'm sorry. I didn't know.",
-        "The vats run on something they won't tell us the name of. The workers call it 'the feed.'",
-        "The Gates of Hell aren't a metaphor. I've seen them. The smell doesn't leave you."
-      ],
-      "rewardHint": "The defector provides an Aegis Rune — factory-grade protection, originally for their own soldiers."
-    },
-    {
-      "id": "odin_temple",
-      "name": "Temple of Odin",
-      "levelRange": [48, 49],
-      "intro": "The Temple of Odin stands at the edge of the world. Its halls echo with prayers of the faithful — and screams of the damned.",
-      "quests": [
-        "The Valkyries have abandoned their posts. The temple's guardians are missing.",
-        "The All-Father's flame gutters. Only a worthy sacrifice can relight it."
-      ],
-      "outros": [
-        "The temple falls silent. The gods are watching."
-      ],
-      "enemyFlavor": "divine constructs and fallen Valkyries",
-      "npc": "Odin Priestess",
-      "npcDialogue": [
-        "The All-Father does not intervene. He observes. Whether that is mercy or cruelty, I have never decided.",
-        "Valkyries are not soldiers. They are judges. Whatever corrupted them changed what they judge you worthy of.",
-        "The trial ahead was designed to kill heroes. That is the point. Only the unkillable deserve what lies beyond."
-      ],
-      "rewardHint": "The Odin Priestess grants a Forge Rune — sanctified in the All-Father's flame."
-    },
-    {
-      "id": "einbroch_wastes",
-      "name": "Einbroch Wastes",
-      "levelRange": [50, 52],
-      "intro": "Beyond the factories lies the wasteland — Einbroch's dumping ground. Toxic rivers, ash storms, and the twisted remnants of countless failed experiments.",
-      "quests": [
-        "The Genesis Project's waste has created a dead zone. Cross it to reach the source.",
-        "Survivors eke out an existence in the wasteland. They know the way.",
-        "Something massive moves beneath the ash. Stay on solid ground."
-      ],
-      "outros": [
-        "The wasteland stretches behind you. Death lies ahead."
-      ],
-      "enemyFlavor": "toxic mutants and industrial undead",
-      "npc": "Wasteland Guide",
-      "npcDialogue": [
-        "Don't breathe the yellow air. The grey air is fine. Mostly.",
-        "People survive out here. You'd be surprised what humans adapt to, given no choice.",
-        "The Genesis Project's waste has been dumping here for decades. Everything that lives here was changed by it."
-      ],
-      "rewardHint": "A wasteland survivor trades a Pegasus Rune for safe passage — fastest legs in a dead land."
-    },
-    {
-      "id": "nifflheim",
-      "name": "Nifflheim",
-      "levelRange": [53, 54],
-      "intro": "The realm of the dead is not a myth. The veil between life and death here is thin enough to see through — and something on the other side is reaching back.",
-      "quests": [
-        "Souls are being stolen before they can pass to the afterlife.",
-        "A lich has been raising the dead of Nifflheim into an army.",
-        "The ferryman demands a toll. But what currency do the dead accept?"
-      ],
-      "outros": [
-        "Death is patient. But you are not done living yet."
-      ],
-      "enemyFlavor": "undead legions and soul-devouring wraiths",
-      "npc": "Death's Gatekeeper",
-      "npcDialogue": [
-        "I have held this gate since before your civilization had a name for death. Be brief.",
-        "The dead do not rest here. Something is keeping them awake.",
-        "You carry the living world on your back. Do not let that weight make you slow."
-      ],
-      "rewardHint": "The Gatekeeper permits one relic to pass back with you — an Aegis Rune, pulled from a fallen Valkyrie."
-    },
-    {
-      "id": "biolabs",
-      "name": "Biolabs",
-      "levelRange": [55, 58],
-      "intro": "The final horror: a research facility built on the edge of life and death. The scientists here played god — and created monsters that will devour the world.",
-      "quests": [
-        "The Genesis Project must be stopped. Every vat must be destroyed.",
-        "The mastermind behind the corruption is somewhere in these halls.",
-        "The creatures here were designed. Find the research notes.",
-        "There is no escape. The only way out is through."
-      ],
-      "outros": [
-        "The facility falls silent. But was the Genesis Project truly stopped?"
-      ],
-      "enemyFlavor": "genetic abominations and failed experiments",
-      "npc": "Survivor Scientist",
-      "npcDialogue": [
-        "I've been in here for three years. I've run out of things to be afraid of.",
-        "Genesis was never meant to be a weapon. It was meant to be perfect life. They made it both.",
-        "If you shut down the Genesis Project, you'll save thousands. If you don't, you'll lose millions. Move fast."
-      ],
-      "rewardHint": "The scientist's last recorded notes reference a Forge Rune — the only weapon that can scratch what's ahead."
-    }
-  ],
-  "levels": {
-    "1": { "title": "The Road to Prontera", "quest": "Clear the eastern road of strange creatures before they reach the capital.", "npc": "Kafra Guide" },
-    "2": { "title": "Shadow in the Fields", "quest": "Drive out the corruption spreading through the Prontera farmlands." },
-    "3": { "title": "Into Payon Woods", "quest": "Reach the Archer Guild outpost and report its status." },
-    "4": { "title": "Whispers in the Sand", "quest": "Investigate the unearthed tomb before grave robbers plunder it." },
-    "5": { "title": "The Arcane Overflow", "quest": "Contain the wild magic surge before it reaches Geffen Tower." },
-    "6": { "title": "Geffen's Plea", "quest": "Defend the outer wards of the magical academy from mutated horrors." },
-    "7": { "title": "The Payon Night", "quest": "Track the source of strange lights dancing in the midnight forest." },
-    "8": { "title": "Desert Vigil", "quest": "Protect a merchant caravan crossing the Morroc wastes." },
-    "9": { "title": "Edge of the Frontier", "quest": "Reinforce the frontier outpost before it falls." },
-    "10": { "title": "The Mountain's Secret", "quest": "Discover what lurks in the heart of Mjolnir Dead Pass." },
-    "11": { "title": "The Southern Road", "quest": "The corruption has spread south. Investigate the abandoned villages." },
-    "12": { "title": "The Geffen Experiment", "quest": "Shut down a rogue magical experiment in the Geffen catacombs." },
-    "13": { "title": "Arcane Storm", "quest": "Survive the ley line storm and stabilize the magical field." },
-    "14": { "title": "Deep Mjolnir", "quest": "Rescue the dwarven expedition trapped in the deep tunnels." },
-    "15": { "title": "Peak of the Pass", "quest": "Face the beast that rules the highest peak of Mjolnir." },
-    "16": { "title": "The Payon Run", "quest": "Outrun a horde of corrupted wildlife descending from the hills." },
-    "17": { "title": "Morroc Stand", "quest": "Hold the line against a desert incursion at the oasis." },
-    "18": { "title": "Geffen Watch", "quest": "Guard the Geffen gate against an approaching magical storm." },
-    "19": { "title": "Desert Blood", "quest": "The sands run red. Find the source of the massacre." },
-    "20": { "title": "Heart of the Sands", "quest": "The Pharaoh awakens. Enter the tomb and end his reign." },
-    "21": { "title": "Geffen Aftermath", "quest": "The plains are scorched. Search for survivors in the fallout zone." },
-    "22": { "title": "Brasilis Awakening", "quest": "Stop the pirate raids at their source — the hidden cove." },
-    "23": { "title": "Yuno's Plight", "quest": "Prevent the sabotage of Yuno's floating anchor mechanism." },
-    "24": { "title": "The Archive Breach", "quest": "Retrieve the stolen tome before it falls into the wrong hands." },
-    "25": { "title": "Pilgrim's Path", "quest": "Escort the pilgrims safely to Rachel Sanctuary." },
-    "26": { "title": "Sanctuary Under Siege", "quest": "Defend the sanctuary from heretic invaders." },
-    "27": { "title": "Veins Masquerade", "quest": "Infiltrate the Veins court and uncover their conspiracy." },
-    "28": { "title": "Comodo Depths", "quest": "Dive into the underwater caves and stop the abductions." },
-    "29": { "title": "Veins Catacombs", "quest": "Descend into the catacombs and confront the vampire lord." },
-    "30": { "title": "The Prophet's Legacy", "quest": "Face the corrupted prophet in the depths of Rachel." },
-    "31": { "title": "Dicastes Hunt", "quest": "Track and defeat the great beast stalking the plains." },
-    "32": { "title": "Lasagna Tremors", "quest": "Calm the earth-gods beneath Lasagna Village." },
-    "33": { "title": "Manuk Awakening", "quest": "Navigate the Manuk ruins and disable the ancient defenses." },
-    "34": { "title": "The Manuk Relic", "quest": "Retrieve the relic before scavengers claim it." },
-    "35": { "title": "Splendide's Wound", "quest": "Seal the elemental rift at Splendide Peak." },
-    "36": { "title": "Manuk Revenge", "quest": "Survive the awakened war machines of the Manuk citadel." },
-    "37": { "title": "Lasagna Farewell", "quest": "Clear the canyon pass for the village's evacuation." },
-    "38": { "title": "Einbroch Arrival", "quest": "Enter the industrial district and find the resistance." },
-    "39": { "title": "Rock Ridge Descent", "quest": "Descend into the mines and rescue the trapped miners." },
-    "40": { "title": "The Deep Earth", "quest": "Seal the abyss beneath Rock Ridge before it surfaces." },
-    "41": { "title": "Factory of Flesh", "quest": "Infiltrate the biological weapons factory." },
-    "42": { "title": "Hell's Approach", "quest": "Reinforce the crusaders at the Gates of Hell." },
-    "43": { "title": "Quarantine Zone", "quest": "Enter the quarantined district and find the source of the outbreak." },
-    "44": { "title": "The Vats", "quest": "Destroy the vat chambers before more monsters are born." },
-    "45": { "title": "Chemical Night", "quest": "Survive the chemical bombardment and shut down the processing plant." },
-    "46": { "title": "Abyss Walkers", "quest": "Lead a sortie into the Gates of Hell chasm." },
-    "47": { "title": "Einbroch Liberation", "quest": "Liberate the central factory district." },
-    "48": { "title": "Odin's Threshold", "quest": "Enter the Temple of Odin and find the missing Valkyries." },
-    "49": { "title": "The All-Father's Trial", "quest": "Prove your worth in the trial of Odin's chosen." },
-    "50": { "title": "The Final Factory", "quest": "Destroy the Genesis production line at Einbroch's core." },
-    "51": { "title": "Ashen Fields", "quest": "Cross the toxic wasteland to reach the source." },
-    "52": { "title": "The Last Outpost", "quest": "Hold the last Einbroch outpost against endless waves." },
-    "53": { "title": "Death's Doorstep", "quest": "Enter Nifflheim and confront the soul-thief." },
-    "54": { "title": "The Lich's Lair", "quest": "Destroy the lich commanding Nifflheim's dead." },
-    "55": { "title": "Biolab: Genesis", "quest": "Enter the Biolabs. The source of all corruption is here." },
-    "56": { "title": "The Menagerie", "quest": "Fight through the experimental creature containment wing." },
-    "57": { "title": "The Garden", "quest": "Survive the organic nightmare of the Biolab garden." },
-    "58": { "title": "The Heart of the Lab", "quest": "Confront the mastermind. End the Genesis Project forever." }
-  },
-  "bosses": {
-    "5": {
-      "name": "Arcane Anomaly",
-      "title": "The Living Spell",
-      "intro": "Geffen's failed experiment has coalesced into a being of pure magic. It crackles with stolen power — and it is not friendly.",
-      "outro": "The anomaly dissipates into harmless motes of light. Geffen's mages breathe a collective sigh of relief."
-    },
-    "10": {
-      "name": "Maya — Golden Bug",
-      "title": "Queen of the Dead Pass",
-      "intro": "At the heart of Mjolnir Dead Pass, a golden insect the size of a house blocks the way. Its carapace is harder than steel, and its wrath is ancient.",
-      "outro": "The Golden Bug falls. The pass is open — but the mountains tremble with the echo of its death."
-    },
-    "15": {
-      "name": "Orc Hero",
-      "title": "Warlord of Mjolnir",
-      "intro": "The Orc Hero descends from the peak, wielding a weapon forged in dragonfire. Every orc in the mountain bows to this one.",
-      "outro": "The orcs scatter without their hero. The peak is yours."
-    },
-    "20": {
-      "name": "Pharaoh",
-      "title": "Undying King of the Sands",
-      "intro": "Deep within Morroc's greatest tomb, the Pharaoh stirs. Millennia of death have not diminished his hunger for dominion.",
-      "outro": "The Pharaoh crumbles to dust. The desert winds carry his final sigh across the dunes."
-    },
-    "25": {
-      "name": "Corrupted Priestess",
-      "title": "The False Prophet",
-      "intro": "The High Priestess of Rachel has fallen to the corruption she sought to contain. Her faith has become a weapon.",
-      "outro": "The sanctuary bells toll her passing. Rachel weeps — but the path is purified."
-    },
-    "30": {
-      "name": "Moonlight Flower",
-      "title": "The Nightmare Blossom",
-      "intro": "At the heart of Rachel's catacombs, a flower of impossible beauty blooms. Its pollen shows you your deepest fears — then makes them real.",
-      "outro": "The flower withers. Dawn breaks over Rachel for the first time in weeks."
-    },
-    "35": {
-      "name": "Elemental Titan",
-      "title": "Splendide's Heart",
-      "intro": "The elemental imbalance at Splendide Peak has birthed a titan of fire and ice. It does not attack — it simply exists, and existence around it is annihilated.",
-      "outro": "The titan crumbles. Splendide Peak grows quiet, the elements slowly returning to balance."
-    },
-    "40": {
-      "name": "Earth Abomination",
-      "title": "What Was Buried",
-      "intro": "The miners of Rock Ridge dug too deep. What they found was not a mineral vein — it was a sleeping horror, and it is awake.",
-      "outro": "The abomination sinks back into the depths. Rock Ridge seals the mine forever."
-    },
-    "45": {
-      "name": "Chemical Behemoth",
-      "title": "Einbroch's Worst Creation",
-      "intro": "The vat-grown monstrosity towers over the factory floor. It is the combined essence of every failed experiment — pain given flesh.",
-      "outro": "The behemoth collapses into a pool of toxic sludge. Einbroch's skies begin to clear."
-    },
-    "50": {
-      "name": "Valkyrie Randgris",
-      "title": "Fallen Seraph",
-      "intro": "The Temple of Odin's greatest guardian has been corrupted. Randgris, once the protector of the worthy, now judges all — and finds all wanting.",
-      "outro": "Randgris's wings shatter. The temple's light flickers back to life."
-    },
-    "55": {
-      "name": "Ifrit",
-      "title": "Lord of the Inferno",
-      "intro": "The Biolabs' ultimate weapon: a primordial spirit of fire bound into flesh. Ifrit burns with a hatred older than humanity.",
-      "outro": "Ifrit's flames gutter and die. The Biolabs' temperature drops for the first time in years."
-    },
-    "58": {
-      "name": "Genesis",
-      "title": "The First and the Last",
-      "intro": "At the heart of the Biolabs, the Genesis Project awaits. It is not a monster — it is the template from which all monsters were made. The origin of the corruption. The end of your journey.",
-      "outro": "Genesis falls. The Biolabs fall silent. The corruption's source is severed — but the scars remain."
-    }
-  },
-  "dialogue": [
-    { "level": 5,  "type": "boss_entry",  "speaker": "Arcane Anomaly", "text": "You cannot kill a spell. You can only outlast it." },
-    { "level": 5,  "type": "half_hp",     "speaker": "Wizard Guildmaster", "text": "Hold your ground! The anomaly feeds on panic!" },
-    { "level": 10, "type": "boss_entry",  "speaker": "Maya", "text": "..." },
-    { "level": 10, "type": "first_blood", "speaker": "Mountain Guide", "text": "Don't celebrate yet. That thing has a queen." },
-    { "level": 10, "type": "half_hp",     "speaker": "Mountain Guide", "text": "Its shell is cracking! Push through!" },
-    { "level": 15, "type": "boss_entry",  "speaker": "Orc Hero", "text": "Small ones come to die on the peak. The mountain approves." },
-    { "level": 15, "type": "half_hp",     "speaker": "Orc Hero", "text": "You bleed. Good. Now we are even." },
-    { "level": 20, "type": "boss_entry",  "speaker": "Pharaoh", "text": "Millennia of patience. You are not the first to disturb my rest. You will be the last." },
-    { "level": 20, "type": "first_blood", "speaker": "Desert Shaman", "text": "The sand remembers every wound. Make it remember yours." },
-    { "level": 20, "type": "half_hp",     "speaker": "Pharaoh", "text": "You cannot kill what already rules over death." },
-    { "level": 25, "type": "boss_entry",  "speaker": "Corrupted Priestess", "text": "I prayed for guidance. The corruption answered. Who are you to say it was wrong?" },
-    { "level": 25, "type": "half_hp",     "speaker": "Pilgrim Guide", "text": "The sanctuary's bells are silent. We must end this quickly." },
-    { "level": 30, "type": "boss_entry",  "speaker": "Moonlight Flower", "text": "What you fear most is already here. I simply make it visible." },
-    { "level": 30, "type": "first_blood", "speaker": "Pilgrim Guide", "text": "Don't look at its petals. Focus on the roots." },
-    { "level": 35, "type": "boss_entry",  "speaker": "Elemental Titan", "text": "..." },
-    { "level": 35, "type": "half_hp",     "speaker": "Ruins Scholar", "text": "The elemental matrix is destabilizing — our attacks are working!" },
-    { "level": 40, "type": "boss_entry",  "speaker": "Earth Abomination", "text": "GGRRAAHHH" },
-    { "level": 40, "type": "first_blood", "speaker": "Einbroch Resistance Leader", "text": "Good hit. Now don't stop — it regenerates." },
-    { "level": 40, "type": "half_hp",     "speaker": "Einbroch Resistance Leader", "text": "It's slowing down. The earth can't sustain it above ground!" },
-    { "level": 45, "type": "boss_entry",  "speaker": "Chemical Behemoth", "text": "Subjects detected. Initiating containment protocol." },
-    { "level": 45, "type": "half_hp",     "speaker": "Factory Defector", "text": "The toxin sacs are rupturing — don't let it spray you!" },
-    { "level": 50, "type": "boss_entry",  "speaker": "Valkyrie Randgris", "text": "I judged ten thousand warriors. I found them all unworthy. I judge you now." },
-    { "level": 50, "type": "first_blood", "speaker": "Odin Priestess", "text": "She still fights like a Valkyrie — even corrupted. We must match her discipline." },
-    { "level": 50, "type": "half_hp",     "speaker": "Valkyrie Randgris", "text": "...Perhaps I misjudged." },
-    { "level": 55, "type": "boss_entry",  "speaker": "Ifrit", "text": "Every fire that ever burned remembers my name." },
-    { "level": 55, "type": "half_hp",     "speaker": "Ifrit", "text": "Impossible. The bound one cannot be hurt!" },
-    { "level": 58, "type": "boss_entry",  "speaker": "Genesis", "text": "You reached the end. Most don't. I have been waiting. I always wait." },
-    { "level": 58, "type": "first_blood", "speaker": "Survivor Scientist", "text": "It's actually bleeding. I didn't think that was possible." },
-    { "level": 58, "type": "half_hp",     "speaker": "Genesis", "text": "Fascinating. You exceed the projected parameters." },
-    { "level": 58, "type": "victory",     "speaker": "Survivor Scientist", "text": "It's over. After everything... it's over." }
-  ]
+	"version": "1.0",
+	"arcs": [
+		{
+			"id": 1,
+			"name": "The Awakening",
+			"levels": [
+				1,
+				29
+			],
+			"summary": "Six strangers answer the call. The land groans under strange new monsters and the kingdoms cry for deliverance. Your journey begins on the roads of Prontera."
+		},
+		{
+			"id": 2,
+			"name": "The Crossroads",
+			"levels": [
+				30,
+				62
+			],
+			"summary": "The wilderness deepens. Ancient forces stir beneath Mjolnir's peaks and Morroc's endless sands. Every step forward unearths new threats and older mysteries."
+		},
+		{
+			"id": 3,
+			"name": "Beyond the Seas",
+			"levels": [
+				63,
+				85
+			],
+			"summary": "The world opens before you. From the beaches of Brasilis to the floating spires of Yuno, a greater conspiracy reveals itself. The Sanctuary of Rachel holds the key."
+		},
+		{
+			"id": 4,
+			"name": "Iron and Faith",
+			"levels": [
+				86,
+				137
+			],
+			"summary": "Industry chokes the skies of Einbroch. Below, the Gates of Hell smolder. At the Temple of Odin, the line between mortal and divine grows thin."
+		},
+		{
+			"id": 5,
+			"name": "The Ancient World",
+			"levels": [
+				138,
+				152
+			],
+			"summary": "Lost civilizations whisper from crumbling stones. Dicastes, Manuk, Splendide — buried secrets of a forgotten age. The earth itself remembers what was."
+		},
+		{
+			"id": 6,
+			"name": "The End of All Things",
+			"levels": [
+				153,
+				161
+			],
+			"summary": "Beyond the veil of death lies Nifflheim. Below the frozen wastes, the Biolabs hum with unspeakable purpose. The source of the corruption awaits."
+		}
+	],
+	"regions": [
+		{
+			"id": "prontera_fields",
+			"name": "Prontera Fields",
+			"levelRange": [
+				1,
+				5
+			],
+			"intro": "The sun rises over the plains outside the capital. The grass is trampled — something passed through here recently.",
+			"quests": [
+				"Investigate strange disturbances at the Prontera farmlands.",
+				"A merchant caravan was ambushed on the eastern road. Find survivors.",
+				"Farmers report livestock driven mad by unknown creatures."
+			],
+			"outros": [
+				"The road ahead stretches toward Payon. Rumors of a forest blight reach your ears.",
+				"The capital's guards thank you. The path south lies open."
+			],
+			"enemyFlavor": "wild creatures driven from their habitats",
+			"npc": "Kafra Guide",
+			"npcDialogue": [
+				"The road ahead is dangerous. Rest here, and take what supplies you can.",
+				"I've seen your kind before — brave enough to march into the unknown. Try not to die.",
+				"The Kafra Corporation covers these roads. If you see our waypoints, you're still on the right path."
+			],
+			"rewardHint": "The grateful merchants offer a Pegasus Rune for your trouble."
+		},
+		{
+			"id": "geffen_plains",
+			"name": "Geffen Plains",
+			"levelRange": [
+				6,
+				16
+			],
+			"intro": "The magical spires of Geffen crackle on the horizon. The very air tastes of ozone and arcane residue.",
+			"quests": [
+				"Arcane experiments at Geffen Tower have gone catastrophically wrong.",
+				"Wild magic surges across the plains, warping local wildlife into horrors.",
+				"The Wizards' Academy requests assistance with a containment breach."
+			],
+			"outros": [
+				"Geffen's gratitude is measured in knowledge. The path forward is clearer now."
+			],
+			"enemyFlavor": "magically mutated creatures and arcane anomalies",
+			"npc": "Wizard Guildmaster",
+			"npcDialogue": [
+				"Magic in excess becomes a cancer. We learned that the hard way.",
+				"Every spell leaves a scar on reality. We've made quite a few scars here.",
+				"Geffen's towers were built to channel power, not contain it. There's a difference."
+			],
+			"rewardHint": "The Academy rewards competence with an Aegis Rune, calibrated to absorb magical impact."
+		},
+		{
+			"id": "morroc_desert",
+			"name": "Morroc Desert",
+			"levelRange": [
+				17,
+				24
+			],
+			"intro": "Heat shimmers over the endless dunes. The ruins of an older civilization lie half-buried in the sand.",
+			"quests": [
+				"Sandstorms have unearthed an ancient tomb — and something within has awakened.",
+				"Desert merchants whisper of a wraith picking off caravans one by one.",
+				"The dunes shift in patterns that are not natural."
+			],
+			"outros": [
+				"The desert yields its secrets reluctantly. But you are not done with it yet."
+			],
+			"enemyFlavor": "desert monstrosities and ancient undead",
+			"npc": "Desert Guide",
+			"npcDialogue": [
+				"The sands hide more than treasure. They hide what those treasures cost.",
+				"Don't drink the water near the ruins. It remembers what bled into it.",
+				"No map survives the desert. Only instinct does."
+			],
+			"rewardHint": "A desert relic trader leaves behind a Forge Rune — tempered by the sands."
+		},
+		{
+			"id": "payon_forest",
+			"name": "Payon Forest",
+			"levelRange": [
+				25,
+				29
+			],
+			"intro": "The bamboo groves of Payon sway in an uneasy wind. The archers who guard these woods are nowhere to be seen.",
+			"quests": [
+				"The Archer Guild has lost contact with its western outpost.",
+				"A dark influence spreads through the Payon woodlands.",
+				"The forest whispers your name — though you have never been here before."
+			],
+			"outros": [
+				"The forest grows quiet, for now. The trail leads into the desert."
+			],
+			"enemyFlavor": "corrupted forest spirits and enraged beasts",
+			"npc": "Archer Guildmaster",
+			"npcDialogue": [
+				"The forest has a memory. Whatever entered it recently — it does not belong.",
+				"Archers speak in whispers here. The trees have ears.",
+				"Return with proof of your deeds. The Guild does not reward words."
+			],
+			"rewardHint": "The Archer Guildmaster gifts you an Aegis Rune — a shield for the road ahead."
+		},
+		{
+			"id": "mjolnir_pass",
+			"name": "Mjolnir Dead Pass",
+			"levelRange": [
+				30,
+				39
+			],
+			"intro": "The jagged peaks of Mjolnir tear at the clouds. This mountain pass has claimed more lives than any war.",
+			"quests": [
+				"The mountain pass is blocked by a monstrous territorial beast.",
+				"A dwarven excavation team has gone silent in the deep tunnels beneath the pass."
+			],
+			"outros": [
+				"The pass is clear, but the mountain's secrets remain buried."
+			],
+			"enemyFlavor": "mountain predators and cave-dwelling horrors",
+			"npc": "Mountain Guide",
+			"npcDialogue": [
+				"Mjolnir breaks everyone eventually. The question is whether it breaks you before or after you're through.",
+				"The dwarves who came here looking for ore found something they couldn't put back.",
+				"Don't stop moving. The cold doesn't take you quickly, but it takes you completely."
+			],
+			"rewardHint": "The dwarven survivors gift you a Forge Rune — forged deep in these same mountains."
+		},
+		{
+			"id": "southern_reaches",
+			"name": "Southern Reaches",
+			"levelRange": [
+				40,
+				46
+			],
+			"intro": "The roads grow rougher south of the capital. Abandoned villages and scorched earth tell a story of slow decline.",
+			"quests": [
+				"Villages along the southern trade route have gone silent one by one.",
+				"A plague is spreading — but it is no ordinary sickness.",
+				"Refugees stream north with tales of a creeping darkness."
+			],
+			"outros": [
+				"The south grows darker. But you push onward."
+			],
+			"enemyFlavor": "plague-ridden creatures and desperate bandits",
+			"npc": "Traveling Merchant",
+			"npcDialogue": [
+				"I've traded goods from Prontera to Comodo. This road? I won't walk it anymore.",
+				"The villages went quiet in order. First Orendio, then Kokomo. Something moves south to north.",
+				"Pay me and I'll tell you what I know. Don't, and you'll find out anyway — the hard way."
+			],
+			"rewardHint": "The merchant, grateful for safe passage, parts with a Pegasus Rune from his last delivery."
+		},
+		{
+			"id": "payon_frontier",
+			"name": "Payon Frontier",
+			"levelRange": [
+				47,
+				53
+			],
+			"intro": "Beyond the bamboo fences, the frontier stretches wild and untamed. The village walls grow distant behind you.",
+			"quests": [
+				"Settlers on the frontier have been driven from their homesteads.",
+				"Strange lights dance in the Payon night. The villagers speak of fox spirits.",
+				"A rogue band of hunters has been poaching protected forest creatures."
+			],
+			"outros": [
+				"The frontier holds, but for how long?"
+			],
+			"enemyFlavor": "territorial predators and rogue hunters",
+			"npc": "Frontier Scout",
+			"npcDialogue": [
+				"The frontier doesn't ask if you're ready. It just starts.",
+				"I've been scouting these roads for a decade. Things are worse than I've ever seen.",
+				"Stay off the low ground after dark. Trust me on this."
+			],
+			"rewardHint": "The frontier settlement pools their savings for a Pegasus Rune — swift passage for a swift hero."
+		},
+		{
+			"id": "geffen_borderlands",
+			"name": "Geffen Borderlands",
+			"levelRange": [
+				54,
+				57
+			],
+			"intro": "The borderlands between Geffen and the eastern territories are a no-man's land of arcane fallout and monstrous regrowth.",
+			"quests": [
+				"A magical dead zone has expanded, strangling the life from the land.",
+				"Border patrols report seeing their own worst fears made flesh."
+			],
+			"outros": [
+				"The borderlands fall silent. The sea beckons."
+			],
+			"enemyFlavor": "arcane aberrations and territorial beasts",
+			"npc": "Border Warden",
+			"npcDialogue": [
+				"My post is six leagues from Geffen. I can still hear the explosions.",
+				"The magic dead zone is expanding. Three inches a day. I've measured it.",
+				"Cross the border at dawn. Whatever hunts here doesn't like the light."
+			],
+			"rewardHint": "The warden presses a Forge Rune into your hand — confiscated from a smuggler, now yours."
+		},
+		{
+			"id": "deep_desert",
+			"name": "Deep Desert",
+			"levelRange": [
+				58,
+				62
+			],
+			"intro": "The desert deepens. These sands have not seen civilization in centuries. What they hide, they hide well.",
+			"quests": [
+				"An ancient city has emerged from the shifting dunes. Something inside still lives.",
+				"The desert tribes speak of a king who never died — only slept.",
+				"Sand storms carry whispers in a language older than humanity."
+			],
+			"outros": [
+				"The desert claims its secrets back. But you have seen what lies beneath."
+			],
+			"enemyFlavor": "awakened mummies and sand-elemental beings",
+			"npc": "Desert Shaman",
+			"npcDialogue": [
+				"The desert remembers every tomb, every prayer, every drop of blood shed here. It does not forgive.",
+				"The king who sleeps in these sands chose that sleep. That is what makes him dangerous.",
+				"I can read the dunes. They say something is coming. Something that was never meant to rise."
+			],
+			"rewardHint": "The desert shaman bestows an Aegis Rune — ancient protection against forces that refuse to die."
+		},
+		{
+			"id": "brasilis_coast",
+			"name": "Brasilis Coast",
+			"levelRange": [
+				63,
+				72
+			],
+			"intro": "Salt spray and the cry of tropical birds. The beaches of Brasilis are pristine — but something dark washes ashore at night.",
+			"quests": [
+				"Pirates have been raiding coastal villages with unnerving precision.",
+				"Something ancient stirs in the sunken ruins off the coast."
+			],
+			"outros": [
+				"The tides carry you onward. Yuno's spires pierce the clouds to the east."
+			],
+			"enemyFlavor": "salt-crusted pirates and deep-sea horrors",
+			"npc": "Coastal Warden",
+			"npcDialogue": [
+				"Brasilis is paradise — which means anything that disturbs it is especially wrong.",
+				"The ruins offshore predate the city. We don't know who built them. We're not sure we want to.",
+				"The tide brings things in at night. Whatever it is, it doesn't float."
+			],
+			"rewardHint": "Coastal traders reward your deeds with a Pegasus Rune — for those who need to move fast on water or land."
+		},
+		{
+			"id": "holy_lands",
+			"name": "Holy Lands",
+			"levelRange": [
+				73,
+				85
+			],
+			"intro": "The white paths of Rachel, the pale courts of Veins, the turquoise waters of Comodo — beauty masks the rot beneath.",
+			"quests": [
+				"The High Priestess has foreseen a cataclysm. The source lies beneath the sanctuary.",
+				"The Veins nobility hide something in their catacombs.",
+				"Tourists vanish from Comodo's beaches. The locals blame sea monsters.",
+				"A schism has erupted within the faithful. Heretics guard the lower catacombs."
+			],
+			"outros": [
+				"The holy lands breathe easier. But the corruption has not been stopped — only delayed."
+			],
+			"enemyFlavor": "fanatical heretics, vampire nobles, and aquatic predators",
+			"npc": "Pilgrim Guide",
+			"npcDialogue": [
+				"Faith is a weapon here. The heretics have sharpened theirs.",
+				"Rachel Sanctuary is holy ground — but holiness doesn't stop a blade.",
+				"The Veins court smiles and smiles. I've learned not to smile back."
+			],
+			"rewardHint": "The Pilgrim Guide offers a Forge Rune — blessed by the Sanctuary before it was besieged."
+		},
+		{
+			"id": "einbroch_outskirts",
+			"name": "Einbroch Outskirts",
+			"levelRange": [
+				86,
+				95
+			],
+			"intro": "The sky ahead is black with smog. The ground vibrates with industrial machinery. Einbroch's outskirts are a graveyard of failed experiments.",
+			"quests": [
+				"Factory foremen report workers going missing in the lower levels.",
+				"A chemical leak has mutated the wildlife beyond recognition.",
+				"The mining operation at Rock Ridge has breached something ancient."
+			],
+			"outros": [
+				"The outskirts are secured. The industrial heart of Einbroch awaits."
+			],
+			"enemyFlavor": "industrial monstrosities and chemical abominations",
+			"npc": "Einbroch Resistance Leader",
+			"npcDialogue": [
+				"We tried to warn the city council three years ago. They called us alarmists.",
+				"The factories run at night now. They don't want you to see what they're making.",
+				"Every resistance cell we set up gets found within a week. There's an informant — or something worse."
+			],
+			"rewardHint": "The resistance leader hands over a Forge Rune — stolen from the factory's own stores."
+		},
+		{
+			"id": "einbroch_industrial",
+			"name": "Einbroch Industrial Zone",
+			"levelRange": [
+				96,
+				102
+			],
+			"intro": "The factories of Einbroch churn day and night. Smoke, steam, and screams rise from the chimneys. This is where the corruption is manufactured.",
+			"quests": [
+				"A biological weapon has been leaked into the city's water supply.",
+				"The factory overseers are creating monsters in vats. Shut them down.",
+				"An entire district has been quarantined. Something is hunting within.",
+				"Demonic forces pour from a chasm at the city's edge — the Gates of Hell."
+			],
+			"outros": [
+				"Einbroch's gears grind on. But you have slowed the machine."
+			],
+			"enemyFlavor": "vat-grown horrors and demonic soldiers",
+			"npc": "Factory Defector",
+			"npcDialogue": [
+				"I built some of what they're using against you. I'm sorry. I didn't know.",
+				"The vats run on something they won't tell us the name of. The workers call it 'the feed.'",
+				"The Gates of Hell aren't a metaphor. I've seen them. The smell doesn't leave you."
+			],
+			"rewardHint": "The defector provides an Aegis Rune — factory-grade protection, originally for their own soldiers."
+		},
+		{
+			"id": "yuno_heights",
+			"name": "Yuno Heights",
+			"levelRange": [
+				103,
+				115
+			],
+			"intro": "The floating city of Yuno casts a shadow across the clouds. Scholars say knowledge is power — here, it is both weapon and curse.",
+			"quests": [
+				"The Yuno Academy archives have been breached. Forbidden knowledge was stolen.",
+				"The airship docks report sabotage. The culprit is still at large.",
+				"A tome of summoning has gone missing from the restricted section."
+			],
+			"outros": [
+				"Yuno's secrets remain locked in its floating spires. Your descent into Rachel begins."
+			],
+			"enemyFlavor": "alchemical constructs and rogue scholars",
+			"npc": "High Scholar",
+			"npcDialogue": [
+				"Forbidden knowledge isn't forbidden because it's useless. It's forbidden because it works.",
+				"The thief who stole from our archives wasn't a thief. They knew exactly what they were looking for.",
+				"Yuno floats because of a principle we discovered, then immediately classified. Some things shouldn't be weaponized."
+			],
+			"rewardHint": "The Academy archives yield an Aegis Rune — once assigned to a scholar who never returned."
+		},
+		{
+			"id": "einbroch_wastes",
+			"name": "Einbroch Wastes",
+			"levelRange": [
+				116,
+				118
+			],
+			"intro": "Beyond the factories lies the wasteland — Einbroch's dumping ground. Toxic rivers, ash storms, and the twisted remnants of countless failed experiments.",
+			"quests": [
+				"The Genesis Project's waste has created a dead zone. Cross it to reach the source.",
+				"Survivors eke out an existence in the wasteland. They know the way.",
+				"Something massive moves beneath the ash. Stay on solid ground."
+			],
+			"outros": [
+				"The wasteland stretches behind you. Death lies ahead."
+			],
+			"enemyFlavor": "toxic mutants and industrial undead",
+			"npc": "Wasteland Guide",
+			"npcDialogue": [
+				"Don't breathe the yellow air. The grey air is fine. Mostly.",
+				"People survive out here. You'd be surprised what humans adapt to, given no choice.",
+				"The Genesis Project's waste has been dumping here for decades. Everything that lives here was changed by it."
+			],
+			"rewardHint": "A wasteland survivor trades a Pegasus Rune for safe passage — fastest legs in a dead land."
+		},
+		{
+			"id": "dicastes_plains",
+			"name": "Dicastes Plains",
+			"levelRange": [
+				119,
+				131
+			],
+			"intro": "The great plains of Dicastes stretch into eternity. Herds of wild dinosaurs roam freely — but they are not the apex predators here.",
+			"quests": [
+				"The Dicastes hunters speak of a great beast slaughtering entire herds.",
+				"An expedition from the capital has gone missing in the tallgrass."
+			],
+			"outros": [
+				"The plains fall silent. You press onward through ancient lands."
+			],
+			"enemyFlavor": "prehistoric beasts and territorial megafauna",
+			"npc": "Dicastes Chieftain",
+			"npcDialogue": [
+				"The great beasts have hunted these plains since before your civilization existed. Respect that.",
+				"Something drove the herds mad. Even apex predators don't act like this without cause.",
+				"We honor the land by fighting only what the land cannot handle itself."
+			],
+			"rewardHint": "The chieftain rewards you with a Pegasus Rune — earned by those swift enough to survive the plains."
+		},
+		{
+			"id": "lasagna_canyon",
+			"name": "Lasagna Canyon",
+			"levelRange": [
+				132,
+				137
+			],
+			"intro": "The canyon pass winds through cliffs that howl when the wind blows. Old carvings on the walls tell a story of sacrifice.",
+			"quests": [
+				"The canyon pass must be cleared for the village's evacuation.",
+				"Wind-carved caves echo with whispers. Something is calling."
+			],
+			"outros": [
+				"The canyon falls quiet. The path forward leads to industry and fire."
+			],
+			"enemyFlavor": "wind spirits and territorial raptors",
+			"npc": "Canyon Guide",
+			"npcDialogue": [
+				"The canyon echoes everything. You'll hear the enemy before you see them.",
+				"Those carvings? The people who made them evacuated. They knew what was coming.",
+				"The whispers aren't spirits. It's air pressure through old tunnels. Probably."
+			],
+			"rewardHint": "A hidden cache in the canyon walls yields a Pegasus Rune, left by a traveler who didn't make it through."
+		},
+		{
+			"id": "manuk_jungle",
+			"name": "Manuk Jungle",
+			"levelRange": [
+				138,
+				142
+			],
+			"intro": "Crumbling stone monuments rise from the jungle floor. The Manuk civilization achieved wonders — and committed atrocities.",
+			"quests": [
+				"The ruins are guarded by automatons that still follow ancient kill-orders.",
+				"A relic of power lies at the heart of the Manuk citadel — if you can survive the traps.",
+				"The jungle itself seems to resist your passage. Vines move when there is no wind."
+			],
+			"outros": [
+				"The jungle reclaims the ruins. But you carry their memory."
+			],
+			"enemyFlavor": "ancient war machines and awakened guardians",
+			"npc": "Ruins Scholar",
+			"npcDialogue": [
+				"The Manuk didn't fall to war. They fell to their own creations. Sound familiar?",
+				"Every guardian still running has a kill order that was never rescinded. We're all still valid targets.",
+				"I've translated enough of their script to know they were proud. I've seen enough of their ruins to know pride doesn't protect you."
+			],
+			"rewardHint": "The scholar locates an Aegis Rune among the ruins — Manuk tech, adapted for modern use."
+		},
+		{
+			"id": "lasagna_village",
+			"name": "Lasagna Village",
+			"levelRange": [
+				143,
+				152
+			],
+			"intro": "A sleepy village nestled between canyons. The people speak of earth-gods that slumber beneath their feet.",
+			"quests": [
+				"The ground trembles constantly. The villagers say the earth-gods are restless.",
+				"A canyon collapse has revealed an underground temple sealed for millennia."
+			],
+			"outros": [
+				"Lasagna breathes easier — but the earth remembers what sleeps below."
+			],
+			"enemyFlavor": "earth elementals and subterranean predators",
+			"npc": "Village Elder",
+			"npcDialogue": [
+				"We have lived above these gods for generations. We know their moods. This is not a mood — this is anger.",
+				"The temple below is not a ruin. It was deliberately sealed. Someone has opened it.",
+				"Leave offerings before you descend. The earth-gods are old, but they notice."
+			],
+			"rewardHint": "The elder offers a Forge Rune — pulled from the sealed temple's antechamber decades ago."
+		},
+		{
+			"id": "odin_temple",
+			"name": "Temple of Odin",
+			"levelRange": [
+				153,
+				154
+			],
+			"intro": "The Temple of Odin stands at the edge of the world. Its halls echo with prayers of the faithful — and screams of the damned.",
+			"quests": [
+				"The Valkyries have abandoned their posts. The temple's guardians are missing.",
+				"The All-Father's flame gutters. Only a worthy sacrifice can relight it."
+			],
+			"outros": [
+				"The temple falls silent. The gods are watching."
+			],
+			"enemyFlavor": "divine constructs and fallen Valkyries",
+			"npc": "Odin Priestess",
+			"npcDialogue": [
+				"The All-Father does not intervene. He observes. Whether that is mercy or cruelty, I have never decided.",
+				"Valkyries are not soldiers. They are judges. Whatever corrupted them changed what they judge you worthy of.",
+				"The trial ahead was designed to kill heroes. That is the point. Only the unkillable deserve what lies beyond."
+			],
+			"rewardHint": "The Odin Priestess grants a Forge Rune — sanctified in the All-Father's flame."
+		},
+		{
+			"id": "biolabs",
+			"name": "Biolabs",
+			"levelRange": [
+				155,
+				158
+			],
+			"intro": "The final horror: a research facility built on the edge of life and death. The scientists here played god — and created monsters that will devour the world.",
+			"quests": [
+				"The Genesis Project must be stopped. Every vat must be destroyed.",
+				"The mastermind behind the corruption is somewhere in these halls.",
+				"The creatures here were designed. Find the research notes.",
+				"There is no escape. The only way out is through."
+			],
+			"outros": [
+				"The facility falls silent. But was the Genesis Project truly stopped?"
+			],
+			"enemyFlavor": "genetic abominations and failed experiments",
+			"npc": "Survivor Scientist",
+			"npcDialogue": [
+				"I've been in here for three years. I've run out of things to be afraid of.",
+				"Genesis was never meant to be a weapon. It was meant to be perfect life. They made it both.",
+				"If you shut down the Genesis Project, you'll save thousands. If you don't, you'll lose millions. Move fast."
+			],
+			"rewardHint": "The scientist's last recorded notes reference a Forge Rune — the only weapon that can scratch what's ahead."
+		},
+		{
+			"id": "nifflheim",
+			"name": "Nifflheim",
+			"levelRange": [
+				159,
+				161
+			],
+			"intro": "The realm of the dead is not a myth. The veil between life and death here is thin enough to see through — and something on the other side is reaching back.",
+			"quests": [
+				"Souls are being stolen before they can pass to the afterlife.",
+				"A lich has been raising the dead of Nifflheim into an army.",
+				"The ferryman demands a toll. But what currency do the dead accept?"
+			],
+			"outros": [
+				"Death is patient. But you are not done living yet."
+			],
+			"enemyFlavor": "undead legions and soul-devouring wraiths",
+			"npc": "Death's Gatekeeper",
+			"npcDialogue": [
+				"I have held this gate since before your civilization had a name for death. Be brief.",
+				"The dead do not rest here. Something is keeping them awake.",
+				"You carry the living world on your back. Do not let that weight make you slow."
+			],
+			"rewardHint": "The Gatekeeper permits one relic to pass back with you — an Aegis Rune, pulled from a fallen Valkyrie."
+		}
+	],
+	"levels": {
+		"1": {
+			"title": "East Prontera Plains",
+			"quest": "Track down pack leaders driving local wildlife into madness."
+		},
+		"2": {
+			"title": "Sograt Borderlands",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"3": {
+			"title": "Kafra Highway",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"4": {
+			"title": "The Northern Forest",
+			"quest": "Rescue Kafra personnel stranded by sudden creature migrations."
+		},
+		"5": {
+			"title": "St. Capitolina Boundary",
+			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes."
+		},
+		"6": {
+			"title": "Ley Line Convergence",
+			"quest": "Secure the Wizards Academy border from wild magic anomalies."
+		},
+		"7": {
+			"title": "Geffen Outskirts",
+			"quest": "Rescue stranded researchers trapped in the magic fallout zone."
+		},
+		"8": {
+			"title": "Wizard Trail",
+			"quest": "Secure the Wizards Academy border from wild magic anomalies."
+		},
+		"9": {
+			"title": "Arcane Quarry",
+			"quest": "Rescue stranded researchers trapped in the magic fallout zone."
+		},
+		"10": {
+			"title": "Magic Shallows",
+			"quest": "Purge the mana-warped creatures disrupting local ley lines."
+		},
+		"11": {
+			"title": "Cobalt Plains",
+			"quest": "Collect stable arcane residue from corrupted beasts."
+		},
+		"12": {
+			"title": "Magic Shallows II",
+			"quest": "Secure the Wizards Academy border from wild magic anomalies."
+		},
+		"13": {
+			"title": "Spellbound Fields",
+			"quest": "Purge the mana-warped creatures disrupting local ley lines."
+		},
+		"14": {
+			"title": "Cobalt Plains II",
+			"quest": "Purge the mana-warped creatures disrupting local ley lines."
+		},
+		"15": {
+			"title": "The Arcane Overflow",
+			"quest": "Contain the wild magic surge before it reaches Geffen Tower."
+		},
+		"16": {
+			"title": "Wizard Trail II",
+			"quest": "Purge the mana-warped creatures disrupting local ley lines."
+		},
+		"17": {
+			"title": "Scorched Wilderness",
+			"quest": "Eliminate the desert predators driving merchants away from the oasis."
+		},
+		"18": {
+			"title": "Sinking Sands",
+			"quest": "Search half-buried ruins for signs of dark ancient awakening."
+		},
+		"19": {
+			"title": "Sograt Dunes",
+			"quest": "Eliminate the desert predators driving merchants away from the oasis."
+		},
+		"20": {
+			"title": "Clay Canyons",
+			"quest": "Search half-buried ruins for signs of dark ancient awakening."
+		},
+		"21": {
+			"title": "Scorched Wilderness II",
+			"quest": "Eliminate the desert predators driving merchants away from the oasis."
+		},
+		"22": {
+			"title": "Sinking Sands II",
+			"quest": "Search half-buried ruins for signs of dark ancient awakening."
+		},
+		"23": {
+			"title": "Sograt Dunes II",
+			"quest": "Eliminate the desert predators driving merchants away from the oasis."
+		},
+		"24": {
+			"title": "Sinking Sands III",
+			"quest": "Search half-buried ruins for signs of dark ancient awakening."
+		},
+		"25": {
+			"title": "Echoing Caves",
+			"quest": "Clear the main payon trade trail of aggressive wild beasts."
+		},
+		"26": {
+			"title": "Echoing Caves II",
+			"quest": "Track down territorial predators encroaching on the archers outpost."
+		},
+		"27": {
+			"title": "Echoing Caves III",
+			"quest": "Clear the main payon trade trail of aggressive wild beasts."
+		},
+		"28": {
+			"title": "Spirit Woods",
+			"quest": "Track down territorial predators encroaching on the archers outpost."
+		},
+		"29": {
+			"title": "Whispering Canopy",
+			"quest": "Track down territorial predators encroaching on the archers outpost."
+		},
+		"30": {
+			"title": "Mjolnir Depths",
+			"quest": "Clear the mountain path of fallen boulders and aggressive harpies."
+		},
+		"31": {
+			"title": "The Steppes",
+			"quest": "Recover lost mining equipment stolen by rogue mountain tribes."
+		},
+		"32": {
+			"title": "The Cold Pass",
+			"quest": "Defend dwarven miners from territorial mountain predators."
+		},
+		"33": {
+			"title": "Dragonfire Ridge",
+			"quest": "Investigate dark energy signals emerging from deep crevices."
+		},
+		"34": {
+			"title": "Windy Crags",
+			"quest": "Defend dwarven miners from territorial mountain predators."
+		},
+		"35": {
+			"title": "The Mountain's Secret",
+			"quest": "Discover what lurks in the heart of Mjolnir Dead Pass."
+		},
+		"36": {
+			"title": "The Cold Pass II",
+			"quest": "Defend dwarven miners from territorial mountain predators."
+		},
+		"37": {
+			"title": "Dragonfire Ridge II",
+			"quest": "Investigate dark energy signals emerging from deep crevices."
+		},
+		"38": {
+			"title": "Jagged Peaks",
+			"quest": "Recover lost mining equipment stolen by rogue mountain tribes."
+		},
+		"39": {
+			"title": "Windy Crags II",
+			"quest": "Defend dwarven miners from territorial mountain predators."
+		},
+		"40": {
+			"title": "Sograt Borderlands II",
+			"quest": "Track down pack leaders driving local wildlife into madness."
+		},
+		"41": {
+			"title": "Kafra Highway II",
+			"quest": "Track down pack leaders driving local wildlife into madness."
+		},
+		"42": {
+			"title": "Royal Grasslands",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"43": {
+			"title": "St. Capitolina Boundary II",
+			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes."
+		},
+		"44": {
+			"title": "West Prontera Road",
+			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes."
+		},
+		"45": {
+			"title": "The Warlord's Ascent",
+			"quest": "Face the beast that rules the highest peak of Mjolnir."
+		},
+		"46": {
+			"title": "East Prontera Plains II",
+			"quest": "Track down pack leaders driving local wildlife into madness."
+		},
+		"47": {
+			"title": "Toy Factory Gates",
+			"quest": "Clear Lutie road of ice spirits and winter predators."
+		},
+		"48": {
+			"title": "Whispering Canopy II",
+			"quest": "Clear the main payon trade trail of aggressive wild beasts."
+		},
+		"49": {
+			"title": "Whispering Canopy III",
+			"quest": "Track down territorial predators encroaching on the archers outpost."
+		},
+		"50": {
+			"title": "The Nightmare Blossom",
+			"quest": "Confront the Moonlight Flower in the depths of Payon."
+		},
+		"51": {
+			"title": "Echoing Caves IV",
+			"quest": "Restore the sacred forest barriers from corrupting influences."
+		},
+		"52": {
+			"title": "Echoing Caves V",
+			"quest": "Track down territorial predators encroaching on the archers outpost."
+		},
+		"53": {
+			"title": "Payon Glade",
+			"quest": "Track down territorial predators encroaching on the archers outpost."
+		},
+		"54": {
+			"title": "Cobalt Plains III",
+			"quest": "Collect stable arcane residue from corrupted beasts."
+		},
+		"55": {
+			"title": "Magic Shallows III",
+			"quest": "Secure the Wizards Academy border from wild magic anomalies."
+		},
+		"56": {
+			"title": "Arcane Quarry II",
+			"quest": "Secure the Wizards Academy border from wild magic anomalies."
+		},
+		"57": {
+			"title": "Ozone Breezes",
+			"quest": "Collect stable arcane residue from corrupted beasts."
+		},
+		"58": {
+			"title": "Sunburned Cliffs",
+			"quest": "Locate and rescue a lost desert excavation team."
+		},
+		"59": {
+			"title": "Oasis Frontier",
+			"quest": "Clear the sandstorm path of aggressive elemental constructs."
+		},
+		"60": {
+			"title": "Heart of the Sands",
+			"quest": "The Pharaoh awakens. Enter the tomb and end his reign."
+		},
+		"61": {
+			"title": "Clay Canyons II",
+			"quest": "Eliminate the desert predators driving merchants away from the oasis."
+		},
+		"62": {
+			"title": "Red Sand Basin",
+			"quest": "Locate and rescue a lost desert excavation team."
+		},
+		"63": {
+			"title": "St. Capitolina Boundary III",
+			"quest": "Rescue Kafra personnel stranded by sudden creature migrations."
+		},
+		"64": {
+			"title": "Royal Grasslands II",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"65": {
+			"title": "Sograt Borderlands III",
+			"quest": "Track down pack leaders driving local wildlife into madness."
+		},
+		"66": {
+			"title": "Royal Grasslands III",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"67": {
+			"title": "Royal Grasslands IV",
+			"quest": "Track down pack leaders driving local wildlife into madness."
+		},
+		"68": {
+			"title": "West Prontera Road II",
+			"quest": "Rescue Kafra personnel stranded by sudden creature migrations."
+		},
+		"69": {
+			"title": "Sograt Borderlands IV",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"70": {
+			"title": "The Steppes II",
+			"quest": "Clear the mountain path of fallen boulders and aggressive harpies."
+		},
+		"71": {
+			"title": "Mjolnir Slopes",
+			"quest": "Recover lost mining equipment stolen by rogue mountain tribes."
+		},
+		"72": {
+			"title": "Kafra Highway III",
+			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
+		},
+		"73": {
+			"title": "Pharos Coast",
+			"quest": "Investigate mysterious abductions from the tourist beaches."
+		},
+		"74": {
+			"title": "Smugglers Cove",
+			"quest": "Clear the coastal highway of aggressive sea-dwelling beasts."
+		},
+		"75": {
+			"title": "Splendide's Wound",
+			"quest": "Seal the elemental rift at Splendide Peak."
+		},
+		"76": {
+			"title": "Pharos Coast II",
+			"quest": "Clear the coastal highway of aggressive sea-dwelling beasts."
+		},
+		"77": {
+			"title": "Smugglers Cove II",
+			"quest": "Investigate mysterious abductions from the tourist beaches."
+		},
+		"78": {
+			"title": "Turquoise Shores",
+			"quest": "Clear the coastal highway of aggressive sea-dwelling beasts."
+		},
+		"79": {
+			"title": "Pharos Coast III",
+			"quest": "Investigate mysterious abductions from the tourist beaches."
+		},
+		"80": {
+			"title": "Silent Sands",
+			"quest": "Disrupt the pirate supply lines hidden in coastal sea caves."
+		},
+		"81": {
+			"title": "Coral Reef",
+			"quest": "Disrupt the pirate supply lines hidden in coastal sea caves."
+		},
+		"82": {
+			"title": "Hvergelmir Fountain",
+			"quest": "Seek guidance from the local tribes to clear the jungle path."
+		},
+		"83": {
+			"title": "The Great Tree Roots",
+			"quest": "Seek guidance from the local tribes to clear the jungle path."
+		},
+		"84": {
+			"title": "The Great Tree Roots II",
+			"quest": "Seek guidance from the local tribes to clear the jungle path."
+		},
+		"85": {
+			"title": "Hvergelmir Fountain II",
+			"quest": "Seek guidance from the local tribes to clear the jungle path."
+		},
+		"86": {
+			"title": "Steam Perimeter",
+			"quest": "Rescue lost factory workers from toxic chemical vapors."
+		},
+		"87": {
+			"title": "Steam Perimeter II",
+			"quest": "Track the biological runoff leaking from factory pipes."
+		},
+		"88": {
+			"title": "Steam Perimeter III",
+			"quest": "Rescue lost factory workers from toxic chemical vapors."
+		},
+		"89": {
+			"title": "Steam Perimeter IV",
+			"quest": "Track the biological runoff leaking from factory pipes."
+		},
+		"90": {
+			"title": "Coal Slopes",
+			"quest": "Neutralize rogue automatons wandering the waste heaps."
+		},
+		"91": {
+			"title": "Coal Slopes II",
+			"quest": "Secure the perimeter of the outer mining operations."
+		},
+		"92": {
+			"title": "Coal Slopes III",
+			"quest": "Neutralize rogue automatons wandering the waste heaps."
+		},
+		"93": {
+			"title": "Coal Slopes IV",
+			"quest": "Secure the perimeter of the outer mining operations."
+		},
+		"94": {
+			"title": "Coal Slopes V",
+			"quest": "Neutralize rogue automatons wandering the waste heaps."
+		},
+		"95": {
+			"title": "The Deep Earth",
+			"quest": "Seal the abyss beneath Rock Ridge before it surfaces."
+		},
+		"96": {
+			"title": "The Coast of Dreams",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"97": {
+			"title": "The Coast of Dreams II",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"98": {
+			"title": "Odin Foothills",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"99": {
+			"title": "The Coast of Dreams III",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"100": {
+			"title": "The Coast of Dreams IV",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"101": {
+			"title": "Odin Foothills II",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"102": {
+			"title": "Odin Foothills III",
+			"quest": "Escort messengers traveling between Hugel and the capital."
+		},
+		"103": {
+			"title": "Cloudreach Cliffs",
+			"quest": "Clear the high pass of aggressive wind-elemental creatures."
+		},
+		"104": {
+			"title": "Cloudreach Cliffs II",
+			"quest": "Clear the high pass of aggressive wind-elemental creatures."
+		},
+		"105": {
+			"title": "The Floating Steppes",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"106": {
+			"title": "The Floating Steppes II",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"107": {
+			"title": "The Floating Steppes III",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"108": {
+			"title": "The Floating Steppes IV",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"109": {
+			"title": "El Mes Plateau",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"110": {
+			"title": "Yuno Escarpment",
+			"quest": "Stabilize the floating islands anchoring mechanisms."
+		},
+		"111": {
+			"title": "Yuno Escarpment II",
+			"quest": "Stabilize the floating islands anchoring mechanisms."
+		},
+		"112": {
+			"title": "Yuno Escarpment III",
+			"quest": "Stabilize the floating islands anchoring mechanisms."
+		},
+		"113": {
+			"title": "The Floating Steppes V",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"114": {
+			"title": "The Floating Steppes VI",
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+		},
+		"115": {
+			"title": "Einbroch's Nightmare",
+			"quest": "Deactivate the core processor and face Einbroch's worst creation."
+		},
+		"116": {
+			"title": "The Corporate Frontier",
+			"quest": "Neutralize escaped lab specimens hiding in the slums."
+		},
+		"117": {
+			"title": "Lighthalzen Plains",
+			"quest": "Investigate reports of unauthorized corporate experiments."
+		},
+		"118": {
+			"title": "Sector Boundary",
+			"quest": "Secure the border gates from rogue automated drones."
+		},
+		"119": {
+			"title": "The Sanctuary Wards",
+			"quest": "Investigate dark whispers calling from the gorge depths."
+		},
+		"120": {
+			"title": "Freya Canyons",
+			"quest": "Escort the high priestess entourage safely."
+		},
+		"121": {
+			"title": "The Sanctuary Wards II",
+			"quest": "Restore the divine wards protecting the holy road."
+		},
+		"122": {
+			"title": "Arunafeltz Gorge",
+			"quest": "Restore the divine wards protecting the holy road."
+		},
+		"123": {
+			"title": "The Silent Steppes",
+			"quest": "Escort the high priestess entourage safely."
+		},
+		"124": {
+			"title": "Arunafeltz Gorge II",
+			"quest": "Restore the divine wards protecting the holy road."
+		},
+		"125": {
+			"title": "The Prophet's Legacy",
+			"quest": "Face the corrupted prophet in the depths of Rachel."
+		},
+		"126": {
+			"title": "Arunafeltz Gorge III",
+			"quest": "Restore the divine wards protecting the holy road."
+		},
+		"127": {
+			"title": "The Silent Steppes II",
+			"quest": "Escort the high priestess entourage safely."
+		},
+		"128": {
+			"title": "Freya Canyons II",
+			"quest": "Investigate dark whispers calling from the gorge depths."
+		},
+		"129": {
+			"title": "The Sanctuary Wards III",
+			"quest": "Investigate dark whispers calling from the gorge depths."
+		},
+		"130": {
+			"title": "Freya Canyons III",
+			"quest": "Escort the high priestess entourage safely."
+		},
+		"131": {
+			"title": "The Sanctuary Wards IV",
+			"quest": "Restore the divine wards protecting the holy road."
+		},
+		"132": {
+			"title": "Thor Foothills",
+			"quest": "Clear the Thor volcano paths of aggressive fire-elementals."
+		},
+		"133": {
+			"title": "Thor Foothills II",
+			"quest": "Cool down critical geothermal vents to prevent eruption."
+		},
+		"134": {
+			"title": "Thor Foothills III",
+			"quest": "Cool down critical geothermal vents to prevent eruption."
+		},
+		"135": {
+			"title": "Lord of the Inferno",
+			"quest": "Confront the spirit of fire bound in Thor Volcano."
+		},
+		"136": {
+			"title": "Thor Foothills IV",
+			"quest": "Clear the Thor volcano paths of aggressive fire-elementals."
+		},
+		"137": {
+			"title": "Smoldering Crags",
+			"quest": "Clear the Thor volcano paths of aggressive fire-elementals."
+		},
+		"138": {
+			"title": "Dicastes Outpost",
+			"quest": "Clear the Dicastes hunting grounds of aggressive megafauna."
+		},
+		"139": {
+			"title": "Dicastes Outpost II",
+			"quest": "Defeat rogue ice-giants threatening the Manuk settlement."
+		},
+		"140": {
+			"title": "Splendide Fields",
+			"quest": "Clear the Dicastes hunting grounds of aggressive megafauna."
+		},
+		"141": {
+			"title": "Splendide Fields II",
+			"quest": "Defeat rogue ice-giants threatening the Manuk settlement."
+		},
+		"142": {
+			"title": "Manuk Frostlands",
+			"quest": "Defeat rogue ice-giants threatening the Manuk settlement."
+		},
+		"143": {
+			"title": "Lasagna Canyons",
+			"quest": "Clear the canyon pass of territorial raptor nests."
+		},
+		"144": {
+			"title": "Lasagna Canyons II",
+			"quest": "Clear the canyon pass of territorial raptor nests."
+		},
+		"145": {
+			"title": "Cat Paw Shore",
+			"quest": "Help the Cat Paw merchant guild retrieve washed-up cargo."
+		},
+		"146": {
+			"title": "Cat Paw Shore II",
+			"quest": "Help the Cat Paw merchant guild retrieve washed-up cargo."
+		},
+		"147": {
+			"title": "Bifrost Mist",
+			"quest": "Navigate the shifting mists of the Bifrost forest safely."
+		},
+		"148": {
+			"title": "Bifrost Mist II",
+			"quest": "Retrieve elven artifacts lost in the ancient ruins."
+		},
+		"149": {
+			"title": "Bifrost Mist III",
+			"quest": "Navigate the shifting mists of the Bifrost forest safely."
+		},
+		"150": {
+			"title": "Odin's Threshold",
+			"quest": "Prove your worth in the trial of Odin's chosen and face the fallen judge."
+		},
+		"151": {
+			"title": "Eclage Boundary",
+			"quest": "Defeat rogue ice-giants threatening the Manuk settlement."
+		},
+		"152": {
+			"title": "Eclage Boundary II",
+			"quest": "Clear the Dicastes hunting grounds of aggressive megafauna."
+		},
+		"153": {
+			"title": "Glast Heim Outskirts",
+			"quest": "Seal the dark chasm before demonic forces swarm the fields."
+		},
+		"154": {
+			"title": "Glast Heim Outskirts II",
+			"quest": "Seal the dark chasm before demonic forces swarm the fields."
+		},
+		"155": {
+			"title": "Biolab Testing Chamber",
+			"quest": "Disable automated security systems in the containment wing."
+		},
+		"156": {
+			"title": "Biolab Testing Chamber II",
+			"quest": "Retrieve critical research logs from the mainframe."
+		},
+		"157": {
+			"title": "Biolab Testing Chamber III",
+			"quest": "Retrieve critical research logs from the mainframe."
+		},
+		"158": {
+			"title": "Biolab Testing Chamber IV",
+			"quest": "Retrieve critical research logs from the mainframe."
+		},
+		"159": {
+			"title": "The Valley of Gyoll",
+			"quest": "Survive the relentless onslaught of Nifflheim undead."
+		},
+		"160": {
+			"title": "The Valley of Gyoll II",
+			"quest": "Destroy the soul-harvesting portals before they spread."
+		},
+		"161": {
+			"title": "The Heart of the Lab",
+			"quest": "Confront the mastermind. End the Genesis Project forever."
+		}
+	},
+	"bosses": {
+		"15": {
+			"name": "Arcane Anomaly",
+			"title": "The Living Spell",
+			"intro": "Geffen's failed experiment has coalesced into a being of pure magic. It crackles with stolen power — and it is not friendly.",
+			"outro": "The anomaly dissipates into harmless motes of light. Geffen's mages breathe a collective sigh of relief."
+		},
+		"35": {
+			"name": "Maya — Golden Bug",
+			"title": "Queen of the Dead Pass",
+			"intro": "At the heart of Mjolnir Dead Pass, a golden insect the size of a house blocks the way. Its carapace is harder than steel, and its wrath is ancient.",
+			"outro": "The Golden Bug falls. The pass is open — but the mountains tremble with the echo of its death."
+		},
+		"45": {
+			"name": "Orc Hero",
+			"title": "Warlord of Mjolnir",
+			"intro": "The Orc Hero descends from the peak, wielding a weapon forged in dragonfire. Every orc in the mountain bows to this one.",
+			"outro": "The orcs scatter without their hero. The peak is yours."
+		},
+		"50": {
+			"name": "Moonlight Flower",
+			"title": "The Nightmare Blossom",
+			"intro": "At the heart of Rachel's catacombs, a flower of impossible beauty blooms. Its pollen shows you your deepest fears — then makes them real.",
+			"outro": "The flower withers. Dawn breaks over Rachel for the first time in weeks."
+		},
+		"60": {
+			"name": "Pharaoh",
+			"title": "Undying King of the Sands",
+			"intro": "Deep within Morroc's greatest tomb, the Pharaoh stirs. Millennia of death have not diminished his hunger for dominion.",
+			"outro": "The Pharaoh crumbles to dust. The desert winds carry his final sigh across the dunes."
+		},
+		"75": {
+			"name": "Elemental Titan",
+			"title": "Splendide's Heart",
+			"intro": "The elemental imbalance at Splendide Peak has birthed a titan of fire and ice. It does not attack — it simply exists, and existence around it is annihilated.",
+			"outro": "The titan crumbles. Splendide Peak grows quiet, the elements slowly returning to balance."
+		},
+		"95": {
+			"name": "Earth Abomination",
+			"title": "What Was Buried",
+			"intro": "The miners of Rock Ridge dug too deep. What they found was not a mineral vein — it was a sleeping horror, and it is awake.",
+			"outro": "The abomination sinks back into the depths. Rock Ridge seals the mine forever."
+		},
+		"115": {
+			"name": "Chemical Behemoth",
+			"title": "Einbroch's Worst Creation",
+			"intro": "The vat-grown monstrosity towers over the factory floor. It is the combined essence of every failed experiment — pain given flesh.",
+			"outro": "The behemoth collapses into a pool of toxic sludge. Einbroch's skies begin to clear."
+		},
+		"125": {
+			"name": "Corrupted Priestess",
+			"title": "The False Prophet",
+			"intro": "The High Priestess of Rachel has fallen to the corruption she sought to contain. Her faith has become a weapon.",
+			"outro": "The sanctuary bells toll her passing. Rachel weeps — but the path is purified."
+		},
+		"135": {
+			"name": "Ifrit",
+			"title": "Lord of the Inferno",
+			"intro": "The Biolabs' ultimate weapon: a primordial spirit of fire bound into flesh. Ifrit burns with a hatred older than humanity.",
+			"outro": "Ifrit's flames gutter and die. The Biolabs' temperature drops for the first time in years."
+		},
+		"150": {
+			"name": "Valkyrie Randgris",
+			"title": "Fallen Seraph",
+			"intro": "The Temple of Odin's greatest guardian has been corrupted. Randgris, once the protector of the worthy, now judges all — and finds all wanting.",
+			"outro": "Randgris's wings shatter. The temple's light flickers back to life."
+		},
+		"161": {
+			"name": "Genesis",
+			"title": "The First and the Last",
+			"intro": "At the heart of the Biolabs, the Genesis Project awaits. It is not a monster — it is the template from which all monsters were made. The origin of the corruption. The end of your journey.",
+			"outro": "Genesis falls. The Biolabs fall silent. The corruption's source is severed — but the scars remain."
+		}
+	},
+	"dialogue": [
+		{
+			"level": 15,
+			"type": "boss_entry",
+			"speaker": "Arcane Anomaly",
+			"text": "You cannot kill a spell. You can only outlast it."
+		},
+		{
+			"level": 15,
+			"type": "half_hp",
+			"speaker": "Wizard Guildmaster",
+			"text": "Hold your ground! The anomaly feeds on panic!"
+		},
+		{
+			"level": 35,
+			"type": "boss_entry",
+			"speaker": "Maya",
+			"text": "..."
+		},
+		{
+			"level": 35,
+			"type": "first_blood",
+			"speaker": "Mountain Guide",
+			"text": "Don't celebrate yet. That thing has a queen."
+		},
+		{
+			"level": 35,
+			"type": "half_hp",
+			"speaker": "Mountain Guide",
+			"text": "Its shell is cracking! Push through!"
+		},
+		{
+			"level": 45,
+			"type": "boss_entry",
+			"speaker": "Orc Hero",
+			"text": "Small ones come to die on the peak. The mountain approves."
+		},
+		{
+			"level": 45,
+			"type": "half_hp",
+			"speaker": "Orc Hero",
+			"text": "You bleed. Good. Now we are even."
+		},
+		{
+			"level": 60,
+			"type": "boss_entry",
+			"speaker": "Pharaoh",
+			"text": "Millennia of patience. You are not the first to disturb my rest. You will be the last."
+		},
+		{
+			"level": 60,
+			"type": "first_blood",
+			"speaker": "Desert Shaman",
+			"text": "The sand remembers every wound. Make it remember yours."
+		},
+		{
+			"level": 60,
+			"type": "half_hp",
+			"speaker": "Pharaoh",
+			"text": "You cannot kill what already rules over death."
+		},
+		{
+			"level": 125,
+			"type": "boss_entry",
+			"speaker": "Corrupted Priestess",
+			"text": "I prayed for guidance. The corruption answered. Who are you to say it was wrong?"
+		},
+		{
+			"level": 125,
+			"type": "half_hp",
+			"speaker": "Pilgrim Guide",
+			"text": "The sanctuary's bells are silent. We must end this quickly."
+		},
+		{
+			"level": 50,
+			"type": "boss_entry",
+			"speaker": "Moonlight Flower",
+			"text": "What you fear most is already here. I simply make it visible."
+		},
+		{
+			"level": 50,
+			"type": "first_blood",
+			"speaker": "Pilgrim Guide",
+			"text": "Don't look at its petals. Focus on the roots."
+		},
+		{
+			"level": 75,
+			"type": "boss_entry",
+			"speaker": "Elemental Titan",
+			"text": "..."
+		},
+		{
+			"level": 75,
+			"type": "half_hp",
+			"speaker": "Ruins Scholar",
+			"text": "The elemental matrix is destabilizing — our attacks are working!"
+		},
+		{
+			"level": 95,
+			"type": "boss_entry",
+			"speaker": "Earth Abomination",
+			"text": "GGRRAAHHH"
+		},
+		{
+			"level": 95,
+			"type": "first_blood",
+			"speaker": "Einbroch Resistance Leader",
+			"text": "Good hit. Now don't stop — it regenerates."
+		},
+		{
+			"level": 95,
+			"type": "half_hp",
+			"speaker": "Einbroch Resistance Leader",
+			"text": "It's slowing down. The earth can't sustain it above ground!"
+		},
+		{
+			"level": 115,
+			"type": "boss_entry",
+			"speaker": "Chemical Behemoth",
+			"text": "Subjects detected. Initiating containment protocol."
+		},
+		{
+			"level": 115,
+			"type": "half_hp",
+			"speaker": "Factory Defector",
+			"text": "The toxin sacs are rupturing — don't let it spray you!"
+		},
+		{
+			"level": 150,
+			"type": "boss_entry",
+			"speaker": "Valkyrie Randgris",
+			"text": "I judged ten thousand warriors. I found them all unworthy. I judge you now."
+		},
+		{
+			"level": 150,
+			"type": "first_blood",
+			"speaker": "Odin Priestess",
+			"text": "She still fights like a Valkyrie — even corrupted. We must match her discipline."
+		},
+		{
+			"level": 150,
+			"type": "half_hp",
+			"speaker": "Valkyrie Randgris",
+			"text": "...Perhaps I misjudged."
+		},
+		{
+			"level": 135,
+			"type": "boss_entry",
+			"speaker": "Ifrit",
+			"text": "Every fire that ever burned remembers my name."
+		},
+		{
+			"level": 135,
+			"type": "half_hp",
+			"speaker": "Ifrit",
+			"text": "Impossible. The bound one cannot be hurt!"
+		},
+		{
+			"level": 161,
+			"type": "boss_entry",
+			"speaker": "Genesis",
+			"text": "You reached the end. Most don't. I have been waiting. I always wait."
+		},
+		{
+			"level": 161,
+			"type": "first_blood",
+			"speaker": "Survivor Scientist",
+			"text": "It's actually bleeding. I didn't think that was possible."
+		},
+		{
+			"level": 161,
+			"type": "half_hp",
+			"speaker": "Genesis",
+			"text": "Fascinating. You exceed the projected parameters."
+		},
+		{
+			"level": 161,
+			"type": "victory",
+			"speaker": "Survivor Scientist",
+			"text": "It's over. After everything... it's over."
+		}
+	]
 }

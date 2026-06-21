@@ -74,7 +74,7 @@ URL ?campaign=true&map=levelN.json
 | `js/campaign/campaign-manager.js` | Meta-game: fatigue, devotion points, perks, HP combat, saves | Campaign features, perk effects, save format |
 | `js/campaign/story-engine.js` | Narrative: regions, arcs, bosses, NPC dialogue, reward hints | Story queries; thin layer — add data to JSON not here |
 | `js/campaign/ro_quest_db.json` | All narrative content: 22 regions, 6 arcs, 12 bosses, 31 dialogue lines | Adding story content, dialogue, NPC lines |
-| `js/campaign/ro_level_rmi.json` | RO map names for terrain generation (58 entries) | Changing map visuals per level |
+| `js/campaign/ro_level_rmi.json` | RO map names for terrain generation (161 entries) | Changing map visuals per level |
 | `html/controller.html` | Battle UI: story intro/outro overlays, quest HUD, story toast, setup buttons | Story UI, battle HUD changes |
 | `html/camp.html` | Camp screen: devotion spending, perk selection, NPC dialogue, world map button | Camp/upgrade UI |
 | `html/worldmap.html` | Campaign world map timeline | World map display |
