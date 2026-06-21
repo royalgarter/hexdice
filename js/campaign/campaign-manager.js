@@ -432,7 +432,7 @@ const CampaignManager = {
 		// Knight Tier 2 [B] Vanguard: attacker gets -10 ATK if adjacent to an enemy Knight with this perk (and target is not that Knight)
 		const attackerHex = gameInstance.getHex(attacker.hexId, state);
 		if (attackerHex) {
-			const vanguardDebuff = AXES.some(([dq, dr]) => {
+			const vanguardDebuff = AXES.some(({q: dq, r: dr}) => {
 				const adjHex = gameInstance.getHexByQR(attackerHex.q + dq, attackerHex.r + dr, state);
 				if (!adjHex) return false;
 				const adjUnit = gameInstance.getUnitOnHex(adjHex.id, state);
