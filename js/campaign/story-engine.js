@@ -125,6 +125,18 @@ const StoryEngine = {
 		return this.db.dialogue.find(d => d.level === levelNum && d.type === type) || null;
 	},
 
+	getNPCDialogue(levelNum) {
+		const region = this.getRegionForLevel(levelNum);
+		if (!region || !region.npcDialogue || !region.npcDialogue.length) return null;
+		const idx = this._seededRandom(levelNum + 200, region.npcDialogue.length);
+		return { speaker: region.npc || 'Mysterious Figure', text: region.npcDialogue[idx] };
+	},
+
+	getRewardHint(levelNum) {
+		const region = this.getRegionForLevel(levelNum);
+		return region?.rewardHint || null;
+	},
+
 	markSeen(levelNum) {
 		this._seen[levelNum] = true;
 	},

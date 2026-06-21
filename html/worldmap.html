@@ -1,0 +1,57 @@
+<div style="display:none;" x-show="showWorldMap" x-cloak class="fixed top-0 left-0 right-0 bottom-0 z-30 flex items-center justify-center bg-black/80 p-4">
+	<div class="border w-full max-w-2xl bg-hardwood overflow-y-auto relative" style="max-height: 90vh;">
+		<div class="sticky top-0 bg-hardwood border-b px-4 py-3 flex items-center justify-between z-10">
+			<div class="font-bold uppercase tracking-widest text-sm">Journey of the Six — World Map</div>
+			<button @click="showWorldMap = false" class="text-lg font-bold cursor-pointer">✕</button>
+		</div>
+
+		<div class="p-4">
+			<template x-if="StoryEngine.db">
+				<div class="space-y-4">
+					<template x-for="arc in StoryEngine.db.arcs" :key="arc.id">
+						<div :class="CampaignManager.state.currentLevel >= arc.levels[0] ? 'opacity-100' : 'opacity-30'">
+							<!-- Arc header -->
+							<div class="flex items-center gap-2 mb-2">
+								<div class="w-3 h-3 rounded-full border-2 flex-shrink-0"
+									 :class="CampaignManager.state.currentLevel > arc.levels[1] ? 'bg-yellow-600 border-yellow-600' : CampaignManager.state.currentLevel >= arc.levels[0] ? 'bg-white border-white' : 'border-white/40'"></div>
+								<div class="font-bold text-sm" x-text="arc.name"></div>
+								<div class="text-[10px] opacity-50 ml-auto" x-text="'Lv ' + arc.levels[0] + '–' + arc.levels[1]"></div>
+							</div>
+							<div class="ml-5 text-[10px] opacity-50 italic mb-2 leading-relaxed" x-text="arc.summary"></div>
+
+							<!-- Regions in this arc -->
+							<div class="ml-5 space-y-1">
+								<template x-for="region in StoryEngine.db.regions.filter(r => r.levelRange[0] >= arc.levels[0] && r.levelRange[1] <= arc.levels[1])" :key="region.id">
+									<div class="flex items-center gap-2 text-xs py-0.5">
+										<div class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+											 :class="CampaignManager.state.currentLevel > region.levelRange[1] ? 'bg-yellow-600' : CampaignManager.state.currentLevel >= region.levelRange[0] ? 'bg-white' : 'bg-white/20'"></div>
+										<span x-text="region.name" :class="CampaignManager.state.currentLevel >= region.levelRange[0] ? '' : 'opacity-40'"></span>
+										<span class="opacity-30 text-[9px]" x-text="'Lv ' + region.levelRange[0] + (region.levelRange[1] !== region.levelRange[0] ? '–' + region.levelRange[1] : '')"></span>
+										<!-- Boss indicator -->
+										<template x-for="bossLevel in Object.keys(StoryEngine.db.bosses).map(Number).filter(n => n >= region.levelRange[0] && n <= region.levelRange[1])" :key="bossLevel">
+											<span class="text-[9px] font-bold ml-auto"
+												  :class="CampaignManager.state.storyState?.bossesDefeated?.includes(bossLevel) ? 'text-yellow-600' : CampaignManager.state.currentLevel >= bossLevel ? 'text-red-400 animate-pulse' : 'text-red-900'"
+												  x-text="'⚔ ' + StoryEngine.db.bosses[bossLevel]?.name"></span>
+										</template>
+									</div>
+								</template>
+							</div>
+
+							<!-- Arc divider (not after last) -->
+							<template x-if="arc.id < StoryEngine.db.arcs.length">
+								<div class="ml-5 mt-2 border-l border-white/10 h-3"></div>
+							</template>
+						</div>
+					</template>
+				</div>
+			</template>
+
+			<!-- Stats footer -->
+			<div class="mt-6 pt-4 border-t text-[10px] opacity-40 flex gap-4 justify-center">
+				<span>Level: <span x-text="CampaignManager.state.currentLevel"></span>/58</span>
+				<span>Quests: <span x-text="Object.keys(CampaignManager.state.storyState?.completedQuests || {}).length"></span></span>
+				<span>Bosses: <span x-text="CampaignManager.state.storyState?.bossesDefeated?.length || 0"></span>/12</span>
+			</div>
+		</div>
+	</div>
+</div>
