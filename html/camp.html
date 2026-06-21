@@ -8,6 +8,34 @@
 			</div>
 		</div>
 
+		<!-- Story Arc Progress -->
+		<div class="mb-3 p-2 border bg-black/10 text-center">
+			<div class="text-xs uppercase tracking-wide opacity-60">Current Arc</div>
+			<div class="font-bold text-sm" x-text="StoryEngine.getArcName(CampaignManager.state.currentLevel) || 'Journey of the Six'"></div>
+			<div class="text-[10px] opacity-50 mt-0.5 italic" x-text="StoryEngine.getArcSummary(CampaignManager.state.currentLevel)?.summary || ''"></div>
+			<div class="mt-1 flex items-center justify-center gap-2 text-[10px]">
+				<span class="opacity-60">Level <span x-text="CampaignManager.state.currentLevel"></span></span>
+				<template x-if="StoryEngine.getArcForLevel(CampaignManager.state.currentLevel)">
+					<span class="opacity-40">|</span>
+				</template>
+				<template x-if="StoryEngine.getArcForLevel(CampaignManager.state.currentLevel)">
+					<span class="opacity-60">
+						<span x-text="StoryEngine.getArcSummary(CampaignManager.state.currentLevel)?.start"></span>-
+						<span x-text="StoryEngine.getArcSummary(CampaignManager.state.currentLevel)?.end"></span>
+						(<span x-text="StoryEngine.getArcSummary(CampaignManager.state.currentLevel)?.progress + '%'"></span>)
+					</span>
+				</template>
+			</div>
+			<div class="text-[10px] mt-1 opacity-40">
+				<template x-if="CampaignManager.state.storyState">
+					<span>Quests: <span x-text="Object.keys(CampaignManager.state.storyState.completedQuests || {}).length"></span> completed</span>
+				</template>
+				<template x-if="CampaignManager.state.storyState?.bossesDefeated?.length">
+					<span> | Bosses: <span x-text="CampaignManager.state.storyState.bossesDefeated.length"></span> slain</span>
+				</template>
+			</div>
+		</div>
+
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
 			<template x-for="val in [1, 2, 3, 4, 5, 6]" :key="val">
 				<div class="border p-2 flex flex-col">
@@ -55,13 +83,13 @@
 										<div class="flex w-full gap-2">
 											<button @click="CampaignManager.selectPerk(val, tier, 'A')" class="flex-1 border hover:text-white p-1 group relative">
 												<div class="font-bold">PATH A</div>
-												<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
-												<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
+												<div class="text-sm leading-tight font-bold uppercase" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].name"></div>
+												<div class="text-xs leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['A'].desc"></div>
 											</button>
 											<button @click="CampaignManager.selectPerk(val, tier, 'B')" class="flex-1 border hover:text-white p-1 group relative">
 												<div class="font-bold">PATH B</div>
-												<div class="text-sm leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
-												<div class="hidden group-hover:block absolute z-50 bg-black text-white p-2 text-sm w-40 -top-16 border border-white" style="left: 50%; transform: translateX(-50%);" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
+												<div class="text-sm leading-tight font-bold uppercase" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].name"></div>
+												<div class="text-xs leading-tight" x-text="CampaignManager.PERK_DESCRIPTIONS[val][tier]['B'].desc"></div>
 											</button>
 										</div>
 									</template>

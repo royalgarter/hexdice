@@ -3,7 +3,7 @@
  * Persistent fatigue and rune systems.
  */
 const CampaignManager = {
-	state: {
+		state: {
 		activeSlot: 1,
 		slots: {
 			1: { name: 'Campaign 1', data: null },
@@ -22,7 +22,13 @@ const CampaignManager = {
 			6: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
 		},
 		currentLevel: 1,
-		isCampaignActive: new URLSearchParams(location.search).get('campaign') === 'true'
+		isCampaignActive: new URLSearchParams(location.search).get('campaign') === 'true',
+		storyState: {
+			currentArc: 1,
+			completedQuests: {},
+			bossesDefeated: [],
+			seenIntros: {}
+		}
 	},
 
 	STORAGE_KEY: 'hexdice_campaign_state',
@@ -176,10 +182,15 @@ const CampaignManager = {
 					this.state.runes = { aegis: 2, pegasus: 1, forge: 1 };
 				}
 
-				// Ensure recoveryLevels exists for backward compatibility
-				if (!this.state.recoveryLevels) {
-					this.state.recoveryLevels = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
-				}
+			// Ensure recoveryLevels exists for backward compatibility
+			if (!this.state.recoveryLevels) {
+				this.state.recoveryLevels = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+			}
+
+			// Ensure storyState exists for backward compatibility
+			if (!this.state.storyState) {
+				this.state.storyState = { currentArc: 1, completedQuests: {}, bossesDefeated: [], seenIntros: {} };
+			}
 			} catch (e) {
 				console.error("Failed to parse campaign state:", e);
 			}
@@ -194,6 +205,9 @@ const CampaignManager = {
 
 		// Sync with server if logged in
 		await this.syncWithServer();
+
+		// Load story engine data
+		await StoryEngine.init();
 	},
 
 	/**
@@ -689,7 +703,15 @@ const CampaignManager = {
 
 		this.updateAfterBattle(deployedValues, eliminatedValues);
 
+		// Track story progression
+		const levelNum = this.state.currentLevel;
 		if (winnerPlayerIndex === 0) {
+			this.state.storyState.completedQuests[levelNum] = true;
+			if (StoryEngine.isBossLevel(levelNum)) {
+				this.state.storyState.bossesDefeated.push(levelNum);
+			}
+			this.state.storyState.seenIntros[levelNum + 1] = false;
+
 			this.advanceLevel();
 			if (game.campaignData?.rewards) {
 				this.grantRewards(game.campaignData.rewards);
@@ -730,6 +752,15 @@ const CampaignManager = {
 			unit.currentHP = 0;
 			game.removeUnit(hexId, state);
 		}
+
+		// Queue game renderer update for campaign mode
+		if (!state && game.gameRenderer?._hexCache.has(hexId)) {
+			game.gameRenderer.queueUpdate(
+				hexId, unit.currentHP, unit.maxHP,
+				unit.currentArmor, unit.effectiveArmor || unit.currentArmor, unit.attack, unit.veteranLevel
+			);
+		}
+
 		return true;
 	},
 
@@ -767,6 +798,22 @@ const CampaignManager = {
 
 	getCurrentMapName() {
 		return `level${this.state.currentLevel}.json`;
+	},
+
+	getLevelStory(levelNum) {
+		return {
+			region: StoryEngine.getRegionName(levelNum),
+			title: StoryEngine.getTitle(levelNum),
+			quest: StoryEngine.getQuest(levelNum),
+			intro: StoryEngine.getIntro(levelNum),
+			outro: StoryEngine.getOutro(levelNum),
+			npc: StoryEngine.getNPC(levelNum),
+			arc: StoryEngine.getArcName(levelNum),
+			arcSummary: StoryEngine.getArcSummary(levelNum),
+			enemyFlavor: StoryEngine.getEnemyFlavor(levelNum),
+			isBoss: StoryEngine.isBossLevel(levelNum),
+			boss: StoryEngine.getBossForLevel(levelNum)
+		};
 	},
 
 	/**
@@ -834,7 +881,7 @@ const CampaignManager = {
 	/**
 	 * Reset the entire campaign (for "New Game" in campaign mode).
 	 */
-	resetCampaign() {
+		resetCampaign() {
 		const newCampaignData = {
 			unitUsage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
 			recoveryLevels: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
@@ -849,7 +896,13 @@ const CampaignManager = {
 				6: { atk: 0, def: 0, hp: 0, points: 0, perks: { tier1: null, tier2: null, tier3: null } },
 			},
 			currentLevel: 1,
-			isCampaignActive: true
+			isCampaignActive: true,
+			storyState: {
+				currentArc: 1,
+				completedQuests: {},
+				bossesDefeated: [],
+				seenIntros: {}
+			}
 		};
 
 		// Merge instead of replace to preserve reactivity
@@ -886,17 +939,35 @@ const CampaignManager = {
 		let enemyDiceCount = Math.ceil(levelNum / 10 + 2);
 		let enemyDice = Array.from({ length: enemyDiceCount }, () => Math.floor(Math.random() * 6) + 1);
 
+		const levelNumInt = parseInt(levelNum);
+		const isBoss = StoryEngine.isBossLevel(levelNumInt);
+
 		return {
-			name: `Ragnarok Online Level ${levelNum} (${map})`,
+			name: isBoss
+				? `${StoryEngine.getBossForLevel(levelNumInt).name} — ${StoryEngine.getBossForLevel(levelNumInt).title}`
+				: `${StoryEngine.getRegionName(levelNumInt)} — ${StoryEngine.getTitle(levelNumInt)}`,
 			rmi: `${map}.gif`,
-			level: levelNum,
+			level: levelNumInt,
 			radius: 5,
+			baseDeploymentLimit: 3,
 			deploymentLimit: 3,
 			player1Dice: [1, 2, 3, 4, 5, 6],
 			enemyDice: enemyDice,
 			config: {
 				p2AI: true,
 				options: "rm"
+			},
+			story: {
+				region: StoryEngine.getRegionName(levelNumInt),
+				title: StoryEngine.getTitle(levelNumInt),
+				quest: StoryEngine.getQuest(levelNumInt),
+				intro: StoryEngine.getIntro(levelNumInt),
+				outro: StoryEngine.getOutro(levelNumInt),
+				npc: StoryEngine.getNPC(levelNumInt),
+				arc: StoryEngine.getArcName(levelNumInt),
+				enemyFlavor: StoryEngine.getEnemyFlavor(levelNumInt),
+				isBoss: isBoss,
+				boss: StoryEngine.getBossForLevel(levelNumInt)
 			}
 		}
 	}

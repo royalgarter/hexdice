@@ -232,10 +232,10 @@ const Autochess = {
 		GAME.Autochess.state.selectedUnitId = unitId1;
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
-		GAME.Autochess.deployPlayerUnits(GAME, playerId);
-
-		// If u1 is on board, its reference is already updated, but we might want to refresh its hexId just in case
-		// No full deployPlayerUnits here to preserve other units' positions.
+		// Only redeploy if u1 was not already on the board (needs deployment after u2 removal shifted indices)
+		if (!u1.hexId) {
+			GAME.Autochess.deployPlayerUnits(GAME, playerId);
+		}
 	},
 
 	createUnit(GAME, value, playerId) {
@@ -255,18 +255,21 @@ const Autochess = {
 			veteranLevel: 0,
 			perks: { tier1: null, tier2: null, tier3: null },
 
-			// Autochess-specific tracking
-			ticksInCombat: 0,
-			oncePerBattleUsed: false,
-			lastWindriderTick: 0,
-			consecutiveHits: 0,
-			lastTargetId: null,
-			entrenchStacks: 0,
-			parryShield: 0,
-			frozenTicks: 0,
-			speedBuff: 0,
-			speedBuffDuration: 0,
-			sniperCount: 0,
+		// Autochess-specific tracking
+		ticksInCombat: 0,
+		oncePerBattleUsed: false,
+		lastWindriderTick: 0,
+		consecutiveHits: 0,
+		lastTargetId: null,
+		entrenchStacks: 0,
+		parryShield: 0,
+		frozenTicks: 0,
+		speedBuff: 0,
+		speedBuffDuration: 0,
+		sniperCount: 0,
+		isHit: false,
+		isHitDx: 0,
+		isHitDy: 0,
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
 		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
@@ -303,6 +306,9 @@ const Autochess = {
 		GAME.Autochess.state.phase = 'COMBAT';
 		GAME.Autochess.state.roundTimer = 0;
 		GAME.messageLog = [];
+
+		// Init combat renderer for direct DOM updates (bypasses Alpine reactivity)
+		GAME.Autochess.combatRenderer.init();
 
 		// For single-player mode, ensure Player 0 profile is set
 		if (GAME.players[0] && !GAME.players[0].isAI) {
@@ -440,12 +446,14 @@ const Autochess = {
 	runSimulation(GAME) {
 		const combatInterval = setInterval(() => {
 			if (GAME.Autochess.state.phase !== 'COMBAT') {
+				GAME.Autochess.combatRenderer.destroy();
 				clearInterval(combatInterval);
 				return;
 			}
 
 			GAME.Autochess.state.roundTimer += 0.1;
 			if (GAME.Autochess.state.roundTimer >= AUTOCHESS_CONFIG.ROUND_TIME_LIMIT) {
+				GAME.Autochess.combatRenderer.destroy();
 				GAME.Autochess.resolveTimeout(GAME);
 				clearInterval(combatInterval);
 				return;
@@ -453,11 +461,24 @@ const Autochess = {
 
 			GAME.Autochess.simulateStep(GAME);
 
+			// Queue rAF updates for all deployed units (bypasses Alpine reactivity)
+			GAME.players.forEach(p => {
+				p.dice.forEach(u => {
+					if (u.hexId && u.isDeployed && !u.isDeath) {
+						GAME.Autochess.combatRenderer.queueUpdate(
+							u.hexId, u.hp, u.maxHP, u.actionGauge,
+							u.isHit, u.isHitDx, u.isHitDy
+						);
+					}
+				});
+			});
+
 			const alivePlayers = GAME.players.filter(p => p.dice.some(u => u.hexId && u.isDeployed && !u.isDeath));
 
 			if (alivePlayers.length > 1) return;
 
 			clearInterval(combatInterval);
+			GAME.Autochess.combatRenderer.destroy();
 			const winner = alivePlayers[0];
 
 			GAME.players.forEach(p => {
@@ -477,6 +498,7 @@ const Autochess = {
 	},
 
 	resolveTimeout(GAME) {
+		GAME.Autochess.combatRenderer.destroy();
 		const aliveUnits = GAME.players.map(p => p.dice.filter(u => u.hexId && u.isDeployed && !u.isDeath));
 		const playerHPs = aliveUnits.map(units => units.reduce((sum, u) => sum + u.hp, 0));
 
@@ -512,8 +534,94 @@ const Autochess = {
 		GAME.Autochess.state.phase = 'RECAP';
 	},
 
+	combatRenderer: {
+		_rafId: null,
+		_hexCache: new Map(),
+
+		init() {
+			this.destroy();
+			document.querySelectorAll('[data-combat-hp]').forEach(el => {
+				const hex = el.closest('.hexagon');
+				if (hex) {
+					const id = parseInt(hex.dataset.id);
+					if (!isNaN(id)) {
+						this._hexCache.set(id, {
+							hpBar: el,
+							gaugeBar: hex.querySelector('[data-combat-gauge]'),
+							hitIcon: hex.querySelector('[data-combat-hit]'),
+							hexEl: hex,
+						});
+					}
+				}
+			});
+		},
+
+		queueUpdate(hexId, hp, maxHp, actionGauge, isHit, isHitDx, isHitDy) {
+			const entry = this._hexCache.get(hexId);
+			if (!entry) return;
+			entry._hp = hp;
+			entry._maxHp = maxHp;
+			entry._gauge = actionGauge;
+			entry._isHit = isHit;
+			entry._hitDx = isHitDx;
+			entry._hitDy = isHitDy;
+			if (!this._rafId) {
+				this._rafId = requestAnimationFrame(() => this.flush());
+			}
+		},
+
+		flush() {
+			this._rafId = null;
+			for (const [, e] of this._hexCache) {
+				if (e._hp === undefined) continue;
+				const hpPct = Math.max(0, Math.min(100, (e._hp / e._maxHp) * 100));
+				e.hpBar.style.width = hpPct + '%';
+				e.hpBar.style.transitionDuration = '0ms';
+				if (hpPct < 25) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-red-500'); }
+				else if (hpPct < 50) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-yellow-500'); }
+				else { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-green-500'); }
+
+				e.gaugeBar.style.width = Math.max(0, Math.min(100, e._gauge)) + '%';
+				e.gaugeBar.style.transitionDuration = '0ms';
+
+				if (e._isHit) {
+					e.hitIcon.classList.remove('hidden');
+					e.hitIcon.style.top = e._hitDy + 'px';
+					e.hitIcon.style.right = (-e._hitDx) + 'px';
+				} else {
+					e.hitIcon.classList.add('hidden');
+				}
+				delete e._hp;
+			}
+		},
+
+		destroy() {
+			if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+			for (const [, e] of this._hexCache) { delete e._hp; }
+		},
+	},
+
 	simulateStep(GAME, state) {
-		const targetPlayers = (state || GAME).players;
+		const target = state || GAME;
+		const targetPlayers = target.players;
+
+		// Precompute per-player AI data once per tick (much cheaper than per-unit-action)
+		const playerAIData = {};
+		targetPlayers.forEach((p, idx) => {
+			playerAIData[idx] = {
+				pressureMap: calculatePressureMap(GAME, target, idx),
+				predictedThreats: predictEnemyThreats(GAME, target, idx),
+			};
+		});
+
+		// Precompute which players have a Templar with T3A aura (skip expensive hex scan if none)
+		const templarT3APlayers = new Set();
+		targetPlayers.forEach((p, idx) => {
+			if (p.dice.some(u => u.value === 4 && GAME.hasPerk(u, 'tier3', 'A'))) {
+				templarT3APlayers.add(idx);
+			}
+		});
+
 		const allUnits = targetPlayers.flatMap(p => p.dice)
 			.filter(u => u.hexId && u.isDeployed && !u.isDeath)
 			.sort((a, b) => (b.actionGauge - a.actionGauge) || (random() - 0.5));
@@ -561,8 +669,8 @@ const Autochess = {
 				}
 				// Oracle T1B Hex
 				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'B')) {
-					const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
-					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId).r));
+					const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
+					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 					enemies.slice(0, 2).forEach(e => {
 						e.currentArmor = Math.max(0, (e.currentArmor || e.armor) - 10);
 						GAME.addLog(`🔮 Hex! ${GAME.logUnit(e, state)} lost 10 DEF.`, true, state);
@@ -573,7 +681,7 @@ const Autochess = {
 			// Tanker T1B Magnetic (Every 15 ticks)
 			if (unit.ticksInCombat % 15 === 0 && unit.hexId && unit.value === 5 && GAME.hasPerk(unit, 'tier1', 'B')) {
 				const hex = GAME.getHex(unit.hexId, state);
-				const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+				const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
 				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 				const target = enemies[0];
 				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId, state).q, GAME.getHex(target.hexId, state).r) <= 3) {
@@ -605,15 +713,17 @@ const Autochess = {
 					}
 				});
 
-				// Templar T3A Speed Aura
-				(state || GAME).hexes.forEach(h => {
-					const templar = h.unit;
-					if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
-						if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
-							currentSpeed += templar.speed * 0.2;
+				// Templar T3A Speed Aura (only scan hexes if this player has a Templar with T3A)
+				if (templarT3APlayers.has(unit.playerId)) {
+					(state || GAME).hexes.forEach(h => {
+						const templar = h.unit;
+						if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
+							if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
+								currentSpeed += templar.speed * 0.2;
+							}
 						}
-					}
-				});
+					});
+				}
 			}
 
 			unit.actionGauge += Math.max(1, currentSpeed);
@@ -629,7 +739,7 @@ const Autochess = {
 					GAME.addLog(`🛡️ Entrench! ${GAME.logUnit(unit, state)} gains DEF (Stack: ${unit.entrenchStacks})`, true, state);
 				}
 
-				GAME.Autochess.executeAction(GAME, unit, state);
+				GAME.Autochess.executeAction(GAME, unit, state, playerAIData[unit.playerId]);
 				unit.actionGauge -= 100;
 			}
 		});
@@ -668,6 +778,23 @@ const Autochess = {
 		}
 	},
 
+	setHitEffect(GAME, targetUnit, sourceUnit, state) {
+		if (state || !targetUnit.hexId || !sourceUnit.hexId) return;
+		const targetHex = GAME.getHex(targetUnit.hexId);
+		const sourceHex = GAME.getHex(sourceUnit.hexId);
+		if (!targetHex || !sourceHex) return;
+		const dq = sourceHex.q - targetHex.q;
+		const dr = sourceHex.r - targetHex.r;
+		const dx = dq + dr / 2;
+		const dy = dr * 0.866;
+		const len = Math.sqrt(dx * dx + dy * dy) || 1;
+		targetUnit.isHit = true;
+		targetUnit.isHitDx = Math.round((dx / len) * 10);
+		targetUnit.isHitDy = Math.round((dy / len) * 10);
+		const ref = targetUnit;
+		setTimeout(() => { ref.isHit = false; ref.isHitDx = 0; ref.isHitDy = 0; }, 500);
+	},
+
 	triggerDreadnoughtDeath(GAME, unit, hexId, state) {
 		const hex = GAME.getHex(hexId, state);
 		if (!hex) return;
@@ -679,10 +806,63 @@ const Autochess = {
 				if (target) {
 					target.hp -= 100;
 					target.actionGauge = 0;
+					GAME.Autochess.setHitEffect(GAME, target, unit, state);
 					if (target.hp <= 0) GAME.Autochess.killUnit(GAME, target, state);
 				}
 			}
 		});
+	},
+
+	_saveEvalSnapshot(state) {
+		const units = [];
+		state.players.forEach(p => {
+			p.dice.forEach(u => {
+				units.push({
+					ref: u,
+					hp: u.hp, actionGauge: u.actionGauge, isDeath: u.isDeath,
+					hexId: u.hexId, isDeployed: u.isDeployed, frozenTicks: u.frozenTicks,
+					currentArmor: u.currentArmor, speedBuff: u.speedBuff,
+					speedBuffDuration: u.speedBuffDuration, attack: u.attack,
+					hasMovedOrAttackedThisTurn: u.hasMovedOrAttackedThisTurn,
+					actionsTakenThisTurn: u.actionsTakenThisTurn,
+					consecutiveHits: u.consecutiveHits, lastTargetId: u.lastTargetId,
+					sniperCount: u.sniperCount, entrenchStacks: u.entrenchStacks,
+					parryShield: u.parryShield, oncePerBattleUsed: u.oncePerBattleUsed,
+					lastWindriderTick: u.lastWindriderTick, isGuarding: u.isGuarding,
+					skirmishBuff: u.skirmishBuff, venomDuration: u.venomDuration,
+					ticksInCombat: u.ticksInCombat,
+					isHit: u.isHit, isHitDx: u.isHitDx, isHitDy: u.isHitDy,
+				});
+			});
+		});
+		const hexes = state.hexes.map(h => ({
+			ref: h, unit: h.unit, unitId: h.unitId,
+		}));
+		return { units, hexes };
+	},
+
+	_restoreEvalSnapshot(state, snapshot) {
+		for (const us of snapshot.units) {
+			Object.assign(us.ref, {
+				hp: us.hp, actionGauge: us.actionGauge, isDeath: us.isDeath,
+				hexId: us.hexId, isDeployed: us.isDeployed, frozenTicks: us.frozenTicks,
+				currentArmor: us.currentArmor, speedBuff: us.speedBuff,
+				speedBuffDuration: us.speedBuffDuration, attack: us.attack,
+				hasMovedOrAttackedThisTurn: us.hasMovedOrAttackedThisTurn,
+				actionsTakenThisTurn: us.actionsTakenThisTurn,
+				consecutiveHits: us.consecutiveHits, lastTargetId: us.lastTargetId,
+				sniperCount: us.sniperCount, entrenchStacks: us.entrenchStacks,
+				parryShield: us.parryShield, oncePerBattleUsed: us.oncePerBattleUsed,
+				lastWindriderTick: us.lastWindriderTick, isGuarding: us.isGuarding,
+				skirmishBuff: us.skirmishBuff, venomDuration: us.venomDuration,
+				ticksInCombat: us.ticksInCombat,
+				isHit: us.isHit, isHitDx: us.isHitDx, isHitDy: us.isHitDy,
+			});
+		}
+		for (const hs of snapshot.hexes) {
+			hs.ref.unit = hs.unit;
+			hs.ref.unitId = hs.unitId;
+		}
 	},
 
 	PERK_DESCRIPTIONS: {
@@ -732,14 +912,14 @@ const Autochess = {
 		});
 	},
 
-	executeAction(GAME, unit, state) {
+	executeAction(GAME, unit, state, cachedAIData) {
 		// Store original turn index to restore after action
 		const originalPlayerIndex = GAME.currentPlayerIndex;
 
 		// Oracle T3B Warlock
 		if (unit.value === 6 && GAME.hasPerk(unit, 'tier3', 'B') && !unit.oncePerBattleUsed && unit.hp > 60) {
 			const targetPlayers = (state || GAME).players;
-			const enemies = targetPlayers.find((p, idx) => idx !== unit.playerId).dice.filter(d => !d.isDeath && d.hexId);
+			const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
 			if (enemies.length > 2) {
 				GAME.Autochess.triggerOracleWarlock(GAME, unit, state);
 				unit.actionGauge = 0;
@@ -763,7 +943,8 @@ const Autochess = {
 		const profileName = (state || GAME).players[unit.playerId].profileName || classProfiles[unit.value] || 'baseline';
 
 		const evaluationState = state || GAME.cloneState();
-		const move = evaluateBestMoveForUnit(GAME, evaluationState, unit, profileName);
+		evaluationState._autochessEval = true;
+		const move = evaluateBestMoveForUnit(GAME, evaluationState, unit, profileName, cachedAIData);
 
 		if (move && move.actionType !== 'END_TURN') {
 			// If it's a spell, we need to set oracleSelectedSpell
@@ -790,6 +971,7 @@ const Autochess = {
 					if (enemy && enemy.playerId !== unit.playerId) {
 						enemy.hp -= 30;
 						enemy.actionGauge = 0;
+						GAME.Autochess.setHitEffect(GAME, enemy, unit, state);
 						GAME.addLog(`🐉 Dragoon Landing! ${GAME.logUnit(enemy, state)} crushed.`, true, state);
 						if (enemy.hp <= 0) GAME.Autochess.killUnit(GAME, enemy, state);
 					}
@@ -878,6 +1060,7 @@ const Autochess = {
 		if (defenderUnit.value === 5 && GAME.hasPerk(defenderUnit, 'tier1', 'A')) {
 			const reflect = 20;
 			attackerUnit.hp -= reflect;
+			GAME.Autochess.setHitEffect(GAME, attackerUnit, defenderUnit, state);
 			GAME.addLog(`💥 Spiked Armor! ${GAME.logUnit(attackerUnit, state)} takes ${reflect} reflect damage.`, state);
 		}
 
@@ -896,6 +1079,11 @@ const Autochess = {
 		}
 
 		defenderUnit.hp -= damage;
+
+		// --- Hit visual effect ---
+		if (damage > 0) {
+			GAME.Autochess.setHitEffect(GAME, defenderUnit, attackerUnit, state);
+		}
 
 		// --- Post-Damage Perks ---
 		// Archer Tier 2 [B] Slowing Shot
@@ -916,6 +1104,7 @@ const Autochess = {
 			defenderUnit.actionGauge = Math.min(100, defenderUnit.actionGauge + 20);
 			const counterDamage = Math.floor(defenderUnit.attack * 0.5);
 			attackerUnit.hp -= counterDamage;
+			GAME.Autochess.setHitEffect(GAME, attackerUnit, defenderUnit, state);
 			GAME.addLog(`↩️ Riposte! Countered for ${counterDamage} damage.`, state);
 		}
 		// Fencer Tier 2 [B] Flurry

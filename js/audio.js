@@ -125,12 +125,39 @@
 			try {
 				const res = await fetch('/assets/sounds/ragnarok.json');
 				if (res.ok) {
-					this.campaignPlaylist = await res.json();
+					const data = await res.json();
+					if (Array.isArray(data)) {
+						this.campaignPlaylist = { tracks: data, zones: {} };
+					} else {
+						this.campaignPlaylist = data;
+					}
 					if (this.debug) console.debug('AudioManager: loaded campaign playlist');
 				}
 			} catch (e) {
 				if (this.debug) console.warn('AudioManager: loadCampaignPlaylist failed', e);
 			}
+		},
+
+		_resolveCampaignTrack(opts) {
+			const playlist = this.campaignPlaylist;
+			if (!playlist || !playlist.tracks || playlist.tracks.length === 0) return null;
+
+			const mapName = opts?.mapName || '';
+			if (mapName && playlist.zones) {
+				const prefix = mapName.replace(/\d+$/, '').replace(/_0$/, '');
+				const keys = Object.keys(playlist.zones).sort((a, b) => b.length - a.length);
+				for (const key of keys) {
+					if (prefix.startsWith(key)) {
+						const indices = playlist.zones[key];
+						const idx = indices[Math.floor(Math.random() * indices.length)];
+						if (typeof idx === 'number' && playlist.tracks[idx]) {
+							return playlist.tracks[idx];
+						}
+					}
+				}
+			}
+
+			return playlist.tracks[Math.floor(Math.random() * playlist.tracks.length)];
 		},
 
 		async playMusic(name, opts = {}) {
@@ -139,8 +166,9 @@
 
 				if (name === 'campaign') {
 					if (!this.campaignPlaylist) await this.loadCampaignPlaylist();
-					if (this.campaignPlaylist && this.campaignPlaylist.length > 0) {
-						name = this.campaignPlaylist[Math.floor(Math.random() * this.campaignPlaylist.length)];
+					const resolved = this._resolveCampaignTrack(opts);
+					if (resolved) {
+						name = resolved;
 					} else {
 						name = 'battle'; // Fallback
 					}
@@ -186,7 +214,7 @@
 				this.musicEl.onended = () => {
 					if (url.includes('battles/')) {
 						this.playMusic('battle', opts);
-					} else if (this.campaignPlaylist && this.campaignPlaylist.includes(url)) {
+					} else if (this.campaignPlaylist?.tracks?.includes(url)) {
 						this.playMusic('campaign', opts);
 					}
 				};

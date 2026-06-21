@@ -43,6 +43,7 @@
 	<script type="text/javascript" src="/js/audio.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/game.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/campaign/campaign-manager.js?v=___VERSION___"></script>
+	<script type="text/javascript" src="/js/campaign/story-engine.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/ai/heuristic-profiles.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/ai/ai-heuristic.js?v=___VERSION___"></script>
 	<script type="text/javascript" src="/js/ai/ai.js?v=___VERSION___"></script>
@@ -73,7 +74,7 @@
 	<div x-init="loadComponent($el, 'dice')"></div>
 
 	<!-- Hex Grid Container -->
-	<div class="flex-grow flex items-start justify-center w-full overflow-auto mt-6">
+	<div class="flex-grow flex items-start justify-center w-full overflow-auto my-6" style="max-height: min-content;">
 		<template x-if="isCampaign && showMinimap && !autochess">
 			<div class="hex-grid-campaign-background fixed" :style="hexGrid.style">
 			</div>
@@ -83,10 +84,10 @@
 	</div>
 
 	<!-- Autochess UI Overlay -->
-	<div x-init="loadComponent($el, 'autochess')"></div>
+	<div x-init="loadComponent($el, 'autochess')" style="max-height: min-content;"></div>
 
 	<!-- Game Controller -->
-	<div x-init="loadComponent($el, 'controller')"></div>
+	<div x-init="loadComponent($el, 'controller')" style="max-height: min-content;"></div>
 
 	<!-- Message Log -->
 	<div x-init="loadComponent($el, 'log')"></div>

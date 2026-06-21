@@ -1,4 +1,72 @@
 <div id="game-controller" x-show="!Autochess.state.enabled" class="w-full flex flex-col items-center mb-20 md:mb-2">
+
+	<!-- Story Intro Overlay -->
+	<div x-show="showStoryIntro" x-cloak class="fixed top-0 left-0 right-0 bottom-0 z-30 flex items-center justify-center bg-black/80 p-4" @click.away="showStoryIntro = false">
+		<div class="border-2 bg-hardwood max-w-xl w-full p-6 relative max-h-[80vh] overflow-y-auto">
+			<button @click="showStoryIntro = false" class="absolute top-2 right-2 text-lg font-bold cursor-pointer">✕</button>
+
+			<div class="text-center mb-4">
+				<div class="text-lg opacity-60" x-text="campaignData?.story?.region"></div>
+				<div class="text-xl font-bold mt-1" x-text="campaignData?.story?.title"></div>
+				<template x-if="campaignData?.story?.isBoss">
+					<div class="mt-2 text-red-400 font-bold text-lg animate-pulse">
+						BOSS ENCOUNTER: <span x-text="campaignData?.story?.boss?.name"></span>
+					</div>
+				</template>
+				<div class="mt-2 text-sm uppercase tracking-wide opacity-60" x-text="campaignData?.story?.arc"></div>
+			</div>
+
+			<template x-if="campaignData?.story?.isBoss">
+				<div class="text-center my-4 p-3 border border-red-800 bg-red-900/20">
+					<div class="text-lg font-bold text-red-300" x-text="campaignData?.story?.boss?.title"></div>
+				</div>
+			</template>
+
+			<div class="text-sm leading-relaxed whitespace-pre-line mb-4" x-text="campaignData?.story?.intro"></div>
+
+			<div class="border-t pt-3 mt-3">
+				<div class="text-xs opacity-60 uppercase tracking-wide">Quest</div>
+				<div class="text-sm font-bold" x-text="campaignData?.story?.quest"></div>
+				<div class="text-xs mt-1 opacity-60"><span x-text="campaignData?.story?.npc"></span> awaits your report.</div>
+			</div>
+
+			<button @click="showStoryIntro = false" class="mt-4 w-full border py-2 font-bold text-lg cursor-pointer hover:bg-black hover:text-white transition-colors">
+				Accept Quest
+			</button>
+		</div>
+	</div>
+
+	<!-- Story Outro Overlay -->
+	<div x-show="showStoryOutro" x-cloak class="fixed top-0 left-0 right-0 bottom-0 z-30 flex items-center justify-center bg-black/80 p-4">
+		<div class="border-2 bg-hardwood max-w-xl w-full p-6 relative">
+			<button @click="showStoryOutro = false" class="absolute top-2 right-2 text-lg font-bold cursor-pointer">✕</button>
+			<div class="text-center mb-4">
+				<div class="text-lg opacity-60">Quest Complete</div>
+				<div class="text-xl font-bold mt-1" x-text="campaignData?.story?.title"></div>
+			</div>
+			<div class="text-sm leading-relaxed whitespace-pre-line mb-4" x-text="campaignData?.story?.outro"></div>
+			<div class="border-t pt-3 text-center text-xs opacity-60 italic">
+				Proceed to the Camp screen to spend Devotion Points.
+			</div>
+			<button @click="showStoryOutro = false" class="mt-3 w-full border py-2 font-bold cursor-pointer hover:bg-black hover:text-white transition-colors">
+				Continue
+			</button>
+		</div>
+	</div>
+
+	<!-- Quest Log HUD -->
+	<div x-show="isCampaign && campaignData?.story && !phase.startsWith('SETUP') && phase !== 'GAME_OVER'"
+		 class="fixed bottom-2 right-2 z-10 max-w-xs bg-hardwood border p-2 text-xs opacity-80 hover:opacity-100 transition-opacity">
+		<div class="font-bold uppercase tracking-wide text-[10px] opacity-60" x-text="campaignData?.story?.region + ' / ' + campaignData?.story?.arc"></div>
+		<div class="font-bold text-sm leading-tight mt-0.5" x-text="campaignData?.story?.quest"></div>
+		<template x-if="campaignData?.story?.isBoss">
+			<div class="text-red-400 font-bold text-xs mt-1 animate-pulse">⚠ BOSS: <span x-text="campaignData?.story?.boss?.name"></span></div>
+		</template>
+		<template x-if="!campaignData?.story?.isBoss">
+			<div class="text-[10px] opacity-40 mt-1 italic"><span x-text="campaignData?.story?.enemyFlavor"></span></div>
+		</template>
+	</div>
+
 	<!-- Game Setup -->
 	<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
 		<!-- <h2 class="text-lg mb-2" x-text="setupStatusMessage()"></h2> -->
@@ -98,7 +166,7 @@
 			</p>
 			<div class="flex justify-center flex-wrap gap-2 mb-2">
 				<template x-for="(die, index) in players[currentPlayerIndex]?.dice" :key="index">
-					<div
+					<div x-data="{d_value: players[currentPlayerIndex]?.dice[index]?.value}"
 						class="p-1 border text-xs cursor-pointer select-none min-w-16 text-blue-600"
 						:class="
 							[
@@ -110,8 +178,8 @@
 						"
 						@click="selectDieToDeploy(index)"
 					>
-						<span x-text="'⚀⚁⚂⚃⚄⚅'[index]" class="text-2xl"></span>
-						<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+players[currentPlayerIndex]?.dice[index]?.value+'.png'" :alt="'D['+players[currentPlayerIndex]?.dice[index]?.value+']'" :title="players[currentPlayerIndex]?.dice[index]?.value" width="16" height="16">
+						<span x-text="'⚀⚁⚂⚃⚄⚅'[d_value-1]" class="text-2xl"></span>
+						<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+d_value+'.png'" :alt="'D['+d_value+']'" :title="d_value" width="16" height="16">
 						<!-- D<span x-text="players[currentPlayerIndex]?.dice[index]?.value"></span> -->
 						<div class="text-xs font-bold" x-show="isCampaign && currentPlayerIndex === 0" x-text="players[0].dice[index]?.fatigueStatus"></div>
 					</div>
@@ -177,34 +245,34 @@
 
 		<div class="space-x-2">
 			<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
 				@click="initiateAction('MOVE')"
 			>[MOVE]</button>
 			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 				@click="performAction('REROLL', selectedUnitHexId)"
 			>
 				<img class="inline h-6 w-6" src="/assets/sprites/icons/reroll.png" alt="[REROLL]" title="REROLL" width="24" height="24">
 			</button>
 			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 				@click="performAction('GUARD', selectedUnitHexId)"
 			>
 				<img class="inline h-6 w-6" src="/assets/sprites/icons/guard.png" alt="[GUARD]" title="GUARD" width="24" height="24">
 			</button>
 			<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'RANGED_ATTACK')"
 				@click="initiateAction('RANGED_ATTACK')"
 			>[RANGE]</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
+			<button class="hidden cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')"
 				@click="initiateAction('SPECIAL_ATTACK')"
 				--x-text="getHex(selectedUnitHexId)?.unit?.value === 6 ? '[SPELLS]' : '[SPL ATK]'"
 			>
 				<img class="inline h-6 w-6" src="/assets/sprites/icons/spell.png" alt="[SPELLS]" title="SPELLS" width="24" height="24">
 			</button>
 
-			<div x-show="actionMode === 'ORACLE_SPELL_SELECT'" class="inline-block space-x-1">
+			<div x-show="canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" class="inline-block space-x-1">
 				<button class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">
 					<img class="inline h-6 w-6" src="/assets/sprites/icons/shield.png" alt="[SHIELD]" title="SHIELD" width="24" height="24">
 				</button>
@@ -216,14 +284,15 @@
 				</button>
 			</div>
 
+
 			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
+				x-show="options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 				@click="initiateAction('MERGE')"
 			>
 				<img class="inline h-6 w-6" src="/assets/sprites/icons/merge.png" alt="[MERGE]" title="MERGE" width="24" height="24">
 			</button>
 			<button class="cursor-pointer p-1 hover:bg-black hover:text-white font-bold bg-red-100"
-				x-show="actionMode !== 'ORACLE_SPELL_SELECT' && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
+				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
 				@click="initiateAction('SPELLCAST_SACRIFICE')"
 			>
 				<img class="inline h-6 w-6" src="/assets/sprites/icons/transmute.png" alt="[TRANSMUTE]" title="TRANSMUTE" width="24" height="24">
@@ -249,8 +318,8 @@
 
 		<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 			<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
-			Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + players[currentPlayerIndex].name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
-			<span x-show="players[currentPlayerIndex]?.empire" x-text="' - Empire: ' + players[currentPlayerIndex]?.empire"></span>
+			Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + currentPlayer.name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+			<span x-show="players[currentPlayerIndex]?.empire" x-text="' - ' + EMPIRES[players[currentPlayerIndex]?.empire]?.alias"></span>
 		</p>
 		<p class="text-xs italic" x-show="players[currentPlayerIndex]?.empire" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 			<span x-text="EMPIRES[players[currentPlayerIndex]?.empire]?.name + ': ' + EMPIRES[players[currentPlayerIndex]?.empire]?.buff"></span>
