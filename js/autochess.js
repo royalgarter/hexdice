@@ -272,7 +272,7 @@ const Autochess = {
 		isHitDy: 0,
 		};
 		unit.spriteUrl = GAME.getUnitSpriteUrl(unit);
-		unit.iconUrl = '/assets/sprites/icons/' + value + '.png';
+		unit.iconUrl = `${HEXDICE_CDN}/sprites/icons/${value}.png`;
 		unit.id = `unit_${random().toString(36).substr(2, 9)}`;
 
 		return unit;

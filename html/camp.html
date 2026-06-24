@@ -52,7 +52,7 @@
 				<div class="border p-2 flex flex-col">
 					<div class="flex items-center gap-3 mb-3 border-b pb-2">
 						<span class="text-4xl" x-text="'⚀⚁⚂⚃⚄⚅'[val-1]"></span>
-						<img class="inline h-6 w-6" :src="'/assets/sprites/icons/'+val+'.png'" :alt="'D['+val+']'" :title="'D['+val+']'" width="16" height="16">
+						<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/' + val + '.png'" :alt="'D['+val+']'" :title="'D['+val+']'" width="16" height="16">
 						<div class="font-bold text-lg uppercase" x-text="UNIT_STATS[val].name"></div>
 					</div>
 

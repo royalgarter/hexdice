@@ -420,10 +420,10 @@ function alpineHexDiceTacticGame() { return {
 				`background-size: ${this.isCampaign ? `${Number.isFinite(hex.basePlayerId) ? 'auto 90%' : 'cover'}` : '110%'};`,
 				`background-image:
 					${Number.isFinite(hex.basePlayerId)
-						? `url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif'), `
+						? `url('${HEXDICE_CDN}/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif'), `
 						: ``
 					}
-					url("/assets/sprites/terrain/${this.terrainByType(type)}.png");`
+					url('${HEXDICE_CDN}/sprites/terrain/${this.terrainByType(type)}.png');`
 			].join(' ');
 		} else {
 			hex.terrainStyle = '';
@@ -434,7 +434,7 @@ function alpineHexDiceTacticGame() { return {
 		let rmiName = campaignData.rmi;
 		let level = campaignData.level;
 
-		const url = `/assets/ro_maps/${rmiName}`;
+		const url = `${HEXDICE_CDN}/ro_maps/${rmiName}`;
 		this.addLog(`Generating terrain from RMI: ${rmiName}...`);
 
 		try {
@@ -1312,7 +1312,7 @@ function alpineHexDiceTacticGame() { return {
 		await this.CampaignManager.init();
 
 		try {
-			const response = await fetch(`/assets/sets.json?v=${document.querySelector('#hexdice_version')?.content}`);
+			const response = await fetch(`${HEXDICE_CDN}/sets.json?v=${document.querySelector('#hexdice_version')?.content}`);
 			this.spriteSets = await response.json();
 		} catch (e) {
 			console.error("Failed to load sprite sets", e);
@@ -1507,7 +1507,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (player.selectedSpriteSet?.includes('mix')) {
-			fetch(`/assets/sprites/sets/${player.selectedSpriteSet}/mix.json?v=${document.querySelector('#hexdice_version')?.content}`)
+			fetch(`${HEXDICE_CDN}/sprites/sets/${player.selectedSpriteSet}/mix.json?v=${document.querySelector('#hexdice_version')?.content}`)
 				.then(r => r.json())
 				.then(json => {
 					player.selectedSpriteMix = json;
@@ -1515,7 +1515,7 @@ function alpineHexDiceTacticGame() { return {
 						const sprite = json.filter(x => x.includes(`${die.value}_`)).cosmic_random();
 						if (sprite) {
 							player.sprites = player.sprites || [];
-							player.sprites[die.value] = `/assets/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
+							player.sprites[die.value] = `${HEXDICE_CDN}/sprites/sets/${player.selectedSpriteSet}/${sprite}`;
 							die.spriteUrl = player.sprites[die.value];
 						}
 					});
@@ -1822,11 +1822,11 @@ function alpineHexDiceTacticGame() { return {
 					`background-size: auto ${this.isCampaign?'90%':this.empiresModeEnabled?'80%':'66%'}, ${Number.isFinite(hex.basePlayerId)?'auto 90%':'cover'};`,
 					`background-image: url("${unitUrl}")
 						${(Number.isFinite(hex.basePlayerId) && !isAutochess)
-							? `, url('/assets/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
+							? `, url('${HEXDICE_CDN}/sprites/terrain/base_ro_${PLAYER_CONFIG[hex.basePlayerId].color.toLowerCase()}.gif')`
 							: ``
 						}
 						${(terrainStyle && !shouldSuppressBg)
-							? `, url("/assets/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
+							? `, url("${HEXDICE_CDN}/sprites/terrain/${this.terrainByType(hex.terrainType)}.png")`
 							: ``
 						};`
 				);
@@ -1869,16 +1869,16 @@ function alpineHexDiceTacticGame() { return {
 		if (!selectedUnit) return null;
 		const hoveredUnit = hex.unit;
 		if (!hoveredUnit) {
-			return this.validMovesSet?.has(hex.id) ? '/assets/cursors/cursor_move.png' : null;
+			return this.validMovesSet?.has(hex.id) ? `${HEXDICE_CDN}/cursors/cursor_move.png` : null;
 		}
 		if (hoveredUnit.playerId !== selectedUnit.playerId) {
 			// Enemy hex: ranged/oracle use validTargetsSet, melee use validMovesSet
 			const isRanged = this.actionMode === 'RANGED_ATTACK' || selectedUnit.value === 2;
-			if (isRanged) return this.validTargetsSet?.has(hex.id) ? '/assets/cursors/cursor_arrow.png' : null;
-			return this.validMovesSet?.has(hex.id) ? '/assets/cursors/cursor_attack.png' : null;
+			if (isRanged) return this.validTargetsSet?.has(hex.id) ? `${HEXDICE_CDN}/cursors/cursor_arrow.png` : null;
+			return this.validMovesSet?.has(hex.id) ? `${HEXDICE_CDN}/cursors/cursor_attack.png` : null;
 		}
 		// Friendly hex: spell only, and only after a spell has been chosen
-		if (this.actionMode === 'SPELLCAST' && this.oracleSelectedSpell && this.validTargetsSet?.has(hex.id)) return '/assets/cursors/cursor_spell.png';
+		if (this.actionMode === 'SPELLCAST' && this.oracleSelectedSpell && this.validTargetsSet?.has(hex.id)) return `${HEXDICE_CDN}/cursors/cursor_spell.png`;
 		return null;
 	},
 	hoverHex(hexId) {
@@ -1963,20 +1963,20 @@ function alpineHexDiceTacticGame() { return {
 			const empDir = EMPIRE_STATIC_DIR_MAP[player.empire];
 			const colorDir = PLAYER_EMPIRE_COLOR_MAP[player.color.toLowerCase()];
 
-			return `/assets/sprites/empires/${empDir}_${colorDir}/${value}.png`;
+			return `${HEXDICE_CDN}/sprites/empires/${empDir}_${colorDir}/${value}.png`;
 
 			if (empireDir && colorDir) {
-				return `/assets/sprites/empires/emp_${empireDir}_${colorDir}/${value}.gif`;
+				return `${HEXDICE_CDN}/sprites/empires/emp_${empireDir}_${colorDir}/${value}.gif`;
 			}
 		}
 
 		if (player.selectedSpriteSet) {
-			return `/assets/sprites/sets/${player.selectedSpriteSet}/${value}.gif`;
+			return `${HEXDICE_CDN}/sprites/sets/${player.selectedSpriteSet}/${value}.gif`;
 		}
 
 		return (false && this.players[1].isAI) 
-			? `/assets/sprites/sets/default/${value}.png`
-			: `/assets/sprites/multi_players/d${value}_${spriteColor}.gif`;
+			? `${HEXDICE_CDN}/sprites/sets/default/${value}.png`
+			: `${HEXDICE_CDN}/sprites/multi_players/d${value}_${spriteColor}.gif`;
 	},
 	rollInitialDice(playerId) {
 		if (this.players[playerId].initialRollDone) return;

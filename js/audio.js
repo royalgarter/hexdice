@@ -6,7 +6,7 @@
 		noSFX: false,
 		musicEl: null,
 		gainNode: null,
-		basePaths: ['/assets/sounds'],
+		basePaths: [`${HEXDICE_CDN}/sounds`],
 
 		isRemoteUrl(name) {
 			return /^(https?:)?\/\//.test(name) && /\.(mp3|ogg|flac|wav|aac|m4a|webm)$/i.test(name);
@@ -123,7 +123,7 @@
 		async loadCampaignPlaylist() {
 			if (this.campaignPlaylist) return;
 			try {
-				const res = await fetch('/assets/sounds/ragnarok.json');
+				const res = await fetch(`${HEXDICE_CDN}/sounds/ragnarok.json`);
 				if (res.ok) {
 					const data = await res.json();
 					if (Array.isArray(data)) {

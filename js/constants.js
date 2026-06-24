@@ -4,6 +4,9 @@ const HEX_SIZE = 60; // pixels
 const HEX_WIDTH = HEX_SIZE;
 const HEX_HEIGHT = HEX_SIZE * Math.sqrt(3) / 2; // Height of one equilateral triangle half
 
+const HEXDICE_CDN = 'https://cdn.rwatimes.io/hexdice';
+window.HEXDICE_CDN = HEXDICE_CDN;
+
 const EPIC_PRESETS = {
 	'E_21': {
 		name: 'Standard 21 Dices',
