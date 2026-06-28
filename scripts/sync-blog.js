@@ -62,13 +62,13 @@ const merged = existingEntries.map(e => {
 	return e;
 });
 
-// Append new files not yet in the list
+// Prepend new files not yet in the list (newest on top)
 let newCount = 0;
 for (const id of mdFiles) {
 	if (!existingIds.has(id)) {
 		const heading = firstHeading(path.join(BLOG_DIR, id + '.md'));
 		const title = heading || titleFromId(id);
-		merged.push({ id, title });
+		merged.unshift({ id, title });
 		newCount++;
 		console.log(`NEW: ${id} → "${title}"`);
 	}
