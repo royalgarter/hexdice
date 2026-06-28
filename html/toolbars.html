@@ -1,30 +1,30 @@
 <!-- Bottom Right -->
-<div class="absolute bottom-2 right-1 text-sm font-mono font-bold flex flex-col items-end gap-1" style="display: none;" x-show="audioManager">
-	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood"
+<div class="absolute bottom-0 right-1 text-sm font-mono font-bold flex flex-col items-end gap-1" style="display: none;" x-show="audioManager">
+	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
 		@click="showUnitInfo = !showUnitInfo"
 		:class="showUnitInfo ? 'text-gray-300' : 'text-gray-800'"
 		x-show="unitstat || hoverUnitHexId" style="display: none;">?</a>
 
-	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood"
+	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
 		@click="audioManager.noSFX = !audioManager.noSFX"
 		:class="audioManager.noSFX ? 'text-gray-300' : 'text-gray-800'">♪</a>
 
-	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood text-xs"
+	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl text-xs"
 		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.(isCampaign ? 'campaign' : 'battle')"
 		:class="audioManager.musicEl ? 'text-gray-300' : 'text-gray-800'">𝄞</a>
 
-	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood"
+	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
 		@click="showLog = !showLog"
-		x-show="messageLog?.length" style="display: none;">📜</a>
+		x-show="messageLog?.length" style="display: none;">🪵</a>
 
-	<a href="#" class="cursor-pointer rounded-full w-6 h-6 text-center content-center bg-wood"
+	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
 		@click="showMinimap = !showMinimap"
-		x-show="isCampaign" style="display: none;">🏞️</a>
+		x-show="isCampaign" style="display: none;">🖼️</a>
 </div>
 
 <!-- Bottom Left -->
-<div class="absolute bottom-2 left-1 text-sm font-mono flex gap-1">
-	<a href="#" title="Home" class="rounded-full w-6 h-6 text-center content-center bg-wood hover:bg-gray-200" @click="openURL('/')">🏠</a>
-	<a href="/blog.html" title="Blog" class="p-1 rounded-full bg-wood hover:bg-gray-200" target="_blank" >📒</a>
-	<a href="/rules.html" title="Rules" class="p-1 rounded-full bg-wood hover:bg-gray-200" target="_blank" >📏</a>
+<div class="absolute bottom-0 left-1 text-sm font-mono flex gap-1">
+	<a href="#" title="Home" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl" @click="openURL('/')">🏰</a>
+	<a href="/blog.html" title="Blog" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl" target="_blank" >📣</a>
+	<a href="/rules.html" title="Rules" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl" target="_blank" >🏦</a>
 </div>

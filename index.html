@@ -94,11 +94,14 @@
 
 	<!-- Cursor sprite follower -->
 	<template x-if="cursorSprite">
-		<img
-			:src="cursorSprite"
+		<div class="fixed pointer-events-none z-90 font-bold text-lg" x-text="cursorSprite"
+			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 2rem; height: 2rem;`"
+		></div>
+		<!-- <img
+			:src="cursorSprite" :alt="cursorSprite"
 			class="fixed pointer-events-none z-90"
 			:style="`left: ${cursorX + 12}px; top: ${cursorY - 8}px; width: 32px; height: 32px;`"
-		>
+		> -->
 	</template>
 
 	<div id="midi-container" style="display: none;"></div>

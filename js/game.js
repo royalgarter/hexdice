@@ -1870,17 +1870,21 @@ function alpineHexDiceTacticGame() { return {
 		const selectedUnit = this.getUnitOnHex(this.selectedUnitHexId);
 		if (!selectedUnit) return null;
 		const hoveredUnit = hex.unit;
+
 		if (!hoveredUnit) {
-			return this.validMovesSet?.has(hex.id) ? `${HEXDICE_CDN}/cursors/cursor_move.png` : null;
+			return this.validMovesSet?.has(hex.id) ? ('🥾'  || `${HEXDICE_CDN}/cursors/cursor_move.png`) : null;
 		}
+
 		if (hoveredUnit.playerId !== selectedUnit.playerId) {
 			// Enemy hex: ranged/oracle use validTargetsSet, melee use validMovesSet
 			const isRanged = this.actionMode === 'RANGED_ATTACK' || selectedUnit.value === 2;
-			if (isRanged) return this.validTargetsSet?.has(hex.id) ? `${HEXDICE_CDN}/cursors/cursor_arrow.png` : null;
-			return this.validMovesSet?.has(hex.id) ? `${HEXDICE_CDN}/cursors/cursor_attack.png` : null;
+			if (isRanged) return this.validTargetsSet?.has(hex.id) ? ('🏹' || `${HEXDICE_CDN}/cursors/cursor_arrow.png`) : null;
+			return this.validMovesSet?.has(hex.id) ? ('🗡️' || `${HEXDICE_CDN}/cursors/cursor_attack.png`) : null;
 		}
+
 		// Friendly hex: spell only, and only after a spell has been chosen
-		if (this.actionMode === 'SPELLCAST' && this.oracleSelectedSpell && this.validTargetsSet?.has(hex.id)) return `${HEXDICE_CDN}/cursors/cursor_spell.png`;
+		if (this.actionMode === 'SPELLCAST' && this.oracleSelectedSpell && this.validTargetsSet?.has(hex.id)) return ('✨' || `${HEXDICE_CDN}/cursors/cursor_spell.png`);
+
 		return null;
 	},
 	hoverHex(hexId) {
