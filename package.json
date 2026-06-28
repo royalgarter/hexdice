@@ -16,6 +16,7 @@
     "replay:latest": "deno run --allow-read js/replay.ts simulations/*.json",
     "campaign:gen-sample": "node js/campaign/generator.js --name='Valley of Shadow' --dice='11/21/31/41/51/61' --enemies='12/21/51' --terrain='forest:8,lake:4,mountain:3' --limit=4 --runes='aegis:1,pegasus:1' --output='js/campaign/level_sample.json'",
     "campaign:gen-random": "node js/campaign/generator.js --name='Random Skirmish' --output='js/campaign/level_random.json'",
-    "campaign:ro_rmi": "node js/campaign/generator_ro_rmi.js"
+    "campaign:ro_rmi": "node js/campaign/generator_ro_rmi.js",
+    "blog": "node scripts/sync-blog.js"
   }
 }
