@@ -445,7 +445,9 @@ function alpineHexDiceTacticGame() { return {
 			}
 
 			const img = new Image();
+			img.crossOrigin = "Anonymous";
 			img.src = url;
+			img.setAttribute('crossOrigin', '');
 			await img.decode();
 
 			const canvas = document.createElement('canvas');
