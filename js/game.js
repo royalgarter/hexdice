@@ -1312,7 +1312,7 @@ function alpineHexDiceTacticGame() { return {
 		await this.CampaignManager.init();
 
 		try {
-			const response = await fetch(`${HEXDICE_CDN}/sets.json?v=${document.querySelector('#hexdice_version')?.content}`);
+			const response = await fetch(`/assets/sets.json?v=${document.querySelector('#hexdice_version')?.content}`);
 			this.spriteSets = await response.json();
 		} catch (e) {
 			console.error("Failed to load sprite sets", e);
