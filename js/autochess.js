@@ -622,6 +622,26 @@ const Autochess = {
 			}
 		});
 
+		// Pre-compute Templar T3A positions per player (avoids O(hexes) scan inside per-unit loop)
+		const templarAuraByPlayer = {};
+		if (templarT3APlayers.size > 0) {
+			(state || GAME).hexes.forEach(h => {
+				if (h.unit && templarT3APlayers.has(h.unit.playerId) && h.unit.value === 4 && GAME.hasPerk(h.unit, 'tier3', 'A')) {
+					const pid = h.unit.playerId;
+					if (!templarAuraByPlayer[pid]) templarAuraByPlayer[pid] = [];
+					templarAuraByPlayer[pid].push({ q: h.q, r: h.r, speed: h.unit.speed });
+				}
+			});
+		}
+
+		// Pre-compute live enemies per player (avoids repeated flatMap+filter+sort in aura/perk checks)
+		const liveEnemiesByPlayer = {};
+		targetPlayers.forEach((p, idx) => {
+			liveEnemiesByPlayer[idx] = targetPlayers
+				.filter((_, eidx) => eidx !== idx)
+				.flatMap(ep => ep.dice.filter(d => !d.isDeath && d.hexId));
+		});
+
 		const allUnits = targetPlayers.flatMap(p => p.dice)
 			.filter(u => u.hexId && u.isDeployed && !u.isDeath)
 			.sort((a, b) => (b.actionGauge - a.actionGauge) || (random() - 0.5));
@@ -669,8 +689,8 @@ const Autochess = {
 				}
 				// Oracle T1B Hex
 				if (unit.value === 6 && GAME.hasPerk(unit, 'tier1', 'B')) {
-					const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
-					enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
+					const enemies = (liveEnemiesByPlayer[unit.playerId] || []).filter(e => !e.isDeath && e.hexId)
+						.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 					enemies.slice(0, 2).forEach(e => {
 						e.currentArmor = Math.max(0, (e.currentArmor || e.armor) - 10);
 						GAME.addLog(`🔮 Hex! ${GAME.logUnit(e, state)} lost 10 DEF.`, true, state);
@@ -681,8 +701,8 @@ const Autochess = {
 			// Tanker T1B Magnetic (Every 15 ticks)
 			if (unit.ticksInCombat % 15 === 0 && unit.hexId && unit.value === 5 && GAME.hasPerk(unit, 'tier1', 'B')) {
 				const hex = GAME.getHex(unit.hexId, state);
-				const enemies = targetPlayers.filter((p, idx) => idx !== unit.playerId).flatMap(p => p.dice.filter(d => !d.isDeath && d.hexId));
-				enemies.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
+				const enemies = (liveEnemiesByPlayer[unit.playerId] || []).filter(e => !e.isDeath && e.hexId)
+					.sort((a, b) => GAME.axialDistance(hex.q, hex.r, GAME.getHex(a.hexId, state).q, GAME.getHex(a.hexId, state).r) - GAME.axialDistance(hex.q, hex.r, GAME.getHex(b.hexId, state).q, GAME.getHex(b.hexId, state).r));
 				const target = enemies[0];
 				if (target && GAME.axialDistance(hex.q, hex.r, GAME.getHex(target.hexId, state).q, GAME.getHex(target.hexId, state).r) <= 3) {
 					const neighbors = GAME.getNeighbors(hex, state).filter(n => !GAME.getUnitOnHex(n.id, state));
@@ -713,14 +733,11 @@ const Autochess = {
 					}
 				});
 
-				// Templar T3A Speed Aura (only scan hexes if this player has a Templar with T3A)
+				// Templar T3A Speed Aura — uses pre-computed positions, avoids O(hexes) scan per unit
 				if (templarT3APlayers.has(unit.playerId)) {
-					(state || GAME).hexes.forEach(h => {
-						const templar = h.unit;
-						if (templar && templar.playerId === unit.playerId && templar.value === 4 && GAME.hasPerk(templar, 'tier3', 'A')) {
-							if (GAME.axialDistance(hex.q, hex.r, h.q, h.r) <= 2) {
-								currentSpeed += templar.speed * 0.2;
-							}
+					(templarAuraByPlayer[unit.playerId] || []).forEach(t => {
+						if (GAME.axialDistance(hex.q, hex.r, t.q, t.r) <= 2) {
+							currentSpeed += t.speed * 0.2;
 						}
 					});
 				}

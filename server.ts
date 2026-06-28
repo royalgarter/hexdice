@@ -389,9 +389,23 @@ function startCombatStreaming(roomId: string, game: any) {
 	let lastPhase = game.Autochess.state.phase;
 	const broadcastEvery = Math.max(3, Math.floor(MQTT_PULSE_MS / 100));
 
-	const originalSimStep = game.Autochess.simulateStep.bind(game.Autochess);
+	const originalSimStep = game.Autochess.simulateStep;
+	const originalResolveTimeout = game.Autochess.resolveTimeout;
+
+	const cleanup = () => {
+		game.Autochess.simulateStep = originalSimStep;
+		game.Autochess.resolveTimeout = originalResolveTimeout;
+		// Clear stale delta-tracking props so next combat round starts clean
+		game.players.forEach((p: any) => p.dice.forEach((d: any) => {
+			delete d._bcastHp;
+			delete d._bcastGauge;
+			delete d._bcastDeath;
+			delete d._bcastHexId;
+		}));
+	};
+
 	game.Autochess.simulateStep = (g: any) => {
-		originalSimStep(g);
+		originalSimStep.call(game.Autochess, g);
 		stepCount++;
 
 		if (g.Autochess.state.phase !== lastPhase) {
@@ -403,10 +417,10 @@ function startCombatStreaming(roomId: string, game: any) {
 	};
 
 	// Hook resolveTimeout (catches time-out path)
-	const originalResolveTimeout = game.Autochess.resolveTimeout.bind(game.Autochess);
 	game.Autochess.resolveTimeout = (g: any) => {
-		originalResolveTimeout(g);
+		originalResolveTimeout.call(game.Autochess, g);
 		clearInterval(monitorInterval);
+		cleanup();
 		broadcastState(roomId, g, true);
 	};
 
@@ -414,8 +428,9 @@ function startCombatStreaming(roomId: string, game: any) {
 	// after simulateStep returns, so the simulateStep hook doesn't catch it)
 	const monitorInterval = setInterval(() => {
 		if (game.Autochess.state.phase !== 'COMBAT') {
-			broadcastState(roomId, game, true);
 			clearInterval(monitorInterval);
+			cleanup();
+			broadcastState(roomId, game, true);
 
 			// Auto-advance to next round after 5 seconds in RECAP,
 			// so game doesn't hang if no player clicks "Next Round"

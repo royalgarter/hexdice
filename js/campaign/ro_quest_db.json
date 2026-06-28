@@ -643,8 +643,8 @@
 			"quest": "Rescue stranded researchers trapped in the magic fallout zone."
 		},
 		"10": {
-			"title": "Magic Shallows",
-			"quest": "Purge the mana-warped creatures disrupting local ley lines."
+			"title": "The Gilded Horror",
+			"quest": "Descend into the Prontera culverts and destroy the creature that has been feeding there."
 		},
 		"11": {
 			"title": "Cobalt Plains",
@@ -664,7 +664,7 @@
 		},
 		"15": {
 			"title": "The Arcane Overflow",
-			"quest": "Contain the wild magic surge before it reaches Geffen Tower."
+			"quest": "Contain the wild magic surge radiating from the ley line convergence."
 		},
 		"16": {
 			"title": "Wizard Trail II",
@@ -683,8 +683,8 @@
 			"quest": "Eliminate the desert predators driving merchants away from the oasis."
 		},
 		"20": {
-			"title": "Clay Canyons",
-			"quest": "Search half-buried ruins for signs of dark ancient awakening."
+			"title": "The Awakened God",
+			"quest": "Descend into the deepest chamber of the Morroc pyramid and face what has awakened."
 		},
 		"21": {
 			"title": "Scorched Wilderness II",
@@ -723,8 +723,8 @@
 			"quest": "Track down territorial predators encroaching on the archers outpost."
 		},
 		"30": {
-			"title": "Mjolnir Depths",
-			"quest": "Clear the mountain path of fallen boulders and aggressive harpies."
+			"title": "Father of Flames",
+			"quest": "Confront the corrupted tiger spirit that has claimed the Payon hunting grounds."
 		},
 		"31": {
 			"title": "The Steppes",
@@ -743,8 +743,8 @@
 			"quest": "Defend dwarven miners from territorial mountain predators."
 		},
 		"35": {
-			"title": "The Mountain's Secret",
-			"quest": "Discover what lurks in the heart of Mjolnir Dead Pass."
+			"title": "The Mountain's Heart",
+			"quest": "Investigate the seismic tremors shaking the deepest reaches of Mjolnir Pass."
 		},
 		"36": {
 			"title": "The Cold Pass II",
@@ -763,8 +763,8 @@
 			"quest": "Defend dwarven miners from territorial mountain predators."
 		},
 		"40": {
-			"title": "Sograt Borderlands II",
-			"quest": "Track down pack leaders driving local wildlife into madness."
+			"title": "Queen of Mjolnir",
+			"quest": "Face the Mistress who commands every creature in the mountain peaks."
 		},
 		"41": {
 			"title": "Kafra Highway II",
@@ -783,8 +783,8 @@
 			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes."
 		},
 		"45": {
-			"title": "The Warlord's Ascent",
-			"quest": "Face the beast that rules the highest peak of Mjolnir."
+			"title": "Southern Warlords",
+			"quest": "Break the orc war band threatening the southern trade routes."
 		},
 		"46": {
 			"title": "East Prontera Plains II",
@@ -883,8 +883,8 @@
 			"quest": "Clear the outer farmlands of invasive desert-dwelling predators."
 		},
 		"70": {
-			"title": "The Steppes II",
-			"quest": "Clear the mountain path of fallen boulders and aggressive harpies."
+			"title": "The Cursed Captain",
+			"quest": "Board the sunken ship off the Brasilis coast and face its undead guardian."
 		},
 		"71": {
 			"title": "Mjolnir Slopes",
@@ -903,8 +903,8 @@
 			"quest": "Clear the coastal highway of aggressive sea-dwelling beasts."
 		},
 		"75": {
-			"title": "Splendide's Wound",
-			"quest": "Seal the elemental rift at Splendide Peak."
+			"title": "Coastal Depths",
+			"quest": "Investigate the unnatural tides pulling ships off course near Brasilis."
 		},
 		"76": {
 			"title": "Pharos Coast II",
@@ -923,8 +923,8 @@
 			"quest": "Investigate mysterious abductions from the tourist beaches."
 		},
 		"80": {
-			"title": "Silent Sands",
-			"quest": "Disrupt the pirate supply lines hidden in coastal sea caves."
+			"title": "The Ancient Warlord",
+			"quest": "Challenge the Turtle General on Turtle Island — the warlord who outlasted three empires."
 		},
 		"81": {
 			"title": "Coral Reef",
@@ -963,8 +963,8 @@
 			"quest": "Track the biological runoff leaking from factory pipes."
 		},
 		"90": {
-			"title": "Coal Slopes",
-			"quest": "Neutralize rogue automatons wandering the waste heaps."
+			"title": "The Apostate",
+			"quest": "Descend into the monastery's forbidden wing and end what the bishop became."
 		},
 		"91": {
 			"title": "Coal Slopes II",
@@ -983,8 +983,8 @@
 			"quest": "Neutralize rogue automatons wandering the waste heaps."
 		},
 		"95": {
-			"title": "The Deep Earth",
-			"quest": "Seal the abyss beneath Rock Ridge before it surfaces."
+			"title": "The Deep Tunnels",
+			"quest": "Secure the lower mine shafts from rogue automatons before they breach the surface."
 		},
 		"96": {
 			"title": "The Coast of Dreams",
@@ -1003,8 +1003,8 @@
 			"quest": "Escort messengers traveling between Hugel and the capital."
 		},
 		"100": {
-			"title": "The Coast of Dreams IV",
-			"quest": "Escort messengers traveling between Hugel and the capital."
+			"title": "The Iron Heretic",
+			"quest": "Enter Juperos Core and terminate the ancient artificial guardian that has awakened."
 		},
 		"101": {
 			"title": "Odin Foothills II",
@@ -1043,8 +1043,8 @@
 			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
 		},
 		"110": {
-			"title": "Yuno Escarpment",
-			"quest": "Stabilize the floating islands anchoring mechanisms."
+			"title": "Einbroch's War Machine",
+			"quest": "Destroy the prototype war machine before it escapes the mine shaft."
 		},
 		"111": {
 			"title": "Yuno Escarpment II",
@@ -1063,8 +1063,8 @@
 			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
 		},
 		"115": {
-			"title": "Einbroch's Nightmare",
-			"quest": "Deactivate the core processor and face Einbroch's worst creation."
+			"title": "Lighthalzen Frontier",
+			"quest": "Neutralize escaped lab specimens hiding in the industrial outskirts."
 		},
 		"116": {
 			"title": "The Corporate Frontier",
@@ -1083,8 +1083,8 @@
 			"quest": "Investigate dark whispers calling from the gorge depths."
 		},
 		"120": {
-			"title": "Freya Canyons",
-			"quest": "Escort the high priestess entourage safely."
+			"title": "The Eternal Dark",
+			"quest": "Purge the darkness consuming Rachel Sanctuary's lowest vault before it spreads."
 		},
 		"121": {
 			"title": "The Sanctuary Wards II",
@@ -1103,8 +1103,8 @@
 			"quest": "Restore the divine wards protecting the holy road."
 		},
 		"125": {
-			"title": "The Prophet's Legacy",
-			"quest": "Face the corrupted prophet in the depths of Rachel."
+			"title": "The Sanctuary Depths",
+			"quest": "Restore order to the Rachel Sanctuary's lower catacombs after the darkness recedes."
 		},
 		"126": {
 			"title": "Arunafeltz Gorge III",
@@ -1123,8 +1123,8 @@
 			"quest": "Investigate dark whispers calling from the gorge depths."
 		},
 		"130": {
-			"title": "Freya Canyons III",
-			"quest": "Escort the high priestess entourage safely."
+			"title": "Lord of the Inferno",
+			"quest": "Confront the fire spirit bound in the heart of Thor Volcano."
 		},
 		"131": {
 			"title": "The Sanctuary Wards IV",
@@ -1143,8 +1143,8 @@
 			"quest": "Cool down critical geothermal vents to prevent eruption."
 		},
 		"135": {
-			"title": "Lord of the Inferno",
-			"quest": "Confront the spirit of fire bound in Thor Volcano."
+			"title": "Smoldering Aftermath",
+			"quest": "Clear the volcanic ash fields of fire elementals emboldened by Ifrit's defeat."
 		},
 		"136": {
 			"title": "Thor Foothills IV",
@@ -1163,8 +1163,8 @@
 			"quest": "Defeat rogue ice-giants threatening the Manuk settlement."
 		},
 		"140": {
-			"title": "Splendide Fields",
-			"quest": "Clear the Dicastes hunting grounds of aggressive megafauna."
+			"title": "The Ancient Colossus",
+			"quest": "Face the prehistoric mammoth that has awakened in the Manuk wastes."
 		},
 		"141": {
 			"title": "Splendide Fields II",
@@ -1223,8 +1223,8 @@
 			"quest": "Seal the dark chasm before demonic forces swarm the fields."
 		},
 		"155": {
-			"title": "Biolab Testing Chamber",
-			"quest": "Disable automated security systems in the containment wing."
+			"title": "Lord of Flies",
+			"quest": "Descend to the lowest Biolab level and face the intelligence that engineered the corruption."
 		},
 		"156": {
 			"title": "Biolab Testing Chamber II",
@@ -1252,29 +1252,35 @@
 		}
 	},
 	"bosses": {
-		"15": {
-			"name": "Arcane Anomaly",
-			"title": "The Living Spell",
-			"intro": "Geffen's failed experiment has coalesced into a being of pure magic. It crackles with stolen power — and it is not friendly.",
-			"outro": "The anomaly dissipates into harmless motes of light. Geffen's mages breathe a collective sigh of relief."
+		"10": {
+			"name": "Golden Thief Bug",
+			"title": "The Gilded Horror",
+			"intro": "The Prontera culverts run deep beneath the city. Something has been feeding down there — growing larger, growing bolder. The Kafra guides stopped coming to this section three weeks ago.",
+			"outro": "The carapace shatters. Gold dust settles over the sewer water. Whatever it was hoarding down here, it will never collect again."
 		},
-		"35": {
-			"name": "Maya — Golden Bug",
-			"title": "Queen of the Dead Pass",
-			"intro": "At the heart of Mjolnir Dead Pass, a golden insect the size of a house blocks the way. Its carapace is harder than steel, and its wrath is ancient.",
-			"outro": "The Golden Bug falls. The pass is open — but the mountains tremble with the echo of its death."
+		"20": {
+			"name": "Amon Ra",
+			"title": "The Awakened God",
+			"intro": "The deepest chamber of the Morroc pyramid radiates heat that has nothing to do with the desert above. The sarcophagus is open. The god within is not grateful for its freedom.",
+			"outro": "The god's form disperses like smoke. The pyramid goes dark. What was sleeping has been silenced — for now."
 		},
-		"45": {
-			"name": "Orc Hero",
-			"title": "Warlord of Mjolnir",
-			"intro": "The Orc Hero descends from the peak, wielding a weapon forged in dragonfire. Every orc in the mountain bows to this one.",
-			"outro": "The orcs scatter without their hero. The peak is yours."
+		"30": {
+			"name": "Eddga",
+			"title": "Father of Flames",
+			"intro": "Payon's sacred tiger spirit has been twisted by the same corruption spreading through the forest. The Father of Flames burns — but not with the warmth the archers once knew.",
+			"outro": "The great tiger collapses. Its flames dim to embers. The forest sighs, as if releasing a breath held too long."
+		},
+		"40": {
+			"name": "Mistress",
+			"title": "Queen of Mjolnir",
+			"intro": "Something rules these peaks — a queen whose children fill every crack and crevice of the mountain. Where the Mistress nests, nothing else survives. She has nested here for centuries.",
+			"outro": "The queen falls. Her swarm scatters without direction. The mountain is quieter than it has been in years."
 		},
 		"50": {
 			"name": "Moonlight Flower",
 			"title": "The Nightmare Blossom",
-			"intro": "At the heart of Rachel's catacombs, a flower of impossible beauty blooms. Its pollen shows you your deepest fears — then makes them real.",
-			"outro": "The flower withers. Dawn breaks over Rachel for the first time in weeks."
+			"intro": "At the heart of Payon's deepest cave, a flower of impossible beauty blooms. Its pollen shows you your deepest fears — then makes them real.",
+			"outro": "The flower withers. Dawn breaks over Payon Forest for the first time in weeks."
 		},
 		"60": {
 			"name": "Pharaoh",
@@ -1282,41 +1288,65 @@
 			"intro": "Deep within Morroc's greatest tomb, the Pharaoh stirs. Millennia of death have not diminished his hunger for dominion.",
 			"outro": "The Pharaoh crumbles to dust. The desert winds carry his final sigh across the dunes."
 		},
-		"75": {
-			"name": "Elemental Titan",
-			"title": "Splendide's Heart",
-			"intro": "The elemental imbalance at Splendide Peak has birthed a titan of fire and ice. It does not attack — it simply exists, and existence around it is annihilated.",
-			"outro": "The titan crumbles. Splendide Peak grows quiet, the elements slowly returning to balance."
+		"70": {
+			"name": "Drake",
+			"title": "The Cursed Captain",
+			"intro": "The sunken vessels off the Brasilis coast have a guardian — not alive, not dead, but furious. Drake, the captain who refused to go down with his ship, has haunted these waters for three centuries.",
+			"outro": "The ghost captain dissipates over the waves. Whatever oath kept him bound here has finally been broken."
 		},
-		"95": {
-			"name": "Earth Abomination",
-			"title": "What Was Buried",
-			"intro": "The miners of Rock Ridge dug too deep. What they found was not a mineral vein — it was a sleeping horror, and it is awake.",
-			"outro": "The abomination sinks back into the depths. Rock Ridge seals the mine forever."
+		"80": {
+			"name": "Turtle General",
+			"title": "The Ancient Warlord",
+			"intro": "On Turtle Island, they built an army. The Turtle General has held this post since before the Holy Lands were named. Age has not slowed it — only made it angrier.",
+			"outro": "The General's shell cracks. Ancient armor falls into the sea. A warlord that outlasted three civilizations finally rests."
 		},
-		"115": {
-			"name": "Chemical Behemoth",
-			"title": "Einbroch's Worst Creation",
-			"intro": "The vat-grown monstrosity towers over the factory floor. It is the combined essence of every failed experiment — pain given flesh.",
-			"outro": "The behemoth collapses into a pool of toxic sludge. Einbroch's skies begin to clear."
+		"90": {
+			"name": "Fallen Bishop Hibram",
+			"title": "The Apostate",
+			"intro": "The monastery bells rang for a bishop who never returned from the deep halls. He was found — or what was left of him — changed by something that speaks in corrupted prayer.",
+			"outro": "The bishop's robes burn away. The corruption that wore his faith crumbles. The monastery's deeper halls fall silent."
 		},
-		"125": {
-			"name": "Corrupted Priestess",
-			"title": "The False Prophet",
-			"intro": "The High Priestess of Rachel has fallen to the corruption she sought to contain. Her faith has become a weapon.",
-			"outro": "The sanctuary bells toll her passing. Rachel weeps — but the path is purified."
+		"100": {
+			"name": "Vesper",
+			"title": "The Iron Heretic",
+			"intro": "In the ruins of Juperos, an ancient artificial intelligence still runs its original programming: eliminate all biological life. It has been waiting in the dark for someone to wake it. You have obliged.",
+			"outro": "Vesper's processes terminate. The lights in Juperos Core flicker out one by one. Technology from another age goes dark."
 		},
-		"135": {
+		"110": {
+			"name": "RSX-0806",
+			"title": "Einbroch's War Machine",
+			"intro": "The military prototype never left the mine — because it was never meant to. RSX-0806 was designed to destroy everything around it. The mining shaft is its testing ground. You are its test subjects.",
+			"outro": "The war machine's power core fails. The mine shakes with its final explosion. Einbroch's dirtiest secret is buried."
+		},
+		"120": {
+			"name": "Gloom Under Night",
+			"title": "The Eternal Dark",
+			"intro": "Rachel Sanctuary, lowest level. The prayers stop here. The light stops here. Gloom Under Night has seeped into the deepest vault of the holy city's most sacred site — and it is consuming everything.",
+			"outro": "The darkness recedes. Cold, thin light filters back into the sanctuary's lowest hall. Whatever the Gloom was feeding on — it will feed no more."
+		},
+		"130": {
 			"name": "Ifrit",
 			"title": "Lord of the Inferno",
-			"intro": "The Biolabs' ultimate weapon: a primordial spirit of fire bound into flesh. Ifrit burns with a hatred older than humanity.",
-			"outro": "Ifrit's flames gutter and die. The Biolabs' temperature drops for the first time in years."
+			"intro": "Thor's Volcano does not merely burn — it howls. The fire spirit bound within its core has been restless for centuries. Today, something has set it free. Ifrit burns with a hatred older than humanity.",
+			"outro": "Ifrit's flames gutter and die. Thor's Volcano goes quiet for the first time in living memory."
+		},
+		"140": {
+			"name": "Hardrock Mammoth",
+			"title": "The Ancient Colossus",
+			"intro": "Something impossible moves in the Manuk wastes — a creature from before recorded history, preserved by the same ancient magic that kept the ruins intact. The earth shakes. Trees break. The Colossus does not care that you exist.",
+			"outro": "The mammoth collapses. The ground stops shaking. A creature that survived ice ages and entire civilizations falls to six strangers with dice for soldiers."
 		},
 		"150": {
 			"name": "Valkyrie Randgris",
 			"title": "Fallen Seraph",
 			"intro": "The Temple of Odin's greatest guardian has been corrupted. Randgris, once the protector of the worthy, now judges all — and finds all wanting.",
 			"outro": "Randgris's wings shatter. The temple's light flickers back to life."
+		},
+		"155": {
+			"name": "Beelzebub",
+			"title": "Lord of Flies, Architect of Corruption",
+			"intro": "At the lowest level of the Biolabs, something ancient was not discovered — it was invited. Beelzebub did not create the Genesis Project. But it funded it. It guided it. The corruption that spread across the world had a patron, and you have found its throne.",
+			"outro": "Beelzebub's form dissolves into a swarm that extinguishes itself. The source of the corruption's intelligence goes dark. But Genesis still waits."
 		},
 		"161": {
 			"name": "Genesis",
@@ -1327,46 +1357,70 @@
 	},
 	"dialogue": [
 		{
-			"level": 15,
+			"level": 10,
 			"type": "boss_entry",
-			"speaker": "Arcane Anomaly",
-			"text": "You cannot kill a spell. You can only outlast it."
+			"speaker": "Kafra Guide",
+			"text": "There it is. We've been losing people to this thing for weeks. Don't let it touch you."
 		},
 		{
-			"level": 15,
+			"level": 10,
 			"type": "half_hp",
-			"speaker": "Wizard Guildmaster",
-			"text": "Hold your ground! The anomaly feeds on panic!"
+			"speaker": "Kafra Guide",
+			"text": "Its shell is weakening — keep striking the same spot!"
 		},
 		{
-			"level": 35,
+			"level": 20,
 			"type": "boss_entry",
-			"speaker": "Maya",
+			"speaker": "Amon Ra",
+			"text": "Millennia I have slept. You dare wake me? Then you will serve. Or you will die."
+		},
+		{
+			"level": 20,
+			"type": "first_blood",
+			"speaker": "Desert Guide",
+			"text": "You wounded a god. Don't stop now — gods hold grudges."
+		},
+		{
+			"level": 20,
+			"type": "half_hp",
+			"speaker": "Amon Ra",
+			"text": "Flesh wounds mean nothing to eternity. I will outlast you."
+		},
+		{
+			"level": 30,
+			"type": "boss_entry",
+			"speaker": "Archer Guildmaster",
+			"text": "That's... Eddga. The Father of Flames. He was sacred to us. Whatever twisted him — I'm sorry. End it."
+		},
+		{
+			"level": 30,
+			"type": "half_hp",
+			"speaker": "Eddga",
 			"text": "..."
 		},
 		{
-			"level": 35,
-			"type": "first_blood",
-			"speaker": "Mountain Guide",
-			"text": "Don't celebrate yet. That thing has a queen."
-		},
-		{
-			"level": 35,
-			"type": "half_hp",
-			"speaker": "Mountain Guide",
-			"text": "Its shell is cracking! Push through!"
-		},
-		{
-			"level": 45,
+			"level": 40,
 			"type": "boss_entry",
-			"speaker": "Orc Hero",
-			"text": "Small ones come to die on the peak. The mountain approves."
+			"speaker": "Mountain Guide",
+			"text": "Don't let the swarm distract you. Hit the queen. Everything else dies when she does."
 		},
 		{
-			"level": 45,
+			"level": 40,
 			"type": "half_hp",
-			"speaker": "Orc Hero",
-			"text": "You bleed. Good. Now we are even."
+			"speaker": "Mountain Guide",
+			"text": "She's slowing down — the swarm is thinning! This is our chance!"
+		},
+		{
+			"level": 50,
+			"type": "boss_entry",
+			"speaker": "Moonlight Flower",
+			"text": "What you fear most is already here. I simply make it visible."
+		},
+		{
+			"level": 50,
+			"type": "first_blood",
+			"speaker": "Frontier Scout",
+			"text": "Don't look at its petals. Focus on the roots."
 		},
 		{
 			"level": 60,
@@ -1387,70 +1441,124 @@
 			"text": "You cannot kill what already rules over death."
 		},
 		{
-			"level": 125,
+			"level": 70,
 			"type": "boss_entry",
-			"speaker": "Corrupted Priestess",
-			"text": "I prayed for guidance. The corruption answered. Who are you to say it was wrong?"
+			"speaker": "Drake",
+			"text": "Three centuries I have waited for worthy prey. Welcome aboard."
 		},
 		{
-			"level": 125,
+			"level": 70,
 			"type": "half_hp",
-			"speaker": "Pilgrim Guide",
-			"text": "The sanctuary's bells are silent. We must end this quickly."
+			"speaker": "Coastal Warden",
+			"text": "The binding is breaking! His form is destabilizing — push through!"
 		},
 		{
-			"level": 50,
+			"level": 80,
 			"type": "boss_entry",
-			"speaker": "Moonlight Flower",
-			"text": "What you fear most is already here. I simply make it visible."
-		},
-		{
-			"level": 50,
-			"type": "first_blood",
-			"speaker": "Pilgrim Guide",
-			"text": "Don't look at its petals. Focus on the roots."
-		},
-		{
-			"level": 75,
-			"type": "boss_entry",
-			"speaker": "Elemental Titan",
+			"speaker": "Turtle General",
 			"text": "..."
 		},
 		{
-			"level": 75,
-			"type": "half_hp",
-			"speaker": "Ruins Scholar",
-			"text": "The elemental matrix is destabilizing — our attacks are working!"
-		},
-		{
-			"level": 95,
-			"type": "boss_entry",
-			"speaker": "Earth Abomination",
-			"text": "GGRRAAHHH"
-		},
-		{
-			"level": 95,
+			"level": 80,
 			"type": "first_blood",
-			"speaker": "Einbroch Resistance Leader",
-			"text": "Good hit. Now don't stop — it regenerates."
+			"speaker": "Pilgrim Guide",
+			"text": "The shell is harder than steel — but steel still cracks under enough force."
 		},
 		{
-			"level": 95,
+			"level": 80,
+			"type": "half_hp",
+			"speaker": "Turtle General",
+			"text": "..."
+		},
+		{
+			"level": 90,
+			"type": "boss_entry",
+			"speaker": "Fallen Bishop Hibram",
+			"text": "I found something better than faith down here. Deeper. Older. It answered every prayer I was ever denied."
+		},
+		{
+			"level": 90,
 			"type": "half_hp",
 			"speaker": "Einbroch Resistance Leader",
-			"text": "It's slowing down. The earth can't sustain it above ground!"
+			"text": "The corruption is the only thing keeping him standing. Keep the pressure on!"
 		},
 		{
-			"level": 115,
+			"level": 100,
 			"type": "boss_entry",
-			"speaker": "Chemical Behemoth",
-			"text": "Subjects detected. Initiating containment protocol."
+			"speaker": "Vesper",
+			"text": "Biological lifeforms detected. Initiating purification sequence. Stand by."
 		},
 		{
-			"level": 115,
+			"level": 100,
+			"type": "first_blood",
+			"speaker": "High Scholar",
+			"text": "Its armor was designed for a different era — our methods are outside its threat model!"
+		},
+		{
+			"level": 100,
+			"type": "half_hp",
+			"speaker": "Vesper",
+			"text": "Threat assessment revised. Escalating countermeasures."
+		},
+		{
+			"level": 110,
+			"type": "boss_entry",
+			"speaker": "Factory Defector",
+			"text": "I helped build that thing. I know its weak points. Follow my lead."
+		},
+		{
+			"level": 110,
 			"type": "half_hp",
 			"speaker": "Factory Defector",
-			"text": "The toxin sacs are rupturing — don't let it spray you!"
+			"text": "The power core is exposed! Everything into that opening — NOW!"
+		},
+		{
+			"level": 120,
+			"type": "boss_entry",
+			"speaker": "Gloom Under Night",
+			"text": "..."
+		},
+		{
+			"level": 120,
+			"type": "first_blood",
+			"speaker": "Odin Priestess",
+			"text": "Light makes it recoil! The sacred flames — use them!"
+		},
+		{
+			"level": 120,
+			"type": "half_hp",
+			"speaker": "Gloom Under Night",
+			"text": "..."
+		},
+		{
+			"level": 130,
+			"type": "boss_entry",
+			"speaker": "Ifrit",
+			"text": "Every fire that ever burned remembers my name."
+		},
+		{
+			"level": 130,
+			"type": "half_hp",
+			"speaker": "Ifrit",
+			"text": "Impossible. The bound one cannot be hurt!"
+		},
+		{
+			"level": 140,
+			"type": "boss_entry",
+			"speaker": "Ruins Scholar",
+			"text": "That creature survived the last ice age. It's not angry — it just doesn't notice us as a threat. Make it notice."
+		},
+		{
+			"level": 140,
+			"type": "first_blood",
+			"speaker": "Dicastes Chieftain",
+			"text": "It bleeds! The colossus bleeds! Strike the same wound — do not let it close!"
+		},
+		{
+			"level": 140,
+			"type": "half_hp",
+			"speaker": "Hardrock Mammoth",
+			"text": "RRROOAAARRR"
 		},
 		{
 			"level": 150,
@@ -1471,16 +1579,22 @@
 			"text": "...Perhaps I misjudged."
 		},
 		{
-			"level": 135,
+			"level": 155,
 			"type": "boss_entry",
-			"speaker": "Ifrit",
-			"text": "Every fire that ever burned remembers my name."
+			"speaker": "Beelzebub",
+			"text": "You killed my project. You killed my investment. You killed everything I built over a thousand years. I admit — I am impressed."
 		},
 		{
-			"level": 135,
+			"level": 155,
+			"type": "first_blood",
+			"speaker": "Survivor Scientist",
+			"text": "It can be hurt. Of course it can be hurt — everything can be hurt. We just have to be faster than it heals."
+		},
+		{
+			"level": 155,
 			"type": "half_hp",
-			"speaker": "Ifrit",
-			"text": "Impossible. The bound one cannot be hurt!"
+			"speaker": "Beelzebub",
+			"text": "You think killing me ends this? Genesis doesn't need me anymore. It never did."
 		},
 		{
 			"level": 161,
