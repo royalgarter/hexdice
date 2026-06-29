@@ -625,7 +625,11 @@
 		"5": {
 			"title": "St. Capitolina Boundary",
 			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes.",
-			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "Flawless advance! +1 Devotion" }
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "Flawless advance! +1 Devotion"
+			}
 		},
 		"6": {
 			"title": "Ley Line Convergence",
@@ -646,7 +650,11 @@
 		"10": {
 			"title": "The Gilded Horror",
 			"quest": "Descend into the Prontera culverts and destroy the creature that has been feeding there.",
-			"questObjective": { "type": "win_in_turns", "param": 14, "bonusText": "Swift delve! +1 Devotion" }
+			"questObjective": {
+				"type": "win_in_turns",
+				"param": 14,
+				"bonusText": "Swift delve! +1 Devotion"
+			}
 		},
 		"11": {
 			"title": "Cobalt Plains",
@@ -666,7 +674,12 @@
 		},
 		"15": {
 			"title": "The Arcane Overflow",
-			"quest": "Contain the wild magic surge radiating from the ley line convergence."
+			"quest": "Contain the wild magic surge radiating from the ley line convergence.",
+			"questObjective": {
+				"type": "no_spells",
+				"param": null,
+				"bonusText": "Overcame magic with steel! +1 Devotion"
+			}
 		},
 		"16": {
 			"title": "Wizard Trail II",
@@ -687,7 +700,11 @@
 		"20": {
 			"title": "The Awakened God",
 			"quest": "Descend into the deepest chamber of the Morroc pyramid and face what has awakened.",
-			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "No offerings made! +1 Devotion" }
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "No offerings made! +1 Devotion"
+			}
 		},
 		"21": {
 			"title": "Scorched Wilderness II",
@@ -708,7 +725,11 @@
 		"25": {
 			"title": "Echoing Caves",
 			"quest": "Clear the main payon trade trail of aggressive wild beasts.",
-			"questObjective": { "type": "protect_unit", "param": 1, "bonusText": "Fencer unbroken! +1 Devotion" }
+			"questObjective": {
+				"type": "protect_unit",
+				"param": 1,
+				"bonusText": "Fencer unbroken! +1 Devotion"
+			}
 		},
 		"26": {
 			"title": "Echoing Caves II",
@@ -729,7 +750,11 @@
 		"30": {
 			"title": "Father of Flames",
 			"quest": "Confront the corrupted tiger spirit that has claimed the Payon hunting grounds.",
-			"questObjective": { "type": "no_ranged", "param": null, "bonusText": "Melee only — the old way! +1 Devotion" }
+			"questObjective": {
+				"type": "no_ranged",
+				"param": null,
+				"bonusText": "Melee only — the old way! +1 Devotion"
+			}
 		},
 		"31": {
 			"title": "The Steppes",
@@ -749,7 +774,12 @@
 		},
 		"35": {
 			"title": "The Mountain's Heart",
-			"quest": "Investigate the seismic tremors shaking the deepest reaches of Mjolnir Pass."
+			"quest": "Investigate the seismic tremors shaking the deepest reaches of Mjolnir Pass.",
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "No tremors in the ranks! +1 Devotion"
+			}
 		},
 		"36": {
 			"title": "The Cold Pass II",
@@ -770,7 +800,11 @@
 		"40": {
 			"title": "Queen of Mjolnir",
 			"quest": "Face the Mistress who commands every creature in the mountain peaks.",
-			"questObjective": { "type": "win_in_turns", "param": 16, "bonusText": "Before the swarm regrouped! +1 Devotion" }
+			"questObjective": {
+				"type": "win_in_turns",
+				"param": 16,
+				"bonusText": "Before the swarm regrouped! +1 Devotion"
+			}
 		},
 		"41": {
 			"title": "Kafra Highway II",
@@ -790,7 +824,12 @@
 		},
 		"45": {
 			"title": "Southern Warlords",
-			"quest": "Break the orc war band threatening the southern trade routes."
+			"quest": "Break the orc war band threatening the southern trade routes.",
+			"questObjective": {
+				"type": "win_in_turns",
+				"param": 15,
+				"bonusText": "War band routed swiftly! +1 Devotion"
+			}
 		},
 		"46": {
 			"title": "East Prontera Plains II",
@@ -811,7 +850,11 @@
 		"50": {
 			"title": "The Nightmare Blossom",
 			"quest": "Confront the Moonlight Flower in the depths of Payon.",
-			"questObjective": { "type": "no_spells", "param": null, "bonusText": "Unenchanted victory! +1 Devotion" }
+			"questObjective": {
+				"type": "no_spells",
+				"param": null,
+				"bonusText": "Unenchanted victory! +1 Devotion"
+			}
 		},
 		"51": {
 			"title": "Echoing Caves IV",
@@ -831,7 +874,12 @@
 		},
 		"55": {
 			"title": "Magic Shallows III",
-			"quest": "Secure the Wizards Academy border from wild magic anomalies."
+			"quest": "Secure the Wizards Academy border from wild magic anomalies.",
+			"questObjective": {
+				"type": "no_ranged",
+				"param": null,
+				"bonusText": "Fought through the shallows! +1 Devotion"
+			}
 		},
 		"56": {
 			"title": "Arcane Quarry II",
@@ -852,7 +900,11 @@
 		"60": {
 			"title": "Heart of the Sands",
 			"quest": "The Pharaoh awakens. Enter the tomb and end his reign.",
-			"questObjective": { "type": "kill_type", "param": 6, "bonusText": "Champion slain! +1 Devotion" }
+			"questObjective": {
+				"type": "kill_type",
+				"param": 6,
+				"bonusText": "Champion slain! +1 Devotion"
+			}
 		},
 		"61": {
 			"title": "Clay Canyons II",
@@ -872,7 +924,12 @@
 		},
 		"65": {
 			"title": "Sograt Borderlands III",
-			"quest": "Track down pack leaders driving local wildlife into madness."
+			"quest": "Track down pack leaders driving local wildlife into madness.",
+			"questObjective": {
+				"type": "protect_unit",
+				"param": 2,
+				"bonusText": "Scout returned alive! +1 Devotion"
+			}
 		},
 		"66": {
 			"title": "Royal Grasslands III",
@@ -893,7 +950,11 @@
 		"70": {
 			"title": "The Cursed Captain",
 			"quest": "Board the sunken ship off the Brasilis coast and face its undead guardian.",
-			"questObjective": { "type": "use_guard", "param": 3, "bonusText": "Weathered the storm! +1 Devotion" }
+			"questObjective": {
+				"type": "use_guard",
+				"param": 3,
+				"bonusText": "Weathered the storm! +1 Devotion"
+			}
 		},
 		"71": {
 			"title": "Mjolnir Slopes",
@@ -913,7 +974,12 @@
 		},
 		"75": {
 			"title": "Coastal Depths",
-			"quest": "Investigate the unnatural tides pulling ships off course near Brasilis."
+			"quest": "Investigate the unnatural tides pulling ships off course near Brasilis.",
+			"questObjective": {
+				"type": "use_guard",
+				"param": 3,
+				"bonusText": "Held against the tides! +1 Devotion"
+			}
 		},
 		"76": {
 			"title": "Pharos Coast II",
@@ -934,7 +1000,11 @@
 		"80": {
 			"title": "The Ancient Warlord",
 			"quest": "Challenge the Turtle General on Turtle Island — the warlord who outlasted three empires.",
-			"questObjective": { "type": "hold_tower", "param": 1, "bonusText": "High ground held! +1 Devotion" }
+			"questObjective": {
+				"type": "hold_tower",
+				"param": 1,
+				"bonusText": "High ground held! +1 Devotion"
+			}
 		},
 		"81": {
 			"title": "Coral Reef",
@@ -954,7 +1024,12 @@
 		},
 		"85": {
 			"title": "Hvergelmir Fountain II",
-			"quest": "Seek guidance from the local tribes to clear the jungle path."
+			"quest": "Seek guidance from the local tribes to clear the jungle path.",
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "Jungle claimed no lives! +1 Devotion"
+			}
 		},
 		"86": {
 			"title": "Steam Perimeter",
@@ -975,7 +1050,11 @@
 		"90": {
 			"title": "The Apostate",
 			"quest": "Descend into the monastery's forbidden wing and end what the bishop became.",
-			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "No one lost to the darkness! +1 Devotion" }
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "No one lost to the darkness! +1 Devotion"
+			}
 		},
 		"91": {
 			"title": "Coal Slopes II",
@@ -995,7 +1074,12 @@
 		},
 		"95": {
 			"title": "The Deep Tunnels",
-			"quest": "Secure the lower mine shafts from rogue automatons before they breach the surface."
+			"quest": "Secure the lower mine shafts from rogue automatons before they breach the surface.",
+			"questObjective": {
+				"type": "kill_type",
+				"param": 3,
+				"bonusText": "Automaton overloaded! +1 Devotion"
+			}
 		},
 		"96": {
 			"title": "The Coast of Dreams",
@@ -1016,7 +1100,11 @@
 		"100": {
 			"title": "The Iron Heretic",
 			"quest": "Enter Juperos Core and terminate the ancient artificial guardian that has awakened.",
-			"questObjective": { "type": "no_spells", "param": null, "bonusText": "Magic-immune victory! +1 Devotion" }
+			"questObjective": {
+				"type": "no_spells",
+				"param": null,
+				"bonusText": "Magic-immune victory! +1 Devotion"
+			}
 		},
 		"101": {
 			"title": "Odin Foothills II",
@@ -1036,7 +1124,12 @@
 		},
 		"105": {
 			"title": "The Floating Steppes",
-			"quest": "Recover stolen alchemical supplies from rogue sky-pirates."
+			"quest": "Recover stolen alchemical supplies from rogue sky-pirates.",
+			"questObjective": {
+				"type": "no_ranged",
+				"param": null,
+				"bonusText": "No shots fired in the sky! +1 Devotion"
+			}
 		},
 		"106": {
 			"title": "The Floating Steppes II",
@@ -1057,7 +1150,11 @@
 		"110": {
 			"title": "Einbroch's War Machine",
 			"quest": "Destroy the prototype war machine before it escapes the mine shaft.",
-			"questObjective": { "type": "win_in_turns", "param": 12, "bonusText": "Contained in time! +1 Devotion" }
+			"questObjective": {
+				"type": "win_in_turns",
+				"param": 12,
+				"bonusText": "Contained in time! +1 Devotion"
+			}
 		},
 		"111": {
 			"title": "Yuno Escarpment II",
@@ -1077,7 +1174,12 @@
 		},
 		"115": {
 			"title": "Lighthalzen Frontier",
-			"quest": "Neutralize escaped lab specimens hiding in the industrial outskirts."
+			"quest": "Neutralize escaped lab specimens hiding in the industrial outskirts.",
+			"questObjective": {
+				"type": "win_in_turns",
+				"param": 13,
+				"bonusText": "Specimens contained fast! +1 Devotion"
+			}
 		},
 		"116": {
 			"title": "The Corporate Frontier",
@@ -1098,7 +1200,11 @@
 		"120": {
 			"title": "The Eternal Dark",
 			"quest": "Purge the darkness consuming Rachel Sanctuary's lowest vault before it spreads.",
-			"questObjective": { "type": "protect_unit", "param": 4, "bonusText": "Templar held the light! +1 Devotion" }
+			"questObjective": {
+				"type": "protect_unit",
+				"param": 4,
+				"bonusText": "Templar held the light! +1 Devotion"
+			}
 		},
 		"121": {
 			"title": "The Sanctuary Wards II",
@@ -1118,7 +1224,12 @@
 		},
 		"125": {
 			"title": "The Sanctuary Depths",
-			"quest": "Restore order to the Rachel Sanctuary's lower catacombs after the darkness recedes."
+			"quest": "Restore order to the Rachel Sanctuary's lower catacombs after the darkness recedes.",
+			"questObjective": {
+				"type": "protect_unit",
+				"param": 6,
+				"bonusText": "High Priest endures! +1 Devotion"
+			}
 		},
 		"126": {
 			"title": "Arunafeltz Gorge III",
@@ -1139,7 +1250,11 @@
 		"130": {
 			"title": "Lord of the Inferno",
 			"quest": "Confront the fire spirit bound in the heart of Thor Volcano.",
-			"questObjective": { "type": "no_ranged", "param": null, "bonusText": "Fought through the flames! +1 Devotion" }
+			"questObjective": {
+				"type": "no_ranged",
+				"param": null,
+				"bonusText": "Fought through the flames! +1 Devotion"
+			}
 		},
 		"131": {
 			"title": "The Sanctuary Wards IV",
@@ -1159,7 +1274,12 @@
 		},
 		"135": {
 			"title": "Smoldering Aftermath",
-			"quest": "Clear the volcanic ash fields of fire elementals emboldened by Ifrit's defeat."
+			"quest": "Clear the volcanic ash fields of fire elementals emboldened by Ifrit's defeat.",
+			"questObjective": {
+				"type": "hold_tower",
+				"param": 1,
+				"bonusText": "Volcano peak held! +1 Devotion"
+			}
 		},
 		"136": {
 			"title": "Thor Foothills IV",
@@ -1180,7 +1300,11 @@
 		"140": {
 			"title": "The Ancient Colossus",
 			"quest": "Face the prehistoric mammoth that has awakened in the Manuk wastes.",
-			"questObjective": { "type": "kill_type", "param": 5, "bonusText": "Mage pierced the hide! +1 Devotion" }
+			"questObjective": {
+				"type": "kill_type",
+				"param": 5,
+				"bonusText": "Mage pierced the hide! +1 Devotion"
+			}
 		},
 		"141": {
 			"title": "Splendide Fields II",
@@ -1200,7 +1324,12 @@
 		},
 		"145": {
 			"title": "Cat Paw Shore",
-			"quest": "Help the Cat Paw merchant guild retrieve washed-up cargo."
+			"quest": "Help the Cat Paw merchant guild retrieve washed-up cargo.",
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "Cat Paw crew unharmed! +1 Devotion"
+			}
 		},
 		"146": {
 			"title": "Cat Paw Shore II",
@@ -1221,7 +1350,11 @@
 		"150": {
 			"title": "Odin's Threshold",
 			"quest": "Prove your worth in the trial of Odin's chosen and face the fallen judge.",
-			"questObjective": { "type": "use_guard", "param": 4, "bonusText": "Stood firm like a Valkyrie! +1 Devotion" }
+			"questObjective": {
+				"type": "use_guard",
+				"param": 4,
+				"bonusText": "Stood firm like a Valkyrie! +1 Devotion"
+			}
 		},
 		"151": {
 			"title": "Eclage Boundary",
@@ -1242,7 +1375,11 @@
 		"155": {
 			"title": "Lord of Flies",
 			"quest": "Descend to the lowest Biolab level and face the intelligence that engineered the corruption.",
-			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "All six endure! +1 Devotion" }
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "All six endure! +1 Devotion"
+			}
 		},
 		"156": {
 			"title": "Biolab Testing Chamber II",
@@ -1262,12 +1399,21 @@
 		},
 		"160": {
 			"title": "The Valley of Gyoll II",
-			"quest": "Destroy the soul-harvesting portals before they spread."
+			"quest": "Destroy the soul-harvesting portals before they spread.",
+			"questObjective": {
+				"type": "use_guard",
+				"param": 4,
+				"bonusText": "Portals could not break you! +1 Devotion"
+			}
 		},
 		"161": {
 			"title": "The Heart of the Lab",
 			"quest": "Confront the mastermind. End the Genesis Project forever.",
-			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "All six survive to the end! +1 Devotion" }
+			"questObjective": {
+				"type": "win_no_casualties",
+				"param": null,
+				"bonusText": "All six survive to the end! +1 Devotion"
+			}
 		}
 	},
 	"bosses": {
