@@ -1,42 +1,56 @@
 # Hex Dice — TODO
 
-## Quest Objective System (v1)
+## Quest Objective System (v1) ✓ COMPLETE
 
-Make campaign quests mechanically real via a **bonus objective** layer.
-Each level optionally declares a `questObjective` in `ro_quest_db.json`.
-On win, condition is evaluated against existing game state.
-Success: +1 devotion point + toast notification.
+v1 shipped: 8 passive types (win_no_casualties, win_in_turns, protect_unit, no_ranged, no_spells, use_guard, hold_tower, kill_type), 33 levels covered. +1 devotion on bonus, delayed toast.
 
-### Objective types supported (v1)
+---
 
-| type | condition (checked at gameOver) | new tracking needed |
+## Quest Objective System (v2) — Hard Challenges
+
+Adds 7 harder types requiring deliberate risk/mastery. Boss and late-game levels (60+) get v2 objectives; early levels keep v1 as onramp.
+
+### New types (v2)
+
+| type | condition | tracking needed |
 |---|---|---|
-| `win_no_casualties` | zero player unit deaths | none |
-| `win_in_turns:N` | `turnCount <= param` | none |
-| `protect_unit:V` | unit of value V not dead | none |
-| `no_ranged` | player used no RANGED_ATTACK actions | none (`actionLog` already exists) |
-| `no_spells` | player used no SPELLCAST actions | none (`actionLog` already exists) |
-| `use_guard:N` | player used GUARD >= N times | none (`actionLog` already exists) |
-| `hold_tower:N` | player holds >= N TOWER hexes at battle end | none (iterate hexes) |
-| `kill_type:V` | killed at least one enemy of unit value V | one flag: `_questKillTypeAchieved` |
+| `solo_survivor` | exactly 1 player unit alive at win | none |
+| `unit_bloodied` | ≥1 player unit at effectiveArmor ≤ 1 but alive at win | none |
+| `no_guard` | player never used GUARD action | none (actionLog) |
+| `use_special` | player used SPECIAL_ATTACK ≥ N times | none (actionLog) |
+| `oracle_last` | Oracle (value 6) is a surviving unit at win | none |
+| `chain_kill` | killed ≥ N enemies in a single player turn | `_questChainKillMax` + `_questChainKillThisTurn` counters |
+| `win_by_capture` | won by occupying enemy base (not elimination) | `_questWonByCapture` flag in `checkWinConditions` |
 
-> Future v2 ideas: `capture_base`, `kill_with_type` (attacker tracking), combo objectives, timed sub-goals mid-battle.
+> Future v3 ideas: combo objectives (two conditions both met), timed sub-goals mid-battle, "no movement" (teleport-only Oracle win).
 
 ### Implementation steps
 
-- [x] **Step 1 — Data**: Add `questObjective: { type, param, bonusText }` to ~20 levels in `ro_quest_db.json`. No engine changes yet. Verify JSON parses cleanly.
-- [x] **Step 2 — Engine query**: Add `StoryEngine.getQuestObjective(levelNum)` (3 lines) in `story-engine.js`. Returns `{ type:'win', param:null, bonusText:null }` default for levels without it.
-- [x] **Step 3 — Expose to game**: Add `questObjective: StoryEngine.getQuestObjective(levelNumInt)` to the `story:` object in `campaign-manager.js` fetchCampaignMap (~line 990).
-- [x] **Step 4 — Evaluator**: Add `CampaignManager.checkQuestObjective(game)` helper before `handleGameOver`. All 8 types. Uses `actionLog`, `hexes`, `players[0].dice` — all already on game object.
-- [x] **Step 5 — Reward hook**: In `handleGameOver`, replace `completedQuests[levelNum] = true` with `{ completed: true, bonus: bonusAchieved }`. On bonus: `devotionPoints++` + delayed toast (4500ms, after victory toast clears).
-- [x] **Step 6 — kill_type flag**: In `game.js resetGame()` add `_questKillTypeAchieved = false`. In `removeUnit` inside `if (!state)` block, set flag when enemy of matching value dies.
-- [x] **Step 7 — HUD**: In `controller.html` Quest Log HUD, add 1 template line showing `◎ bonusText`. Live green highlight for `kill_type` via `_questKillTypeAchieved` (already Alpine-reactive).
-- [x] **Step 8 — Verify backward compat**: Old saves with `completedQuests[n] = true` — `true.bonus` is `undefined` (falsy), all `if (completedQuests[n])` guards still pass. No migration code needed.
+- [x] **Step 1 — TODO update** *(this file)*
+- [x] **Step 2 — Evaluator**: Add 7 new cases to `CampaignManager.checkQuestObjective()` switch in `campaign-manager.js`
+- [x] **Step 3 — chain_kill tracking**: In `game.js resetGame()` add 3 new flags. In `removeUnit` inside `if (!state)` block add chain counter. In `_endTurn` reset counter each player-0 turn.
+- [x] **Step 4 — win_by_capture flag**: In `game.js checkWinConditions()` at `baseCaptured && !annihilationMode` branch, set `_questWonByCapture = true` when enemy base is captured.
+- [x] **Step 5 — Data**: Replace 12 boss/late-game level objectives in `ro_quest_db.json` with v2 types. Verify JSON parses.
+- [x] **Step 6 — Verify**: Syntax check all JS files. Spot-check objective logic by code review.
+
+### Levels getting v2 objectives
+
+| Level | Type | Param |
+|---|---|---|
+| 60 | `solo_survivor` | — |
+| 70 | `win_by_capture` | — |
+| 80 | `chain_kill` | 2 |
+| 90 | `no_guard` | — |
+| 100 | `use_special` | 2 |
+| 110 | `chain_kill` | 2 |
+| 120 | `unit_bloodied` | — |
+| 130 | `solo_survivor` | — |
+| 140 | `oracle_last` | — |
+| 150 | `no_guard` | — |
+| 155 | `chain_kill` | 3 |
+| 161 | `solo_survivor` | — |
 
 ### Key files
-
-- `js/campaign/ro_quest_db.json`
-- `js/campaign/story-engine.js`
-- `js/campaign/campaign-manager.js` — `checkQuestObjective()`, `handleGameOver()`, `fetchCampaignMap()`
-- `js/game.js` — `resetGame()`, `removeUnit()`
-- `html/controller.html` — Quest Log HUD
+- `js/campaign/campaign-manager.js` — `checkQuestObjective()`: +7 cases
+- `js/game.js` — `resetGame()`, `removeUnit()`, `_endTurn()`, `checkWinConditions()`: ~8 new lines
+- `js/campaign/ro_quest_db.json` — replace 12 objectives

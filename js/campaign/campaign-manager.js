@@ -726,6 +726,14 @@ const CampaignManager = {
 			case 'use_guard':        return p0log.filter(a => a.actionType === 'GUARD').length >= (obj.param || 1);
 			case 'hold_tower':       return game.hexes.filter(h => h.terrainType === 'TOWER' && h.unit?.playerId === 0).length >= (obj.param || 1);
 			case 'kill_type':        return !!game._questKillTypeAchieved;
+			// v2 hard types
+			case 'solo_survivor':   return p0.dice.filter(d => d.isDeployed && !d.isDeath).length === 1;
+			case 'unit_bloodied':   return p0.dice.filter(d => !d.isDeath && d.isDeployed && d.effectiveArmor <= 1).length >= 1;
+			case 'no_guard':        return p0log.filter(a => a.actionType === 'GUARD').length === 0;
+			case 'use_special':     return p0log.filter(a => a.actionType === 'SPECIAL_ATTACK').length >= (obj.param || 1);
+			case 'oracle_last':     return !!(p0.dice.find(d => d.value === 6 && !d.isDeath && d.isDeployed));
+			case 'chain_kill':      return (game._questChainKillMax || 0) >= (obj.param || 2);
+			case 'win_by_capture':  return !!game._questWonByCapture;
 			default: return false;
 		}
 	},

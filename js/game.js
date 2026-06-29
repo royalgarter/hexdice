@@ -1391,6 +1391,9 @@ function alpineHexDiceTacticGame() { return {
 		this.storyToast = null;
 		this._storyFirstBloodFired = false;
 		this._questKillTypeAchieved = false;
+		this._questChainKillMax = 0;
+		this._questChainKillThisTurn = 0;
+		this._questWonByCapture = false;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];		if (preset) {
 			this.rules.dicePerPlayer = preset.dice.length;
@@ -5061,10 +5064,14 @@ function alpineHexDiceTacticGame() { return {
 				this._storyFirstBloodFired = true;
 				this.showStoryDialogue(this.campaignData?.level || this.CampaignManager.state.currentLevel, 'first_blood');
 			}
-			// Quest objective: kill_type — flag when an enemy of the target value is killed
+			// Quest objectives: track enemy kills for kill_type and chain_kill
 			if (this.isCampaign && unit.playerId !== 0) {
 				const obj = this.campaignData?.story?.questObjective;
 				if (obj?.type === 'kill_type' && unit.value === obj.param) this._questKillTypeAchieved = true;
+				if (this.currentPlayerIndex === 0) {
+					this._questChainKillThisTurn++;
+					if (this._questChainKillThisTurn > this._questChainKillMax) this._questChainKillMax = this._questChainKillThisTurn;
+				}
 			}
 		}
 		
@@ -5156,6 +5163,9 @@ function alpineHexDiceTacticGame() { return {
 	_endTurn(state) {
 		let isState = !!state;
 		state = state || this;
+
+		// Reset chain-kill counter when player 0's turn ends (real game only)
+		if (!isState && state.currentPlayerIndex === 0) state._questChainKillThisTurn = 0;
 
 		if (!isState) this.recordAction('END_TURN');
 
@@ -5288,6 +5298,8 @@ function alpineHexDiceTacticGame() { return {
 			}
 
 			if (baseCaptured && !this.options.includes('a')) {
+				// Quest objective: flag when player 0 captures an enemy base
+				if (!state && this.isCampaign && playerIdx !== 0) this._questWonByCapture = true;
 				// Remove all units of eliminated player from the board
 				p.dice.forEach(d => {
 					if (d.isDeployed && !d.isDeath && d.hexId !== null) {
