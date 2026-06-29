@@ -13,7 +13,7 @@ const heuristicProfiles = {
     baseline: {
         name: "Baseline",
         description: "Balanced: Fundamentally sound, values objectives and combat equally.",
-        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'],
+        priorityOrder: ['capture', 'kill', 'attack', 'spell', 'position'],
         weights: {
             captureBonus: 10000,    // Primary objective: Reward for reaching enemy base
             killBonus: 1000,       // Reward for eliminating an enemy unit
@@ -27,7 +27,7 @@ const heuristicProfiles = {
             threatPenalty: -400,   // Penalty for being in range of enemy attacks
             guardPenalty: -200,    // Mild penalty — Guard is a valid action now, just not spammable
             mergeOver6Penalty: -500,
-            backAndForthPenalty: -1000,
+            backAndForthPenalty: -15000,
 
             teamPositionWeight: 0.6, // Relative importance of overall team formation
             pressureWeight: 0.8,     // Space control — lower to prevent friendly-cluster attractor loops
@@ -72,7 +72,7 @@ const heuristicProfiles = {
             isolationPenalty: 60,  // Rangers can spread out to find terrain
             guardPenalty: -200,    // Occasional guarding is okay
             mergeOver6Penalty: -100,
-            backAndForthPenalty: -600, // Strong — prevents Tower-to-Tower oscillation
+            backAndForthPenalty: -15000, // Strong — prevents Tower-to-Tower oscillation
 
             teamPositionWeight: 0.4,
             pressureWeight: 0.7,     // Values board control from a distance
@@ -119,7 +119,7 @@ const heuristicProfiles = {
             isolationPenalty: 50,  // Lone wolf — can operate independently but not recklessly
             guardPenalty: -400,
             mergeOver6Penalty: -450,
-            backAndForthPenalty: -600, // Prevents stalking oscillation around same target
+            backAndForthPenalty: -15000, // Prevents stalking oscillation around same target
 
             teamPositionWeight: 0.3, // Lone wolf — doesn't need teammates
             pressureWeight: 0.7,     // Zone-aware when repositioning between targets
@@ -210,7 +210,7 @@ const heuristicProfiles = {
             isolationPenalty: 350, // Must stay grouped — isolated units get captured
             guardPenalty: -100,    // Fine with guarding, but not infinitely
             mergeOver6Penalty: -20,
-            backAndForthPenalty: -500, // Prevent wall oscillation
+            backAndForthPenalty: -15000, // Prevent wall oscillation
 
             teamPositionWeight: 1.0, // Demands tight, adjacent formations for mutual support
             pressureWeight: 0.8,     // Prefers low-pressure, controlled space
@@ -257,7 +257,7 @@ const heuristicProfiles = {
             isolationPenalty: 150, // Board control requires coordinated units, not lone wolves
             guardPenalty: -300,
             mergeOver6Penalty: -400,
-            backAndForthPenalty: -600,
+            backAndForthPenalty: -15000,
 
             teamPositionWeight: 0.9, // Values group synergy for multi-turn setup logic
             pressureWeight: 0.9,     // Board controller needs strong zone awareness

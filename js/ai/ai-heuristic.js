@@ -417,7 +417,8 @@ function filterByPriority(scoredMoves, priority, opponentBases) {
         case 'kill': return scoredMoves.filter(m => m.canKillEnemy);
         case 'attack': return scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
         case 'spell': return scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_'));
-        case 'dodge': return scoredMoves.filter(m => m.isCurrentlyThreatened || m.canBeKilledCurrently);
+        // Only dodge from positions where unit WILL be killed — not just threatened. Avoids oscillation loops.
+        case 'dodge': return scoredMoves.filter(m => m.canBeKilledCurrently);
         case 'position': return scoredMoves.filter(m => !m.isThreatened && !m.move.actionType.includes('SPELLCAST_'));
         default: return [];
     }
@@ -569,7 +570,6 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'kill': {
-            // Find moves that kill enemies, but skip heavily fatigued units (score<0 means fatigue penalty exceeded kill bonus)
             const killMoves = scoredMoves.filter(m => m.canKillEnemy && m.score > 0);
             if (killMoves.length > 0) {
                 sortMovesByStrategy(killMoves, profile.targetSelection, profile.riskTolerance);
@@ -651,7 +651,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'dodge': {
-            const threatenedMoves = scoredMoves.filter(m => (m.isCurrentlyThreatened || m.canBeKilledCurrently)
+            const threatenedMoves = scoredMoves.filter(m => m.canBeKilledCurrently
                 && !(m.move.actionType === 'GUARD' && m.unit.lastActionWasGuard)); // no guard spam via dodge
             if (threatenedMoves.length > 0) {
                 const unitEscapeMoves = new Map();
@@ -703,13 +703,10 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         case 'position': {
             const allNonSpell = scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_'))
                                            .filter(m => m.move.actionType !== 'GUARD');
-            // Tiered fallback: safe > threatened-but-survivable > all
-            // Avoids walking units directly into confirmed kills (canBeKilled=true)
-            const safeOnly = allNonSpell.filter(m => !m.isThreatened && !m.canBeKilled);
-            // survivableOnly excludes only IMMEDIATE kills — deferred (already-moved enemy) are allowed as fallback.
+            // survivableOnly: allow positions where death is deferred but not immediate.
+            // Prevents walking directly into a lethal trap while still enabling aggressive advances.
             const survivableOnly = allNonSpell.filter(m => !m.canBeKilledImmediate);
-            const strategicMoves = safeOnly.length > 0 ? safeOnly
-                : (survivableOnly.length > 0 ? survivableOnly : allNonSpell);
+            const strategicMoves = survivableOnly.length > 0 ? survivableOnly : allNonSpell;
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -1224,10 +1221,17 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     let canBeKilledByAny = false;      // immediate: enemy hasn't acted yet this round
     let canBeKilledNextTurn = false;   // deferred: enemy already acted but will reset next round
 
+    // Build hexId map from hexes (source of truth) — players[].dice hexIds can be stale after moves.
+    const actualHexIdByUnitId = {};
+    nextState.hexes.forEach(h => { if (h.unit) actualHexIdByUnitId[h.unit.id] = h.id; });
+
     for (const pIdx of opponentIndices) {
         const allOpponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
         for (const opp of allOpponents) {
-            const canAtk = GAME.canUnitAttackTarget(opp, aiUnitNext, nextState);
+            // Use hex-based hexId for correct position (players[].dice.hexId may be stale).
+            const oppActualHexId = actualHexIdByUnitId[opp.id] ?? opp.hexId;
+            const oppForCheck = oppActualHexId !== opp.hexId ? { ...opp, hexId: oppActualHexId } : opp;
+            const canAtk = GAME.canUnitAttackTarget(oppForCheck, aiUnitNext, nextState);
             if (canAtk) {
                 const isImmediate = !opp.hasMovedOrAttackedThisTurn;
                 analysis.isThreatened = true;
@@ -1267,12 +1271,14 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     analysis.canBeKilled = canBeKilledByAny || canBeKilledNextTurn;
     if (canBeKilledByAny) {
         analysis.isSafe = false;
-        // Immediate death: must outrank any advance/kill bonus (max ~7000), so 8000 base.
-        analysis.score -= 8000 + unit.value * 300;
+        // canBeKilledImmediate is used by survivableOnly filter in position priority.
+        // Small score penalty keeps isSafe=false correct for other filters.
+        analysis.score -= 300;
     } else if (canBeKilledNextTurn) {
         analysis.isSafe = false;
-        // Deferred death: significant but not absolute deterrent — allows tactical advances when needed.
-        analysis.score -= 2500 + unit.value * 100;
+        // Deferred death (enemy already moved this round): mild deterrent only.
+        // Don't penalize heavily — would block all offensive play when enemies take turns.
+        analysis.score += w.threatPenalty;
     } else if (analysis.isThreatened) {
         analysis.isSafe = false;
         analysis.score += w.threatPenalty * threatCount;
