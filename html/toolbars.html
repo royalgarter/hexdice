@@ -1,10 +1,5 @@
-<!-- Bottom Right -->
-<div class="absolute bottom-0 right-1 text-sm font-mono font-bold flex flex-col items-end gap-1" style="display: none;" x-show="audioManager">
-	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
-		@click="showUnitInfo = !showUnitInfo"
-		:class="showUnitInfo ? 'text-gray-300' : 'text-gray-800'"
-		x-show="unitstat || hoverUnitHexId" style="display: none;">?</a>
-
+<!-- Top Left -->
+<div class="absolute top-0 left-1 text-sm font-mono font-bold flex flex-col items-start gap-1" style="display: none;" x-show="audioManager">
 	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
 		@click="audioManager.noSFX = !audioManager.noSFX"
 		:class="audioManager.noSFX ? 'text-gray-300' : 'text-gray-800'">♪</a>
@@ -12,6 +7,15 @@
 	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl text-xs"
 		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.(isCampaign ? 'campaign' : 'battle')"
 		:class="audioManager.musicEl ? 'text-gray-300' : 'text-gray-800'">𝄞</a>
+
+</div>
+
+<!-- Bottom Right -->
+<div class="absolute bottom-0 right-1 text-sm font-mono font-bold flex flex-col items-end gap-1">
+	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
+		@click="showUnitInfo = !showUnitInfo"
+		:class="showUnitInfo ? 'text-gray-300' : 'text-gray-800'"
+		x-show="unitstat || hoverUnitHexId" style="display: none;">?</a>
 
 	<a href="#" class="cursor-pointer rounded-full w-7 h-7 text-center content-center bg-wood hover:opacity-90 hover:shadow-xl"
 		@click="showLog = !showLog"

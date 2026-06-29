@@ -25,8 +25,6 @@ const mqttClient = mqtt.connect(MQTT, {
 	password: mqttUrl.password || undefined,
 });
 
-console.log(MQTT, mqttUrl.username || "(no user)", mqttUrl.password ? "***" : "(no pass)")
-
 const MQTT_PULSE_MS = Number(Deno.env.get("MQTT_PULSE_MS")) || 90;
 
 const roomEngines: Record<string, any> = {};
