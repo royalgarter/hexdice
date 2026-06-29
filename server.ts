@@ -16,14 +16,21 @@ const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD");
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
 
 const MQTT = Deno.env.get("MQTT") || "wss://broker.emqx.io:8084/mqtt";
-const mqttClient = mqtt.connect(MQTT);
+
+const mqttUrl = new URL(MQTT);
+const mqttClient = mqtt.connect(MQTT, {
+	username: mqttUrl.username || undefined,
+	password: mqttUrl.password || undefined,
+});
+
+console.log(MQTT, mqttUrl.username || "(no user)", mqttUrl.password ? "***" : "(no pass)")
 
 const MQTT_PULSE_MS = Number(Deno.env.get("MQTT_PULSE_MS")) || 90;
 
 const roomEngines: Record<string, any> = {};
 
 mqttClient.on("connect", () => {
-	console.log("Connected to MQTT broker via esm.sh (v4)");
+	console.log("Connected to MQTT broker via esm.sh (v4)", MQTT);
 	mqttClient.subscribe("hexdice/rooms/+");
 });
 
