@@ -24,9 +24,9 @@ const heuristicProfiles = {
             protectedRangeBonus: 100, // Reward for positioning where allies provide cover
 
             threatPenalty: -400,   // Penalty for being in range of enemy attacks
-            guardPenalty: -500,    // Penalty for guarding (prevents excessive passivity)
-            mergeOver6Penalty: -500, // Penalty for merging dice into a value > 6 (loss of value)
-            backAndForthPenalty: -1000, // Penalty for repetitive movement loops
+            guardPenalty: -200,    // Mild penalty — Guard is a valid action now, just not spammable
+            mergeOver6Penalty: -500,
+            backAndForthPenalty: -1000,
 
             teamPositionWeight: 0.6, // Relative importance of overall team formation
             pressureWeight: 2.0,     // Space control — raised so zone pressure is meaningful vs kill scores
@@ -66,11 +66,11 @@ const heuristicProfiles = {
             threatPenalty: -800,   // Runs away from close combat (prefers distance)
             protectedRangeBonus: 1500, // Thrives shooting over friendly lines from safety
             friendlySixBonus: 100,
-            advanceBonus: 100,     // Low advancement; wants to stay in its "nest"
+            advanceBonus: 150,     // Slightly proactive when no tower available
 
             guardPenalty: -200,    // Occasional guarding is okay
             mergeOver6Penalty: -100,
-            backAndForthPenalty: -200,
+            backAndForthPenalty: -600, // Strong — prevents Tower-to-Tower oscillation
 
             teamPositionWeight: 0.4,
             pressureWeight: 0.7,     // Values board control from a distance
@@ -116,10 +116,10 @@ const heuristicProfiles = {
 
             guardPenalty: -400,
             mergeOver6Penalty: -450,
-            backAndForthPenalty: -300,
+            backAndForthPenalty: -600, // Prevents stalking oscillation around same target
 
-            teamPositionWeight: 0.3, // Operates as a lone wolf; doesn't need teammates
-            pressureWeight: 0.3,     // Doesn't care about zone control, only the target
+            teamPositionWeight: 0.3, // Lone wolf — doesn't need teammates
+            pressureWeight: 1.2,     // Zone-aware when repositioning between targets
 
             terrainWeights: {
                 defenseBonusWeight: 100,
@@ -202,9 +202,9 @@ const heuristicProfiles = {
             friendlySixBonus: 400, // Highly values the protection of an Oracle (Dice 6)
             advanceBonus: 50,      // Barely advances; waits for the enemy to come
 
-            guardPenalty: -50,     // Perfectly happy guarding to boost defense
-            mergeOver6Penalty: -20, // Willing to merge to keep HP/Armor high
-            backAndForthPenalty: -100, // Repetition is fine if it maintains the wall
+            guardPenalty: -100,    // Fine with guarding, but not infinitely
+            mergeOver6Penalty: -20,
+            backAndForthPenalty: -500, // Prevent wall oscillation
 
             teamPositionWeight: 1.0, // Demands tight, adjacent formations for mutual support
             pressureWeight: 0.8,     // Prefers low-pressure, controlled space
@@ -250,10 +250,10 @@ const heuristicProfiles = {
 
             guardPenalty: -300,
             mergeOver6Penalty: -400,
-            backAndForthPenalty: -300,
+            backAndForthPenalty: -600,
 
             teamPositionWeight: 0.9, // Values group synergy for multi-turn setup logic
-            pressureWeight: 0.4,     // Space control is important but secondary to synergy
+            pressureWeight: 1.5,     // Board controller needs strong zone awareness
 
             terrainWeights: {
                 defenseBonusWeight: 200,
@@ -270,7 +270,7 @@ const heuristicProfiles = {
             }
         },
         riskTolerance: 0.4,
-        targetSelection: 'highestValue',
+        targetSelection: 'threatRemoval', // Eliminate units that threaten the plan, not just big ones
         positioningStyle: 'balanced',
         unitSelection: 'leastMoved'
     },
