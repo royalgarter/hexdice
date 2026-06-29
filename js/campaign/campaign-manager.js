@@ -712,6 +712,24 @@ const CampaignManager = {
 	 * Main entry point for campaign game over from game.js.
 	 * Handles rewards, level advancement, and unit tracking.
 	 */
+	checkQuestObjective(game) {
+		const obj = game.campaignData?.story?.questObjective;
+		if (!obj || obj.type === 'win') return false;
+		const p0 = game.players[0];
+		const p0log = (game.actionLog || []).filter(a => a.player === 0);
+		switch (obj.type) {
+			case 'win_no_casualties': return p0.dice.filter(d => d.isDeath).length === 0;
+			case 'win_in_turns':     return game.turnCount <= (obj.param || 99);
+			case 'protect_unit':     return p0.dice.filter(d => d.isDeath && d.value === obj.param).length === 0;
+			case 'no_ranged':        return p0log.filter(a => a.actionType === 'RANGED_ATTACK').length === 0;
+			case 'no_spells':        return p0log.filter(a => a.actionType === 'SPELLCAST').length === 0;
+			case 'use_guard':        return p0log.filter(a => a.actionType === 'GUARD').length >= (obj.param || 1);
+			case 'hold_tower':       return game.hexes.filter(h => h.terrainType === 'TOWER' && h.unit?.playerId === 0).length >= (obj.param || 1);
+			case 'kill_type':        return !!game._questKillTypeAchieved;
+			default: return false;
+		}
+	},
+
 	handleGameOver(game, winnerPlayerIndex) {
 		const deployedValues = game.players[0].dice
 			.filter(d => d.isDeployed && !d.isDeath)
@@ -725,7 +743,18 @@ const CampaignManager = {
 		// Track story progression
 		const levelNum = this.state.currentLevel;
 		if (winnerPlayerIndex === 0) {
-			this.state.storyState.completedQuests[levelNum] = true;
+			const bonusAchieved = this.checkQuestObjective(game);
+			this.state.storyState.completedQuests[levelNum] = { completed: true, bonus: bonusAchieved };
+			if (bonusAchieved) {
+				this.state.devotionPoints++;
+				const bonusText = game.campaignData?.story?.questObjective?.bonusText || 'Bonus objective complete! +1 Devotion';
+				// Delay 4500ms: victory toast fires at gameOver and lasts 4s; show bonus after it clears
+				setTimeout(() => {
+					game.storyToast = { speaker: 'Bonus Objective', text: '⭐ ' + bonusText };
+					clearTimeout(game._storyToastTimer);
+					game._storyToastTimer = setTimeout(() => { game.storyToast = null; }, 4000);
+				}, 4500);
+			}
 			if (StoryEngine.isBossLevel(levelNum)) {
 				this.state.storyState.bossesDefeated.push(levelNum);
 			}
@@ -987,7 +1016,8 @@ const CampaignManager = {
 				isBoss: isBoss,
 				boss: StoryEngine.getBossForLevel(levelNumInt),
 				npcDialogue: StoryEngine.getNPCDialogue(levelNumInt),
-				rewardHint: StoryEngine.getRewardHint(levelNumInt)
+				rewardHint: StoryEngine.getRewardHint(levelNumInt),
+				questObjective: StoryEngine.getQuestObjective(levelNumInt)
 			}
 		}
 	}

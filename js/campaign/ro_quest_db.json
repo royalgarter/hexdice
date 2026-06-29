@@ -624,7 +624,8 @@
 		},
 		"5": {
 			"title": "St. Capitolina Boundary",
-			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes."
+			"quest": "Purge aggressive wild creatures disrupting the merchant trade routes.",
+			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "Flawless advance! +1 Devotion" }
 		},
 		"6": {
 			"title": "Ley Line Convergence",
@@ -644,7 +645,8 @@
 		},
 		"10": {
 			"title": "The Gilded Horror",
-			"quest": "Descend into the Prontera culverts and destroy the creature that has been feeding there."
+			"quest": "Descend into the Prontera culverts and destroy the creature that has been feeding there.",
+			"questObjective": { "type": "win_in_turns", "param": 14, "bonusText": "Swift delve! +1 Devotion" }
 		},
 		"11": {
 			"title": "Cobalt Plains",
@@ -684,7 +686,8 @@
 		},
 		"20": {
 			"title": "The Awakened God",
-			"quest": "Descend into the deepest chamber of the Morroc pyramid and face what has awakened."
+			"quest": "Descend into the deepest chamber of the Morroc pyramid and face what has awakened.",
+			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "No offerings made! +1 Devotion" }
 		},
 		"21": {
 			"title": "Scorched Wilderness II",
@@ -704,7 +707,8 @@
 		},
 		"25": {
 			"title": "Echoing Caves",
-			"quest": "Clear the main payon trade trail of aggressive wild beasts."
+			"quest": "Clear the main payon trade trail of aggressive wild beasts.",
+			"questObjective": { "type": "protect_unit", "param": 1, "bonusText": "Fencer unbroken! +1 Devotion" }
 		},
 		"26": {
 			"title": "Echoing Caves II",
@@ -724,7 +728,8 @@
 		},
 		"30": {
 			"title": "Father of Flames",
-			"quest": "Confront the corrupted tiger spirit that has claimed the Payon hunting grounds."
+			"quest": "Confront the corrupted tiger spirit that has claimed the Payon hunting grounds.",
+			"questObjective": { "type": "no_ranged", "param": null, "bonusText": "Melee only — the old way! +1 Devotion" }
 		},
 		"31": {
 			"title": "The Steppes",
@@ -764,7 +769,8 @@
 		},
 		"40": {
 			"title": "Queen of Mjolnir",
-			"quest": "Face the Mistress who commands every creature in the mountain peaks."
+			"quest": "Face the Mistress who commands every creature in the mountain peaks.",
+			"questObjective": { "type": "win_in_turns", "param": 16, "bonusText": "Before the swarm regrouped! +1 Devotion" }
 		},
 		"41": {
 			"title": "Kafra Highway II",
@@ -804,7 +810,8 @@
 		},
 		"50": {
 			"title": "The Nightmare Blossom",
-			"quest": "Confront the Moonlight Flower in the depths of Payon."
+			"quest": "Confront the Moonlight Flower in the depths of Payon.",
+			"questObjective": { "type": "no_spells", "param": null, "bonusText": "Unenchanted victory! +1 Devotion" }
 		},
 		"51": {
 			"title": "Echoing Caves IV",
@@ -844,7 +851,8 @@
 		},
 		"60": {
 			"title": "Heart of the Sands",
-			"quest": "The Pharaoh awakens. Enter the tomb and end his reign."
+			"quest": "The Pharaoh awakens. Enter the tomb and end his reign.",
+			"questObjective": { "type": "kill_type", "param": 6, "bonusText": "Champion slain! +1 Devotion" }
 		},
 		"61": {
 			"title": "Clay Canyons II",
@@ -884,7 +892,8 @@
 		},
 		"70": {
 			"title": "The Cursed Captain",
-			"quest": "Board the sunken ship off the Brasilis coast and face its undead guardian."
+			"quest": "Board the sunken ship off the Brasilis coast and face its undead guardian.",
+			"questObjective": { "type": "use_guard", "param": 3, "bonusText": "Weathered the storm! +1 Devotion" }
 		},
 		"71": {
 			"title": "Mjolnir Slopes",
@@ -924,7 +933,8 @@
 		},
 		"80": {
 			"title": "The Ancient Warlord",
-			"quest": "Challenge the Turtle General on Turtle Island — the warlord who outlasted three empires."
+			"quest": "Challenge the Turtle General on Turtle Island — the warlord who outlasted three empires.",
+			"questObjective": { "type": "hold_tower", "param": 1, "bonusText": "High ground held! +1 Devotion" }
 		},
 		"81": {
 			"title": "Coral Reef",
@@ -964,7 +974,8 @@
 		},
 		"90": {
 			"title": "The Apostate",
-			"quest": "Descend into the monastery's forbidden wing and end what the bishop became."
+			"quest": "Descend into the monastery's forbidden wing and end what the bishop became.",
+			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "No one lost to the darkness! +1 Devotion" }
 		},
 		"91": {
 			"title": "Coal Slopes II",
@@ -1004,7 +1015,8 @@
 		},
 		"100": {
 			"title": "The Iron Heretic",
-			"quest": "Enter Juperos Core and terminate the ancient artificial guardian that has awakened."
+			"quest": "Enter Juperos Core and terminate the ancient artificial guardian that has awakened.",
+			"questObjective": { "type": "no_spells", "param": null, "bonusText": "Magic-immune victory! +1 Devotion" }
 		},
 		"101": {
 			"title": "Odin Foothills II",
@@ -1044,7 +1056,8 @@
 		},
 		"110": {
 			"title": "Einbroch's War Machine",
-			"quest": "Destroy the prototype war machine before it escapes the mine shaft."
+			"quest": "Destroy the prototype war machine before it escapes the mine shaft.",
+			"questObjective": { "type": "win_in_turns", "param": 12, "bonusText": "Contained in time! +1 Devotion" }
 		},
 		"111": {
 			"title": "Yuno Escarpment II",
@@ -1084,7 +1097,8 @@
 		},
 		"120": {
 			"title": "The Eternal Dark",
-			"quest": "Purge the darkness consuming Rachel Sanctuary's lowest vault before it spreads."
+			"quest": "Purge the darkness consuming Rachel Sanctuary's lowest vault before it spreads.",
+			"questObjective": { "type": "protect_unit", "param": 4, "bonusText": "Templar held the light! +1 Devotion" }
 		},
 		"121": {
 			"title": "The Sanctuary Wards II",
@@ -1124,7 +1138,8 @@
 		},
 		"130": {
 			"title": "Lord of the Inferno",
-			"quest": "Confront the fire spirit bound in the heart of Thor Volcano."
+			"quest": "Confront the fire spirit bound in the heart of Thor Volcano.",
+			"questObjective": { "type": "no_ranged", "param": null, "bonusText": "Fought through the flames! +1 Devotion" }
 		},
 		"131": {
 			"title": "The Sanctuary Wards IV",
@@ -1164,7 +1179,8 @@
 		},
 		"140": {
 			"title": "The Ancient Colossus",
-			"quest": "Face the prehistoric mammoth that has awakened in the Manuk wastes."
+			"quest": "Face the prehistoric mammoth that has awakened in the Manuk wastes.",
+			"questObjective": { "type": "kill_type", "param": 5, "bonusText": "Mage pierced the hide! +1 Devotion" }
 		},
 		"141": {
 			"title": "Splendide Fields II",
@@ -1204,7 +1220,8 @@
 		},
 		"150": {
 			"title": "Odin's Threshold",
-			"quest": "Prove your worth in the trial of Odin's chosen and face the fallen judge."
+			"quest": "Prove your worth in the trial of Odin's chosen and face the fallen judge.",
+			"questObjective": { "type": "use_guard", "param": 4, "bonusText": "Stood firm like a Valkyrie! +1 Devotion" }
 		},
 		"151": {
 			"title": "Eclage Boundary",
@@ -1224,7 +1241,8 @@
 		},
 		"155": {
 			"title": "Lord of Flies",
-			"quest": "Descend to the lowest Biolab level and face the intelligence that engineered the corruption."
+			"quest": "Descend to the lowest Biolab level and face the intelligence that engineered the corruption.",
+			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "All six endure! +1 Devotion" }
 		},
 		"156": {
 			"title": "Biolab Testing Chamber II",
@@ -1248,7 +1266,8 @@
 		},
 		"161": {
 			"title": "The Heart of the Lab",
-			"quest": "Confront the mastermind. End the Genesis Project forever."
+			"quest": "Confront the mastermind. End the Genesis Project forever.",
+			"questObjective": { "type": "win_no_casualties", "param": null, "bonusText": "All six survive to the end! +1 Devotion" }
 		}
 	},
 	"bosses": {

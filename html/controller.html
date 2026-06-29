@@ -76,6 +76,12 @@
 		<template x-if="!campaignData?.story?.isBoss">
 			<div class="text-[10px] opacity-40 mt-1 italic"><span x-text="campaignData?.story?.enemyFlavor"></span></div>
 		</template>
+		<template x-if="campaignData?.story?.questObjective?.type && campaignData.story.questObjective.type !== 'win'">
+			<div class="text-[10px] mt-1"
+				 :class="_questKillTypeAchieved && campaignData.story.questObjective.type === 'kill_type' ? 'text-green-400' : 'text-yellow-300 opacity-70'">
+				◎ <span x-text="campaignData.story.questObjective.bonusText"></span>
+			</div>
+		</template>
 	</div>
 
 	<!-- Game Setup -->

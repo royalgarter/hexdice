@@ -80,6 +80,12 @@ const StoryEngine = {
 		return region.quests[idx];
 	},
 
+	getQuestObjective(levelNum) {
+		const info = this.getLevelInfo(levelNum);
+		if (info.level && info.level.questObjective) return info.level.questObjective;
+		return { type: 'win', param: null, bonusText: null };
+	},
+
 	getTitle(levelNum) {
 		const info = this.getLevelInfo(levelNum);
 		if (info.level && info.level.title) return info.level.title;

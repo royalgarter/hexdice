@@ -1390,6 +1390,7 @@ function alpineHexDiceTacticGame() { return {
 		this.showStoryOutro = false;
 		this.storyToast = null;
 		this._storyFirstBloodFired = false;
+		this._questKillTypeAchieved = false;
 
 		const preset = this.preset && EPIC_PRESETS[this.preset];		if (preset) {
 			this.rules.dicePerPlayer = preset.dice.length;
@@ -5059,6 +5060,11 @@ function alpineHexDiceTacticGame() { return {
 			if (this.isCampaign && !this._storyFirstBloodFired) {
 				this._storyFirstBloodFired = true;
 				this.showStoryDialogue(this.campaignData?.level || this.CampaignManager.state.currentLevel, 'first_blood');
+			}
+			// Quest objective: kill_type — flag when an enemy of the target value is killed
+			if (this.isCampaign && unit.playerId !== 0) {
+				const obj = this.campaignData?.story?.questObjective;
+				if (obj?.type === 'kill_type' && unit.value === obj.param) this._questKillTypeAchieved = true;
 			}
 		}
 		
