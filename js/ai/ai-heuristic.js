@@ -99,13 +99,12 @@ function calculatePhaseWeights(GAME, state, profile) {
         }
     }
 
-    // Estimate game phase
+    // Estimate game phase (check late first — it is a subset of the early condition)
     let phase = 'mid';
-    if (deployedUnits < totalPossibleUnits * 0.4) {
-        phase = 'early';
-    } else if (deployedUnits < totalPossibleUnits * 0.2) {
-        // Very few units left — end game
+    if (deployedUnits < totalPossibleUnits * 0.2) {
         phase = 'late';
+    } else if (deployedUnits < totalPossibleUnits * 0.4) {
+        phase = 'early';
     }
 
     // Weight adjustments per phase
@@ -570,8 +569,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'kill': {
-            // Find moves that kill enemies
-            const killMoves = scoredMoves.filter(m => m.canKillEnemy);
+            // Find moves that kill enemies, but skip heavily fatigued units (score<0 means fatigue penalty exceeded kill bonus)
+            const killMoves = scoredMoves.filter(m => m.canKillEnemy && m.score > 0);
             if (killMoves.length > 0) {
                 sortMovesByStrategy(killMoves, profile.targetSelection, profile.riskTolerance);
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Found kill opportunity (${profile.targetSelection})!`, killMoves[0].move);
@@ -585,7 +584,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'attack': {
-            const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
+            const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy && m.score > 0);
             if (attackMoves.length > 0) {
                 sortMovesByStrategy(attackMoves, profile.targetSelection, profile.riskTolerance);
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Found attack opportunity (${profile.targetSelection})!`, attackMoves[0].move);
@@ -609,13 +608,36 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                 // Cast only if spell score beats the best non-spell move available to Oracle.
                 // Prevents Oracle from spamming spells when moving would be more valuable.
+                // IMPORTANT: heuristicMove does NOT include advanceBonus — that's added in position priority.
+                // Add it here to compare spells against moves fairly.
                 viableSpells.sort((a, b) => b.score - a.score);
                 const bestSpellScore = viableSpells.length > 0 ? viableSpells[0].score : -Infinity;
                 const oracleUnit = viableSpells.length > 0 ? viableSpells[0].unit : null;
+                const w = profile.weights;
+                const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
                 const bestMoveScore = oracleUnit
-                    ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => m.score), -Infinity)
+                    ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => {
+                        let s = m.score;
+                        // Augment MOVE score with advance bonus that position priority would add
+                        if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
+                            const tHex = GAME.getHex(m.move.targetHexId, state);
+                            if (tHex) {
+                                let minD = Infinity;
+                                opponentBases.forEach(b => {
+                                    const d = GAME.axialDistance(tHex.q, tHex.r, b.baseHex.q, b.baseHex.r);
+                                    if (d < minD) minD = d;
+                                });
+                                s += (w.advanceBonus || 0) * (maxDist - minD);
+                            }
+                        }
+                        return s;
+                    }), -Infinity)
                     : -Infinity;
-                const spellIsWorthIt = hasSacrifice || bestSpellScore > Math.max(bestMoveScore, 0);
+                // Spell fires only if it's meaningfully better than oracle's best move.
+                // Minimum threshold 120 prevents preventative/low-urgency spells (score ~2-75)
+                // from stealing the turn when oracle can't productively move.
+                const spellThreshold = Math.max(bestMoveScore, 120);
+                const spellIsWorthIt = hasSacrifice || bestSpellScore > spellThreshold;
                 if (viableSpells.length > 0 && spellIsWorthIt) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     const appliedMove = viableSpells[0].move;
@@ -681,9 +703,12 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         case 'position': {
             const allNonSpell = scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_'))
                                            .filter(m => m.move.actionType !== 'GUARD');
-            // Prefer safe hexes; fall back to threatened moves if needed (scores penalise danger)
+            // Tiered fallback: safe > threatened-but-survivable > all
+            // Avoids walking units directly into confirmed kills (canBeKilled=true)
             const safeOnly = allNonSpell.filter(m => !m.isThreatened && !m.canBeKilled);
-            const strategicMoves = safeOnly.length > 0 ? safeOnly : allNonSpell;
+            const survivableOnly = allNonSpell.filter(m => !m.canBeKilled);
+            const strategicMoves = safeOnly.length > 0 ? safeOnly
+                : (survivableOnly.length > 0 ? survivableOnly : allNonSpell);
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -833,9 +858,15 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
             else if (minAllyDist <= 2) bonus += 60; // In support range — reward staying here
             break;
         }
-        case 'SNIPER':
-            // Already handled by Archer kiting, but can add more here
+        case 'SNIPER': {
+            // Archer wants distance 2 from nearest enemy: shoot next turn without retaliation
+            const nearestFromTarget = findNearestEnemyUnit(GAME, state, unit.playerId, targetHex);
+            if (nearestFromTarget.distance === 2) bonus += 350;      // Optimal kiting range
+            else if (nearestFromTarget.distance === 3) bonus += 120; // Still in range, slightly safer
+            else if (nearestFromTarget.distance === 1) bonus -= 500; // Melee range — bad for Archer
+            else if (nearestFromTarget.distance > 4) bonus -= 200;   // Too far to contribute
             break;
+        }
     }
 
     return bonus;
@@ -1041,8 +1072,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
     // Point 3: Fatigue Penalty - reduce score for units that act too often
     // This helps break fixation on a single "lead" unit
-    const fatigueWeight = w.fatigueWeight || 150;
-    analysis.score -= (unit.activationCount || 0) * fatigueWeight;
+    // Exponential scaling: 1st repeat is small, 3rd+ is large, stopping one Knight from killing forever
+    const fatigueWeight = w.fatigueWeight || 300;
+    const activations = unit.activationCount || 0;
+    analysis.score -= activations * fatigueWeight + Math.max(0, activations - 1) * fatigueWeight;
 
     // isCurrentlyThreatened / canBeKilledCurrently: immediate (1-step) threats only.
     // 2-step threats inform shielding urgency but should not trigger panic-dodge.
@@ -1069,18 +1102,24 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         return analysis;
     }
 
+    // For spell moves: Oracle doesn't move to targetHexId — skip positional scoring based on target hex.
+    // Role bonus, pressure, team score, and isolation are only meaningful for actual unit displacement.
+    const isSpellMove = move.actionType.startsWith('SPELLCAST_');
+
     // Point 4: Apply Role-based positioning bonus
     const targetHexObj = GAME.getHex(move.targetHexId, state);
-    if (targetHexObj) {
+    if (!isSpellMove && targetHexObj) {
         analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
     }
 
     // Zone of Control (Pressure Map) bonus/penalty
-    const targetPressure = pressureMap[move.targetHexId] || 0;
-    analysis.score += targetPressure * (w.pressureWeight || 0.3);
+    if (!isSpellMove) {
+        const targetPressure = pressureMap[move.targetHexId] || 0;
+        analysis.score += targetPressure * (w.pressureWeight || 0.3);
+    }
 
     // Team Position Score calculation
-    if (typeof calculateTeamScore === 'function') {
+    if (!isSpellMove && typeof calculateTeamScore === 'function') {
         const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
         const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
         analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
@@ -1167,7 +1206,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     let canBeKilledByAny = false;
 
     for (const pIdx of opponentIndices) {
-        const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+        // Check ALL enemy units — including ones that already moved this round but can attack next round.
+        // Filtering by !hasMovedOrAttackedThisTurn causes P1 to walk into death after P2 Knight acts.
+        const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
         for (const opp of opponents) {
             if (GAME.canUnitAttackTarget(opp, aiUnitNext, nextState)) {
                 analysis.isThreatened = true;
@@ -1299,12 +1340,31 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
     }
 
+    // Isolation penalty: unit advancing far ahead of all allies risks dying alone (prevents lone-knight rushes)
+    if (move.actionType === 'MOVE') {
+        const unitHexAfter = GAME.getHex(aiUnitNext.hexId, nextState);
+        if (unitHexAfter) {
+            const myAllies = nextState.players[state.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.id !== unit.id);
+            let minAllyDist = Infinity;
+            for (const ally of myAllies) {
+                const allyHex = GAME.getHex(ally.hexId, nextState);
+                if (!allyHex) continue;
+                const dist = GAME.axialDistance(unitHexAfter.q, unitHexAfter.r, allyHex.q, allyHex.r);
+                if (dist < minAllyDist) minAllyDist = dist;
+            }
+            if (myAllies.length > 0 && minAllyDist > 3) {
+                analysis.score -= (minAllyDist - 3) * (w.isolationPenalty || 100);
+            }
+        }
+    }
+
     // --- ORACLE (Dice 6) SPELL HEURISTICS ---
     // Oracle is a support unit - evaluate spell casting opportunities with tactical prediction
     if (unit.value === 6) {
         const spellType = move.actionType;
 
         if (spellType === 'SPELLCAST_SHIELD') {
+            const shieldMult = (w.spells && w.spells.SPELLCAST_SHIELD != null) ? w.spells.SPELLCAST_SHIELD : 1.0;
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             if (targetUnit && !(targetUnit.isGuarding >= 2)) { // Skip: already fully shielded
                 const targetHex = GAME.getHex(move.targetHexId, nextState);
@@ -1338,34 +1398,39 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                         if (enemy && enemy.playerId !== state.currentPlayerIndex) {
                             const enemyArmor = GAME.calcDefenderEffectiveArmor(tn.id, nextState);
                             if (targetUnit.attack >= enemyArmor) {
-                                analysis.score += 80 + targetUnit.value * 10; // Advance setup bonus
+                                analysis.score += shieldMult * (200 + targetUnit.value * 30); // Advance setup bonus
                                 break;
                             }
                         }
                     }
                 }
 
-                // Score shielding based on urgency and unit value
+                // FRESH UNIT BONUS: shielding a unit that hasn't acted yet means it benefits this turn
+                if (!GAME.autochess && !targetUnit.hasMovedOrAttackedThisTurn && targetUnit.value >= 3) {
+                    analysis.score += shieldMult * (40 + targetUnit.value * 8);
+                    analysis.isSupportAction = true;
+                }
+
+                // Score shielding based on urgency and unit value.
+                // Only immediate kill threats get high scores (competing with move scores).
+                // Preventative shielding stays low so Oracle advances unless a unit is truly in danger.
                 if (willBeKilled) {
-                    // Immediate kill threat — shield now
-                    analysis.score += (GAME.autochess ? 250 : 150) + (targetUnit.value * (GAME.autochess ? 25 : 15));
+                    // Immediate kill threat — shield is critical
+                    analysis.score += shieldMult * ((GAME.autochess ? 250 : 400) + (targetUnit.value * (GAME.autochess ? 25 : 45)));
                     analysis.isSupportAction = true;
                 } else if (willBeKilledSoon && targetUnit.value >= 3) {
-                    // 2-step kill approaching — proactive shield, lower urgency
-                    analysis.score += (GAME.autochess ? 150 : 80) + (targetUnit.value * (GAME.autochess ? 15 : 10));
+                    // 2-step kill approaching — moderate priority, not turn-wasting
+                    analysis.score += shieldMult * ((GAME.autochess ? 150 : 80) + (targetUnit.value * (GAME.autochess ? 15 : 10)));
                     analysis.isSupportAction = true;
-                } else if (willBeAttacked) {
-                    analysis.score += (GAME.autochess ? 150 : 60) + (targetUnit.value * (GAME.autochess ? 15 : 8));
+                } else if (willBeAttacked && targetUnit.value >= 3) {
+                    analysis.score += shieldMult * ((GAME.autochess ? 150 : 40) + (targetUnit.value * (GAME.autochess ? 15 : 5)));
                     analysis.isSupportAction = true;
-                } else if (isCurrentlyThreatened && targetUnit.value >= 3) {
-                    analysis.score += (GAME.autochess ? 80 : 50) + (targetUnit.value * (GAME.autochess ? 10 : 6));
-                    analysis.isSupportAction = true;
-                } else if (targetUnit.value >= 5) {
-                    analysis.score += (GAME.autochess ? 60 : 30) + (targetUnit.value * (GAME.autochess ? 5 : 3));
+                } else if (isCurrentlyThreatened && targetUnit.value >= 4) {
+                    analysis.score += shieldMult * ((GAME.autochess ? 80 : 20) + (targetUnit.value * (GAME.autochess ? 10 : 3)));
                     analysis.isSupportAction = true;
                 } else {
-                    // Base value for shielding healthy units in Autochess (preventative)
-                    analysis.score += GAME.autochess ? 40 : 5;
+                    // Preventative shielding — very low score so moves beat it
+                    analysis.score += GAME.autochess ? 40 : 2;
                     analysis.isSupportAction = true;
                 }
 
@@ -1520,6 +1585,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
 
         if (spellType === 'SPELLCAST_SKIRMISH') {
+            const skirmishMult = (w.spells && w.spells.SPELLCAST_SKIRMISH != null) ? w.spells.SPELLCAST_SKIRMISH : 1.0;
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             if (targetUnit && !targetUnit.skirmishBuff) { // Skip: already buffed — would waste the spell
                 const targetHex = GAME.getHex(move.targetHexId, state);
@@ -1534,15 +1600,15 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                         nearEnemy = true;
                         // Core bonus: high-attack unit adjacent to enemy
                         if (targetUnit.attack >= 3) {
-                            analysis.score += 150 + (targetUnit.attack * 30);
+                            analysis.score += skirmishMult * (200 + (targetUnit.attack * 40));
                         } else {
-                            analysis.score += 60;
+                            analysis.score += skirmishMult * 80;
                         }
                         // Extra bonus if skirmish attack can still kill (-1 atk)
                         const effectiveAtk = targetUnit.attack - 1;
                         const defArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, state);
                         if (effectiveAtk >= defArmor) {
-                            analysis.score += 100;
+                            analysis.score += skirmishMult * 150;
                         }
                         break;
                     }

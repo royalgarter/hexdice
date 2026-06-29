@@ -20,9 +20,10 @@ const heuristicProfiles = {
             attackBonus: 500,      // Reward for damaging an enemy unit
             safeBonus: 400,        // Reward for ending turn on a non-threatened hex
             friendlySixBonus: 50,  // Reward for staying near a friendly Oracle (Dice 6)
-            advanceBonus: 600,     // Reward for moving closer to enemy objectives
+            advanceBonus: 700,     // Reward for moving closer to enemy objectives
             protectedRangeBonus: 100, // Reward for positioning where allies provide cover
 
+            isolationPenalty: 100, // Penalty per hex beyond 3 from nearest ally
             threatPenalty: -400,   // Penalty for being in range of enemy attacks
             guardPenalty: -200,    // Mild penalty — Guard is a valid action now, just not spammable
             mergeOver6Penalty: -500,
@@ -40,7 +41,7 @@ const heuristicProfiles = {
             },
 
             spells: {
-                SPELLCAST_SHIELD: 0.8,   // Relative priority of Shield spell
+                SPELLCAST_SHIELD: 1.0,   // Relative priority of Shield spell
                 SPELLCAST_SWAP: 0.8,     // Relative priority of Swap spell
                 SPELLCAST_SKIRMISH: 1.0, // Relative priority of Skirmish spell
             }
@@ -66,8 +67,9 @@ const heuristicProfiles = {
             threatPenalty: -800,   // Runs away from close combat (prefers distance)
             protectedRangeBonus: 1500, // Thrives shooting over friendly lines from safety
             friendlySixBonus: 100,
-            advanceBonus: 150,     // Slightly proactive when no tower available
+            advanceBonus: 400,     // Slightly proactive when no tower available
 
+            isolationPenalty: 60,  // Rangers can spread out to find terrain
             guardPenalty: -200,    // Occasional guarding is okay
             mergeOver6Penalty: -100,
             backAndForthPenalty: -600, // Strong — prevents Tower-to-Tower oscillation
@@ -112,8 +114,9 @@ const heuristicProfiles = {
             threatPenalty: -350,
             protectedRangeBonus: 75,
             friendlySixBonus: 100,
-            advanceBonus: 400,     // High mobility; values closing in for the kill
+            advanceBonus: 500,     // High mobility; values closing in for the kill
 
+            isolationPenalty: 50,  // Lone wolf — can operate independently but not recklessly
             guardPenalty: -400,
             mergeOver6Penalty: -450,
             backAndForthPenalty: -600, // Prevents stalking oscillation around same target
@@ -149,15 +152,17 @@ const heuristicProfiles = {
         description: "Trade Fighter: Rushes for kills and accepts death as a fair price — but only when the trade is worth it.",
         priorityOrder: ['kill', 'attack', 'capture', 'position', 'spell', 'dodge'],
         weights: {
-            captureBonus: 5000,    // Base capture remains very high priority
-            killBonus: 3000,       // Kills — strong but not all-consuming
-            attackBonus: 1500,     // Damage even if not lethal
-            safeBonus: 250,        // Small: slightly prefer not dying for nothing
-            threatPenalty: -200,   // Small fear — won't charge into 3 enemies with no kill in sight
+            captureBonus: 1500,    // Capture is a means, not the primary goal
+            killBonus: 2000,       // Primary identity: kills (reduced to prevent single-unit rampages)
+            attackBonus: 1000,     // Damage even if not lethal
+            safeBonus: 300,        // Small: slightly prefer not dying for nothing
+            threatPenalty: -250,   // Small fear — won't charge into 3 enemies with no kill in sight
             protectedRangeBonus: 0,
             friendlySixBonus: 50,  // Slight awareness of Oracle support
-            advanceBonus: 1200,    // Aggressive advance but not suicidal
+            advanceBonus: 500,     // Advances at same pace as others — fights en route
 
+            isolationPenalty: 200, // Can't kill anything alone on the far side of the map
+            fatigueWeight: 800,    // Very high: prevents 1 unit acting more than 2 turns in a row
             guardPenalty: -1500,   // Hates guarding but won't die just to avoid it
             mergeOver6Penalty: -200,
             backAndForthPenalty: -300,
@@ -191,17 +196,18 @@ const heuristicProfiles = {
     turtle: {
         name: "Turtle",
         description: "Defensive: Highly cautious. Clusters tightly, shields constantly, refuses risks.",
-        priorityOrder: ['dodge', 'spell', 'capture', 'position', 'kill', 'attack'],
+        priorityOrder: ['capture', 'spell', 'dodge', 'kill', 'position', 'attack'],
         weights: {
             captureBonus: 8000,    // Still wants to win, but very slowly
-            killBonus: 500,        // Low priority on killing if it means leaving safety
-            attackBonus: 100,      // Very low aggression
-            safeBonus: 3000,       // Obsessed with safe hexes to preserve units
-            threatPenalty: -1500,  // Terrified of ending turns in enemy threat range
+            killBonus: 800,        // Will kill if an enemy is exposed and adjacent
+            attackBonus: 300,      // Some aggression when grouped
+            safeBonus: 1200,       // Prefers safe hexes but not at the cost of all progress
+            threatPenalty: -800,   // Cautious but not paralyzed — reduced from -1500
             protectedRangeBonus: 500, // Thrives when units overlap coverage
             friendlySixBonus: 400, // Highly values the protection of an Oracle (Dice 6)
-            advanceBonus: 200,     // Cautious advance while maintaining defensive stance
+            advanceBonus: 400,     // Slow but steady advance as a group
 
+            isolationPenalty: 350, // Must stay grouped — isolated units get captured
             guardPenalty: -100,    // Fine with guarding, but not infinitely
             mergeOver6Penalty: -20,
             backAndForthPenalty: -500, // Prevent wall oscillation
@@ -248,6 +254,7 @@ const heuristicProfiles = {
             friendlySixBonus: 300,
             advanceBonus: 300,
 
+            isolationPenalty: 150, // Board control requires coordinated units, not lone wolves
             guardPenalty: -300,
             mergeOver6Penalty: -400,
             backAndForthPenalty: -600,
