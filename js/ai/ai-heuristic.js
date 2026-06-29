@@ -99,12 +99,13 @@ function calculatePhaseWeights(GAME, state, profile) {
         }
     }
 
-    // Estimate game phase (check late first — it is a subset of the early condition)
+    // Estimate game phase
     let phase = 'mid';
-    if (deployedUnits < totalPossibleUnits * 0.2) {
-        phase = 'late';
-    } else if (deployedUnits < totalPossibleUnits * 0.4) {
+    if (deployedUnits < totalPossibleUnits * 0.4) {
         phase = 'early';
+    } else if (deployedUnits < totalPossibleUnits * 0.2) {
+        // Very few units left — end game
+        phase = 'late';
     }
 
     // Weight adjustments per phase
@@ -417,8 +418,7 @@ function filterByPriority(scoredMoves, priority, opponentBases) {
         case 'kill': return scoredMoves.filter(m => m.canKillEnemy);
         case 'attack': return scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
         case 'spell': return scoredMoves.filter(m => m.move.actionType.includes('SPELLCAST_'));
-        // Only dodge from positions where unit WILL be killed — not just threatened. Avoids oscillation loops.
-        case 'dodge': return scoredMoves.filter(m => m.canBeKilledCurrently);
+        case 'dodge': return scoredMoves.filter(m => m.isCurrentlyThreatened || m.canBeKilledCurrently);
         case 'position': return scoredMoves.filter(m => !m.isThreatened && !m.move.actionType.includes('SPELLCAST_'));
         default: return [];
     }
@@ -570,7 +570,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'kill': {
-            const killMoves = scoredMoves.filter(m => m.canKillEnemy && m.score > 0);
+            // Find moves that kill enemies
+            const killMoves = scoredMoves.filter(m => m.canKillEnemy);
             if (killMoves.length > 0) {
                 sortMovesByStrategy(killMoves, profile.targetSelection, profile.riskTolerance);
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Found kill opportunity (${profile.targetSelection})!`, killMoves[0].move);
@@ -584,7 +585,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'attack': {
-            const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy && m.score > 0);
+            const attackMoves = scoredMoves.filter(m => m.canAttackEnemy && !m.canKillEnemy);
             if (attackMoves.length > 0) {
                 sortMovesByStrategy(attackMoves, profile.targetSelection, profile.riskTolerance);
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Found attack opportunity (${profile.targetSelection})!`, attackMoves[0].move);
@@ -608,36 +609,13 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                 // Cast only if spell score beats the best non-spell move available to Oracle.
                 // Prevents Oracle from spamming spells when moving would be more valuable.
-                // IMPORTANT: heuristicMove does NOT include advanceBonus — that's added in position priority.
-                // Add it here to compare spells against moves fairly.
                 viableSpells.sort((a, b) => b.score - a.score);
                 const bestSpellScore = viableSpells.length > 0 ? viableSpells[0].score : -Infinity;
                 const oracleUnit = viableSpells.length > 0 ? viableSpells[0].unit : null;
-                const w = profile.weights;
-                const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
                 const bestMoveScore = oracleUnit
-                    ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => {
-                        let s = m.score;
-                        // Augment MOVE score with advance bonus that position priority would add
-                        if (m.move.actionType === 'MOVE' && opponentBases.length > 0) {
-                            const tHex = GAME.getHex(m.move.targetHexId, state);
-                            if (tHex) {
-                                let minD = Infinity;
-                                opponentBases.forEach(b => {
-                                    const d = GAME.axialDistance(tHex.q, tHex.r, b.baseHex.q, b.baseHex.r);
-                                    if (d < minD) minD = d;
-                                });
-                                s += (w.advanceBonus || 0) * (maxDist - minD);
-                            }
-                        }
-                        return s;
-                    }), -Infinity)
+                    ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => m.score), -Infinity)
                     : -Infinity;
-                // Spell fires only if it's meaningfully better than oracle's best move.
-                // Minimum threshold 120 prevents preventative/low-urgency spells (score ~2-75)
-                // from stealing the turn when oracle can't productively move.
-                const spellThreshold = Math.max(bestMoveScore, 120);
-                const spellIsWorthIt = hasSacrifice || bestSpellScore > spellThreshold;
+                const spellIsWorthIt = hasSacrifice || bestSpellScore > Math.max(bestMoveScore, 0);
                 if (viableSpells.length > 0 && spellIsWorthIt) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     const appliedMove = viableSpells[0].move;
@@ -651,7 +629,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'dodge': {
-            const threatenedMoves = scoredMoves.filter(m => m.canBeKilledCurrently
+            const threatenedMoves = scoredMoves.filter(m => (m.isCurrentlyThreatened || m.canBeKilledCurrently)
                 && !(m.move.actionType === 'GUARD' && m.unit.lastActionWasGuard)); // no guard spam via dodge
             if (threatenedMoves.length > 0) {
                 const unitEscapeMoves = new Map();
@@ -703,10 +681,9 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         case 'position': {
             const allNonSpell = scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_'))
                                            .filter(m => m.move.actionType !== 'GUARD');
-            // survivableOnly: allow positions where death is deferred but not immediate.
-            // Prevents walking directly into a lethal trap while still enabling aggressive advances.
-            const survivableOnly = allNonSpell.filter(m => !m.canBeKilledImmediate);
-            const strategicMoves = survivableOnly.length > 0 ? survivableOnly : allNonSpell;
+            // Prefer safe hexes; fall back to threatened moves if needed (scores penalise danger)
+            const safeOnly = allNonSpell.filter(m => !m.isThreatened && !m.canBeKilled);
+            const strategicMoves = safeOnly.length > 0 ? safeOnly : allNonSpell;
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -856,15 +833,9 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
             else if (minAllyDist <= 2) bonus += 60; // In support range — reward staying here
             break;
         }
-        case 'SNIPER': {
-            // Archer wants distance 2 from nearest enemy: shoot next turn without retaliation
-            const nearestFromTarget = findNearestEnemyUnit(GAME, state, unit.playerId, targetHex);
-            if (nearestFromTarget.distance === 2) bonus += 350;      // Optimal kiting range
-            else if (nearestFromTarget.distance === 3) bonus += 120; // Still in range, slightly safer
-            else if (nearestFromTarget.distance === 1) bonus -= 500; // Melee range — bad for Archer
-            else if (nearestFromTarget.distance > 4) bonus -= 200;   // Too far to contribute
+        case 'SNIPER':
+            // Already handled by Archer kiting, but can add more here
             break;
-        }
     }
 
     return bonus;
@@ -1070,10 +1041,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
     // Point 3: Fatigue Penalty - reduce score for units that act too often
     // This helps break fixation on a single "lead" unit
-    // Exponential scaling: 1st repeat is small, 3rd+ is large, stopping one Knight from killing forever
-    const fatigueWeight = w.fatigueWeight || 300;
-    const activations = unit.activationCount || 0;
-    analysis.score -= activations * fatigueWeight + Math.max(0, activations - 1) * fatigueWeight;
+    const fatigueWeight = w.fatigueWeight || 150;
+    analysis.score -= (unit.activationCount || 0) * fatigueWeight;
 
     // isCurrentlyThreatened / canBeKilledCurrently: immediate (1-step) threats only.
     // 2-step threats inform shielding urgency but should not trigger panic-dodge.
@@ -1092,48 +1061,26 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const nextState = applyMove(GAME, move, state, snapshot ? { noClone: true } : undefined);
     if (!nextState) return analysis;
 
-    // Get unit's position after move — use hexes as source of truth.
-    // state.hexes[hexId].unit and state.players[].dice entries can diverge (different object refs).
-    // After applyMove with noClone, the moved unit is authoritative at move.targetHexId.
-    const isSpellMove_ = move.actionType.startsWith('SPELLCAST_');
-    let aiUnitNext;
-    if (!isSpellMove_) {
-        // For move/attack: unit is now at targetHexId (or dead if it lost combat)
-        const unitAtTarget = nextState.hexes[move.targetHexId]?.unit;
-        aiUnitNext = (unitAtTarget && unitAtTarget.id === unit.id)
-            ? unitAtTarget
-            : nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
-    } else {
-        // For spells: Oracle stays at unitHexId
-        const unitAtSrc = nextState.hexes[move.unitHexId]?.unit;
-        aiUnitNext = (unitAtSrc && unitAtSrc.id === unit.id)
-            ? unitAtSrc
-            : nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
-    }
+    // Get unit's position after move
+    const aiUnitNext = nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
     if (!aiUnitNext || aiUnitNext.isDeath) {
         analysis.isSafe = false;
         analysis.canBeKilled = true;
         return analysis;
     }
 
-    // For spell moves: Oracle doesn't move to targetHexId — skip positional scoring based on target hex.
-    // Role bonus, pressure, team score, and isolation are only meaningful for actual unit displacement.
-    const isSpellMove = move.actionType.startsWith('SPELLCAST_');
-
     // Point 4: Apply Role-based positioning bonus
     const targetHexObj = GAME.getHex(move.targetHexId, state);
-    if (!isSpellMove && targetHexObj) {
+    if (targetHexObj) {
         analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
     }
 
     // Zone of Control (Pressure Map) bonus/penalty
-    if (!isSpellMove) {
-        const targetPressure = pressureMap[move.targetHexId] || 0;
-        analysis.score += targetPressure * (w.pressureWeight || 0.3);
-    }
+    const targetPressure = pressureMap[move.targetHexId] || 0;
+    analysis.score += targetPressure * (w.pressureWeight || 0.3);
 
     // Team Position Score calculation
-    if (!isSpellMove && typeof calculateTeamScore === 'function') {
+    if (typeof calculateTeamScore === 'function') {
         const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
         const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
         analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
@@ -1216,24 +1163,13 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     }
 
     // Check threat level at destination (from ALL opponents)
-    // Split into immediate (hasMoved=false, can act this turn) and future (hasMoved=true, acts next turn).
     let threatCount = 0;
-    let canBeKilledByAny = false;      // immediate: enemy hasn't acted yet this round
-    let canBeKilledNextTurn = false;   // deferred: enemy already acted but will reset next round
-
-    // Build hexId map from hexes (source of truth) — players[].dice hexIds can be stale after moves.
-    const actualHexIdByUnitId = {};
-    nextState.hexes.forEach(h => { if (h.unit) actualHexIdByUnitId[h.unit.id] = h.id; });
+    let canBeKilledByAny = false;
 
     for (const pIdx of opponentIndices) {
-        const allOpponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
-        for (const opp of allOpponents) {
-            // Use hex-based hexId for correct position (players[].dice.hexId may be stale).
-            const oppActualHexId = actualHexIdByUnitId[opp.id] ?? opp.hexId;
-            const oppForCheck = oppActualHexId !== opp.hexId ? { ...opp, hexId: oppActualHexId } : opp;
-            const canAtk = GAME.canUnitAttackTarget(oppForCheck, aiUnitNext, nextState);
-            if (canAtk) {
-                const isImmediate = !opp.hasMovedOrAttackedThisTurn;
+        const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
+        for (const opp of opponents) {
+            if (GAME.canUnitAttackTarget(opp, aiUnitNext, nextState)) {
                 analysis.isThreatened = true;
                 threatCount++;
 
@@ -1242,21 +1178,19 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 if (GAME.gameplayVersion === 2) {
                     const { winProb, fumbleProb } = calculateV2CombatSuccessProbability(oppAttack, defenderArmor);
-
+                    
                     // Penalty for enemy winning
                     // Bonus for enemy fumbling (making this spot safer)
                     analysis.score -= winProb * (unit.value * 20 + Math.abs(w.threatPenalty));
                     analysis.score += fumbleProb * (opp.value * 10);
-
+                    
                     if (winProb > 0.5) {
-                        if (isImmediate) canBeKilledByAny = true;
-                        else canBeKilledNextTurn = true;
+                        canBeKilledByAny = true;
                         break;
                     }
                 } else {
                     if (oppAttack >= defenderArmor) {
-                        if (isImmediate) canBeKilledByAny = true;
-                        else canBeKilledNextTurn = true;
+                        canBeKilledByAny = true;
                         break;
                     }
                 }
@@ -1265,20 +1199,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         if (canBeKilledByAny) break;
     }
 
-    // canBeKilled = immediate threat (enemy hasn't moved): strong deterrent
-    // canBeKilledNextTurn = deferred threat (enemy already moved): weaker deterrent
-    analysis.canBeKilledImmediate = canBeKilledByAny;
-    analysis.canBeKilled = canBeKilledByAny || canBeKilledNextTurn;
+    analysis.canBeKilled = canBeKilledByAny;
     if (canBeKilledByAny) {
         analysis.isSafe = false;
-        // canBeKilledImmediate is used by survivableOnly filter in position priority.
-        // Small score penalty keeps isSafe=false correct for other filters.
-        analysis.score -= 300;
-    } else if (canBeKilledNextTurn) {
-        analysis.isSafe = false;
-        // Deferred death (enemy already moved this round): mild deterrent only.
-        // Don't penalize heavily — would block all offensive play when enemies take turns.
-        analysis.score += w.threatPenalty;
+        analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
     } else if (analysis.isThreatened) {
         analysis.isSafe = false;
         analysis.score += w.threatPenalty * threatCount;
@@ -1375,31 +1299,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
     }
 
-    // Isolation penalty: unit advancing far ahead of all allies risks dying alone (prevents lone-knight rushes)
-    if (move.actionType === 'MOVE') {
-        const unitHexAfter = GAME.getHex(aiUnitNext.hexId, nextState);
-        if (unitHexAfter) {
-            const myAllies = nextState.players[state.currentPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath && d.id !== unit.id);
-            let minAllyDist = Infinity;
-            for (const ally of myAllies) {
-                const allyHex = GAME.getHex(ally.hexId, nextState);
-                if (!allyHex) continue;
-                const dist = GAME.axialDistance(unitHexAfter.q, unitHexAfter.r, allyHex.q, allyHex.r);
-                if (dist < minAllyDist) minAllyDist = dist;
-            }
-            if (myAllies.length > 0 && minAllyDist > 3) {
-                analysis.score -= (minAllyDist - 3) * (w.isolationPenalty || 100);
-            }
-        }
-    }
-
     // --- ORACLE (Dice 6) SPELL HEURISTICS ---
     // Oracle is a support unit - evaluate spell casting opportunities with tactical prediction
     if (unit.value === 6) {
         const spellType = move.actionType;
 
         if (spellType === 'SPELLCAST_SHIELD') {
-            const shieldMult = (w.spells && w.spells.SPELLCAST_SHIELD != null) ? w.spells.SPELLCAST_SHIELD : 1.0;
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             if (targetUnit && !(targetUnit.isGuarding >= 2)) { // Skip: already fully shielded
                 const targetHex = GAME.getHex(move.targetHexId, nextState);
@@ -1433,39 +1338,34 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                         if (enemy && enemy.playerId !== state.currentPlayerIndex) {
                             const enemyArmor = GAME.calcDefenderEffectiveArmor(tn.id, nextState);
                             if (targetUnit.attack >= enemyArmor) {
-                                analysis.score += shieldMult * (200 + targetUnit.value * 30); // Advance setup bonus
+                                analysis.score += 80 + targetUnit.value * 10; // Advance setup bonus
                                 break;
                             }
                         }
                     }
                 }
 
-                // FRESH UNIT BONUS: shielding a unit that hasn't acted yet means it benefits this turn
-                if (!GAME.autochess && !targetUnit.hasMovedOrAttackedThisTurn && targetUnit.value >= 3) {
-                    analysis.score += shieldMult * (40 + targetUnit.value * 8);
-                    analysis.isSupportAction = true;
-                }
-
-                // Score shielding based on urgency and unit value.
-                // Only immediate kill threats get high scores (competing with move scores).
-                // Preventative shielding stays low so Oracle advances unless a unit is truly in danger.
+                // Score shielding based on urgency and unit value
                 if (willBeKilled) {
-                    // Immediate kill threat — shield is critical
-                    analysis.score += shieldMult * ((GAME.autochess ? 250 : 400) + (targetUnit.value * (GAME.autochess ? 25 : 45)));
+                    // Immediate kill threat — shield now
+                    analysis.score += (GAME.autochess ? 250 : 150) + (targetUnit.value * (GAME.autochess ? 25 : 15));
                     analysis.isSupportAction = true;
                 } else if (willBeKilledSoon && targetUnit.value >= 3) {
-                    // 2-step kill approaching — moderate priority, not turn-wasting
-                    analysis.score += shieldMult * ((GAME.autochess ? 150 : 80) + (targetUnit.value * (GAME.autochess ? 15 : 10)));
+                    // 2-step kill approaching — proactive shield, lower urgency
+                    analysis.score += (GAME.autochess ? 150 : 80) + (targetUnit.value * (GAME.autochess ? 15 : 10));
                     analysis.isSupportAction = true;
-                } else if (willBeAttacked && targetUnit.value >= 3) {
-                    analysis.score += shieldMult * ((GAME.autochess ? 150 : 40) + (targetUnit.value * (GAME.autochess ? 15 : 5)));
+                } else if (willBeAttacked) {
+                    analysis.score += (GAME.autochess ? 150 : 60) + (targetUnit.value * (GAME.autochess ? 15 : 8));
                     analysis.isSupportAction = true;
-                } else if (isCurrentlyThreatened && targetUnit.value >= 4) {
-                    analysis.score += shieldMult * ((GAME.autochess ? 80 : 20) + (targetUnit.value * (GAME.autochess ? 10 : 3)));
+                } else if (isCurrentlyThreatened && targetUnit.value >= 3) {
+                    analysis.score += (GAME.autochess ? 80 : 50) + (targetUnit.value * (GAME.autochess ? 10 : 6));
+                    analysis.isSupportAction = true;
+                } else if (targetUnit.value >= 5) {
+                    analysis.score += (GAME.autochess ? 60 : 30) + (targetUnit.value * (GAME.autochess ? 5 : 3));
                     analysis.isSupportAction = true;
                 } else {
-                    // Preventative shielding — very low score so moves beat it
-                    analysis.score += GAME.autochess ? 40 : 2;
+                    // Base value for shielding healthy units in Autochess (preventative)
+                    analysis.score += GAME.autochess ? 40 : 5;
                     analysis.isSupportAction = true;
                 }
 
@@ -1620,7 +1520,6 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
 
         if (spellType === 'SPELLCAST_SKIRMISH') {
-            const skirmishMult = (w.spells && w.spells.SPELLCAST_SKIRMISH != null) ? w.spells.SPELLCAST_SKIRMISH : 1.0;
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
             if (targetUnit && !targetUnit.skirmishBuff) { // Skip: already buffed — would waste the spell
                 const targetHex = GAME.getHex(move.targetHexId, state);
@@ -1635,15 +1534,15 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                         nearEnemy = true;
                         // Core bonus: high-attack unit adjacent to enemy
                         if (targetUnit.attack >= 3) {
-                            analysis.score += skirmishMult * (200 + (targetUnit.attack * 40));
+                            analysis.score += 150 + (targetUnit.attack * 30);
                         } else {
-                            analysis.score += skirmishMult * 80;
+                            analysis.score += 60;
                         }
                         // Extra bonus if skirmish attack can still kill (-1 atk)
                         const effectiveAtk = targetUnit.attack - 1;
                         const defArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, state);
                         if (effectiveAtk >= defArmor) {
-                            analysis.score += skirmishMult * 150;
+                            analysis.score += 100;
                         }
                         break;
                     }
