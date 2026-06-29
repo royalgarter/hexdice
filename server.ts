@@ -9,10 +9,12 @@ import { loadEngine, GameEngine } from "./js/engine-server.ts";
 
 await load({export: true});
 
-const ARANGO_URL = Deno.env.get("ARANGODB_URI");
-const ARANGO_DB = Deno.env.get("ARANGODB_DATABASE");
-const ARANGO_USER = Deno.env.get("ARANGODB_USER");
-const ARANGO_PASS = Deno.env.get("ARANGODB_PASSWORD");
+const ARANGO_URI = Deno.env.get("ARANGODB_URI") || "";
+const arangoUrl = new URL(ARANGO_URI);
+const ARANGO_URL = `${arangoUrl.protocol}//${arangoUrl.host}`;
+const ARANGO_DB = arangoUrl.pathname.slice(1) || "_system";
+const ARANGO_USER = arangoUrl.username || "";
+const ARANGO_PASS = arangoUrl.password || "";
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
 
 const MQTT = Deno.env.get("MQTT") || "wss://broker.emqx.io:8084/mqtt";
