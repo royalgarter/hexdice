@@ -595,11 +595,16 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                 let hasSacrifice = viableSpells.find(m => m.move.actionType == 'SPELLCAST_SACRIFICE');
 
-                // Cast if the best spell has positive value (or sacrifice is available).
-                // Old: random() < ratio caused Oracle to randomly skip good spells.
+                // Cast only if spell score beats the best non-spell move available to Oracle.
+                // Prevents Oracle from spamming spells when moving would be more valuable.
                 viableSpells.sort((a, b) => b.score - a.score);
                 const bestSpellScore = viableSpells.length > 0 ? viableSpells[0].score : -Infinity;
-                if (viableSpells.length > 0 && (hasSacrifice || bestSpellScore > 0)) {
+                const oracleUnit = viableSpells.length > 0 ? viableSpells[0].unit : null;
+                const bestMoveScore = oracleUnit
+                    ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => m.score), -Infinity)
+                    : -Infinity;
+                const spellIsWorthIt = hasSacrifice || bestSpellScore > Math.max(bestMoveScore, 0);
+                if (viableSpells.length > 0 && spellIsWorthIt) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     const appliedMove = viableSpells[0].move;
                     const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
@@ -1459,30 +1464,32 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             if (targetUnit) {
                 const targetHex = GAME.getHex(move.targetHexId, state);
                 const neighbors = GAME.getNeighbors(targetHex, state);
-                
-                // High bonus for high attack units (Hussar/Knight)
-                if (targetUnit.attack >= 3) {
-                    analysis.score += 150 + (targetUnit.attack * 30);
-                } else {
-                    analysis.score += 50;
-                }
 
-                // Check if target is near enemies to actually use the skirmish
+                // Skirmish is only valuable if target is adjacent to an enemy and can use it.
+                // No bonus for buffing units that aren't in position to attack.
                 let nearEnemy = false;
                 for (const neighbor of neighbors) {
                     const neighborUnit = GAME.getUnitOnHex(neighbor.id, state);
                     if (neighborUnit && neighborUnit.playerId !== state.currentPlayerIndex) {
                         nearEnemy = true;
-                        // Extra bonus if it can actually kill someone with -1 attack
+                        // Core bonus: high-attack unit adjacent to enemy
+                        if (targetUnit.attack >= 3) {
+                            analysis.score += 150 + (targetUnit.attack * 30);
+                        } else {
+                            analysis.score += 60;
+                        }
+                        // Extra bonus if skirmish attack can still kill (-1 atk)
                         const effectiveAtk = targetUnit.attack - 1;
                         const defArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, state);
                         if (effectiveAtk >= defArmor) {
                             analysis.score += 100;
                         }
+                        break;
                     }
                 }
-                
-                if (nearEnemy) analysis.score += 50;
+
+                // No nearEnemy — skirmish has no immediate use, small residual value only
+                if (!nearEnemy) analysis.score += 10;
                 analysis.isSupportAction = true;
             }
         }
