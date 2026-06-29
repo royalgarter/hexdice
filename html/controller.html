@@ -87,29 +87,29 @@
 	<!-- Game Setup -->
 	<div style="display: none;" x-show="phase.startsWith('SETUP')" class="bg-wood mb-1 p-2 border text-center">
 		<!-- <h2 class="text-lg mb-2" x-text="setupStatusMessage()"></h2> -->
-		<div x-show="phase === 'SETUP_ROLL'" style="display: none;" class="space-y-2">
-			<div class="space-x-2">
-				<!-- <span class="font-bold text-sm">PLAYERS:</span> -->
-				<a :href="getUrl(null, {players: 2})" class="hover:bg-black hover:text-white" :class="playerCount === 2 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[2]</a>
-				<a :href="getUrl(null, {players: 3})" class="hover:bg-black hover:text-white" :class="playerCount === 3 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[3]</a>
-				<a :href="getUrl(null, {players: 4})" class="hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[4]</a>
-				<a :href="getUrl(null, {players: 6})" class="hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">[6]</a>
-				<!-- <span class="font-bold text-sm">COMBAT:</span> -->
-				<a :href="getUrl(null, {version: 1})" class="hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">[🥇 Decisive]</a>
-				<a :href="getUrl(null, {version: 2})" class="hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">[🥈 Destiny]</a>
-				<a href="/blog.html?post=version_2_destiny_dice" target="_blank" class="text-blue-800">🛈</a>
+		<div x-show="phase === 'SETUP_ROLL'" style="display: none;" class="space-y-4">
+			<div class="">
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[🤺 Practice]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[🎰 Random]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[🫳 Deploy]</button>
+				<a class="hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''" :href="getUrl(null, {players: 2, preset: 'E_21'})" >[♟️ Epic 21]</a>
+				<a class="hidden hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''" :href="getUrl(null, {players: 2, preset: 'E_15'})" >[Grand 15]</a>
+			</div>
+
+			<div class="gap-4">
+				<button class="cursor-pointer hover:bg-black hover:text-white" :class="empiresModeEnabled ? 'bg-black text-white' : ''" @click="toggleEmpiresMode()">[👑 Empires]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" :class="terrainEnabled ? 'bg-black text-white' : ''" @click="setupTerrain(true)">[🏞️ Terrain]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="openURL(null, {campaign: 'true', map: CampaignManager.getCurrentMapName()})" x-show="!isCampaign">[📜 Campaign Mode]</button>
-				<button class="cursor-pointer hover:bg-black hover:text-white" @click="openURL(null, {autochess: 'true', players: playerCount})">[👑 RotDK Mode]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="openURL(null, {autochess: 'true', players: playerCount})">[💥 Autochess Mode]</button>
+				<!-- <button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button> -->
 			</div>
-			<div class="hidden">
-				<span class="font-bold text-sm uppercase">Gameplay:</span>
-			</div>
-			<div class="flex flex-wrap justify-center gap-4" x-show="spriteSets.length > 0 && players.length > 0">
-				<span class="py-2 font-bold text-sm uppercase">Cosmetics:</span>
+
+			<div class="flex flex-wrap justify-center text-sm gap-1" x-show="spriteSets.length > 0 && players.length > 0">
+				<span class="font-bold pt-0.5">COSMETICS:</span>
 				<template x-for="(player, idx) in players" :key="idx">
-					<div class="py-2 text-sm" x-show="!player.isAI">
+					<div class="text-sm" x-show="!player.isAI">
 						<!-- <span class="font-bold" :class="player.logColor" x-text="player.color"></span> -->
-						<select x-model="player.selectedSpriteSet" class="text-sm w-24 cursor-pointer" :class="player.logColor">
+						<select x-model="player.selectedSpriteSet" class="w-20 cursor-pointer border" :class="player.logColor">
 							<option value="" class="uppercase">Default</option>
 							<option :value="spriteSets.random()" class="uppercase">Random</option>
 							<template x-for="set in spriteSets" :key="set">
@@ -118,18 +118,19 @@
 						</select>
 					</div>
 				</template>
-			</div>
-			<div class="">
 
-				<button class="cursor-pointer hover:bg-black hover:text-white" :class="empiresModeEnabled ? 'bg-black text-white' : ''" @click="toggleEmpiresMode()">[👑 Empires]</button>
-				<button class="cursor-pointer hover:bg-black hover:text-white" :class="terrainEnabled ? 'bg-black text-white' : ''" @click="setupTerrain(true)">[🏞️ Terrain]</button>
-				<button class="cursor-pointer hover:bg-black hover:text-white" @click="players.forEach((p, i) => rollInitialDice(i))">[⚔ Deploy]</button>
-				<button class="cursor-pointer hover:bg-black hover:text-white" @click="resetGame({isCampaign: false}); setPlayerAI(players[1]); players.forEach((p, i) => i > 0 && rollInitialDice(i)); if (location.search.match(/preset=\w+/)) randomStart();">[🤺 Practice]</button>
-				<button class="cursor-pointer hover:bg-black hover:text-white" @click="randomStart()">[🎰 Random]</button>
-				<!-- <button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button> -->
-				<a :href="getUrl(null, {players: 2, preset: 'E_21'})" class="mx-1 hover:bg-black hover:text-white" :class="preset === 'E_21' ? 'bg-black text-white' : ''">[♟️ Epic 21]</a>
-				<a :href="getUrl(null, {players: 2, preset: 'E_15'})" class="hidden mx-1 hover:bg-black hover:text-white" :class="preset === 'E_15' ? 'bg-black text-white' : ''">[Grand 15]</a>
+				<span class="ml-6 font-bold pt-0.5">PLAYERS:</span>
+				<a :href="getUrl(null, {players: 2})" class="border px-1 hover:bg-black hover:text-white" :class="playerCount === 2 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">2</a>
+				<a :href="getUrl(null, {players: 3})" class="border px-1 hover:bg-black hover:text-white" :class="playerCount === 3 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">3</a>
+				<a :href="getUrl(null, {players: 4})" class="border px-1 hover:bg-black hover:text-white" :class="playerCount === 4 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">4</a>
+				<a :href="getUrl(null, {players: 6})" class="border px-1 hover:bg-black hover:text-white" :class="playerCount === 6 && !location.search.match(/preset=\w+/) ? 'bg-black text-white' : ''">6</a>
+
+				<span class="ml-6 font-bold pt-0.5">COMBAT:</span>
+				<a :href="getUrl(null, {version: 1})" class="border px-1 hover:bg-black hover:text-white" :class="gameplayVersion === 1 ? 'bg-black text-white' : ''">🥇 Decisive</a>
+				<a :href="getUrl(null, {version: 2})" class="border px-1 hover:bg-black hover:text-white" :class="gameplayVersion === 2 ? 'bg-black text-white' : ''">🥈 Destiny</a>
+				<a href="/blog.html?post=version_2_destiny_dice" target="_blank" class="text-blue-800">🛈</a>
 			</div>
+
 			<div class="hidden mt-4">
 			</div>
 			<div class="">

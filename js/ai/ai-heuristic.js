@@ -1102,7 +1102,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     }
 
     // Autochess Aggression: Reward proximity to enemies
-    if (GAME.autochess) {
+    if (GAME.autochess && targetHexObj) {
         const nearest = findNearestEnemyUnit(GAME, nextState, state.currentPlayerIndex, targetHexObj);
         if (nearest.unit) {
             const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
