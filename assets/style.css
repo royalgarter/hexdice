@@ -1,7 +1,7 @@
 .hex-grid-campaign-background {
 	scale: 1.03;
 	/*filter: contrast(0.6) opacity(0.8);*/
-	filter: contrast(0.8);
+	filter: contrast(0.61);
 	clip-path: polygon(1% 1%, 99% 1%, 99% 99%, 1% 99%);
 	/*clip-path: polygon(50% -2%, 150% 50%, 50% 102%, -50% 50%);*/
 }

@@ -1368,6 +1368,8 @@ function alpineHexDiceTacticGame() { return {
 		this.gameId = this.generateGameId();
 		this.syncUrlWithGameId();
 
+		this.showLog = !this.isCampaign;
+
 		this.currentReplay = {
 			metadata: {},
 			games: [{
@@ -2203,8 +2205,12 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("---");
 		this.addLog("P1 turn.");
 
-		window?.AudioManager?.playSfx('capture');
-		window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'battle', { mapName: this.campaignData?.rmi || '' });
+		window?.AudioManager?.playSfx(this.isCampaign ? 'skill_sfx/BattleTheme' : 'capture');
+		if (this.isCampaign) {
+			setTimeout(() => window?.AudioManager?.playMusic('campaign', { mapName: this.campaignData?.rmi || '' }), 30e3);
+		} else {
+			window?.AudioManager?.playMusic('battle');
+		}
 
 		if (this.gameplayVersion === 2) {
 			this.startFatesCall();
@@ -2511,7 +2517,7 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.selectedUnitHexId = hexId;
-		if (window.AudioManager && typeof window.AudioManager.playUnitSound === 'function') {
+		if (window.AudioManager && typeof window.AudioManager.playUnitSound === 'function' && !this.isCampaign) {
 			window.AudioManager.playUnitSound(unit.value);
 		}
 		this.validMoves = this.calcValidMoves(hexId);
