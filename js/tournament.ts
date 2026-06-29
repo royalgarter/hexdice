@@ -94,13 +94,28 @@ function stubBrowserAPIs(playerCount: number = 2) {
     }
     // Stub location
     const locationStub = {
-        search: `?mode=headless&players=${playerCount}`,
-        href: `https://hexdice.local/?mode=headless&players=${playerCount}`,
-        toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}`
+        search: `?mode=headless&players=${playerCount}&preset=E_21`,
+        href: `https://hexdice.local/?mode=headless&players=${playerCount}&preset=E_21`,
+        toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}&preset=E_21`,
+        assign: () => null,
+        replace: () => null,
+        reload: () => null,
+        host: 'hexdice.local',
+        hostname: 'hexdice.local',
+        origin: 'https://hexdice.local',
+        pathname: '/',
+        protocol: 'https:',
     };
     // Stub document
     const documentStub = {
         getElementById: () => null,
+        querySelector: () => ({ content: '', innerHTML: '' }),
+        querySelectorAll: () => [],
+        addEventListener: () => null,
+        removeEventListener: () => null,
+        createElement: () => ({ style: {}, appendChild: () => null }),
+        body: { appendChild: () => null },
+        head: { appendChild: () => null },
     };
     // Stub localStorage
     const localStorageStub = {
@@ -110,6 +125,14 @@ function stubBrowserAPIs(playerCount: number = 2) {
         clear: () => null,
     };
     (globalThis as any).localStorage = localStorageStub;
+    if (typeof (globalThis as any).window === 'undefined') {
+        (globalThis as any).window = globalThis;
+    }
+    (globalThis as any).window.location = locationStub;
+    (globalThis as any).window.history = { replaceState: () => null, pushState: () => null };
+    if (typeof (globalThis as any).Alpine === 'undefined') {
+        (globalThis as any).Alpine = { initTree: () => null, store: () => null, data: () => null, magic: () => null, $data: () => ({}) };
+    }
 
     // Stub fetch for assets
     (globalThis as any).fetch = (url: string) => {
@@ -149,16 +172,20 @@ class SimulationLogger {
 async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<string, string>): Promise<any> {
     const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount);
 
-    let gameCode: string, aiCoreCode: string, aiHeuristicCode: string, heuristicProfilesCode: string, campaignManagerCode: string;
+    let constantsCode: string, gameCode: string, aiCoreCode: string, aiHeuristicCode: string, heuristicProfilesCode: string, campaignManagerCode: string, autochessCode: string;
 
     if (engineCodes) {
+        constantsCode = engineCodes.constantsCode ?? await Deno.readTextFile("./js/constants.js");
         gameCode = engineCodes.gameCode;
         aiCoreCode = engineCodes.aiCoreCode;
         aiHeuristicCode = engineCodes.aiHeuristicCode;
         heuristicProfilesCode = engineCodes.heuristicProfilesCode;
         campaignManagerCode = engineCodes.campaignManagerCode;
+        autochessCode = engineCodes.autochessCode ?? await Deno.readTextFile("./js/autochess.js");
     } else {
+        constantsCode = await Deno.readTextFile("./js/constants.js");
         gameCode = await Deno.readTextFile("./js/game.js");
+        autochessCode = await Deno.readTextFile("./js/autochess.js");
         aiCoreCode = await Deno.readTextFile("./js/ai/ai.js");
         aiHeuristicCode = await Deno.readTextFile("./js/ai/ai-heuristic.js");
         heuristicProfilesCode = await Deno.readTextFile("./js/ai/heuristic-profiles.js");
@@ -169,6 +196,8 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
         'const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}',
         'var random = () => _internalRandom()'
     );
+    // Strip top-level _seed declaration so it doesn't conflict with the wrapper's var _seed
+    gameCode = gameCode.replace(/^let _seed\s*=.*$/m, '');
 
     const fullCode = `
         return (function(location, document) {
@@ -179,6 +208,9 @@ async function loadGameEngine(playerCount: number = 2, engineCodes?: Record<stri
             };
             var setRandomSeed = (s) => { _seed = s; };
 
+            ${constantsCode}
+            ${autochessCode}
+            var StoryEngine = { init: () => null, getDialogue: () => null, getRegion: () => null, getArc: () => null, getBoss: () => null, getRewardHint: () => null, getNpcDialogue: () => null };
             ${gameCode}
             ${campaignManagerCode}
             ${heuristicProfilesCode}

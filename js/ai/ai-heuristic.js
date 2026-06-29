@@ -34,7 +34,7 @@ function _saveHeuristicSnapshot(state) {
 				hasMovedOrAttackedThisTurn: u.hasMovedOrAttackedThisTurn,
 				actionsTakenThisTurn: u.actionsTakenThisTurn,
 				lastActionWasGuard: u.lastActionWasGuard,
-				lastHexId: u.lastHexId, stepsMoved: u.stepsMoved,
+				lastHexId: u.lastHexId, prevHexId: u.prevHexId, stepsMoved: u.stepsMoved,
 			});
 		});
 	});
@@ -56,6 +56,7 @@ function _restoreHeuristicSnapshot(state, snap) {
 		us.ref.actionsTakenThisTurn = us.actionsTakenThisTurn;
 		us.ref.lastActionWasGuard = us.lastActionWasGuard;
 		us.ref.lastHexId = us.lastHexId;
+		us.ref.prevHexId = us.prevHexId;
 		us.ref.stepsMoved = us.stepsMoved;
 	}
 	for (const hs of snap.hexes) {
@@ -185,8 +186,13 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         return;
     }
 
-    GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
-        || Object.keys(heuristicProfiles).random();
+    // Caller-supplied profileName wins; fall back to player's existing profile or a random one.
+    if (profileName) {
+        GAME.players[GAME.currentPlayerIndex].profileName = profileName;
+    } else {
+        GAME.players[GAME.currentPlayerIndex].profileName = GAME.players[GAME.currentPlayerIndex].profileName
+            || Object.keys(heuristicProfiles).random();
+    }
 
     profileName = GAME.players[GAME.currentPlayerIndex].profileName;
 
@@ -283,7 +289,9 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     const scoredMoves = [];
 
     for (const move of allMoves) {
-        const unit = currentPlayer.dice.find(d => d.hexId === move.unitHexId);
+        // Look up unit via hexes (authoritative) since unit.hexId can be stale
+        const hexUnit = move.unitHexId != null ? (state || GAME).hexes[move.unitHexId]?.unit : null;
+        const unit = hexUnit && hexUnit.playerId === state.currentPlayerIndex ? hexUnit : currentPlayer.dice.find(d => d.hexId === move.unitHexId);
         if (!unit) continue;
 
         const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
@@ -621,7 +629,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'dodge': {
-            const threatenedMoves = scoredMoves.filter(m => m.isCurrentlyThreatened || m.canBeKilledCurrently);
+            const threatenedMoves = scoredMoves.filter(m => (m.isCurrentlyThreatened || m.canBeKilledCurrently)
+                && !(m.move.actionType === 'GUARD' && m.unit.lastActionWasGuard)); // no guard spam via dodge
             if (threatenedMoves.length > 0) {
                 const unitEscapeMoves = new Map();
                 threatenedMoves.forEach(m => {
@@ -641,6 +650,10 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                         if (b.isSafe !== a.isSafe) return (b.isSafe ? 1 : 0) - (a.isSafe ? 1 : 0);
                         if (b.isInProtectedRange !== a.isInProtectedRange) return (b.isInProtectedRange ? 1 : 0) - (a.isInProtectedRange ? 1 : 0);
                         if (b.nearFriendlySix !== a.nearFriendlySix) return (b.nearFriendlySix ? 1 : 0) - (a.nearFriendlySix ? 1 : 0);
+                        // Prefer MOVE over GUARD when scores are similar — avoid guard-loop stalling
+                        const aIsGuard = a.move.actionType === 'GUARD' ? 1 : 0;
+                        const bIsGuard = b.move.actionType === 'GUARD' ? 1 : 0;
+                        if (aIsGuard !== bIsGuard && Math.abs(b.score - a.score) < 200) return aIsGuard - bIsGuard;
                         return b.score - a.score;
                     });
 
@@ -666,8 +679,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
         }
 
         case 'position': {
-            const strategicMoves = scoredMoves.filter(m => !m.isThreatened)
-                                            .filter(m => !m.move.actionType.includes('SPELLCAST_'));
+            const allNonSpell = scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_'))
+                                           .filter(m => m.move.actionType !== 'GUARD');
+            // Prefer safe hexes; fall back to threatened moves if needed (scores penalise danger)
+            const safeOnly = allNonSpell.filter(m => !m.isThreatened && !m.canBeKilled);
+            const strategicMoves = safeOnly.length > 0 ? safeOnly : allNonSpell;
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
@@ -738,8 +754,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 });
 
                 strategicMoves.sort((a, b) => b.positionScore - a.positionScore);
-                if (verbose) console.log(`AI Heuristic (${profile.name}): Strategic positioning`, strategicMoves[0].move, strategicMoves[0].positionScore);
-                const appliedMove = strategicMoves[0].move;
+                const best = strategicMoves[0];
+                // Skip only if top move is worse than all other fallbacks (no real candidates)
+                if (strategicMoves.every(m => m.positionScore < -10000)) break;
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Strategic positioning`, best.move, best.positionScore);
+                const appliedMove = best.move;
                 const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
                 if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
                 applyMove(GAME, appliedMove);
@@ -1070,6 +1089,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     // Penalty for back-and-forth movement (avoiding repetitive patterns)
     if (unit.lastHexId && move.targetHexId === unit.lastHexId && move.actionType === 'MOVE') {
         analysis.score += (w.backAndForthPenalty || -300);
+    }
+    // 2-step cycle: A→B→C→A. prevHexId is 2 moves back. Half penalty (less certain it's a loop).
+    if (unit.prevHexId && move.targetHexId === unit.prevHexId && move.actionType === 'MOVE') {
+        analysis.score += (w.backAndForthPenalty || -300) * 0.5;
     }
 
     // Autochess Aggression: Reward proximity to enemies

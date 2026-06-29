@@ -20,7 +20,7 @@ const heuristicProfiles = {
             attackBonus: 500,      // Reward for damaging an enemy unit
             safeBonus: 400,        // Reward for ending turn on a non-threatened hex
             friendlySixBonus: 50,  // Reward for staying near a friendly Oracle (Dice 6)
-            advanceBonus: 300,     // Reward for moving closer to enemy objectives
+            advanceBonus: 600,     // Reward for moving closer to enemy objectives
             protectedRangeBonus: 100, // Reward for positioning where allies provide cover
 
             threatPenalty: -400,   // Penalty for being in range of enemy attacks
@@ -29,7 +29,7 @@ const heuristicProfiles = {
             backAndForthPenalty: -1000,
 
             teamPositionWeight: 0.6, // Relative importance of overall team formation
-            pressureWeight: 2.0,     // Space control — raised so zone pressure is meaningful vs kill scores
+            pressureWeight: 0.8,     // Space control — lower to prevent friendly-cluster attractor loops
 
             terrainWeights: {
                 defenseBonusWeight: 100, // Bonus for holding defensive terrain
@@ -119,7 +119,7 @@ const heuristicProfiles = {
             backAndForthPenalty: -600, // Prevents stalking oscillation around same target
 
             teamPositionWeight: 0.3, // Lone wolf — doesn't need teammates
-            pressureWeight: 1.2,     // Zone-aware when repositioning between targets
+            pressureWeight: 0.7,     // Zone-aware when repositioning between targets
 
             terrainWeights: {
                 defenseBonusWeight: 100,
@@ -149,14 +149,14 @@ const heuristicProfiles = {
         description: "Trade Fighter: Rushes for kills and accepts death as a fair price — but only when the trade is worth it.",
         priorityOrder: ['kill', 'attack', 'capture', 'position', 'spell', 'dodge'],
         weights: {
-            captureBonus: 3000,    // Objective matters when no kill is available
-            killBonus: 8000,       // Kills above all else
-            attackBonus: 2000,     // Damage even if not lethal
+            captureBonus: 5000,    // Base capture remains very high priority
+            killBonus: 3000,       // Kills — strong but not all-consuming
+            attackBonus: 1500,     // Damage even if not lethal
             safeBonus: 250,        // Small: slightly prefer not dying for nothing
             threatPenalty: -200,   // Small fear — won't charge into 3 enemies with no kill in sight
             protectedRangeBonus: 0,
             friendlySixBonus: 50,  // Slight awareness of Oracle support
-            advanceBonus: 1800,    // Aggressive advance but not suicidal
+            advanceBonus: 1200,    // Aggressive advance but not suicidal
 
             guardPenalty: -1500,   // Hates guarding but won't die just to avoid it
             mergeOver6Penalty: -200,
@@ -200,7 +200,7 @@ const heuristicProfiles = {
             threatPenalty: -1500,  // Terrified of ending turns in enemy threat range
             protectedRangeBonus: 500, // Thrives when units overlap coverage
             friendlySixBonus: 400, // Highly values the protection of an Oracle (Dice 6)
-            advanceBonus: 50,      // Barely advances; waits for the enemy to come
+            advanceBonus: 200,     // Cautious advance while maintaining defensive stance
 
             guardPenalty: -100,    // Fine with guarding, but not infinitely
             mergeOver6Penalty: -20,
@@ -253,7 +253,7 @@ const heuristicProfiles = {
             backAndForthPenalty: -600,
 
             teamPositionWeight: 0.9, // Values group synergy for multi-turn setup logic
-            pressureWeight: 1.5,     // Board controller needs strong zone awareness
+            pressureWeight: 0.9,     // Board controller needs strong zone awareness
 
             terrainWeights: {
                 defenseBonusWeight: 200,

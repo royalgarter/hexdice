@@ -1,5 +1,76 @@
 /**
  * Core AI Utilities and Dispatcher for Hex Dice
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * AI ADJUSTMENT & TESTING GUIDE
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * ## Overview
+ * The AI system has two layers:
+ *   1. heuristic-profiles.js — Profile weights (what to value) and priority order (what to do first)
+ *   2. ai-heuristic.js     — Scoring logic (how moves get evaluated)
+ *
+ * Adjusting AI quality = tuning profiles first, then fixing logic bugs in ai-heuristic.js.
+ *
+ * ## Running Simulated Battles (tournament.ts)
+ *
+ *   # Quick 1-game verbose playback (move-by-move):
+ *   deno run --allow-all js/tournament.ts -g=1 --profiles=baseline,turtle -v
+ *
+ *   # Small balance check (N games per matchup, all profile pairs):
+ *   deno run --allow-all js/tournament.ts -g=5 --profiles=baseline,berserker,turtle,assassin,tactician -q
+ *
+ *   # Full tournament (slow):
+ *   deno run --allow-all js/tournament.ts -g=10 --profiles=baseline,berserker,turtle,assassin,tactician
+ *
+ *   Output: Win%, P1/P2 split per profile. Target: no profile above ~70% win rate.
+ *   Note: E_21 preset has a mild P2 structural advantage (Knight placement). Run each
+ *         profile as both P1 and P2 before concluding dominance.
+ *
+ * ## Diagnosing Problems
+ *
+ *   "No good moves. Ending turn." spam:
+ *     → Check that unit.hexId matches state.hexes placement (see CRITICAL BUG note below).
+ *     → Inspect which priority fires: position, dodge, kill?
+ *     → If position fires but scores all < -10000: advanceBonus too low or penalties too high.
+ *
+ *   Guard spam / oscillation:
+ *     → Check lastActionWasGuard persistence (cleared only on MOVE or RANGED_ATTACK).
+ *     → Check backAndForthPenalty and prevHexId tracking in game.js.
+ *     → Reduce pressureWeight in the profile to break attractor loops.
+ *
+ *   One profile always wins:
+ *     → Compare advanceBonus across profiles. Large gap (e.g. 1800 vs 50) = structural dominance.
+ *     → Check if profile priorityOrder gives it capture/kill before position.
+ *
+ *   Infinite loops in Oracle spells (Shield/Skirmish/Swap):
+ *     → SHIELD: skip if targetUnit.isGuarding >= 2 (already fully shielded).
+ *     → SKIRMISH: skip if targetUnit.skirmishBuff > 0 (already buffed).
+ *     → SWAP: penalise if move.targetHexId === oracleUnit.lastHexId (swap-back loop).
+ *
+ * ## CRITICAL BUG (fixed): unit.hexId Stale After Simulation
+ *   The save/restore snapshot (_saveHeuristicSnapshot/_restoreHeuristicSnapshot) correctly
+ *   restores unit.hexId after each simulation. However, the GAME's Alpine.js reactive
+ *   state means unit.hexId can diverge from state.hexes over multiple AI turns.
+ *   FIX: generateAllPossibleMoves reads the actual hex position from state.hexes (the
+ *   source of truth), not from unit.hexId. Scoring also uses hex-based lookup.
+ *   NEVER rely on unit.hexId being authoritative in AI simulation code.
+ *
+ * ## Tuning Workflow
+ *   1. Run -g=1 verbose for one matchup to understand what moves AI makes.
+ *   2. Find the first "wrong" decision (bad position, repeated guard, ignoring kill).
+ *   3. Trace which priority fired and why that move scored highest.
+ *   4. Adjust the relevant weight in heuristic-profiles.js.
+ *   5. Re-run -g=5 and check that win% moved in the expected direction.
+ *   6. Repeat for each profile until satisfied.
+ *
+ * ## Profile Balance Targets (E_21 preset, 2-player)
+ *   berserker  — aggressive rushdown, wins ~60% (not 100%)
+ *   assassin   — kills first, wins ~55%
+ *   baseline   — well-rounded, wins ~45%
+ *   tactician  — control/zone, wins ~45%
+ *   turtle     — defensive, wins ~40%
+ *   ranger     — kiting, wins ~45%
  */
 
 function performAIByWeight(GAME) {
@@ -36,7 +107,9 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 	}
 
 	unitsThatCanAct.forEach(unit => {
-		const unitHexId = unit.hexId;
+		// Use hexes as source of truth for unit position (unit.hexId can be stale after save/restore)
+		const actualHex = (state || GAME).hexes.find(h => h.unit && h.unit.id === unit.id);
+		const unitHexId = actualHex ? actualHex.id : unit.hexId;
 		const unitValue = unit.value;
 
 		// 1. Basic Moves
@@ -193,7 +266,7 @@ function applyMove(GAME, move, state, options) {
 					if (die.isDeployed) {
 						die.hasMovedOrAttackedThisTurn = false;
 						die.actionsTakenThisTurn = 0;
-						die.lastActionWasGuard = false;
+						// lastActionWasGuard NOT cleared — persists until unit moves/attacks
 					}
 				});
 			} else {

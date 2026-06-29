@@ -2838,7 +2838,9 @@ function alpineHexDiceTacticGame() { return {
 		if (!unit) return;
 
 		if (fromHex) {
+			unit.prevHexId = unit.lastHexId; // 2-step history for oscillation detection
 			unit.lastHexId = fromHex.id; // Store last position
+			unit.lastActionWasGuard = false; // Moving clears guard-spam protection
 			fromHex.unit = null;
 			fromHex.unitId = null;
 			this.trail.fromHex = state ? null : fromHex;
@@ -3177,6 +3179,7 @@ function alpineHexDiceTacticGame() { return {
 	},
 	performRangedAttack(attackerHexId, targetHexId, state) {
 		const attackerUnit = this.getUnitOnHex(attackerHexId, state);
+		if (attackerUnit) attackerUnit.lastActionWasGuard = false; // Attacking clears guard-spam flag
 
 		// Tanker Tier 2 [B] Heavy Ordinance
 		if (attackerUnit && attackerUnit.value === 5 && this.hasPerk(attackerUnit, 'tier2', 'B')) {
@@ -5233,7 +5236,8 @@ function alpineHexDiceTacticGame() { return {
 		unit.actionsTakenThisTurn = 0;
 		unit.isRerolled = false;
 		unit.roundDamageNegated = 0;
-		unit.lastActionWasGuard = false;
+		// lastActionWasGuard persists across turns — cleared only on move/attack so
+		// AI can't guard every other turn on the same unit. See performMove/performRangedAttack.
 
 		if (unit.venomDuration && unit.venomDuration > 0) {
 			this.addLog(`🐍 ${this.logUnit(unit)} takes 10 venom damage.`);
