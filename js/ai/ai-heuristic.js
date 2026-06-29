@@ -706,7 +706,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
             // Tiered fallback: safe > threatened-but-survivable > all
             // Avoids walking units directly into confirmed kills (canBeKilled=true)
             const safeOnly = allNonSpell.filter(m => !m.isThreatened && !m.canBeKilled);
-            const survivableOnly = allNonSpell.filter(m => !m.canBeKilled);
+            // survivableOnly excludes only IMMEDIATE kills — deferred (already-moved enemy) are allowed as fallback.
+            const survivableOnly = allNonSpell.filter(m => !m.canBeKilledImmediate);
             const strategicMoves = safeOnly.length > 0 ? safeOnly
                 : (survivableOnly.length > 0 ? survivableOnly : allNonSpell);
                 
@@ -1094,8 +1095,24 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const nextState = applyMove(GAME, move, state, snapshot ? { noClone: true } : undefined);
     if (!nextState) return analysis;
 
-    // Get unit's position after move
-    const aiUnitNext = nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    // Get unit's position after move — use hexes as source of truth.
+    // state.hexes[hexId].unit and state.players[].dice entries can diverge (different object refs).
+    // After applyMove with noClone, the moved unit is authoritative at move.targetHexId.
+    const isSpellMove_ = move.actionType.startsWith('SPELLCAST_');
+    let aiUnitNext;
+    if (!isSpellMove_) {
+        // For move/attack: unit is now at targetHexId (or dead if it lost combat)
+        const unitAtTarget = nextState.hexes[move.targetHexId]?.unit;
+        aiUnitNext = (unitAtTarget && unitAtTarget.id === unit.id)
+            ? unitAtTarget
+            : nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    } else {
+        // For spells: Oracle stays at unitHexId
+        const unitAtSrc = nextState.hexes[move.unitHexId]?.unit;
+        aiUnitNext = (unitAtSrc && unitAtSrc.id === unit.id)
+            ? unitAtSrc
+            : nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    }
     if (!aiUnitNext || aiUnitNext.isDeath) {
         analysis.isSafe = false;
         analysis.canBeKilled = true;
@@ -1202,15 +1219,17 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     }
 
     // Check threat level at destination (from ALL opponents)
+    // Split into immediate (hasMoved=false, can act this turn) and future (hasMoved=true, acts next turn).
     let threatCount = 0;
-    let canBeKilledByAny = false;
+    let canBeKilledByAny = false;      // immediate: enemy hasn't acted yet this round
+    let canBeKilledNextTurn = false;   // deferred: enemy already acted but will reset next round
 
     for (const pIdx of opponentIndices) {
-        // Check ALL enemy units — including ones that already moved this round but can attack next round.
-        // Filtering by !hasMovedOrAttackedThisTurn causes P1 to walk into death after P2 Knight acts.
-        const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
-        for (const opp of opponents) {
-            if (GAME.canUnitAttackTarget(opp, aiUnitNext, nextState)) {
+        const allOpponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
+        for (const opp of allOpponents) {
+            const canAtk = GAME.canUnitAttackTarget(opp, aiUnitNext, nextState);
+            if (canAtk) {
+                const isImmediate = !opp.hasMovedOrAttackedThisTurn;
                 analysis.isThreatened = true;
                 threatCount++;
 
@@ -1219,19 +1238,21 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 if (GAME.gameplayVersion === 2) {
                     const { winProb, fumbleProb } = calculateV2CombatSuccessProbability(oppAttack, defenderArmor);
-                    
+
                     // Penalty for enemy winning
                     // Bonus for enemy fumbling (making this spot safer)
                     analysis.score -= winProb * (unit.value * 20 + Math.abs(w.threatPenalty));
                     analysis.score += fumbleProb * (opp.value * 10);
-                    
+
                     if (winProb > 0.5) {
-                        canBeKilledByAny = true;
+                        if (isImmediate) canBeKilledByAny = true;
+                        else canBeKilledNextTurn = true;
                         break;
                     }
                 } else {
                     if (oppAttack >= defenderArmor) {
-                        canBeKilledByAny = true;
+                        if (isImmediate) canBeKilledByAny = true;
+                        else canBeKilledNextTurn = true;
                         break;
                     }
                 }
@@ -1240,10 +1261,18 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         if (canBeKilledByAny) break;
     }
 
-    analysis.canBeKilled = canBeKilledByAny;
+    // canBeKilled = immediate threat (enemy hasn't moved): strong deterrent
+    // canBeKilledNextTurn = deferred threat (enemy already moved): weaker deterrent
+    analysis.canBeKilledImmediate = canBeKilledByAny;
+    analysis.canBeKilled = canBeKilledByAny || canBeKilledNextTurn;
     if (canBeKilledByAny) {
         analysis.isSafe = false;
-        analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
+        // Immediate death: must outrank any advance/kill bonus (max ~7000), so 8000 base.
+        analysis.score -= 8000 + unit.value * 300;
+    } else if (canBeKilledNextTurn) {
+        analysis.isSafe = false;
+        // Deferred death: significant but not absolute deterrent — allows tactical advances when needed.
+        analysis.score -= 2500 + unit.value * 100;
     } else if (analysis.isThreatened) {
         analysis.isSafe = false;
         analysis.score += w.threatPenalty * threatCount;
