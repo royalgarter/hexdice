@@ -422,62 +422,66 @@ function filterByPriority(scoredMoves, priority, opponentBases) {
  */
 function predictEnemyThreats(GAME, state, myPlayerIndex) {
     const threats = [];
+    const seenKeys = new Set(); // deduplicate attacker+target pairs
     const myUnits = state.players[myPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath);
     const enemies = state.players.flatMap((p, idx) =>
         (idx === myPlayerIndex || p.isEliminated) ? [] : p.dice.filter(d => d.isDeployed && !d.isDeath)
     );
 
+    function addThreat(attacker, targetUnit, targetHexId, defenderArmor, isRanged, isTwoStep) {
+        const key = `${attacker.id}:${targetUnit.id}:${targetHexId}`;
+        if (seenKeys.has(key)) return;
+        seenKeys.add(key);
+        let canKill = false;
+        if (GAME.gameplayVersion === 2) {
+            const { winProb } = calculateV2CombatSuccessProbability(attacker.attack, defenderArmor);
+            canKill = winProb > 0.5;
+        } else {
+            canKill = attacker.attack >= defenderArmor;
+        }
+        threats.push({ attacker, target: targetUnit, targetHexId, canKill, attackValue: attacker.attack, defenderArmor, isRanged, isTwoStep: !!isTwoStep });
+    }
+
     for (const enemy of enemies) {
         const enemyHex = GAME.getHex(enemy.hexId, state);
         if (!enemyHex) continue;
 
-        // Calculate units this enemy can attack (Melee)
+        // 1-step melee threats (already adjacent)
         const neighbors = GAME.getNeighbors(enemyHex, state);
         for (const neighbor of neighbors) {
             const targetUnit = GAME.getUnitOnHex(neighbor.id, state);
             if (targetUnit && targetUnit.playerId === myPlayerIndex) {
-                const defenderArmor = GAME.calcDefenderEffectiveArmor(neighbor.id, state);
-                let canKill = false;
-                if (GAME.gameplayVersion === 2) {
-                    const { winProb } = calculateV2CombatSuccessProbability(enemy.attack, defenderArmor);
-                    canKill = winProb > 0.5;
-                } else {
-                    canKill = enemy.attack >= defenderArmor;
-                }
-                threats.push({
-                    attacker: enemy,
-                    target: targetUnit,
-                    targetHexId: neighbor.id,
-                    canKill,
-                    attackValue: enemy.attack,
-                    defenderArmor: defenderArmor
-                });
+                addThreat(enemy, targetUnit, neighbor.id, GAME.calcDefenderEffectiveArmor(neighbor.id, state), false);
             }
         }
 
-        // Ranged threats (Dice 2)
+        // 1-step ranged threats (Archer Dice 2)
         if (enemy.value === 2) {
             const validRanged = GAME.calcValidRangedTargets(enemy.hexId, state);
             for (const targetHexId of validRanged) {
                 const targetUnit = GAME.getUnitOnHex(targetHexId, state);
                 if (targetUnit && targetUnit.playerId === myPlayerIndex) {
-                    const defenderArmor = GAME.calcDefenderEffectiveArmor(targetHexId, state);
-                    let canKill = false;
-                    if (GAME.gameplayVersion === 2) {
-                        const { winProb } = calculateV2CombatSuccessProbability(enemy.attack, defenderArmor);
-                        canKill = winProb > 0.5;
-                    } else {
-                        canKill = enemy.attack >= defenderArmor;
+                    addThreat(enemy, targetUnit, targetHexId, GAME.calcDefenderEffectiveArmor(targetHexId, state), true);
+                }
+            }
+        }
+
+        // 2-step threats: enemy moves first, then attacks.
+        // Only for melee units (not Archer — their ranged threat is already covered).
+        // Skip Dice 6 (Oracle has no attack). Skip already-adjacent enemies (covered above).
+        if (enemy.value !== 6) {
+            const reachableHexes = GAME.calcValidMoves(enemy.hexId, false, state);
+            for (const reachHexId of reachableHexes) {
+                const reachHex = GAME.getHex(reachHexId, state);
+                if (!reachHex) continue;
+                // Skip if occupied (enemy can't move there except by combat, not relevant for 2-step)
+                if (GAME.getUnitOnHex(reachHexId, state)) continue;
+                const reachNeighbors = GAME.getNeighbors(reachHex, state);
+                for (const rn of reachNeighbors) {
+                    const targetUnit = GAME.getUnitOnHex(rn.id, state);
+                    if (targetUnit && targetUnit.playerId === myPlayerIndex) {
+                        addThreat(enemy, targetUnit, rn.id, GAME.calcDefenderEffectiveArmor(rn.id, state), false, true);
                     }
-                    threats.push({
-                        attacker: enemy,
-                        target: targetUnit,
-                        targetHexId,
-                        canKill,
-                        attackValue: enemy.attack,
-                        defenderArmor,
-                        isRanged: true
-                    });
                 }
             }
         }
@@ -786,14 +790,30 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
             // Bonus for being near the center vertical axis or advancing
             bonus += (mapRadius - Math.abs(targetHex.q)) * 15;
             break;
-        case 'SUPPORT':
-            // Bonus for being near teammates
-            const neighbors = GAME.getNeighbors(targetHex, state);
-            neighbors.forEach(n => {
+        case 'SUPPORT': {
+            // Bonus for being adjacent to teammates
+            const supportNeighbors = GAME.getNeighbors(targetHex, state);
+            supportNeighbors.forEach(n => {
                 const nu = GAME.getUnitOnHex(n.id, state);
                 if (nu && nu.playerId === unit.playerId) bonus += 30;
             });
+
+            // Reposition pull: bonus for closing distance to nearest ally in spell range (2).
+            // Prevents Oracle from idling far from the fight when it has no adjacent targets.
+            const myAllies = state.players[unit.playerId].dice.filter(d => d.isDeployed && !d.isDeath && d.id !== unit.id);
+            let minAllyDist = Infinity;
+            for (const ally of myAllies) {
+                const allyHex = GAME.getHex(ally.hexId, state);
+                if (!allyHex) continue;
+                const dist = GAME.axialDistance(targetHex.q, targetHex.r, allyHex.q, allyHex.r);
+                if (dist < minAllyDist) minAllyDist = dist;
+            }
+            // Ideal Oracle range: within 2 of nearest ally (spell range).
+            // Penalty for being farther, scaled so Oracle moves but doesn't crowd.
+            if (minAllyDist > 2) bonus -= (minAllyDist - 2) * 40;
+            else if (minAllyDist <= 2) bonus += 60; // In support range — reward staying here
             break;
+        }
         case 'SNIPER':
             // Already handled by Archer kiting, but can add more here
             break;
@@ -1005,8 +1025,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const fatigueWeight = w.fatigueWeight || 150;
     analysis.score -= (unit.activationCount || 0) * fatigueWeight;
 
-    analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id);
-    analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill);
+    // isCurrentlyThreatened / canBeKilledCurrently: immediate (1-step) threats only.
+    // 2-step threats inform shielding urgency but should not trigger panic-dodge.
+    analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id && !t.isTwoStep);
+    analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill && !t.isTwoStep);
 
     // Simulate the move using save/restore to avoid structuredClone on every candidate.
     // Autochess uses its own snapshot; tactical mode uses _saveHeuristicSnapshot.
@@ -1277,8 +1299,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 // PREDICTIVE SHIELDING: Check if unit will be attacked next turn (using pre-calculated threats)
                 const futureThreats = predictedThreats.filter(t => t.target.id === targetUnit.id);
-                const willBeKilled = futureThreats.some(t => t.canKill);
-                const willBeAttacked = futureThreats.length > 0;
+                // Distinguish immediate (1-step) vs approaching (2-step) threats — urgency differs
+                const immediateKillThreats = futureThreats.filter(t => t.canKill && !t.isTwoStep);
+                const approachingKillThreats = futureThreats.filter(t => t.canKill && t.isTwoStep);
+                const willBeKilled = immediateKillThreats.length > 0;
+                const willBeKilledSoon = approachingKillThreats.length > 0;
+                const willBeAttacked = futureThreats.some(t => !t.isTwoStep);
 
                 // COMBO BONUS: Shield enables a strong unit to advance safely next turn.
                 // If the target is a frontline (value 4/5) and has a killable enemy adjacent, shielding sets up an attack.
@@ -1298,7 +1324,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
                 // Score shielding based on urgency and unit value
                 if (willBeKilled) {
+                    // Immediate kill threat — shield now
                     analysis.score += (GAME.autochess ? 250 : 150) + (targetUnit.value * (GAME.autochess ? 25 : 15));
+                    analysis.isSupportAction = true;
+                } else if (willBeKilledSoon && targetUnit.value >= 3) {
+                    // 2-step kill approaching — proactive shield, lower urgency
+                    analysis.score += (GAME.autochess ? 150 : 80) + (targetUnit.value * (GAME.autochess ? 15 : 10));
                     analysis.isSupportAction = true;
                 } else if (willBeAttacked) {
                     analysis.score += (GAME.autochess ? 150 : 60) + (targetUnit.value * (GAME.autochess ? 15 : 8));
