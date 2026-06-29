@@ -29,7 +29,7 @@ const heuristicProfiles = {
             backAndForthPenalty: -1000, // Penalty for repetitive movement loops
 
             teamPositionWeight: 0.6, // Relative importance of overall team formation
-            pressureWeight: 0.5,     // Relative importance of space control (Zone of Control)
+            pressureWeight: 2.0,     // Space control — raised so zone pressure is meaningful vs kill scores
 
             terrainWeights: {
                 defenseBonusWeight: 100, // Bonus for holding defensive terrain
@@ -102,8 +102,8 @@ const heuristicProfiles = {
         name: "Assassin",
         description: "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
         priorityOrder: ['kill', 'capture', 'attack', 'spell', 'dodge', 'position'],
-        minimax: true,             // Kept
-        minimaxDepth: 2,
+        minimax: true,
+        minimaxDepth: 3,
         weights: {
             captureBonus: 8000,    // Objective is a distraction/backup plan
             killBonus: 5000,       // Very high priority on eliminating specific weak units
@@ -236,8 +236,8 @@ const heuristicProfiles = {
         name: "Tactician",
         description: "Strategic Thinker: Uses deep calculation (Minimax) to set traps and control the board.",
         priorityOrder: ['capture', 'spell', 'position', 'kill', 'attack', 'dodge'],
-        minimax: true,             // Kept
-        minimaxDepth: 2,
+        minimax: true,
+        minimaxDepth: 3,
         weights: {
             captureBonus: 10000,   // Strategic focus on the ultimate win condition
             killBonus: 1500,       // Values kills as a means to thin opponent lines

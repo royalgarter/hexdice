@@ -5233,6 +5233,7 @@ function alpineHexDiceTacticGame() { return {
 		unit.actionsTakenThisTurn = 0;
 		unit.isRerolled = false;
 		unit.roundDamageNegated = 0;
+		unit.lastActionWasGuard = false;
 
 		if (unit.venomDuration && unit.venomDuration > 0) {
 			this.addLog(`🐍 ${this.logUnit(unit)} takes 10 venom damage.`);

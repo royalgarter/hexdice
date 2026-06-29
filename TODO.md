@@ -54,3 +54,41 @@ Adds 7 harder types requiring deliberate risk/mastery. Boss and late-game levels
 - `js/campaign/campaign-manager.js` — `checkQuestObjective()`: +7 cases
 - `js/game.js` — `resetGame()`, `removeUnit()`, `_endTurn()`, `checkWinConditions()`: ~8 new lines
 - `js/campaign/ro_quest_db.json` — replace 12 objectives
+
+---
+
+## AI Improvements — Priority Order
+
+### Step 1 — Fix random spell gate [ai-heuristic.js] ← START HERE
+Remove `random() < ratio` in `executePriority('spell')`.
+Always cast if `viableSpells[0].score > 0`. Keep sacrifice special-case unchanged.
+Risk: none.
+
+### Step 2 — Fix minimax candidate filter [ai-heuristic.js]
+Change filter from `actionType === 'MOVE' || actionType === 'POSITION'`
+→ `actionType === 'MOVE' || actionType === 'RANGED_ATTACK'`
+`POSITION` doesn't exist — minimax never refined ranged attacks.
+Risk: none — correctness fix only.
+
+### Step 3 — Fix phase detection overlap [ai-heuristic.js]
+`late` condition: remove `|| state.turnCount > 100` (causes overlap with early).
+Keep: `deployedUnits < totalPossibleUnits * 0.2` only.
+Risk: low.
+
+### Step 4 — Re-enable Guard action [ai.js + ai-heuristic.js]
+- Uncomment Guard in `generateAllPossibleMoves` (ai.js).
+- Anti-spam: only generate Guard move if `!unit.isGuarding && !unit.lastActionWasGuard`.
+  Set `unit.lastActionWasGuard = true` in applyMove Guard branch (cleared on any other action).
+- Guard scores high only when: unit is threatened AND on FOREST/TOWER/MOUNTAIN.
+  `w.guardPenalty` (already -500) prevents spam on plain terrain.
+- Skip Merge — future work.
+Risk: medium — anti-spam flag is safety net.
+
+### Step 5 — Archer proactive kiting [ai-heuristic.js]
+When evaluating Dice 2 MOVE: if destination puts a ranged target at distance 2 with LoS, add +300 "setup" bonus.
+Existing +200 for landing at distance 2 stays.
+Risk: low — additive.
+
+### Step 6 — Hussar flanking bonus [ai-heuristic.js]
+When Hussar MOVE lands adjacent to enemy value >= 3 that it can kill next turn (attack >= defenderArmor), add +200.
+Risk: low — additive.

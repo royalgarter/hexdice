@@ -100,10 +100,10 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 		// 	moves.push({ actionType: 'MERGE', unitHexId, targetHexId });
 		// });
 
-		// // 7. Guard
-		// if (!unit.isGuarding) {
-		// 	moves.push({ actionType: 'GUARD', unitHexId });
-		// }
+		// 7. Guard — only if not already guarding and didn't guard last action (anti-spam)
+		if (!unit.isGuarding && !unit.lastActionWasGuard) {
+			moves.push({ actionType: 'GUARD', unitHexId });
+		}
 	});
 
 	return moves;
@@ -171,9 +171,13 @@ function applyMove(GAME, move, state, options) {
 		case 'MERGE':
 			GAME.performMerge(move.unitHexId, move.targetHexId, true, applyState);
 			break;
-		case 'GUARD':
+		case 'GUARD': {
 			GAME.performGuard(move.unitHexId, applyState);
+			// Mark unit so it cannot guard again next turn (anti-spam)
+			const guardedUnit = GAME.getUnitOnHex(move.unitHexId, applyState || undefined);
+			if (guardedUnit) guardedUnit.lastActionWasGuard = true;
 			break;
+		}
 		case 'END_TURN':
 			// When analyzing (state provided), just advance turn in cloned state
 			// When executing (no state), actually end the turn
@@ -189,6 +193,7 @@ function applyMove(GAME, move, state, options) {
 					if (die.isDeployed) {
 						die.hasMovedOrAttackedThisTurn = false;
 						die.actionsTakenThisTurn = 0;
+						die.lastActionWasGuard = false;
 					}
 				});
 			} else {

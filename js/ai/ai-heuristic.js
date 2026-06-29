@@ -18,6 +18,54 @@ const DEFAULT_PROFILE = heuristicProfiles.baseline;
 const AUTOCHESS_WEIGHT_MULTIPLIER = 3;
 
 /**
+ * Lightweight save/restore for heuristic evaluation.
+ * Avoids structuredClone — captures only fields that change during simulation.
+ */
+function _saveHeuristicSnapshot(state) {
+	const units = [];
+	state.players.forEach(p => {
+		p.dice.forEach(u => {
+			units.push({
+				ref: u,
+				hexId: u.hexId, isDeath: u.isDeath, isDeployed: u.isDeployed,
+				isGuarding: u.isGuarding, skirmishBuff: u.skirmishBuff,
+				currentArmor: u.currentArmor, armorReduction: u.armorReduction,
+				effectiveArmor: u.effectiveArmor,
+				hasMovedOrAttackedThisTurn: u.hasMovedOrAttackedThisTurn,
+				actionsTakenThisTurn: u.actionsTakenThisTurn,
+				lastActionWasGuard: u.lastActionWasGuard,
+				lastHexId: u.lastHexId, stepsMoved: u.stepsMoved,
+			});
+		});
+	});
+	const hexes = state.hexes.map(h => ({ ref: h, unit: h.unit, unitId: h.unitId }));
+	return { units, hexes, phase: state.phase };
+}
+
+function _restoreHeuristicSnapshot(state, snap) {
+	for (const us of snap.units) {
+		us.ref.hexId = us.hexId;
+		us.ref.isDeath = us.isDeath;
+		us.ref.isDeployed = us.isDeployed;
+		us.ref.isGuarding = us.isGuarding;
+		us.ref.skirmishBuff = us.skirmishBuff;
+		us.ref.currentArmor = us.currentArmor;
+		us.ref.armorReduction = us.armorReduction;
+		us.ref.effectiveArmor = us.effectiveArmor;
+		us.ref.hasMovedOrAttackedThisTurn = us.hasMovedOrAttackedThisTurn;
+		us.ref.actionsTakenThisTurn = us.actionsTakenThisTurn;
+		us.ref.lastActionWasGuard = us.lastActionWasGuard;
+		us.ref.lastHexId = us.lastHexId;
+		us.ref.stepsMoved = us.stepsMoved;
+	}
+	for (const hs of snap.hexes) {
+		hs.ref.unit = hs.unit;
+		hs.ref.unitId = hs.unitId;
+	}
+	state.phase = snap.phase;
+}
+
+/**
  * Adjust AI weights based on the current game phase
  */
 function calculatePhaseWeights(GAME, state, profile) {
@@ -54,8 +102,8 @@ function calculatePhaseWeights(GAME, state, profile) {
     let phase = 'mid';
     if (deployedUnits < totalPossibleUnits * 0.4) {
         phase = 'early';
-    } else if (deployedUnits < totalPossibleUnits * 0.2 || state.turnCount > 100) {
-        // Very few units left or very long game
+    } else if (deployedUnits < totalPossibleUnits * 0.2) {
+        // Very few units left — end game
         phase = 'late';
     }
 
@@ -251,7 +299,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         // Sort by basic score and take top candidates for strategic refinement
         // Only refine moves that are MOVE or POSITION (tactical/strategic)
         const candidates = scoredMoves
-            .filter(m => m.move.actionType === 'MOVE' || m.move.actionType === 'POSITION')
+            .filter(m => m.move.actionType === 'MOVE' || m.move.actionType === 'RANGED_ATTACK')
             .sort((a, b) => b.score - a.score)
             .slice(0, 8); // Refine top 8 candidates
 
@@ -547,12 +595,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                 let hasSacrifice = viableSpells.find(m => m.move.actionType == 'SPELLCAST_SACRIFICE');
 
-                const ratio = hasSacrifice ? 1 : (viableSpells.length / 3/*Oracle have 3 spells*/ / scoredMoves.length);
-
-                if (viableSpells.length > 0 && (random() < ratio)) {
-                    if (verbose) console.log('Spellcast Ratio:', ratio);
-                    
-                    viableSpells.sort((a, b) => b.score - a.score);
+                // Cast if the best spell has positive value (or sacrifice is available).
+                // Old: random() < ratio caused Oracle to randomly skip good spells.
+                viableSpells.sort((a, b) => b.score - a.score);
+                const bestSpellScore = viableSpells.length > 0 ? viableSpells[0].score : -Infinity;
+                if (viableSpells.length > 0 && (hasSacrifice || bestSpellScore > 0)) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     const appliedMove = viableSpells[0].move;
                     const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
@@ -715,11 +762,21 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
     const mapRadius = GAME.getRadius ? GAME.getRadius() : 5;
 
     switch (unit.role) {
-        case 'FLANKER':
-            // Bonus for being away from the center axis (q=0, r=0, s=0)
+        case 'FLANKER': {
+            // Bonus for being away from the center axis (flanking geography)
             const distFromCenter = Math.max(Math.abs(targetHex.q), Math.abs(targetHex.r), Math.abs(-targetHex.q - targetHex.r));
             bonus += distFromCenter * 20;
+            // Extra bonus for landing adjacent to a killable high-value enemy
+            const flankNeighbors = GAME.getNeighbors(targetHex, state);
+            for (const fn of flankNeighbors) {
+                const fnu = GAME.getUnitOnHex(fn.id, state);
+                if (fnu && fnu.playerId !== unit.playerId && fnu.value >= 3) {
+                    const defArm = GAME.calcDefenderEffectiveArmor(fn.id, state);
+                    if (unit.attack >= defArm) bonus += 200; // Can kill this next turn
+                }
+            }
             break;
+        }
         case 'FRONTLINE':
             // Bonus for being near the center vertical axis or advancing
             bonus += (mapRadius - Math.abs(targetHex.q)) * 15;
@@ -946,11 +1003,14 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id);
     analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill);
 
-    // Simulate the move (use save/restore in autochess eval to avoid per-move structuredClone)
+    // Simulate the move using save/restore to avoid structuredClone on every candidate.
+    // Autochess uses its own snapshot; tactical mode uses _saveHeuristicSnapshot.
     let snapshot = null;
     try {
     if (GAME.autochess && state._autochessEval && GAME.Autochess?._saveEvalSnapshot) {
         snapshot = GAME.Autochess._saveEvalSnapshot(state);
+    } else if (!GAME.autochess) {
+        snapshot = _saveHeuristicSnapshot(state);
     }
     const nextState = applyMove(GAME, move, state, snapshot ? { noClone: true } : undefined);
     if (!nextState) return analysis;
@@ -1150,6 +1210,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
         if (nearest.distance === 2) {
             analysis.score += 200; // Optimal kiting range
+            // Extra bonus: destination sets up a ranged shot next turn
+            const rangedTargets = GAME.calcValidRangedTargets(aiUnitNext.hexId, nextState);
+            if (rangedTargets.length > 0) analysis.score += 300;
         } else if (nearest.distance === 1) {
             analysis.score -= 500; // Too close!
         }
@@ -1211,6 +1274,22 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                 const futureThreats = predictedThreats.filter(t => t.target.id === targetUnit.id);
                 const willBeKilled = futureThreats.some(t => t.canKill);
                 const willBeAttacked = futureThreats.length > 0;
+
+                // COMBO BONUS: Shield enables a strong unit to advance safely next turn.
+                // If the target is a frontline (value 4/5) and has a killable enemy adjacent, shielding sets up an attack.
+                if (!GAME.autochess && targetUnit.value >= 4) {
+                    const targetHexNeighbors = GAME.getNeighbors(targetHex, nextState);
+                    for (const tn of targetHexNeighbors) {
+                        const enemy = GAME.getUnitOnHex(tn.id, nextState);
+                        if (enemy && enemy.playerId !== state.currentPlayerIndex) {
+                            const enemyArmor = GAME.calcDefenderEffectiveArmor(tn.id, nextState);
+                            if (targetUnit.attack >= enemyArmor) {
+                                analysis.score += 80 + targetUnit.value * 10; // Advance setup bonus
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 // Score shielding based on urgency and unit value
                 if (willBeKilled) {
@@ -1358,6 +1437,19 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
                             analysis.isSupportAction = true;
                         }
                     }
+
+                    // Penalty: Oracle lands in a threatened position after swap (swapping into danger)
+                    const oracleLandsAtTargetHex = oracleNeighbors; // After swap, Oracle is at targetHex
+                    const oracleAtTargetNeighbors = GAME.getNeighbors(targetHex, state);
+                    let oracleLandsThreatened = false;
+                    for (const n of oracleAtTargetNeighbors) {
+                        const nu = GAME.getUnitOnHex(n.id, state);
+                        if (nu && nu.playerId !== state.currentPlayerIndex) {
+                            oracleLandsThreatened = true;
+                            break;
+                        }
+                    }
+                    if (oracleLandsThreatened) analysis.score -= 300;
                 }
             }
         }
@@ -1452,7 +1544,11 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     return analysis;
     } finally {
         if (snapshot) {
-            GAME.Autochess._restoreEvalSnapshot(state, snapshot);
+            if (GAME.autochess && GAME.Autochess?._restoreEvalSnapshot) {
+                GAME.Autochess._restoreEvalSnapshot(state, snapshot);
+            } else {
+                _restoreHeuristicSnapshot(state, snapshot);
+            }
         }
     }
 }
