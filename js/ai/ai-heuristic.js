@@ -1061,8 +1061,14 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const nextState = applyMove(GAME, move, state, snapshot ? { noClone: true } : undefined);
     if (!nextState) return analysis;
 
-    // Get unit's position after move
-    const aiUnitNext = nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    // Get unit's position after move.
+    // Use hexes as source of truth — players[].dice.hexId can be stale after applyMove with noClone.
+    const _hexIdByUnitId = {};
+    nextState.hexes.forEach(h => { if (h.unit) _hexIdByUnitId[h.unit.id] = h.id; });
+    const _aiUnitRaw = nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
+    const aiUnitNext = _aiUnitRaw && _hexIdByUnitId[unit.id] && _hexIdByUnitId[unit.id] !== _aiUnitRaw.hexId
+        ? { ..._aiUnitRaw, hexId: _hexIdByUnitId[unit.id] }
+        : _aiUnitRaw;
     if (!aiUnitNext || aiUnitNext.isDeath) {
         analysis.isSafe = false;
         analysis.canBeKilled = true;
@@ -1162,47 +1168,63 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
     }
 
-    // Check threat level at destination (from ALL opponents)
+    // Check threat level at destination (from ALL opponents).
+    // Distinguish immediate (enemy hasn't acted this turn) vs deferred (enemy already moved, resets next round).
     let threatCount = 0;
-    let canBeKilledByAny = false;
+    let canBeKilledImmediate = false; // enemy can act NOW this round
+    let canBeKilledNextTurn = false;  // enemy already moved, threat is next round
+
+    // Use hex-based positions for opponents too (same stale-hexId fix).
+    const _oppHexIdByUnitId = _hexIdByUnitId; // already built above
 
     for (const pIdx of opponentIndices) {
-        const opponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath && !d.hasMovedOrAttackedThisTurn);
-        for (const opp of opponents) {
-            if (GAME.canUnitAttackTarget(opp, aiUnitNext, nextState)) {
+        const allOpponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
+        for (const opp of allOpponents) {
+            const oppHexId = _oppHexIdByUnitId[opp.id] ?? opp.hexId;
+            const oppForCheck = oppHexId !== opp.hexId ? { ...opp, hexId: oppHexId } : opp;
+            if (GAME.canUnitAttackTarget(oppForCheck, aiUnitNext, nextState)) {
                 analysis.isThreatened = true;
                 threatCount++;
 
                 const defenderArmor = GAME.calcDefenderEffectiveArmor(aiUnitNext.hexId, nextState);
                 const oppAttack = opp.attack;
+                const isImmediate = !opp.hasMovedOrAttackedThisTurn;
 
                 if (GAME.gameplayVersion === 2) {
                     const { winProb, fumbleProb } = calculateV2CombatSuccessProbability(oppAttack, defenderArmor);
-                    
+
                     // Penalty for enemy winning
                     // Bonus for enemy fumbling (making this spot safer)
                     analysis.score -= winProb * (unit.value * 20 + Math.abs(w.threatPenalty));
                     analysis.score += fumbleProb * (opp.value * 10);
-                    
+
                     if (winProb > 0.5) {
-                        canBeKilledByAny = true;
+                        if (isImmediate) canBeKilledImmediate = true;
+                        else canBeKilledNextTurn = true;
                         break;
                     }
                 } else {
                     if (oppAttack >= defenderArmor) {
-                        canBeKilledByAny = true;
+                        if (isImmediate) canBeKilledImmediate = true;
+                        else canBeKilledNextTurn = true;
                         break;
                     }
                 }
             }
         }
-        if (canBeKilledByAny) break;
+        if (canBeKilledImmediate) break;
     }
 
-    analysis.canBeKilled = canBeKilledByAny;
-    if (canBeKilledByAny) {
+    analysis.canBeKilledImmediate = canBeKilledImmediate;
+    analysis.canBeKilled = canBeKilledImmediate || canBeKilledNextTurn;
+    if (canBeKilledImmediate) {
         analysis.isSafe = false;
-        analysis.score -= Math.abs(w.safeBonus); // Penalty equal to safe bonus
+        // Strong deterrent — enemy can kill us this round
+        analysis.score -= 300;
+    } else if (canBeKilledNextTurn) {
+        analysis.isSafe = false;
+        // Mild deterrent — enemy already moved, threat resets next round
+        analysis.score += w.threatPenalty;
     } else if (analysis.isThreatened) {
         analysis.isSafe = false;
         analysis.score += w.threatPenalty * threatCount;
