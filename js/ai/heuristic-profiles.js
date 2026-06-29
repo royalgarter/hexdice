@@ -142,47 +142,47 @@ const heuristicProfiles = {
     },
 
     // =========================================================================
-    // 4. BERSERKER - Suicidal Aggression
+    // 4. BERSERKER - Aggressive Trade Fighter
     // =========================================================================
     berserker: {
         name: "Berserker",
-        description: "Bloodthirsty: Rushes forward recklessly. Ignores terrain and safety to kill.",
+        description: "Trade Fighter: Rushes for kills and accepts death as a fair price — but only when the trade is worth it.",
         priorityOrder: ['kill', 'attack', 'capture', 'position', 'spell', 'dodge'],
         weights: {
-            captureBonus: 2000,    // Objective secondary to bloodlust
-            killBonus: 8000,       // Massive kill incentive for primary persona
-            attackBonus: 2000,     // High aggression even if not lethal
-            safeBonus: 0,          // Literally does not care about being safe
-            threatPenalty: 0,      // Does not fear enemy attacks or retaliation
-            protectedRangeBonus: 0, // No interest in defensive cover
-            friendlySixBonus: 0,   // No interest in support proximity
-            advanceBonus: 2500,    // Extreme rush incentive to close distance
+            captureBonus: 3000,    // Objective matters when no kill is available
+            killBonus: 8000,       // Kills above all else
+            attackBonus: 2000,     // Damage even if not lethal
+            safeBonus: 250,        // Small: slightly prefer not dying for nothing
+            threatPenalty: -200,   // Small fear — won't charge into 3 enemies with no kill in sight
+            protectedRangeBonus: 0,
+            friendlySixBonus: 50,  // Slight awareness of Oracle support
+            advanceBonus: 1800,    // Aggressive advance but not suicidal
 
-            guardPenalty: -5000,   // Hates standing still; guarding is for cowards
-            mergeOver6Penalty: -100, // Merging is fine if it keeps units alive to kill more
-            backAndForthPenalty: -100, // Repetition doesn't bother a berserker
+            guardPenalty: -1500,   // Hates guarding but won't die just to avoid it
+            mergeOver6Penalty: -200,
+            backAndForthPenalty: -300,
 
-            teamPositionWeight: 0.1, // Doesn't care about formation or synergy
-            pressureWeight: -0.8,    // Actively seeks out high-pressure (crowded) hexes
+            teamPositionWeight: 0.25, // Slight formation awareness — don't charge alone into 3
+            pressureWeight: 0.8,      // Seek enemies (positive: move toward them, not into death zones)
 
-            terrainWeights: {      // Blindly ignores terrain tactics in favor of speed
-                defenseBonusWeight: 0,
-                archerTowerBonus: 0,
-                archerMountainBonus: 0,
-                mountainMovePenalty: 0,
+            terrainWeights: {      // Mostly ignores terrain but not completely blind
+                defenseBonusWeight: 30,
+                archerTowerBonus: 50,
+                archerMountainBonus: 80,
+                mountainMovePenalty: -50,
                 losBlockBonus: 0
             },
 
             spells: {
-                SPELLCAST_SHIELD: 0.1,  // Shielding is too defensive
-                SPELLCAST_SWAP: 0.5,    // Swapping is only for positioning
-                SPELLCAST_SKIRMISH: 3.0, // Loves skirmish to deal extra damage/attacks
+                SPELLCAST_SHIELD: 0.3,   // Accept shielding a frontline before a charge
+                SPELLCAST_SWAP: 0.5,
+                SPELLCAST_SKIRMISH: 2.5, // Skirmish to enable a kill trade
             }
         },
-        riskTolerance: 1.0,        // Maximum recklessness
-        targetSelection: 'highestValue',
+        riskTolerance: 0.85,       // High risk, not maximum — trades yes, suicides no
+        targetSelection: 'lowArmor', // Pick fights it can WIN — smart trade, not valor die
         positioningStyle: 'rush',
-        unitSelection: 'highestValue' // Leads the charge with best units
+        unitSelection: 'highestValue'
     },
 
     // =========================================================================
