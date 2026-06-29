@@ -1283,7 +1283,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
         if (spellType === 'SPELLCAST_SHIELD') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            if (targetUnit) {
+            if (targetUnit && !(targetUnit.isGuarding >= 2)) { // Skip: already fully shielded
                 const targetHex = GAME.getHex(move.targetHexId, nextState);
                 const neighbors = GAME.getNeighbors(targetHex, nextState);
                 let isCurrentlyThreatened = false;
@@ -1373,6 +1373,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
 
             if (targetUnit && oracleUnit) {
+                // Swap loop guard: Oracle's lastHexId is set to targetHexId after swap.
+                // If Oracle tries to swap back to where it just came from, penalise heavily.
+                if (oracleUnit.lastHexId && move.targetHexId === oracleUnit.lastHexId) {
+                    analysis.score += (w.backAndForthPenalty || -1000);
+                }
+
                 const oracleHex = GAME.getHex(move.unitHexId, state);
                 const targetHex = GAME.getHex(move.targetHexId, state);
                 const oracleNeighbors = GAME.getNeighbors(oracleHex, state);
@@ -1492,7 +1498,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
         if (spellType === 'SPELLCAST_SKIRMISH') {
             const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            if (targetUnit) {
+            if (targetUnit && !targetUnit.skirmishBuff) { // Skip: already buffed — would waste the spell
                 const targetHex = GAME.getHex(move.targetHexId, state);
                 const neighbors = GAME.getNeighbors(targetHex, state);
 
