@@ -1878,7 +1878,10 @@ function alpineHexDiceTacticGame() { return {
 		const hoveredUnit = hex.unit;
 
 		if (!hoveredUnit) {
-			return this.validMovesSet?.has(hex.id) ? ('🥾'  || `${HEXDICE_CDN}/cursors/cursor_move.png`) : null;
+			return this.validMovesSet?.has(hex.id)
+				? (selectedUnit.value == 3 ? '🦅' : selectedUnit.value == 4 ? '🐎' : '👢'
+					|| `${HEXDICE_CDN}/cursors/cursor_move.png`)
+				: null;
 		}
 
 		if (hoveredUnit.playerId !== selectedUnit.playerId) {
@@ -5365,7 +5368,9 @@ function alpineHexDiceTacticGame() { return {
 			this.winnerMessage = `P${winnerPlayerIndex + 1} (${this.players[winnerPlayerIndex].color}) wins! ${message}`;
 		}
 
+		window?.AudioManager?.stopMusic();
 		window?.AudioManager?.playSfx('victory');
+
 		this.addLog(`Game Over: ${this.winnerMessage}`);
 	},
 
