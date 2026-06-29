@@ -2545,9 +2545,13 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		if (unit.value == 6) {
-			this.validTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
-			this.validTargetsSet = new Set(this.validTargets);
-			this.initiateAction('SPECIAL_ATTACK')
+			const spellTargets = this.calcValidSpecialAttackTargets(this.selectedUnitHexId);
+			if (spellTargets.length > 0) {
+				this.validTargets = spellTargets;
+				this.validTargetsSet = new Set(spellTargets);
+				this.initiateAction('SPECIAL_ATTACK');
+			}
+			// else: stay in MOVE mode so Oracle is never left with zero available actions
 		}
 	},
 	/**
@@ -4247,10 +4251,7 @@ function alpineHexDiceTacticGame() { return {
 				// let effectiveMaxDistance = maxDistance;
 
 				if (n.terrainType === 'MOUNTAIN') {
-					if (maxDistance > 1) {
-						costToEnter = 1.5;
-						// effectiveMaxDistance = maxDistance - 1;
-					}
+					costToEnter = 1.5;  // costs 2 effective movement; blocks distance-1 units (Oracle, Archer)
 				}
 
 				const newCost = currentCost + costToEnter;
