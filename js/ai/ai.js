@@ -164,9 +164,11 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 				validSpellTargets.forEach(targetHexId => {
 					const targetUnit = GAME.getUnitOnHex(targetHexId, state);
 					if (targetUnit && targetUnit.playerId === unit.playerId) {
-						moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
-						moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
-						moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
+						// Skip spells that would have no effect (prevent spam)
+						if (targetUnit.isGuarding < 2) moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
+						if (!targetUnit.skirmishBuff) moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
+						// SWAP: skip if would swap back to Oracle's own last position
+						if (targetHexId !== unit.lastHexId) moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
 					}
 				});
 			}

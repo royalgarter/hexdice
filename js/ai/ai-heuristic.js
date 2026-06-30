@@ -288,11 +288,17 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     // Score and categorize all moves
     const scoredMoves = [];
 
+    // Build a unitId→clonedDice map once for O(1) lookup.
+    // We MUST use cloned dice (state.players[].dice) not state.hexes[].unit (real GAME refs)
+    // because _saveHeuristicSnapshot saves/restores cloned dice only — real units bleed lastHexId across iterations.
+    const _clonedDiceById = new Map();
+    for (const p of state.players) for (const d of p.dice) _clonedDiceById.set(d.id, d);
+
     for (const move of allMoves) {
-        // Look up unit via hexes (authoritative) since unit.hexId can be stale
+        // move.unitHexId is authoritative (from aiGetUnitHexId). Find the matching cloned dice.
         const hexUnit = move.unitHexId != null ? (state || GAME).hexes[move.unitHexId]?.unit : null;
-        const unit = hexUnit && hexUnit.playerId === state.currentPlayerIndex ? hexUnit : currentPlayer.dice.find(d => d.hexId === move.unitHexId);
-        if (!unit) continue;
+        const unit = hexUnit ? _clonedDiceById.get(hexUnit.id) : currentPlayer.dice.find(d => d.hexId === move.unitHexId);
+        if (!unit || unit.playerId !== state.currentPlayerIndex) continue;
 
         const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
         scoredMoves.push({
@@ -1050,6 +1056,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id && !t.isTwoStep);
     analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill && !t.isTwoStep);
 
+    // Capture oscillation history before simulation mutates unit.lastHexId/prevHexId.
+    // applyMove with noClone calls this.move() which sets unit.lastHexId = fromHex.id,
+    // so checking unit.lastHexId after simulation would always equal move.unitHexId, not the prior real-game hex.
+    const preSimLastHexId = unit.lastHexId;
+    const preSimPrevHexId = unit.prevHexId;
+
     // Simulate the move using save/restore to avoid structuredClone on every candidate.
     // Autochess uses its own snapshot; tactical mode uses _saveHeuristicSnapshot.
     let snapshot = null;
@@ -1091,12 +1103,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
     }
 
-    // Penalty for back-and-forth movement (avoiding repetitive patterns)
-    if (unit.lastHexId && move.targetHexId === unit.lastHexId && move.actionType === 'MOVE') {
+    // Penalty for back-and-forth movement — use pre-sim values (unit.lastHexId was mutated by applyMove above).
+    if (preSimLastHexId && move.targetHexId === preSimLastHexId && move.actionType === 'MOVE') {
         analysis.score += (w.backAndForthPenalty || -300);
     }
     // 2-step cycle: A→B→C→A. prevHexId is 2 moves back. Half penalty (less certain it's a loop).
-    if (unit.prevHexId && move.targetHexId === unit.prevHexId && move.actionType === 'MOVE') {
+    if (preSimPrevHexId && move.targetHexId === preSimPrevHexId && move.actionType === 'MOVE') {
         analysis.score += (w.backAndForthPenalty || -300) * 0.5;
     }
 
