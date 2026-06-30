@@ -622,7 +622,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 const bestMoveScore = oracleUnit
                     ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => m.score), -Infinity)
                     : -Infinity;
-                const spellIsWorthIt = hasSacrifice || bestSpellScore > Math.max(bestMoveScore, 0);
+                // Minimum threshold: spell must beat the best available move OR score ≥ 150.
+                // 150 = floor for immediate kill-threat response (willBeKilled scores 150+).
+                // Prevents Oracle from casting low-value preventative spells when it has no moves.
+                const spellThreshold = Math.max(bestMoveScore, 150);
+                const spellIsWorthIt = hasSacrifice || bestSpellScore > spellThreshold;
                 if (viableSpells.length > 0 && spellIsWorthIt) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     const appliedMove = viableSpells[0].move;
@@ -1086,15 +1090,20 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         return analysis;
     }
 
-    // Point 4: Apply Role-based positioning bonus
-    const targetHexObj = GAME.getHex(move.targetHexId, state);
-    if (targetHexObj) {
-        analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
-    }
+    // Point 4: Apply Role-based positioning bonus.
+    // Spells don't move the caster — skip positional/pressure bonuses entirely.
+    // Spell value is tactical only (handled in the Oracle spell block below).
+    const isSpell = move.actionType.startsWith('SPELLCAST_');
+    if (!isSpell) {
+        const targetHexObj = GAME.getHex(move.targetHexId, state);
+        if (targetHexObj) {
+            analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
+        }
 
-    // Zone of Control (Pressure Map) bonus/penalty
-    const targetPressure = pressureMap[move.targetHexId] || 0;
-    analysis.score += targetPressure * (w.pressureWeight || 0.3);
+        // Zone of Control (Pressure Map) bonus/penalty
+        const targetPressure = pressureMap[move.targetHexId] || 0;
+        analysis.score += targetPressure * (w.pressureWeight || 0.3);
+    }
 
     // Team Position Score calculation
     if (typeof calculateTeamScore === 'function') {
@@ -1104,12 +1113,19 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     }
 
     // Penalty for back-and-forth movement — use pre-sim values (unit.lastHexId was mutated by applyMove above).
-    if (preSimLastHexId && move.targetHexId === preSimLastHexId && move.actionType === 'MOVE') {
-        analysis.score += (w.backAndForthPenalty || -300);
-    }
-    // 2-step cycle: A→B→C→A. prevHexId is 2 moves back. Half penalty (less certain it's a loop).
-    if (preSimPrevHexId && move.targetHexId === preSimPrevHexId && move.actionType === 'MOVE') {
-        analysis.score += (w.backAndForthPenalty || -300) * 0.5;
+    if (move.actionType === 'MOVE') {
+        const penalty = w.backAndForthPenalty || -300;
+        if (preSimLastHexId && move.targetHexId === preSimLastHexId) {
+            analysis.score += penalty;
+        }
+        // 2-step cycle A→B→C→A: double penalty when BOTH 1-step AND 2-step match (confirmed loop).
+        if (preSimPrevHexId && move.targetHexId === preSimPrevHexId) {
+            const isConfirmedLoop = preSimLastHexId && move.unitHexId === preSimLastHexId;
+            analysis.score += isConfirmedLoop ? penalty * 2 : penalty * 0.5;
+        }
+        // Small deterministic jitter to break symmetric-position ties.
+        // unit.id is a string; use unitHexId (integer) as seed instead.
+        analysis.score += ((move.unitHexId * 7 + move.targetHexId * 13) % 50) - 25;
     }
 
     // Autochess Aggression: Reward proximity to enemies

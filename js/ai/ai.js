@@ -166,7 +166,14 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 					if (targetUnit && targetUnit.playerId === unit.playerId) {
 						// Skip spells that would have no effect (prevent spam)
 						if (targetUnit.isGuarding < 2) moves.push({ actionType: 'SPELLCAST_SHIELD', unitHexId, targetHexId });
-						if (!targetUnit.skirmishBuff) moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
+						// SKIRMISH only useful if target has an adjacent enemy to strike
+						const targetHexObj = (state || GAME).hexes[targetHexId];
+						const hasAdjacentEnemy = targetHexObj && (state || GAME).hexes.some(h => {
+							if (!h.unit || h.unit.playerId === unit.playerId) return false;
+							const th = (state || GAME).hexes[targetHexId];
+							return th && GAME.axialDistance(th.q, th.r, h.q, h.r) === 1;
+						});
+						if (!targetUnit.skirmishBuff && hasAdjacentEnemy) moves.push({ actionType: 'SPELLCAST_SKIRMISH', unitHexId, targetHexId });
 						// SWAP: skip if would swap back to Oracle's own last position
 						if (targetHexId !== unit.lastHexId) moves.push({ actionType: 'SPELLCAST_SWAP', unitHexId, targetHexId });
 					}
