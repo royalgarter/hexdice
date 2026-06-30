@@ -52,9 +52,9 @@
  *   The save/restore snapshot (_saveHeuristicSnapshot/_restoreHeuristicSnapshot) correctly
  *   restores unit.hexId after each simulation. However, the GAME's Alpine.js reactive
  *   state means unit.hexId can diverge from state.hexes over multiple AI turns.
- *   FIX: generateAllPossibleMoves reads the actual hex position from state.hexes (the
- *   source of truth), not from unit.hexId. Scoring also uses hex-based lookup.
- *   NEVER rely on unit.hexId being authoritative in AI simulation code.
+ *   FIX: use aiGetUnitHexId(unit, state) everywhere a unit's position is needed.
+ *   For bulk lookups, call aiBuildHexIdMap(state) once and index into the result.
+ *   NEVER read unit.hexId directly in AI simulation code.
  *
  * ## Tuning Workflow
  *   1. Run -g=1 verbose for one matchup to understand what moves AI makes.
@@ -83,6 +83,21 @@ const performAI = performAIByWeight;
  * Shared Utilities
  */
 
+// Authoritative hex position for a unit in simulation.
+// unit.hexId diverges from state.hexes after applyMove with noClone — never trust it directly in AI code.
+function aiGetUnitHexId(unit, state) {
+	if (!state) return unit.hexId;
+	const hex = state.hexes.find(h => h.unit && h.unit.id === unit.id);
+	return hex ? hex.id : unit.hexId;
+}
+
+// Build id→hexId map for all units in state (O(n) one-time cost, reuse when checking many units).
+function aiBuildHexIdMap(state) {
+	const map = {};
+	state.hexes.forEach(h => { if (h.unit) map[h.unit.id] = h.id; });
+	return map;
+}
+
 function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 	const moves = [];
 	const currentPlayer = state.players[state.currentPlayerIndex];
@@ -107,9 +122,7 @@ function generateAllPossibleMoves(GAME, state, specificUnit = null) {
 	}
 
 	unitsThatCanAct.forEach(unit => {
-		// Use hexes as source of truth for unit position (unit.hexId can be stale after save/restore)
-		const actualHex = (state || GAME).hexes.find(h => h.unit && h.unit.id === unit.id);
-		const unitHexId = actualHex ? actualHex.id : unit.hexId;
+		const unitHexId = aiGetUnitHexId(unit, state || GAME);
 		const unitValue = unit.value;
 
 		// 1. Basic Moves
