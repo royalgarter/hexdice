@@ -1066,6 +1066,16 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const preSimLastHexId = unit.lastHexId;
     const preSimPrevHexId = unit.prevHexId;
 
+    // Capture combat context BEFORE simulation — with noClone, applyMove mutates state in place,
+    // so post-sim lookups on move.targetHexId see the attacker (or an empty hex), never the defender.
+    const preSimTargetUnit = move.targetHexId != null ? GAME.getUnitOnHex(move.targetHexId, state) : null;
+    const preSimDefenderArmor = preSimTargetUnit ? GAME.calcDefenderEffectiveArmor(move.targetHexId, state) : 0;
+    const preSimTargetIsGuarding = preSimTargetUnit ? preSimTargetUnit.isGuarding : 0;
+    const preSimTargetSkirmishBuff = preSimTargetUnit ? preSimTargetUnit.skirmishBuff : 0;
+    const preSimTeamScore = (typeof calculateTeamScore === 'function')
+        ? calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases, shouldExcludeBases)
+        : 0;
+
     // Simulate the move using save/restore to avoid structuredClone on every candidate.
     // Autochess uses its own snapshot; tactical mode uses _saveHeuristicSnapshot.
     let snapshot = null;
@@ -1107,9 +1117,9 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
 
     // Team Position Score calculation
     if (typeof calculateTeamScore === 'function') {
-        const currentTeamScore = calculateTeamScore(GAME, state, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
+        // preSimTeamScore captured before simulation — state and nextState are the same object under noClone
         const nextTeamScore = calculateTeamScore(GAME, nextState, state.currentPlayerIndex, opponentBases, shouldExcludeBases);
-        analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
+        analysis.score += (nextTeamScore - preSimTeamScore) * (w.teamPositionWeight || 0.5);
     }
 
     // Penalty for back-and-forth movement — use pre-sim values (unit.lastHexId was mutated by applyMove above).
@@ -1151,10 +1161,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.captureScore = w.captureBonus;
     }
 
-    // Check if this move kills or attacks an enemy
-    const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
+    // Check if this move kills or attacks an enemy (pre-sim values — defender is gone post-sim)
+    const targetUnit = preSimTargetUnit;
     if (targetUnit && targetUnit.playerId !== state.currentPlayerIndex) {
-        const defenderArmor = GAME.calcDefenderEffectiveArmor(move.targetHexId, state);
+        const defenderArmor = preSimDefenderArmor;
         let attackValue = unit.attack;
 
         if (move.actionType === 'RANGED_ATTACK') attackValue = 2;
@@ -1349,8 +1359,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         const spellType = move.actionType;
 
         if (spellType === 'SPELLCAST_SHIELD') {
-            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            if (targetUnit && !(targetUnit.isGuarding >= 2)) { // Skip: already fully shielded
+            const targetUnit = preSimTargetUnit;
+            if (targetUnit && !(preSimTargetIsGuarding >= 2)) { // Skip: already fully shielded (pre-cast value — sim already applied the shield)
                 const targetHex = GAME.getHex(move.targetHexId, nextState);
                 const neighbors = GAME.getNeighbors(targetHex, nextState);
                 let isCurrentlyThreatened = false;
@@ -1436,13 +1446,14 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
 
         if (spellType === 'SPELLCAST_SWAP') {
-            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
+            // Pre-sim identities — post-sim occupancy is swapped (targetHexId holds the Oracle itself)
+            const targetUnit = preSimTargetUnit;
+            const oracleUnit = unit;
 
             if (targetUnit && oracleUnit) {
-                // Swap loop guard: Oracle's lastHexId is set to targetHexId after swap.
+                // Swap loop guard: use pre-sim lastHexId — sim already overwrote oracleUnit.lastHexId.
                 // If Oracle tries to swap back to where it just came from, penalise heavily.
-                if (oracleUnit.lastHexId && move.targetHexId === oracleUnit.lastHexId) {
+                if (preSimLastHexId && move.targetHexId === preSimLastHexId) {
                     analysis.score += (w.backAndForthPenalty || -1000);
                 }
 
@@ -1564,8 +1575,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
 
         if (spellType === 'SPELLCAST_SKIRMISH') {
-            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            if (targetUnit && !targetUnit.skirmishBuff) { // Skip: already buffed — would waste the spell
+            const targetUnit = preSimTargetUnit;
+            if (targetUnit && !preSimTargetSkirmishBuff) { // Skip: already buffed pre-cast — would waste the spell
                 const targetHex = GAME.getHex(move.targetHexId, state);
                 const neighbors = GAME.getNeighbors(targetHex, state);
 
@@ -1599,14 +1610,11 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
 
         if (move.actionType === 'SPELLCAST_SACRIFICE') {
-            const targetUnit = GAME.getUnitOnHex(move.targetHexId, state);
-            const oracleUnit = GAME.getUnitOnHex(move.unitHexId, state);
-            
-            // Explicitly check calcValidSacrificeTargets as requested
-            const validSacrificeTargets = GAME.calcValidSacrificeTargets(move.unitHexId, state);
-            const isValidSacrifice = validSacrificeTargets.includes(move.targetHexId);
+            // Pre-sim identities; targets already validated at move generation (post-sim state is mutated)
+            const targetUnit = preSimTargetUnit;
+            const oracleUnit = unit;
 
-            if (targetUnit && oracleUnit && isValidSacrifice) {
+            if (targetUnit && oracleUnit) {
                 const player = state.players[state.currentPlayerIndex];
                 const activeUnits = player.dice.filter(d => d.isDeployed && !d.isDeath);
                 const hasReserve = player.dice.some(d => !d.isDeployed && !d.isDeath);
