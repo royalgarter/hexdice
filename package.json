@@ -7,6 +7,8 @@
     "gen": "npm run sprites:gen;npm run manifest:gen",
     "simulate": "deno run --allow-all js/simulate.ts",
     "simulate:v2": "deno run --allow-all js/simulate.ts --version=2 -g=1",
+    "simulate:autochess": "deno run --allow-all js/simulate.ts --autochess -g=1 -v",
+    "simulate:autochess:quick": "deno run --allow-all js/simulate.ts --autochess -g=1 -r=3",
     "tournament": "deno run --allow-all js/tournament.ts",
     "tournament:test": "deno run --allow-all js/tournament.ts -g=5 --profiles=baseline,berserker,turtle",
     "tournament:full": "deno run --allow-all js/tournament.ts -g=20",
