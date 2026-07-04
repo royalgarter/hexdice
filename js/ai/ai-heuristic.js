@@ -148,7 +148,7 @@ function calculatePressureMap(GAME, state, myPlayerIndex) {
         for (const unit of player.dice) {
             if (!unit.isDeployed || unit.isDeath) continue;
 
-            const unitHex = GAME.getHex(unit.hexId, state);
+            const unitHex = GAME.getHex(aiGetUnitHexId(unit, state), state);
             if (!unitHex) continue;
 
             // Pressure radius: Base radius + Range
@@ -288,11 +288,17 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
     // Score and categorize all moves
     const scoredMoves = [];
 
+    // Build a unitId→clonedDice map once for O(1) lookup.
+    // We MUST use cloned dice (state.players[].dice) not state.hexes[].unit (real GAME refs)
+    // because _saveHeuristicSnapshot saves/restores cloned dice only — real units bleed lastHexId across iterations.
+    const _clonedDiceById = new Map();
+    for (const p of state.players) for (const d of p.dice) _clonedDiceById.set(d.id, d);
+
     for (const move of allMoves) {
-        // Look up unit via hexes (authoritative) since unit.hexId can be stale
+        // move.unitHexId is authoritative (from aiGetUnitHexId). Find the matching cloned dice.
         const hexUnit = move.unitHexId != null ? (state || GAME).hexes[move.unitHexId]?.unit : null;
-        const unit = hexUnit && hexUnit.playerId === state.currentPlayerIndex ? hexUnit : currentPlayer.dice.find(d => d.hexId === move.unitHexId);
-        if (!unit) continue;
+        const unit = hexUnit ? _clonedDiceById.get(hexUnit.id) : currentPlayer.dice.find(d => d.hexId === move.unitHexId);
+        if (!unit || unit.playerId !== state.currentPlayerIndex) continue;
 
         const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
         scoredMoves.push({
@@ -451,7 +457,8 @@ function predictEnemyThreats(GAME, state, myPlayerIndex) {
     }
 
     for (const enemy of enemies) {
-        const enemyHex = GAME.getHex(enemy.hexId, state);
+        const enemyActualHexId = aiGetUnitHexId(enemy, state);
+        const enemyHex = GAME.getHex(enemyActualHexId, state);
         if (!enemyHex) continue;
 
         // 1-step melee threats (already adjacent)
@@ -465,7 +472,7 @@ function predictEnemyThreats(GAME, state, myPlayerIndex) {
 
         // 1-step ranged threats (Archer Dice 2)
         if (enemy.value === 2) {
-            const validRanged = GAME.calcValidRangedTargets(enemy.hexId, state);
+            const validRanged = GAME.calcValidRangedTargets(enemyActualHexId, state);
             for (const targetHexId of validRanged) {
                 const targetUnit = GAME.getUnitOnHex(targetHexId, state);
                 if (targetUnit && targetUnit.playerId === myPlayerIndex) {
@@ -478,7 +485,7 @@ function predictEnemyThreats(GAME, state, myPlayerIndex) {
         // Only for melee units (not Archer — their ranged threat is already covered).
         // Skip Dice 6 (Oracle has no attack). Skip already-adjacent enemies (covered above).
         if (enemy.value !== 6) {
-            const reachableHexes = GAME.calcValidMoves(enemy.hexId, false, state);
+            const reachableHexes = GAME.calcValidMoves(enemyActualHexId, false, state);
             for (const reachHexId of reachableHexes) {
                 const reachHex = GAME.getHex(reachHexId, state);
                 if (!reachHex) continue;
@@ -615,7 +622,11 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 const bestMoveScore = oracleUnit
                     ? Math.max(...scoredMoves.filter(m => !m.move.actionType.includes('SPELLCAST_') && m.unit.id === oracleUnit.id).map(m => m.score), -Infinity)
                     : -Infinity;
-                const spellIsWorthIt = hasSacrifice || bestSpellScore > Math.max(bestMoveScore, 0);
+                // Minimum threshold: spell must beat the best available move OR score ≥ 150.
+                // 150 = floor for immediate kill-threat response (willBeKilled scores 150+).
+                // Prevents Oracle from casting low-value preventative spells when it has no moves.
+                const spellThreshold = Math.max(bestMoveScore, 150);
+                const spellIsWorthIt = hasSacrifice || bestSpellScore > spellThreshold;
                 if (viableSpells.length > 0 && spellIsWorthIt) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
                     const appliedMove = viableSpells[0].move;
@@ -717,8 +728,8 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                     // Skip base capture scoring in annihilation mode
                     if (opponentBases.length) {
-                        // Check if unit is already on a captured base
-                        const unitCurrentHexId = m.unit.hexId;
+                        // Check if unit is already on a captured base (use move.unitHexId — authoritative source)
+                        const unitCurrentHexId = m.move.unitHexId;
                         const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
                         const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === m.move.targetHexId);
 
@@ -822,7 +833,7 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
             const myAllies = state.players[unit.playerId].dice.filter(d => d.isDeployed && !d.isDeath && d.id !== unit.id);
             let minAllyDist = Infinity;
             for (const ally of myAllies) {
-                const allyHex = GAME.getHex(ally.hexId, state);
+                const allyHex = GAME.getHex(aiGetUnitHexId(ally, state), state);
                 if (!allyHex) continue;
                 const dist = GAME.axialDistance(targetHex.q, targetHex.r, allyHex.q, allyHex.r);
                 if (dist < minAllyDist) minAllyDist = dist;
@@ -854,7 +865,7 @@ function evaluateState(GAME, state, playerIndex, profile, opponentIndices, oppon
     // Add unit values and roles
     units.forEach(unit => {
         score += unit.value * 100;
-        const hex = GAME.getHex(unit.hexId, state);
+        const hex = GAME.getHex(aiGetUnitHexId(unit, state), state);
         if (hex) score += calculateRoleBonus(unit, hex, GAME, state, w);
     });
 
@@ -1049,6 +1060,12 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     analysis.isCurrentlyThreatened = predictedThreats.some(t => t.target.id === unit.id && !t.isTwoStep);
     analysis.canBeKilledCurrently = predictedThreats.some(t => t.target.id === unit.id && t.canKill && !t.isTwoStep);
 
+    // Capture oscillation history before simulation mutates unit.lastHexId/prevHexId.
+    // applyMove with noClone calls this.move() which sets unit.lastHexId = fromHex.id,
+    // so checking unit.lastHexId after simulation would always equal move.unitHexId, not the prior real-game hex.
+    const preSimLastHexId = unit.lastHexId;
+    const preSimPrevHexId = unit.prevHexId;
+
     // Simulate the move using save/restore to avoid structuredClone on every candidate.
     // Autochess uses its own snapshot; tactical mode uses _saveHeuristicSnapshot.
     let snapshot = null;
@@ -1061,29 +1078,32 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     const nextState = applyMove(GAME, move, state, snapshot ? { noClone: true } : undefined);
     if (!nextState) return analysis;
 
-    // Get unit's position after move.
-    // Use hexes as source of truth — players[].dice.hexId can be stale after applyMove with noClone.
-    const _hexIdByUnitId = {};
-    nextState.hexes.forEach(h => { if (h.unit) _hexIdByUnitId[h.unit.id] = h.id; });
+    // Get unit's position after move — use hex map as source of truth (unit.hexId stale after noClone applyMove).
+    const _hexIdByUnitId = aiBuildHexIdMap(nextState);
     const _aiUnitRaw = nextState.players[state.currentPlayerIndex].dice.find(d => d.id === unit.id);
-    const aiUnitNext = _aiUnitRaw && _hexIdByUnitId[unit.id] && _hexIdByUnitId[unit.id] !== _aiUnitRaw.hexId
-        ? { ..._aiUnitRaw, hexId: _hexIdByUnitId[unit.id] }
-        : _aiUnitRaw;
+    const aiUnitNext = _aiUnitRaw
+        ? { ..._aiUnitRaw, hexId: _hexIdByUnitId[unit.id] ?? _aiUnitRaw.hexId }
+        : null;
     if (!aiUnitNext || aiUnitNext.isDeath) {
         analysis.isSafe = false;
         analysis.canBeKilled = true;
         return analysis;
     }
 
-    // Point 4: Apply Role-based positioning bonus
-    const targetHexObj = GAME.getHex(move.targetHexId, state);
-    if (targetHexObj) {
-        analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
-    }
+    // Point 4: Apply Role-based positioning bonus.
+    // Spells don't move the caster — skip positional/pressure bonuses entirely.
+    // Spell value is tactical only (handled in the Oracle spell block below).
+    const isSpell = move.actionType.startsWith('SPELLCAST_');
+    const targetHexObj = isSpell ? null : GAME.getHex(move.targetHexId, state);
+    if (!isSpell) {
+        if (targetHexObj) {
+            analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
+        }
 
-    // Zone of Control (Pressure Map) bonus/penalty
-    const targetPressure = pressureMap[move.targetHexId] || 0;
-    analysis.score += targetPressure * (w.pressureWeight || 0.3);
+        // Zone of Control (Pressure Map) bonus/penalty
+        const targetPressure = pressureMap[move.targetHexId] || 0;
+        analysis.score += targetPressure * (w.pressureWeight || 0.3);
+    }
 
     // Team Position Score calculation
     if (typeof calculateTeamScore === 'function') {
@@ -1092,13 +1112,20 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         analysis.score += (nextTeamScore - currentTeamScore) * (w.teamPositionWeight || 0.5);
     }
 
-    // Penalty for back-and-forth movement (avoiding repetitive patterns)
-    if (unit.lastHexId && move.targetHexId === unit.lastHexId && move.actionType === 'MOVE') {
-        analysis.score += (w.backAndForthPenalty || -300);
-    }
-    // 2-step cycle: A→B→C→A. prevHexId is 2 moves back. Half penalty (less certain it's a loop).
-    if (unit.prevHexId && move.targetHexId === unit.prevHexId && move.actionType === 'MOVE') {
-        analysis.score += (w.backAndForthPenalty || -300) * 0.5;
+    // Penalty for back-and-forth movement — use pre-sim values (unit.lastHexId was mutated by applyMove above).
+    if (move.actionType === 'MOVE') {
+        const penalty = w.backAndForthPenalty || -300;
+        if (preSimLastHexId && move.targetHexId === preSimLastHexId) {
+            analysis.score += penalty;
+        }
+        // 2-step cycle A→B→C→A: double penalty when BOTH 1-step AND 2-step match (confirmed loop).
+        if (preSimPrevHexId && move.targetHexId === preSimPrevHexId) {
+            const isConfirmedLoop = preSimLastHexId && move.unitHexId === preSimLastHexId;
+            analysis.score += isConfirmedLoop ? penalty * 2 : penalty * 0.5;
+        }
+        // Small deterministic jitter to break symmetric-position ties.
+        // unit.id is a string; use unitHexId (integer) as seed instead.
+        analysis.score += ((move.unitHexId * 7 + move.targetHexId * 13) % 50) - 25;
     }
 
     // Autochess Aggression: Reward proximity to enemies
@@ -1116,8 +1143,6 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         }
     }
 
-    // Check if unit is already on an enemy base (base already captured) - skip in annihilation mode
-    const unitCurrentHexId = unit.hexId;
     const isTargetOnEnemyBase = shouldExcludeBases ? false : opponentBases.some(b => b.baseHexId === move.targetHexId);
 
     // Check for capture (moving to any enemy base) - skip in annihilation mode
@@ -1174,13 +1199,10 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     let canBeKilledImmediate = false; // enemy can act NOW this round
     let canBeKilledNextTurn = false;  // enemy already moved, threat is next round
 
-    // Use hex-based positions for opponents too (same stale-hexId fix).
-    const _oppHexIdByUnitId = _hexIdByUnitId; // already built above
-
     for (const pIdx of opponentIndices) {
         const allOpponents = nextState.players[pIdx].dice.filter(d => d.isDeployed && !d.isDeath);
         for (const opp of allOpponents) {
-            const oppHexId = _oppHexIdByUnitId[opp.id] ?? opp.hexId;
+            const oppHexId = _hexIdByUnitId[opp.id] ?? opp.hexId;
             const oppForCheck = oppHexId !== opp.hexId ? { ...opp, hexId: oppHexId } : opp;
             if (GAME.canUnitAttackTarget(oppForCheck, aiUnitNext, nextState)) {
                 analysis.isThreatened = true;
@@ -1655,7 +1677,7 @@ function findNearestEnemyUnit(GAME, state, myPlayerIndex, currentHex) {
         for (const unit of player.dice) {
             if (!unit.isDeployed || unit.isDeath) continue;
 
-            const enemyHex = GAME.getHex(unit.hexId, state);
+            const enemyHex = GAME.getHex(aiGetUnitHexId(unit, state), state);
             if (!enemyHex) continue;
 
             const dist = GAME.axialDistance(currentHex.q, currentHex.r, enemyHex.q, enemyHex.r);
@@ -1677,7 +1699,7 @@ function calculateTeamScore(GAME, state, playerIndex, opponentBases=[], shouldEx
     let score = 0;
     for (const unit of player.dice) {
         if (!unit.isDeployed || unit.isDeath) continue;
-        const hex = GAME.getHex(unit.hexId, state);
+        const hex = GAME.getHex(aiGetUnitHexId(unit, state), state);
         if (!hex) continue;
 
         // 1. Advancement: Bonus for being closer to the nearest objective

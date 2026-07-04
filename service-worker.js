@@ -55,10 +55,30 @@ self.addEventListener('install', (event) => {
 	);
 });
 
+function cacheFallback(event) {
+	return caches.match(event.request).then((cachedResponse) => {
+		if (cachedResponse) return cachedResponse;
+
+		// If both cache and network fail, return offline fallback for documents
+		if (event.request.destination === 'document') {
+			return caches.match('/');
+		}
+		return new Response('Offline - resource not cached', {
+			headers: { 'Content-Type': 'text/plain' }
+		});
+	});
+}
+
 function fetchEvent(event) {
+	// Network-first: always try live server, cache is fallback only
 	return fetch(event.request).then(
 		(response) => {
-			// Check if we received a valid response
+			// Server error (5xx) — prefer cached copy if available
+			if (response && response.status >= 500) {
+				return caches.match(event.request).then((cachedResponse) => cachedResponse || response);
+			}
+
+			// Only cache valid same-origin responses
 			if (!response || response.status !== 200 || response.type !== 'basic') {
 				return response;
 			}
@@ -75,17 +95,7 @@ function fetchEvent(event) {
 		}
 	).catch(() => {
 		// Network failed, try cache
-		return caches.match(event.request).then((cachedResponse) => {
-			if (cachedResponse) return cachedResponse;
-			
-			// If both cache and network fail, return offline fallback for documents
-			if (event.request.destination === 'document') {
-				return caches.match('/');
-			}
-			return new Response('Offline - resource not cached', {
-				headers: { 'Content-Type': 'text/plain' }
-			});
-		});
+		return cacheFallback(event);
 	});
 }
 

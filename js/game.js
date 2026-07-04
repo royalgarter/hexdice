@@ -2636,6 +2636,9 @@ function alpineHexDiceTacticGame() { return {
 				// Oracle: Prompt for spell selection when SPECIAL_ATTACK action is initiated
 				const unit = this.getUnitOnHex(this.selectedUnitHexId);
 				if (unit && unit.value === 6) {
+					// Oracle can still move instead of casting — keep move highlights alive
+					this.validMoves = this.calcValidMoves(this.selectedUnitHexId);
+					this.validMovesSet = new Set(this.validMoves);
 					this.initiateOracleSpellSelection();
 				}
 			}
