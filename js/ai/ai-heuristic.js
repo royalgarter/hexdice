@@ -1094,8 +1094,8 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     // Spells don't move the caster — skip positional/pressure bonuses entirely.
     // Spell value is tactical only (handled in the Oracle spell block below).
     const isSpell = move.actionType.startsWith('SPELLCAST_');
+    const targetHexObj = isSpell ? null : GAME.getHex(move.targetHexId, state);
     if (!isSpell) {
-        const targetHexObj = GAME.getHex(move.targetHexId, state);
         if (targetHexObj) {
             analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
         }
