@@ -70,8 +70,14 @@ function cacheFallback(event) {
 }
 
 function fetchEvent(event) {
+	// JS/CSS: force server revalidation so code updates land immediately.
+	// Other assets (sprites, sounds) keep default HTTP caching.
+	const dest = event.request.destination;
+	const forceRevalidate = dest === 'script' || dest === 'style' || /\.(js|css)(\?|$)/.test(event.request.url);
+	const request = forceRevalidate ? new Request(event.request, { cache: 'no-cache' }) : event.request;
+
 	// Network-first: always try live server, cache is fallback only
-	return fetch(event.request).then(
+	return fetch(request).then(
 		(response) => {
 			// Server error (5xx) — prefer cached copy if available
 			if (response && response.status >= 500) {
