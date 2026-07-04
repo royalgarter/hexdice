@@ -135,11 +135,15 @@ function alpineHexDiceTacticGame() { return {
 		return Date.now().toString(36).substr(2) + Math.random().toString(36).substr(2, 3);
 	},
 	syncUrlWithGameId() {
-		if (this.gameId) {
-			const url = new URL(window.location.href);
-			url.searchParams.set('id', this.gameId);
-			window.history.replaceState({}, '', url);
-		}
+		if (!this.gameId) return;
+
+		localStorage.setItem('hexdice_gameid', this.gameId);
+
+		return;
+
+		const url = new URL(window.location.href);
+		url.searchParams.set('id', this.gameId);
+		window.history.replaceState({}, '', url);
 	},
 
 	recordMetadata() {
