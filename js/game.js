@@ -4262,7 +4262,10 @@ function alpineHexDiceTacticGame() { return {
 				// let effectiveMaxDistance = maxDistance;
 
 				if (n.terrainType === 'MOUNTAIN') {
-					costToEnter = 1.5;  // costs 2 effective movement; blocks distance-1 units (Oracle, Archer)
+					// RULES: MOUNTAIN reduces distance by 1 except Tanker; distance-1 units
+					// (Archer, Tanker, Oracle) enter at normal cost — exiting is never blocked,
+					// so this cannot trap them (the old "stuck on mountain" bug was spell-mode wipe).
+					if (unit.value !== 5 && maxDistance > 1) costToEnter = 1.5;
 				}
 
 				const newCost = currentCost + costToEnter;

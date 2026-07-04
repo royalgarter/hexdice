@@ -128,7 +128,14 @@ function stubBrowserAPIs(playerCount: number = 2) {
     if (typeof (globalThis as any).window === 'undefined') {
         (globalThis as any).window = globalThis;
     }
-    (globalThis as any).window.location = locationStub;
+    // Deno workers expose a getter-only globalThis.location — assignment throws there.
+    try {
+        (globalThis as any).window.location = locationStub;
+    } catch (_) {
+        try {
+            Object.defineProperty(globalThis, 'location', { value: locationStub, configurable: true });
+        } catch (_) { /* engine code receives location as a function parameter anyway */ }
+    }
     (globalThis as any).window.history = { replaceState: () => null, pushState: () => null };
     if (typeof (globalThis as any).Alpine === 'undefined') {
         (globalThis as any).Alpine = { initTree: () => null, store: () => null, data: () => null, magic: () => null, $data: () => ({}) };

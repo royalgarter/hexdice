@@ -10,9 +10,12 @@
  * Options:
  *   --games, -g     Number of games to simulate (default: 1)
  *   --type, -t      AI types for P1,P2 (default: random,heuristic)
+ *                   In autochess mode: heuristic profile names per player (baseline, berserker, ...)
  *   --output, -o    Output directory for logs (default: simulations)
  *   --depth, -d     Minimax search depth (default: 3)
  *   --verbose, -v   Verbose output (default: false)
+ *   --autochess     Run games in Autochess (RotDK) mode
+ *   --rounds, -r    Autochess rounds per game (default: AUTOCHESS_CONFIG.MAX_ROUND)
  */
 
 import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
@@ -29,8 +32,8 @@ const AI_TYPES: Record<string, string> = {
 
 // CLI Arguments
 const args = parse(Deno.args, {
-    string: ["games", "type", "output", "depth", "players", "version"],
-    boolean: ["verbose", "help"],
+    string: ["games", "type", "output", "depth", "players", "version", "rounds"],
+    boolean: ["verbose", "help", "autochess"],
     alias: {
         g: "games",
         t: "type",
@@ -40,6 +43,8 @@ const args = parse(Deno.args, {
         h: "help",
         pl: "players",
         ver: "version",
+        a: "autochess",
+        r: "rounds",
     },
     default: {
         games: 1,
@@ -49,6 +54,7 @@ const args = parse(Deno.args, {
         verbose: false,
         players: 2,
         version: 1,
+        autochess: false,
     },
 });
 
@@ -67,6 +73,8 @@ Options:
   --output, -o <dir>   Output directory for logs (default: simulations)
   --depth, -d <n>      Minimax search depth (default: 3)
   --verbose, -v        Show detailed move-by-move output
+  --autochess, -a      Run games in Autochess (RotDK) mode
+  --rounds, -r <n>     Autochess rounds per game (default: AUTOCHESS_CONFIG.MAX_ROUND)
   --help, -h           Show this help message
 
 Examples:
@@ -74,6 +82,8 @@ Examples:
   deno run --allow-all simulate.ts -pl=3 -t=random,heuristic,priority
   deno run --allow-all simulate.ts --games=5 --type=minimax,priority --verbose
   deno run --allow-all simulate.ts -g=1 -t=heuristic,heuristic -o=my_logs
+  deno run --allow-all simulate.ts --autochess -g=3 -t=baseline,berserker
+  deno run --allow-all simulate.ts -a -g=1 -r=5 -v
 `);
     Deno.exit(0);
 }
@@ -163,21 +173,59 @@ interface MoveRecord {
 }
 
 // Stub browser APIs for headless execution
-function stubBrowserAPIs(playerCount: number = 2, version: number = 1) {
+function stubBrowserAPIs(playerCount: number = 2, version: number = 1, autochess: boolean = false) {
+	const search = `?mode=headless&players=${playerCount}&version=${version}${autochess ? '&autochess=true' : ''}`;
 	// Stub location
 	const locationStub = {
-		search: `?mode=headless&players=${playerCount}&version=${version}`,
-		href: `https://hexdice.local/?mode=headless&players=${playerCount}&version=${version}`,
-		toString: () => `https://hexdice.local/?mode=headless&players=${playerCount}&version=${version}`
+		search,
+		href: `https://hexdice.local/${search}`,
+		toString: () => `https://hexdice.local/${search}`,
+		assign: () => null,
+		replace: () => null,
+		reload: () => null,
+		host: 'hexdice.local',
+		hostname: 'hexdice.local',
+		origin: 'https://hexdice.local',
+		pathname: '/',
+		protocol: 'https:',
 	};
-	
+
 	// Stub document
 	const documentStub = {
 		getElementById: () => null,
+		querySelector: () => ({ content: '', innerHTML: '' }),
+		querySelectorAll: () => [],
+		addEventListener: () => null,
+		removeEventListener: () => null,
+		createElement: () => ({ style: {}, appendChild: () => null }),
+		body: { appendChild: () => null },
+		head: { appendChild: () => null },
 	};
-	
+
+	// Stub localStorage
+	(globalThis as any).localStorage = {
+		getItem: () => null,
+		setItem: () => null,
+		removeItem: () => null,
+		clear: () => null,
+	};
+
+	if (typeof (globalThis as any).window === 'undefined') {
+		(globalThis as any).window = globalThis;
+	}
+	(globalThis as any).window.location = locationStub;
+	(globalThis as any).window.history = { replaceState: () => null, pushState: () => null };
+	(globalThis as any).alert = () => null;
+	if (typeof (globalThis as any).requestAnimationFrame === 'undefined') {
+		(globalThis as any).requestAnimationFrame = (fn: any) => setTimeout(fn, 0);
+		(globalThis as any).cancelAnimationFrame = (id: any) => clearTimeout(id);
+	}
+	if (typeof (globalThis as any).Alpine === 'undefined') {
+		(globalThis as any).Alpine = { initTree: () => null, store: () => null, data: () => null, magic: () => null, $data: () => ({}) };
+	}
+
 	// Stub $nextTick (Vue.js) - use synchronous execution for simulation
-	(globalThis as any).$nextTick = (fn: any) => { 
+	(globalThis as any).$nextTick = (fn: any) => {
 		try { fn(); } catch(e) { /* ignore */ }
 	};
 
@@ -209,50 +257,49 @@ function createSimulationGame(logger: SimulationLogger, aiType: string, engine: 
 }
 
 // Load all game and AI code
-async function loadGameEngine(playerCount: number = 2, version: number = 1): Promise<any> {
-    const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount, version);
+async function loadGameEngine(playerCount: number = 2, version: number = 1, autochess: boolean = false): Promise<any> {
+    const { location: locationStub, document: documentStub } = stubBrowserAPIs(playerCount, version, autochess);
 
-    let gameCode = await Deno.readTextFile("./js/game.js");
+    const constantsCode = await Deno.readTextFile("./js/constants.js");
+    const autochessCode = await Deno.readTextFile("./js/autochess.js");
+    const gameCode = await Deno.readTextFile("./js/game.js");
     const aiCoreCode = await Deno.readTextFile("./js/ai/ai.js");
     const aiHeuristicCode = await Deno.readTextFile("./js/ai/ai-heuristic.js");
     const aiHeuristicProfiles = await Deno.readTextFile("./js/ai/heuristic-profiles.js");
     const campaignManagerCode = await Deno.readTextFile("./js/campaign/campaign-manager.js");
 
-    // Replace const random with var for override capability
-    gameCode = gameCode.replace(
-        'const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}',
-        'var random = () => Math.random()'
-    );
-
-    // Combine all code with seeded random
+    // Combine all code (game.js has its own seeded random + setSeed)
     const fullCode = `
-        // Seeded random for reproducibility
-        const seedValue = ${Date.now()};
-
-        ${campaignManagerCode}
+        ${constantsCode}
+        ${autochessCode}
+        var StoryEngine = { init: () => null, getDialogue: () => null, getRegion: () => null, getArc: () => null, getBoss: () => null, getRewardHint: () => null, getNpcDialogue: () => null };
         ${gameCode}
-        
-        // Override random to be deterministic
-        if (typeof setSeed === 'function') {
-            setSeed(seedValue);
-        }
-
-        ${aiCoreCode}
+        ${campaignManagerCode}
         ${aiHeuristicProfiles}
+        ${aiCoreCode}
         ${aiHeuristicCode}
+
+        // Seed for reproducibility
+        if (typeof setSeed === 'function') {
+            setSeed(${Date.now()});
+        }
 
         // Return exports object
         return {
             createGame: alpineHexDiceTacticGame,
+            setRandomSeed: typeof setSeed === 'function' ? setSeed : null,
+            random: typeof random === 'function' ? () => random() : () => Math.random(),
+            AUTOCHESS_CONFIG: typeof AUTOCHESS_CONFIG !== 'undefined' ? AUTOCHESS_CONFIG : null,
+            heuristicProfiles: typeof heuristicProfiles !== 'undefined' ? heuristicProfiles : {},
             performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
             generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
             applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
             boardEvaluation: typeof boardEvaluation !== 'undefined' ? boardEvaluation : function() { return 0; },
         };
-    `;    
+    `;
 	// Evaluate and get exports using Function constructor
 	const createModule = new Function('location', 'document', fullCode);
-	
+
 	return createModule(locationStub, documentStub);
 }
 
@@ -555,6 +602,151 @@ async function runGame(
     };
 }
 
+// Run a single Autochess game (round-based auto-battler, all players AI-driven)
+async function runAutochessGame(
+    gameNumber: number,
+    profileNames: string[],
+    rounds: number,
+    verbose: boolean,
+    engine: any
+): Promise<GameReplay> {
+    const logger = new SimulationLogger(verbose);
+
+    const game = engine.createGame();
+    game.playerCount = profileNames.length;
+    (game as any).$nextTick = (fn: any) => { try { fn(); } catch(e) { /* ignore */ } };
+
+    // Capture engine logs
+    const originalAddLog = game.addLog.bind(game);
+    game.addLog = function(msg: string, ...rest: any[]) {
+        if (typeof msg === 'string') logger.log(msg, msg.includes('💀') || msg.includes('⚔️') ? 'combat' : 'game');
+        try { originalAddLog(msg, ...rest); } catch(e) { /* ignore */ }
+    };
+
+    // location stub contains autochess=true → game.init() calls initAutochess()
+    await game.init();
+
+    const AC = game.Autochess;
+    const cfg = engine.AUTOCHESS_CONFIG || { ROUND_TIME_LIMIT: 60, WIN_REROLLS: 2, LOSS_REROLLS: 1, MAX_ROUND: 10 };
+    const knownProfiles = Object.keys(engine.heuristicProfiles || {});
+
+    game.players.forEach((p: any, idx: number) => {
+        p.isAI = true;
+        p.wins = p.wins || 0;
+        // Only set a fixed team profile if a real profile name was given;
+        // otherwise Autochess falls back to per-class profiles (baseline/ranger/assassin/...)
+        if (knownProfiles.includes(profileNames[idx])) p.profileName = profileNames[idx];
+    });
+
+    const moves: MoveRecord[] = [];
+    const maxTicks = (cfg.ROUND_TIME_LIMIT || 60) * 10;
+
+    // Synchronous combat resolution — replaces Autochess.runSimulation's
+    // setInterval/DOM-renderer loop, which is real-time and browser-bound.
+    const runCombatRound = (): number => {
+        AC.state.phase = 'COMBAT';
+        AC.state.roundTimer = 0;
+        AC.prepareCombat(game);
+
+        let winner: any = null;
+        let resolvedByHP = true;
+        for (let t = 0; t < maxTicks; t++) {
+            AC.simulateStep(game);
+            const alive = game.players.filter((p: any) => p.dice.some((u: any) => u.hexId && u.isDeployed && !u.isDeath));
+            if (alive.length <= 1) {
+                winner = alive[0] || null;
+                resolvedByHP = false;
+                break;
+            }
+        }
+
+        if (resolvedByHP) {
+            // Timeout: resolve by total remaining HP (mirrors Autochess.resolveTimeout)
+            const hps = game.players.map((p: any) =>
+                p.dice.filter((u: any) => u.hexId && u.isDeployed && !u.isDeath).reduce((s: number, u: any) => s + u.hp, 0));
+            const maxHP = Math.max(...hps);
+            const leaders = hps.map((h: number, i: number) => i).filter((i: number) => hps[i] === maxHP);
+            winner = (maxHP > 0 && leaders.length === 1) ? game.players[leaders[0]] : null;
+            logger.log(`TIME UP! Resolving by total HP: [${hps.join(', ')}]`, 'game');
+        }
+
+        game.players.forEach((p: any) => {
+            const isWinner = winner && p.id === winner.id;
+            AC.state.rerolls[p.id] = isWinner ? cfg.WIN_REROLLS : cfg.LOSS_REROLLS;
+            if (isWinner) p.wins++;
+        });
+        AC.state.lastWinnerId = winner ? winner.id : null;
+        AC.state.phase = 'RECAP';
+        return winner ? game.players.indexOf(winner) : -1;
+    };
+
+    // Auto-play the preparation phase for every player: recruit, merge duplicates, redeploy.
+    const autoPreparation = () => {
+        game.players.forEach((p: any, idx: number) => {
+            while ((AC.state.inventories[p.id] || []).length > 0) {
+                AC.recruitUnit(game, idx, 0);
+            }
+            let merged = true;
+            while (merged) {
+                merged = false;
+                for (const u of p.dice) {
+                    if ((u.veteranLevel || 0) >= 3) continue;
+                    const partner = p.dice.find((o: any) => o !== u && o.value === u.value && (o.veteranLevel || 0) === (u.veteranLevel || 0));
+                    if (partner) {
+                        AC.mergeUnits(game, idx, u.id, partner.id);
+                        // Pick a random perk for the newly unlocked tier
+                        const tier = `tier${u.veteranLevel}`;
+                        if (u.perks && !u.perks[tier]) u.perks[tier] = engine.random() < 0.5 ? 'A' : 'B';
+                        merged = true;
+                        break;
+                    }
+                }
+            }
+            AC.deployPlayerUnits(game, idx);
+        });
+    };
+
+    const totalRounds = Math.min(rounds, cfg.MAX_ROUND || rounds);
+    for (let r = 1; r <= totalRounds; r++) {
+        const winnerIdx = runCombatRound();
+        const scores = game.players.map((p: any, i: number) => `P${i + 1}:${p.wins}`).join(' ');
+        logger.log(`Round ${r}/${totalRounds}: ${winnerIdx >= 0 ? `P${winnerIdx + 1} (${profileNames[winnerIdx]}) wins` : 'Draw'} | Score: ${scores}`, 'result');
+
+        moves.push({
+            turn: r,
+            player: winnerIdx,
+            aiType: winnerIdx >= 0 ? profileNames[winnerIdx] : 'draw',
+            actionType: 'AUTOCHESS_ROUND',
+            logMessage: `Round ${r}: ${winnerIdx >= 0 ? `P${winnerIdx + 1} wins` : 'Draw'} (${scores})`,
+            stateHash: calculateStateHash(game),
+        });
+
+        if (r < totalRounds) {
+            AC.nextRound(game); // round++, roulette terrain, recruits, redeploy, phase=PREPARATION
+            autoPreparation();
+        }
+    }
+
+    // Final winner: most round wins (tie → draw)
+    const winCounts = game.players.map((p: any) => p.wins || 0);
+    const best = Math.max(...winCounts);
+    const leaders = winCounts.map((_: number, i: number) => i).filter((i: number) => winCounts[i] === best);
+    const winner = leaders.length === 1 ? leaders[0] : -1;
+    const winnerReason = winner >= 0
+        ? `P${winner + 1} (${profileNames[winner]}) wins the autochess tournament ${winCounts.join('-')}!`
+        : `Draw (${winCounts.join('-')})`;
+
+    logger.log(`Game ${gameNumber} ended: ${winnerReason}`, 'result');
+
+    return {
+        gameNumber,
+        winner,
+        winnerReason,
+        totalTurns: totalRounds,
+        moves,
+    };
+}
+
 // Main simulation runner
 async function runSimulation() {
     const numGames = parseInt(args.games) || 1;
@@ -563,24 +755,34 @@ async function runSimulation() {
     const minimaxDepth = parseInt(args.depth) || 3;
     const verbose = !!args.verbose;
     const playerCount = parseInt(args.players) || 2;
-    
-    // Parse AI types
-    const types = typeArg.split(",").map((t: string) => t.trim().toLowerCase());
-    const aiTypes: string[] = [];
-    for (let i = 0; i < playerCount; i++) {
-        const t = types[i] || types[types.length - 1] || "random";
-        aiTypes.push(AI_TYPES[t] ? t : "random");
-    }
-    
-    console.log("╔════════════════════════════════════════╗");
-    console.log("║     Hex Dice CLI Simulation            ║");
-    console.log("╚════════════════════════════════════════╝");
-    console.log(`Games: ${numGames} | Players: ${playerCount} | AI: ${aiTypes.join(", ")}`);
-    console.log("");
-    
+    const autochess = !!args.autochess;
+
     // Load game engine
     console.log("Loading game engine...");
-    const engine = await loadGameEngine(playerCount, parseInt(args.version));
+    const engine = await loadGameEngine(playerCount, parseInt(args.version), autochess);
+
+    // Parse AI types (autochess mode: heuristic profile names per player)
+    const types = typeArg.split(",").map((t: string) => t.trim().toLowerCase());
+    const aiTypes: string[] = [];
+    const knownProfiles = Object.keys(engine.heuristicProfiles || {});
+    for (let i = 0; i < playerCount; i++) {
+        const t = types[i] || types[types.length - 1] || "random";
+        if (autochess) {
+            aiTypes.push(knownProfiles.includes(t) ? t : "per-class");
+        } else {
+            aiTypes.push(AI_TYPES[t] ? t : "random");
+        }
+    }
+
+    const rounds = parseInt(args.rounds) || engine.AUTOCHESS_CONFIG?.MAX_ROUND || 10;
+
+    console.log("╔════════════════════════════════════════╗");
+    console.log(autochess
+        ? "║   Hex Dice CLI Simulation (Autochess)  ║"
+        : "║     Hex Dice CLI Simulation            ║");
+    console.log("╚════════════════════════════════════════╝");
+    console.log(`Games: ${numGames} | Players: ${playerCount} | AI: ${aiTypes.join(", ")}${autochess ? ` | Rounds: ${rounds}` : ''}`);
+    console.log("");
     console.log("Engine loaded.");
     console.log("");
     
@@ -611,7 +813,9 @@ async function runSimulation() {
         console.log(`\n━━━ Game ${i}/${numGames} ━━━`);
 
         try {
-            const gameResult = await runGame(i, aiTypes, minimaxDepth, verbose, engine);
+            const gameResult = autochess
+                ? await runAutochessGame(i, aiTypes, rounds, verbose, engine)
+                : await runGame(i, aiTypes, minimaxDepth, verbose, engine);
             replayData.games.push(gameResult);            
             // Update summary
             if (gameResult.winner >= 0 && gameResult.winner < playerCount) {
@@ -659,6 +863,10 @@ async function runSimulation() {
     ).join("\n");
     await Deno.writeTextFile(logFile, logContent);
     console.log(`📝 Log saved to: ${logFile}`);
+
+    // Exit explicitly — engine code schedules browser-style timers (audio, hit effects)
+    // that would otherwise keep the Deno event loop alive.
+    Deno.exit(0);
 }
 
 // Run simulation

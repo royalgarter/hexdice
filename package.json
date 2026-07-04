@@ -7,6 +7,8 @@
     "gen": "npm run sprites:gen;npm run manifest:gen",
     "simulate": "deno run --allow-all js/simulate.ts",
     "simulate:v2": "deno run --allow-all js/simulate.ts --version=2 -g=1",
+    "simulate:autochess": "deno run --allow-all js/simulate.ts --autochess -g=1 -v",
+    "simulate:autochess:quick": "deno run --allow-all js/simulate.ts --autochess -g=1 -r=3",
     "tournament": "deno run --allow-all js/tournament.ts",
     "tournament:test": "deno run --allow-all js/tournament.ts -g=5 --profiles=baseline,berserker,turtle",
     "tournament:full": "deno run --allow-all js/tournament.ts -g=20",
@@ -17,6 +19,12 @@
     "campaign:gen-sample": "node js/campaign/generator.js --name='Valley of Shadow' --dice='11/21/31/41/51/61' --enemies='12/21/51' --terrain='forest:8,lake:4,mountain:3' --limit=4 --runes='aegis:1,pegasus:1' --output='js/campaign/level_sample.json'",
     "campaign:gen-random": "node js/campaign/generator.js --name='Random Skirmish' --output='js/campaign/level_random.json'",
     "campaign:ro_rmi": "node js/campaign/generator_ro_rmi.js",
-    "blog": "node scripts/sync-blog.js"
+    "blog": "node scripts/sync-blog.js",
+    "test:browser": "node tests/browser-smoke.mjs",
+    "test:browser:v2": "node tests/browser-smoke.mjs \"?players=2&version=2\"",
+    "test:browser:epic": "node tests/browser-smoke.mjs \"?players=2&preset=E_21\""
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hexdice-cache-v5';
+const CACHE_NAME = 'hexdice-cache-v7';
 const CORE_ASSETS = [
 	'/',
 	'/index.html',
