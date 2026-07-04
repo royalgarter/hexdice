@@ -25,8 +25,8 @@
 				<div class="font-bold border-b pb-1 mb-1">Players (<span x-text="players.length"></span>/6):</div>
 				<template x-for="(p, idx) in players" :key="p.id">
 					<div class="flex items-center space-x-2" x-show="p.name && p.id">
-						<div class="w-2 h-2 rounded-full" :class="p.id === auth.user._key ? 'bg-blue-500' : 'bg-gray-400'"></div>
-						<span x-text="p.name" :class="p.id === auth.user._key ? 'font-bold' : ''"></span>
+						<div class="w-2 h-2 rounded-full" :class="(p.id === auth?.user?._key) ? 'bg-blue-500' : 'bg-gray-400'"></div>
+						<span x-text="p.name" :class="(p.id === auth?.user?._key) ? 'font-bold' : ''"></span>
 						<span x-show="p.id === online.creator" class="text-[10px] uppercase border px-1 border-gray-400">Host</span>
 					</div>
 				</template>
@@ -74,7 +74,7 @@
 
 					<div x-show="online.status === 'PLAYING'" class="mt-2 text-xs space-y-1">
 						<div class="font-bold border-b mb-1 pb-0.5">Opponents Status:</div>
-						<template x-for="p in players.filter(p => p.id !== auth.user._key)" :key="p.id">
+						<template x-for="p in players.filter(p => p.id !== auth?.user?._key)" :key="p.id">
 							<div class="flex items-center justify-between">
 								<span x-text="p.name"></span>
 								<span x-show="Autochess.state.ready?.[p.id]" class="text-green-600 font-bold">✓ Ready</span>
@@ -190,7 +190,7 @@
 						</select>
 					</div>
 					<div x-show="online.status !== 'PLAYING'">
-						<button @click="startAutochessCombat()" class="inline bg-black text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase cursor-pointer">
+						<button @click="startAutochessCombat()" class="inline bg-green-500 text-white px-2 py-1 font-bold hover:bg-gray-800 uppercase cursor-pointer">
 							Auto-Battle
 						</button>
 					</div>
@@ -219,7 +219,7 @@
 			</div>
 			<div class="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4 text-[10px] md:text-xs font-bold pointer-events-auto">
 				<template x-for="p in players" :key="p.id">
-					<div class="uppercase px-1 border-l-2" :class="p.id === auth.user._key ? 'border-blue-500' : 'border-gray-400'">
+					<div class="uppercase px-1 border-l-2" :class="p.id === auth?.user?._key ? 'border-blue-500' : 'border-gray-400'">
 						<span x-text="p.name || ('P' + (p.id+1))" class="truncate block"></span>
 						<span class="text-gray-500">Alive: <span x-text="p.dice?.filter(u => u.isDeployed && !u.isDeath).length || 0"></span></span>
 					</div>

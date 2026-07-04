@@ -1314,6 +1314,19 @@ function alpineHexDiceTacticGame() { return {
 
 	/* --- INITIALIZATION --- */
 	async init() {
+		// Synchronous URL parameter parsing — generate hex grid early so the
+		// lazy-loaded hex-grid component has dimensions the moment its first
+		// `async loadComponent` fetch resolves. Without this, `hexGrid.style`
+		// stays empty until the awaits below (initAuth, CampaignManager.init,
+		// sets.json, campaign map) all complete, leaving .hex-grid-container
+		// invisible (width/height = 0) for potentially hundreds of ms.
+		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
+		this.preset = new URLSearchParams(location.search).get('preset');
+		this.mode = new URLSearchParams(location.search).get('mode') || 'gui';
+		const campaignMapParam = new URLSearchParams(location.search).get('map');
+		const earlyRadius = this.getRadius();
+		this.generateHexGrid(earlyRadius);
+
 		await this.initAuth();
 		await this.CampaignManager.init();
 
@@ -1324,7 +1337,6 @@ function alpineHexDiceTacticGame() { return {
 			console.error("Failed to load sprite sets", e);
 		}
 
-		const campaignMapParam = new URLSearchParams(location.search).get('map');
 		this.gameplayVersion = parseInt(new URLSearchParams(location.search).get('version')) || 1;
 		let campaignData = null;
 		if (campaignMapParam) {
@@ -1336,12 +1348,10 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 
-		this.playerCount = parseInt(new URLSearchParams(location.search).get('players')) || 2;
-		this.preset = new URLSearchParams(location.search).get('preset');
-		this.mode = new URLSearchParams(location.search).get('mode') || 'gui';
 		if (campaignData) this.playerCount = 2; // Campaign maps are 2-player by default
 
-		// Map size modifier
+		// Re-generate with the authoritative radius in case campaign data
+		// specified one, or playerCount changed (5 vs 6 hexes for ≤3 players).
 		const radius = campaignData?.radius || this.getRadius();
 		this.generateHexGrid(radius);
 
@@ -1372,7 +1382,7 @@ function alpineHexDiceTacticGame() { return {
 		this.gameId = this.generateGameId();
 		this.syncUrlWithGameId();
 
-		this.showLog = !this.isCampaign;
+		this.showLog = !this.isCampaign && !this.Autochess?.state?.enabled;
 
 		this.currentReplay = {
 			metadata: {},
@@ -1563,6 +1573,7 @@ function alpineHexDiceTacticGame() { return {
 		return radius;
 	},
 	generateHexGrid(radius, padding=1, ratio) {
+		// console.time('generateHexGrid' + ratio)
 		this.hexes = [];
 		this.hexesQR = {};
 
@@ -1664,6 +1675,8 @@ function alpineHexDiceTacticGame() { return {
 			}
 			styleTag.textContent = css;
 		}
+
+		// console.timeEnd('generateHexGrid' + ratio)
 	},
 	determineBaseLocations(radius) {
 		let radiusOffset = -(radius - 1);
