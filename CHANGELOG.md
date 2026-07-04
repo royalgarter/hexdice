@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-07-04 — Autochess mode support in the CLI simulator
+
+**File changed:** `js/simulate.ts`
+
+### What
+
+`simulate.ts` could only run tactical games; Autochess (RotDK) mode was untestable headlessly. Added:
+
+- `--autochess` / `-a` flag — runs games in Autochess mode; `--rounds` / `-r` sets rounds per game (default `AUTOCHESS_CONFIG.MAX_ROUND`).
+- `-t` in autochess mode takes heuristic profile names per player (e.g. `-t=berserker,turtle`); unknown names fall back to Autochess's per-class unit profiles.
+- New `runAutochessGame()`: replaces the browser-bound `Autochess.runSimulation()` (setInterval + DOM renderer) with a synchronous tick loop over `Autochess.simulateStep()`; resolves timeouts by total HP (mirrors `resolveTimeout`), then auto-plays preparation between rounds — recruit all inventory options, merge same-value/same-level duplicates with random perk picks, redeploy — via `Autochess.nextRound()`.
+- Loader modernized to match `tournament.ts`: now loads `constants.js` + `autochess.js`, adds full browser stubs (`window`, `localStorage`, `Alpine`, `alert`, `requestAnimationFrame`, richer `document`/`location`), a `StoryEngine` stub, and uses `game.js`'s built-in seeded `random`/`setSeed` (removed the stale `const random` string replacement that no longer matched).
+- `Deno.exit(0)` at the end — engine schedules browser-style timers (audio, hit effects) that kept the event loop alive.
+
+### Usage
+
+```
+deno run --allow-all js/simulate.ts --autochess -g=3 -t=baseline,berserker
+deno run --allow-all js/simulate.ts -a -g=1 -r=5 -v
+```
+
+### Verification
+
+- `-a -g=1 -r=3 -v` — full 3-round game with combat logs, perks, spells; winner reported per round and overall.
+- `-a -g=2 -r=5 -t=berserker,turtle` — named team profiles work; 5 rounds per game, replay JSON saved.
+- `-g=1` (no flag) — tactical mode regression-checked, still works.
+
 ## 2026-07-04 — Fix heuristic AI never taking kills ("coward AI")
 
 **File changed:** `js/ai/ai-heuristic.js` (only file modified)
