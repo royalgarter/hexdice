@@ -2212,6 +2212,7 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog("---");
 		this.addLog("P1 turn.");
 
+		window?.AudioManager?.stopMusic();
 		window?.AudioManager?.playSfx(this.isCampaign ? 'skill_sfx/BattleTheme' : 'capture');
 		if (this.isCampaign) {
 			setTimeout(() => window?.AudioManager?.playMusic('campaign', { mapName: this.campaignData?.rmi || '' }), 30e3);
