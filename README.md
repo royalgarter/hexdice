@@ -68,6 +68,62 @@ The project uses `npm` as a task runner for asset management and automated testi
 -   **Campaign Tools:**
     -   `npm run campaign:ro_rmi`: Generates campaign map levels based on the RMI (Resource Management Interface) logic.
 
+## 🧪 Browser Testing (Playwright)
+
+Headless Deno scripts (`simulate.ts`, `tournament.ts`) test the game *engine*, but they stub the browser — they cannot catch Alpine.js reactivity bugs, broken buttons, load-order issues, or anything DOM-related. For those, drive the real UI in Chromium via [Playwright](https://playwright.dev/).
+
+### Installation (one-time)
+
+1.  **Node.js 18+** is required (`node --version` to check).
+2.  **Install Playwright** (already listed in `devDependencies`):
+    ```bash
+    npm install
+    ```
+3.  **Install the Chromium browser binary** (~100 MB, downloaded once into `~/.cache/ms-playwright`):
+    ```bash
+    npx playwright install chromium
+    ```
+    On a fresh Linux machine also install OS-level dependencies (needs sudo):
+    ```bash
+    npx playwright install chromium --with-deps
+    ```
+4.  **Verify:**
+    ```bash
+    npx playwright --version
+    ```
+
+### Running the smoke test
+
+1.  **Start a server** on port 1166. Either the full dev server:
+    ```bash
+    npm start
+    ```
+    or, when you only need the static game (no auth/online — auth 404s are expected and ignored by the test):
+    ```bash
+    python3 -m http.server 1166
+    ```
+2.  **Run:**
+    ```bash
+    npm run test:browser        # normal mode  (?players=2)
+    npm run test:browser:v2     # Destiny dice (?players=2&version=2)
+    npm run test:browser:epic   # Epic 21 preset (?players=2&preset=E_21)
+    ```
+    Any URL query can be passed directly: `node tests/browser-smoke.mjs "?players=3"`.
+    A different server address: `BASE_URL=http://localhost:8080 npm run test:browser`.
+
+The smoke test (`tests/browser-smoke.mjs`) clicks **[Practice]** then **[Random]** and asserts every player rolled and deployed all dice and the phase reached `PLAYER_TURN`. It fails on any uncaught page error from game code. Exit code 0 = pass.
+
+### Writing new browser tests
+
+Guidelines:
+
+-   **Read game state through Alpine**, not the DOM: `window.Alpine.$data(document.querySelector('[x-data]'))` returns the live game component (`phase`, `players`, `hexes`, ...). Assert on that — it is far more stable than CSS selectors.
+-   **Wait for lazy components.** `index.html` loads `html/*.html` partials via `loadComponent` after Alpine init — wait ~3s (or poll for the button) before clicking anything.
+-   **Capture errors**: attach `page.on('pageerror')` and `page.on('console')` listeners before `page.goto`. On a static server, ignore `Failed to load resource` noise (auth/online endpoints).
+-   **Prefer text locators** for buttons (`page.locator('button', { hasText: 'Practice' })`) — the UI has no test ids and classes change often.
+-   **Keep tests headless and assertive** — print the game state JSON, exit non-zero on failure, so tests can run in CI or be driven by agents.
+-   Put new tests in `tests/` as plain `.mjs` scripts (no test framework — matches the project's no-dependency philosophy; Playwright is the only dev dependency).
+
 ## 📂 Assets Structure
 
 The `/assets` directory is organized to support a highly customizable and themeable experience:
