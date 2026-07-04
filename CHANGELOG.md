@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-04 — Fix distance-1 units blocked from mountains
+
+**File changed:** `js/game.js` (`bfsValidMoves`)
+
+Commit `5ee76d6` ("Oracle stuck on mountain", 2026-06-29) made MOUNTAIN always cost 1.5 in BFS movement, which blocked every distance-1 unit (Archer 2, Tanker 5, Oracle 6) from ever entering mountains — Tanker explicitly should ignore the mountain penalty per RULES.md, and Archers/Oracles need mountains for the range bonus. The "trapped on mountain" premise was wrong: movement cost applies to the hex being entered, so leaving a mountain was never blocked (the real stuck bug was the Oracle spell-mode wipe, fixed separately in the same commit). Restored the `maxDistance > 1` guard and added the explicit Tanker exception.
+
+Verified headless (simulate.ts game completes) and in Chromium via Playwright.
+
 ## 2026-07-04 — Autochess mode support in the CLI simulator
 
 **File changed:** `js/simulate.ts`
