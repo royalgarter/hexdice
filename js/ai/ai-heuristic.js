@@ -1143,12 +1143,16 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
         const nearest = findNearestEnemyUnit(GAME, nextState, state.currentPlayerIndex, targetHexObj);
         if (nearest.unit) {
             const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
-            // Reward moves that get closer to any enemy
-            analysis.score += (maxDist - nearest.distance) * 100;
-            
+            // Strongly reward moves that get closer to any enemy
+            analysis.score += (maxDist - nearest.distance) * 400;
+
             // Extra bonus for being adjacent (combat engagement)
             if (nearest.distance === 1) {
-                analysis.score += 500;
+                analysis.score += 2000;
+            }
+            // Bonus for being within strike range (dist 2-3)
+            if (nearest.distance <= 3) {
+                analysis.score += 800;
             }
         }
     }
