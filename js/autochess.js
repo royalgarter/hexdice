@@ -233,7 +233,7 @@ const Autochess = {
 		GAME.addLog(`Merged! ${u1.displayName} leveled up!`);
 
 		// Only redeploy if u1 was not already on the board (needs deployment after u2 removal shifted indices)
-		if (!u1.hexId) {
+		if (!u1.hexId || u2.hexId) {
 			GAME.Autochess.deployPlayerUnits(GAME, playerId);
 		}
 	},
