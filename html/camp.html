@@ -124,12 +124,20 @@
 		<div class="p-2 text-center">
 			<div class="mt-4 flex justify-center gap-2">
 				<template x-for="slotId in [1, 2, 3]" :key="slotId">
-					<button
-						@click="CampaignManager.selectSlot(slotId)"
-						:class="CampaignManager.state.activeSlot === slotId ? 'bg-black text-white' : 'bg-transparent border-black'"
-						class="cursor-pointer border px-3 py-1 text-sm font-bold uppercase transition-colors"
-						x-text="CampaignManager.state.slots[slotId]?.name || 'Slot ' + slotId"
-					></button>
+					<div class="relative inline-flex items-center">
+						<button
+							@click="CampaignManager.selectSlot(slotId)"
+							:class="CampaignManager.state.activeSlot === slotId ? 'bg-black text-white' : 'bg-transparent border-black'"
+							class="cursor-pointer border px-3 py-1 text-sm font-bold uppercase transition-colors"
+							x-text="CampaignManager.state.slots[slotId]?.name || 'Slot ' + slotId"
+						></button>
+						<button
+							x-show="CampaignManager.state.slots[slotId] != null"
+							@click.stop="if (confirm('Reset Slot ' + slotId + '? All progress will be lost.')) { CampaignManager.deleteSlot(slotId); if (CampaignManager.state.activeSlot === slotId) CampaignManager.selectSlot(slotId); }"
+							class="cursor-pointer ml-0.5 px-1 py-1 text-xs text-red-700 font-bold hover:bg-red-700 hover:text-white border border-red-700 transition-colors"
+							title="Reset slot"
+						>✕</button>
+					</div>
 				</template>
 			</div>
 			<button @click="showCamp = false" class="mt-2 cursor-pointer p-2 font-bold uppercase transition-transform hover:bg-gray-500">[Return to Journey]</button>
