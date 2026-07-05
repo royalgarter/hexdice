@@ -361,6 +361,9 @@ function alpineHexDiceTacticGame() { return {
 	openURL(url = null, params = {}) {
 		window.location.href = this.getUrl(url, params);
 	},
+	replaceURL(url = null, params = {}) {
+		window.location.replace(this.getUrl(url, params));
+	},
 
 	// --- SETUP TERRAIN METHODS ---
 	async setupTerrain(force) {

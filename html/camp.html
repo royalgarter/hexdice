@@ -126,14 +126,14 @@
 				<template x-for="slotId in [1, 2, 3]" :key="slotId">
 					<div class="relative inline-flex items-center">
 						<button
-							@click="CampaignManager.selectSlot(slotId)"
+							@click="CampaignManager.selectSlot(slotId); replaceURL(null, {campaign: 'true', map: CampaignManager.getCurrentMapName()})"
 							:class="CampaignManager.state.activeSlot === slotId ? 'bg-black text-white' : 'bg-transparent border-black'"
 							class="cursor-pointer border px-3 py-1 text-sm font-bold uppercase transition-colors"
 							x-text="CampaignManager.state.slots[slotId]?.name || 'Slot ' + slotId"
 						></button>
 						<button
 							x-show="CampaignManager.state.slots[slotId] != null"
-							@click.stop="if (confirm('Reset Slot ' + slotId + '? All progress will be lost.')) { CampaignManager.deleteSlot(slotId); if (CampaignManager.state.activeSlot === slotId) CampaignManager.selectSlot(slotId); }"
+							@click.stop="if (confirm('Reset Slot ' + slotId + '? All progress will be lost.')) { const wasActive = CampaignManager.state.activeSlot === slotId; CampaignManager.deleteSlot(slotId); if (wasActive) { CampaignManager.selectSlot(slotId); replaceURL(null, {campaign: 'true', map: 'level1.json'}); } }"
 							class="cursor-pointer ml-0.5 px-1 py-1 text-xs text-red-700 font-bold hover:bg-red-700 hover:text-white border border-red-700 transition-colors"
 							title="Reset slot"
 						>✕</button>
