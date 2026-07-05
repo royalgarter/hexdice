@@ -54,13 +54,12 @@
 				</div>
 
 				<!-- Autochess HP Bar -->
-				<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute cursor-not-allowed w-6 h-3 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col justify-between p-0.5">
-					<div data-combat-hp class="h-1 flex-shrink-0 bg-green-500 rounded-full transition-all"
-						:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'"
-						:class="{'bg-yellow-500': hex.unit?.hp / hex.unit?.maxHP < 0.5, 'bg-red-500': hex.unit?.hp / hex.unit?.maxHP < 0.25}">
+				<div x-show="Autochess.state.enabled" style="bottom:-0.25rem;left:-0.45rem" class="absolute cursor-not-allowed w-6 h-1.5 bg-gray-800 rounded-full border border-gray-900 overflow-hidden flex flex-col">
+					<div data-combat-hp class="h-1 flex-shrink-0 rounded-full"
+						:style="'width: ' + (hex.unit?.hp / hex.unit?.maxHP * 100) + '%'">
 					</div>
-					<div data-combat-gauge class="h-0.5 flex-shrink-0 bg-blue-400 rounded-full transition-all"
-						:style="'width: ' + (hex.unit?.actionGauge || 0) + '%; transition-duration: ' + (Autochess.state.pulseMs || 90) + 'ms'">
+					<div data-combat-gauge class="h-0.5 flex-shrink-0 bg-blue-400 rounded-full"
+						:style="'width: ' + (hex.unit?.actionGauge || 0) + '%'">
 					</div>
 				</div>
 				</div>

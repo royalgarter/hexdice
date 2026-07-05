@@ -577,9 +577,9 @@ const Autochess = {
 				const hpPct = Math.max(0, Math.min(100, (e._hp / e._maxHp) * 100));
 				e.hpBar.style.width = hpPct + '%';
 				e.hpBar.style.transitionDuration = '0ms';
-				if (hpPct < 25) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-red-500'); }
-				else if (hpPct < 50) { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-yellow-500'); }
-				else { e.hpBar.className = e.hpBar.className.replace(/bg-(green|yellow|red)-500/, 'bg-green-500'); }
+				if (hpPct < 25) { e.hpBar.style.backgroundColor = '#ef4444'; }
+				else if (hpPct < 50) { e.hpBar.style.backgroundColor = '#eab308'; }
+				else { e.hpBar.style.backgroundColor = '#22c55e'; }
 
 				e.gaugeBar.style.width = Math.max(0, Math.min(100, e._gauge)) + '%';
 				e.gaugeBar.style.transitionDuration = '0ms';
