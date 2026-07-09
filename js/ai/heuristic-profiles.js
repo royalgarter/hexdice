@@ -30,6 +30,7 @@ const heuristicProfiles = {
 
             teamPositionWeight: 0.6, // Relative importance of overall team formation
             pressureWeight: 0.8,     // Space control — lower to prevent friendly-cluster attractor loops
+            focusFireBonus: 120,     // Reward threatening an enemy already threatened by an ally
 
             terrainWeights: {
                 defenseBonusWeight: 100, // Bonus for holding defensive terrain
@@ -74,6 +75,7 @@ const heuristicProfiles = {
 
             teamPositionWeight: 0.4,
             pressureWeight: 0.7,     // Values board control from a distance
+            focusFireBonus: 150,     // Concentrates fire with allies before enemies close in
 
             terrainWeights: {
                 defenseBonusWeight: 200,
@@ -120,6 +122,7 @@ const heuristicProfiles = {
 
             teamPositionWeight: 0.3, // Lone wolf — doesn't need teammates
             pressureWeight: 0.7,     // Zone-aware when repositioning between targets
+            focusFireBonus: 200,     // Sets up coordinated executions on tough targets
 
             terrainWeights: {
                 defenseBonusWeight: 100,
@@ -164,6 +167,9 @@ const heuristicProfiles = {
 
             teamPositionWeight: 0.25, // Slight formation awareness — don't charge alone into 3
             pressureWeight: 0.8,      // Seek enemies (positive: move toward them, not into death zones)
+            focusFireBonus: 150,      // Piles onto targets allies already engage
+            immediateDeathPenalty: -150, // Half fear of dying — trades are the plan
+            roleWeights: { kitingAdjacentPenalty: -200, bodyguard: 50 }, // Archers brawl too
 
             terrainWeights: {      // Mostly ignores terrain but not completely blind
                 defenseBonusWeight: 30,
@@ -208,6 +214,9 @@ const heuristicProfiles = {
 
             teamPositionWeight: 1.0, // Demands tight, adjacent formations for mutual support
             pressureWeight: 0.8,     // Prefers low-pressure, controlled space
+            focusFireBonus: 80,      // Mild — only gangs up when already safe
+            immediateDeathPenalty: -600, // Doubly terrified of losing any unit
+            roleWeights: { kitingAdjacentPenalty: -700, bodyguard: 250, supportAdjacency: 50 },
 
             terrainWeights: {
                 defenseBonusWeight: 500, // Heavy emphasis on holding defensive terrain
@@ -254,6 +263,7 @@ const heuristicProfiles = {
 
             teamPositionWeight: 0.9, // Values group synergy for multi-turn setup logic
             pressureWeight: 0.9,     // Board controller needs strong zone awareness
+            focusFireBonus: 180,     // Kill-zone setups are its signature play
 
             terrainWeights: {
                 defenseBonusWeight: 200,
@@ -301,21 +311,21 @@ function mutateProfile(baseProfileName, mutationRate = 0.2) {
     
     mutated.name = `${base.name} (Mutated)`;
     
-    // Mutate weights
+    // Mutate weights. Small float-scale weights (multipliers < 10) must not be rounded to ints.
+    const mutateValue = (original) => {
+        const variance = original * mutationRate;
+        const randomOffset = (Math.random() * 2 - 1) * variance;
+        const result = original + randomOffset;
+        return Math.abs(original) < 10 ? Math.round(result * 100) / 100 : Math.round(result);
+    };
     for (const key in mutated.weights) {
-        if (key === 'terrainWeights' || key === 'spells') {
+        if (key === 'terrainWeights' || key === 'spells' || key === 'roleWeights') {
             for (const subKey in mutated.weights[key]) {
-                const original = mutated.weights[key][subKey];
-                const variance = original * mutationRate;
-                const randomOffset = (Math.random() * 2 - 1) * variance;
-                mutated.weights[key][subKey] = Math.round(original + randomOffset);
+                mutated.weights[key][subKey] = mutateValue(mutated.weights[key][subKey]);
             }
             continue;
         }
-        const original = mutated.weights[key];
-        const variance = original * mutationRate;
-        const randomOffset = (Math.random() * 2 - 1) * variance; // -variance to +variance
-        mutated.weights[key] = Math.round(original + randomOffset);
+        mutated.weights[key] = mutateValue(mutated.weights[key]);
     }
     
     // Mutate risk tolerance (clamp to 0-1)
@@ -356,10 +366,16 @@ function generateRandomProfile() {
             friendlySixBonus: Math.floor(Math.random() * 250) + 50,
             advanceBonus: Math.floor(Math.random() * 90) + 10,
             guardPenalty: Math.floor(Math.random() * -900) - 100,
-            mergeOver6Penalty: Math.floor(Math.random() * 600) - 500,
+            mergeOver6Penalty: Math.floor(Math.random() * -500) - 20,
             backAndForthPenalty: -300,
             teamPositionWeight: 0.1,
             pressureWeight: 0.2,
+            focusFireBonus: Math.floor(Math.random() * 200) + 50,
+            spells: {
+                SPELLCAST_SHIELD: Math.random() * 2 + 0.3,
+                SPELLCAST_SWAP: Math.random() * 2 + 0.3,
+                SPELLCAST_SKIRMISH: Math.random() * 2 + 0.3
+            },
             terrainWeights: {
                 defenseBonusWeight: Math.floor(Math.random() * 200) + 50,
                 archerTowerBonus: Math.floor(Math.random() * 300) + 50,

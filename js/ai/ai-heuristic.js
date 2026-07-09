@@ -101,11 +101,11 @@ function calculatePhaseWeights(GAME, state, profile) {
 
     // Estimate game phase
     let phase = 'mid';
-    if (deployedUnits < totalPossibleUnits * 0.4) {
-        phase = 'early';
-    } else if (deployedUnits < totalPossibleUnits * 0.2) {
+    if (deployedUnits < totalPossibleUnits * 0.2) {
         // Very few units left — end game
         phase = 'late';
+    } else if (deployedUnits < totalPossibleUnits * 0.4) {
+        phase = 'early';
     }
 
     // Weight adjustments per phase
@@ -129,21 +129,20 @@ function calculatePhaseWeights(GAME, state, profile) {
 
 /**
  * Calculate the Pressure Map for the entire board.
- * Positive values = Friendly influence/safety.
- * Negative values = Enemy influence/danger.
+ * Each hex gets separate friendly/enemy influence channels — a contested hex
+ * (high both) must not look like an empty one (net zero).
  */
 function calculatePressureMap(GAME, state, myPlayerIndex) {
     const pressureMap = {};
-    
+
     // Initialize map
     for (const hex of state.hexes) {
-        pressureMap[hex.id] = 0;
+        pressureMap[hex.id] = { friendly: 0, enemy: 0 };
     }
 
     // Each unit exerts pressure around its location
     for (const player of state.players) {
-        const isFriendly = player.id === myPlayerIndex;
-        const multiplier = isFriendly ? 1 : -1;
+        const channel = player.id === myPlayerIndex ? 'friendly' : 'enemy';
 
         for (const unit of player.dice) {
             if (!unit.isDeployed || unit.isDeath) continue;
@@ -171,7 +170,7 @@ function calculatePressureMap(GAME, state, myPlayerIndex) {
                     // Pressure decreases with distance
                     // Strongest at dist 0 (unit location)
                     const pressureValue = (totalRadius - dist + 1) * unit.value * 10;
-                    pressureMap[hex.id] += pressureValue * multiplier;
+                    pressureMap[hex.id][channel] += pressureValue;
                 }
             }
         }
@@ -255,6 +254,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 
     // PRE-CALCULATE THREATS: For Oracle spell evaluation
     const predictedThreats = predictEnemyThreats(GAME, state, state.currentPlayerIndex);
+    const friendlyThreatMap = buildFriendlyThreatMap(GAME, state, state.currentPlayerIndex);
 
     // Identify AI Units that can act
     const availableUnits = (GAME.gameplayVersion === 2 && GAME.turnPhase === 'FATE_CALL')
@@ -300,7 +300,7 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
         const unit = hexUnit ? _clonedDiceById.get(hexUnit.id) : currentPlayer.dice.find(d => d.hexId === move.unitHexId);
         if (!unit || unit.playerId !== state.currentPlayerIndex) continue;
 
-        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
+        const moveAnalysis = heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases, friendlyThreatMap);
         scoredMoves.push({
             move,
             unit,
@@ -319,12 +319,16 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
 
         if (candidates.length > 0) {
             const transpositionTable = new Map();
+            const rootPlayerIndex = state.currentPlayerIndex;
             for (const candidate of candidates) {
-                const nextState = applyMove(GAME, candidate.move, state);
+                const snap = _saveHeuristicSnapshot(state);
+                const nextState = applyMove(GAME, candidate.move, state, { noClone: true });
                 if (nextState) {
-                    const lookAheadScore = minimaxSearch(GAME, nextState, profile.minimaxDepth - 1, -Infinity, Infinity, false, state.currentPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                    const lookAheadScore = minimaxSearch(GAME, nextState, profile.minimaxDepth - 1, -Infinity, Infinity, false, rootPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
                     candidate.score += (lookAheadScore * 0.1); // Blend minimax insight into heuristic score
                 }
+                _restoreHeuristicSnapshot(state, snap);
+                state.currentPlayerIndex = rootPlayerIndex;
             }
         }
     }
@@ -364,6 +368,7 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline', ca
 
     const pressureMap = cachedData?.pressureMap || calculatePressureMap(GAME, state, state.currentPlayerIndex);
     const predictedThreats = cachedData?.predictedThreats || predictEnemyThreats(GAME, state, state.currentPlayerIndex);
+    const friendlyThreatMap = cachedData?.friendlyThreatMap || buildFriendlyThreatMap(GAME, state, state.currentPlayerIndex);
 
     const opponentBases = shouldExcludeBases ? [] : opponentIndices
         .filter(idx => !state.players[idx].isEliminated)
@@ -386,7 +391,7 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline', ca
             GAME.oracleSelectedSpell = move.actionType.replace('SPELLCAST_', '');
         }
 
-        const moveAnalysis = heuristicMove(GAME, state, move, unitInState, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases);
+        const moveAnalysis = heuristicMove(GAME, state, move, unitInState, opponentIndices, opponentBases, profile, pressureMap, predictedThreats, shouldExcludeBases, friendlyThreatMap);
         
         // Restore spell
         GAME.oracleSelectedSpell = originalSpell;
@@ -404,6 +409,15 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline', ca
     for (const priority of profile.priorityOrder) {
         const priorityMoves = filterByPriority(scoredMoves, priority, opponentBases);
         if (priorityMoves.length > 0) {
+            // Position moves need the same enrichment executePriority applies —
+            // raw score lacks advance/capture bonuses and would rank them arbitrarily.
+            if (priority === 'position') {
+                priorityMoves.forEach(m => {
+                    m.positionScore = scorePositionMove(GAME, state, m, profile, opponentBases);
+                });
+                priorityMoves.sort((a, b) => b.positionScore - a.positionScore);
+                return priorityMoves[0].move;
+            }
             // Sort priority moves by score
             priorityMoves.sort((a, b) => b.score - a.score);
             return priorityMoves[0].move;
@@ -413,6 +427,78 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline', ca
     // Fallback: highest score
     scoredMoves.sort((a, b) => b.score - a.score);
     return scoredMoves[0].move;
+}
+
+/**
+ * Positional enrichment of a scored move: advance/capture/merge/guard/spell adjustments.
+ * Shared by executePriority('position') and evaluateBestMoveForUnit so both paths rank
+ * position moves identically.
+ */
+function scorePositionMove(GAME, state, m, profile, opponentBases) {
+    let positionScore = m.score;
+    const w = profile.weights;
+
+    if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
+    if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
+
+    // Advancement bonus (hunting or base capture)
+    if (m.move.actionType === 'MOVE') {
+        const targetHex = GAME.getHex(m.move.targetHexId, state);
+        const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
+
+        if (opponentBases.length > 0) {
+            // Distance to nearest opponent base
+            let minBaseDist = Infinity;
+            opponentBases.forEach(base => {
+                const dist = GAME.axialDistance(targetHex.q, targetHex.r, base.baseHex.q, base.baseHex.r);
+                if (dist < minBaseDist) minBaseDist = dist;
+            });
+            positionScore += (w.advanceBonus * (maxDist - minBaseDist));
+        } else {
+            // Hunting: Distance to nearest enemy unit
+            const nearest = findNearestEnemyUnit(GAME, state, state.currentPlayerIndex, targetHex);
+            if (nearest.unit) {
+                positionScore += (w.advanceBonus * 0.8 * (maxDist - nearest.distance));
+            }
+        }
+    }
+
+    // Skip base capture scoring in annihilation mode
+    if (opponentBases.length) {
+        // Check if unit is already on a captured base (use move.unitHexId — authoritative source)
+        const unitCurrentHexId = m.move.unitHexId;
+        const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
+        const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === m.move.targetHexId);
+
+        if (isTargetOnEnemyBase) {
+            // If unit is already on a captured base, reduce capture bonus to encourage movement
+            if (isUnitOnCapturedBase && m.move.actionType === 'MOVE') {
+                positionScore += w.captureBonus * 0.1; // Only 10% to encourage advancement
+            } else {
+                positionScore += w.captureBonus;
+            }
+        }
+    }
+
+    if (m.move.actionType === 'MERGE') {
+        const targetUnit = GAME.getUnitOnHex(m.move.targetHexId, state);
+        if (targetUnit) {
+            const sumValue = m.unit.value + targetUnit.value;
+            if (sumValue > 6) {
+                positionScore += w.mergeOver6Penalty;
+            }
+        }
+    }
+
+    if (m.move.actionType === 'GUARD') {
+        positionScore += w.guardPenalty;
+    }
+
+    if (m.move.actionType.includes('SPELLCAST_')) {
+        positionScore = positionScore * (w.spells?.[m.move.actionType] || 1);
+    }
+
+    return Math.floor(positionScore);
 }
 
 /**
@@ -505,6 +591,35 @@ function predictEnemyThreats(GAME, state, myPlayerIndex) {
 }
 
 /**
+ * Build enemyUnitId → Set(friendly unit ids threatening it) from current positions.
+ * Mirror of predictEnemyThreats, used for focus-fire scoring (gang up on tough targets).
+ */
+function buildFriendlyThreatMap(GAME, state, myPlayerIndex) {
+    const threatMap = {};
+    const myUnits = state.players[myPlayerIndex].dice.filter(d => d.isDeployed && !d.isDeath);
+    for (const mine of myUnits) {
+        const hexId = aiGetUnitHexId(mine, state);
+        const hex = GAME.getHex(hexId, state);
+        if (!hex) continue;
+        const targets = [];
+        for (const n of GAME.getNeighbors(hex, state)) {
+            const u = GAME.getUnitOnHex(n.id, state);
+            if (u && u.playerId !== myPlayerIndex) targets.push(u);
+        }
+        if (mine.value === 2) {
+            for (const tHexId of GAME.calcValidRangedTargets(hexId, state)) {
+                const u = GAME.getUnitOnHex(tHexId, state);
+                if (u && u.playerId !== myPlayerIndex) targets.push(u);
+            }
+        }
+        for (const t of targets) {
+            (threatMap[t.id] = threatMap[t.id] || new Set()).add(mine.id);
+        }
+    }
+    return threatMap;
+}
+
+/**
  * Sort moves based on the profile's target selection strategy
  */
 function sortMovesByStrategy(moves, strategy, riskTolerance) {
@@ -528,6 +643,16 @@ function sortMovesByStrategy(moves, strategy, riskTolerance) {
                 return (b.targetValue || 0) - (a.targetValue || 0);
         }
     });
+}
+
+/**
+ * Apply a chosen move on the real GAME and bump the acting unit's activation counter.
+ */
+function _executeMove(GAME, move) {
+    const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === move.unitHexId);
+    if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
+    applyMove(GAME, move);
+    return true;
 }
 
 /**
@@ -567,11 +692,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
             if (captureMoves.length > 0) {
                 captureMoves.sort((a, b) => b.captureScore - a.captureScore);
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Capturing base!`, captureMoves[0].move);
-                const appliedMove = captureMoves[0].move;
-                const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
-                if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
-                applyMove(GAME, appliedMove);
-                return true;
+                return _executeMove(GAME, captureMoves[0].move);
             }
             break;
         }
@@ -580,13 +701,12 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
             // Find moves that kill enemies
             const killMoves = scoredMoves.filter(m => m.canKillEnemy);
             if (killMoves.length > 0) {
-                sortMovesByStrategy(killMoves, profile.targetSelection, profile.riskTolerance);
-                if (verbose) console.log(`AI Heuristic (${profile.name}): Found kill opportunity (${profile.targetSelection})!`, killMoves[0].move);
-                const appliedMove = killMoves[0].move;
-                const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
-                if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
-                applyMove(GAME, appliedMove);
-                return true;
+                // Demote bad trades: dying to kill a cheaper unit. Prefer clean kills when available.
+                const goodTrades = killMoves.filter(m => !(m.canBeKilled && m.unit.value > (m.targetValue || 0)));
+                const killPool = goodTrades.length > 0 ? goodTrades : killMoves;
+                sortMovesByStrategy(killPool, profile.targetSelection, profile.riskTolerance);
+                if (verbose) console.log(`AI Heuristic (${profile.name}): Found kill opportunity (${profile.targetSelection})!`, killPool[0].move);
+                return _executeMove(GAME, killPool[0].move);
             }
             break;
         }
@@ -596,11 +716,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
             if (attackMoves.length > 0) {
                 sortMovesByStrategy(attackMoves, profile.targetSelection, profile.riskTolerance);
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Found attack opportunity (${profile.targetSelection})!`, attackMoves[0].move);
-                const appliedMove = attackMoves[0].move;
-                const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
-                if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
-                applyMove(GAME, appliedMove);
-                return true;
+                return _executeMove(GAME, attackMoves[0].move);
             }
             break;
         }
@@ -629,11 +745,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 const spellIsWorthIt = hasSacrifice || bestSpellScore > spellThreshold;
                 if (viableSpells.length > 0 && spellIsWorthIt) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Casting spell!`, viableSpells[0].move, viableSpells[0].score);
-                    const appliedMove = viableSpells[0].move;
-                    const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
-                    if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
-                    applyMove(GAME, appliedMove);
-                    return true;
+                    return _executeMove(GAME, viableSpells[0].move);
                 }
             }
             break;
@@ -679,11 +791,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
 
                 if (bestEscape) {
                     if (verbose) console.log(`AI Heuristic (${profile.name}): Dodging to safety!`, bestEscape.move);
-                    const appliedMove = bestEscape.move;
-                    const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
-                    if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
-                    applyMove(GAME, appliedMove);
-                    return true;
+                    return _executeMove(GAME, bestEscape.move);
                 }
             }
             break;
@@ -698,70 +806,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 
             if (strategicMoves.length > 0) {
                 strategicMoves.forEach(m => {
-                    let positionScore = m.score;
-                    const w = profile.weights;
-
-                    if (m.isInProtectedRange) positionScore += w.protectedRangeBonus;
-                    if (m.nearFriendlySix) positionScore += w.friendlySixBonus;
-
-                    // Advancement bonus (hunting or base capture)
-                    if (m.move.actionType === 'MOVE') {
-                        const targetHex = GAME.getHex(m.move.targetHexId, state);
-                        const maxDist = (GAME.getRadius ? GAME.getRadius() : 5) * 2;
-
-                        if (opponentBases.length > 0) {
-                            // Distance to nearest opponent base
-                            let minBaseDist = Infinity;
-                            opponentBases.forEach(base => {
-                                const dist = GAME.axialDistance(targetHex.q, targetHex.r, base.baseHex.q, base.baseHex.r);
-                                if (dist < minBaseDist) minBaseDist = dist;
-                            });
-                            positionScore += (w.advanceBonus * (maxDist - minBaseDist));
-                        } else {
-                            // Hunting: Distance to nearest enemy unit
-                            const nearest = findNearestEnemyUnit(GAME, state, state.currentPlayerIndex, targetHex);
-                            if (nearest.unit) {
-                                positionScore += (w.advanceBonus * 0.8 * (maxDist - nearest.distance));
-                            }
-                        }
-                    }
-
-                    // Skip base capture scoring in annihilation mode
-                    if (opponentBases.length) {
-                        // Check if unit is already on a captured base (use move.unitHexId — authoritative source)
-                        const unitCurrentHexId = m.move.unitHexId;
-                        const isUnitOnCapturedBase = opponentBases.some(b => b.baseHexId === unitCurrentHexId);
-                        const isTargetOnEnemyBase = opponentBases.some(b => b.baseHexId === m.move.targetHexId);
-
-                        if (isTargetOnEnemyBase) {
-                            // If unit is already on a captured base, reduce capture bonus to encourage movement
-                            if (isUnitOnCapturedBase && m.move.actionType === 'MOVE') {
-                                positionScore += w.captureBonus * 0.1; // Only 10% to encourage advancement
-                            } else {
-                                positionScore += w.captureBonus;
-                            }
-                        }
-                    }
-
-                    if (m.move.actionType === 'MERGE') {
-                        const targetUnit = GAME.getUnitOnHex(m.move.targetHexId, state);
-                        if (targetUnit) {
-                            const sumValue = m.unit.value + targetUnit.value;
-                            if (sumValue > 6) {
-                                positionScore += w.mergeOver6Penalty;
-                            }
-                        }
-                    }
-
-                    if (m.move.actionType === 'GUARD') {
-                        positionScore += w.guardPenalty;
-                    }
-
-                    if (m.move.actionType.includes('SPELLCAST_')) {
-                        positionScore = positionScore * (w.spells[m.move.actionType] || 1)
-                    }
-
-                    m.positionScore = Math.floor(positionScore);
+                    m.positionScore = scorePositionMove(GAME, state, m, profile, opponentBases);
                 });
 
                 strategicMoves.sort((a, b) => b.positionScore - a.positionScore);
@@ -769,11 +814,7 @@ function executePriority(GAME, scoredMoves, priority, profile, state, opponentBa
                 // Skip only if top move is worse than all other fallbacks (no real candidates)
                 if (strategicMoves.every(m => m.positionScore < -10000)) break;
                 if (verbose) console.log(`AI Heuristic (${profile.name}): Strategic positioning`, best.move, best.positionScore);
-                const appliedMove = best.move;
-                const activeUnit = GAME.players[GAME.currentPlayerIndex].dice.find(d => d.hexId === appliedMove.unitHexId);
-                if (activeUnit) activeUnit.activationCount = (activeUnit.activationCount || 0) + 1;
-                applyMove(GAME, appliedMove);
-                return true;
+                return _executeMove(GAME, best.move);
             }
             break;
         }
@@ -799,33 +840,34 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
     }
 
     const mapRadius = GAME.getRadius ? GAME.getRadius() : 5;
+    const rw = w.roleWeights || {};
 
     switch (unit.role) {
         case 'FLANKER': {
             // Bonus for being away from the center axis (flanking geography)
             const distFromCenter = Math.max(Math.abs(targetHex.q), Math.abs(targetHex.r), Math.abs(-targetHex.q - targetHex.r));
-            bonus += distFromCenter * 20;
+            bonus += distFromCenter * (rw.flankerEdge ?? 20);
             // Extra bonus for landing adjacent to a killable high-value enemy
             const flankNeighbors = GAME.getNeighbors(targetHex, state);
             for (const fn of flankNeighbors) {
                 const fnu = GAME.getUnitOnHex(fn.id, state);
                 if (fnu && fnu.playerId !== unit.playerId && fnu.value >= 3) {
                     const defArm = GAME.calcDefenderEffectiveArmor(fn.id, state);
-                    if (unit.attack >= defArm) bonus += 200; // Can kill this next turn
+                    if (unit.attack >= defArm) bonus += (rw.flankerKillSetup ?? 200); // Can kill this next turn
                 }
             }
             break;
         }
         case 'FRONTLINE':
             // Bonus for being near the center vertical axis or advancing
-            bonus += (mapRadius - Math.abs(targetHex.q)) * 15;
+            bonus += (mapRadius - Math.abs(targetHex.q)) * (rw.frontlineCenter ?? 15);
             break;
         case 'SUPPORT': {
             // Bonus for being adjacent to teammates
             const supportNeighbors = GAME.getNeighbors(targetHex, state);
             supportNeighbors.forEach(n => {
                 const nu = GAME.getUnitOnHex(n.id, state);
-                if (nu && nu.playerId === unit.playerId) bonus += 30;
+                if (nu && nu.playerId === unit.playerId) bonus += (rw.supportAdjacency ?? 30);
             });
 
             // Reposition pull: bonus for closing distance to nearest ally in spell range (2).
@@ -840,8 +882,8 @@ function calculateRoleBonus(unit, targetHex, GAME, state, w) {
             }
             // Ideal Oracle range: within 2 of nearest ally (spell range).
             // Penalty for being farther, scaled so Oracle moves but doesn't crowd.
-            if (minAllyDist > 2) bonus -= (minAllyDist - 2) * 40;
-            else if (minAllyDist <= 2) bonus += 60; // In support range — reward staying here
+            if (minAllyDist > 2) bonus -= (minAllyDist - 2) * (rw.supportFarPenalty ?? 40);
+            else if (minAllyDist <= 2) bonus += (rw.supportInRange ?? 60); // In support range — reward staying here
             break;
         }
         case 'SNIPER':
@@ -979,14 +1021,22 @@ function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIn
     const branchingLimit = depth > 1 ? 8 : 12;
     const movesToSearch = possibleMoves.slice(0, branchingLimit);
 
+    // Snapshot save/restore per node instead of structuredClone — the recursion
+    // mutates `state` in place and undoes it after each branch.
+    // currentPlayerIndex is not in the snapshot (END_TURN mutates it) — restore manually.
     if (isMaximizing) {
         let maxEval = -Infinity;
         for (const move of movesToSearch) {
-            const nextState = applyMove(GAME, move, state);
-            if (!nextState) continue;
-            const eval = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, false, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
-            maxEval = Math.max(maxEval, eval);
-            alpha = Math.max(alpha, eval);
+            const snap = _saveHeuristicSnapshot(state);
+            const prevPlayerIndex = state.currentPlayerIndex;
+            const nextState = applyMove(GAME, move, state, { noClone: true });
+            if (nextState) {
+                const evalScore = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, false, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                maxEval = Math.max(maxEval, evalScore);
+                alpha = Math.max(alpha, evalScore);
+            }
+            _restoreHeuristicSnapshot(state, snap);
+            state.currentPlayerIndex = prevPlayerIndex;
             if (beta <= alpha) break;
         }
         transpositionTable.set(stateKey, { score: maxEval, depth });
@@ -994,11 +1044,16 @@ function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIn
     } else {
         let minEval = Infinity;
         for (const move of movesToSearch) {
-            const nextState = applyMove(GAME, move, state);
-            if (!nextState) continue;
-            const eval = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, true, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
-            minEval = Math.min(minEval, eval);
-            beta = Math.min(beta, eval);
+            const snap = _saveHeuristicSnapshot(state);
+            const prevPlayerIndex = state.currentPlayerIndex;
+            const nextState = applyMove(GAME, move, state, { noClone: true });
+            if (nextState) {
+                const evalScore = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, true, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                minEval = Math.min(minEval, evalScore);
+                beta = Math.min(beta, evalScore);
+            }
+            _restoreHeuristicSnapshot(state, snap);
+            state.currentPlayerIndex = prevPlayerIndex;
             if (beta <= alpha) break;
         }
         transpositionTable.set(stateKey, { score: minEval, depth });
@@ -1032,7 +1087,7 @@ function calculateV2CombatSuccessProbability(baseAtk, defenderArmor) {
 /**
  * Analyze a single move for tactical value
  */
-function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile = DEFAULT_PROFILE, pressureMap = {}, predictedThreats = [], shouldExcludeBases = false) {
+function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, profile = DEFAULT_PROFILE, pressureMap = {}, predictedThreats = [], shouldExcludeBases = false, friendlyThreatMap = {}) {
     const w = profile.weights;
     const analysis = {
         canKillEnemy: false,
@@ -1110,9 +1165,48 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             analysis.score += calculateRoleBonus(unit, targetHexObj, GAME, state, w);
         }
 
-        // Zone of Control (Pressure Map) bonus/penalty
-        const targetPressure = pressureMap[move.targetHexId] || 0;
-        analysis.score += targetPressure * (w.pressureWeight || 0.3);
+        // Zone of Control (Pressure Map) bonus/penalty — separate channels so
+        // contested hexes aren't mistaken for empty ones (net would cancel out).
+        const targetPressure = pressureMap[move.targetHexId] || { friendly: 0, enemy: 0 };
+        const pw = w.pressureWeight || 0.3;
+        analysis.score += (targetPressure.friendly - targetPressure.enemy) * pw;
+        // A unit already under threat should weigh enemy influence extra when repositioning
+        if (analysis.isCurrentlyThreatened) analysis.score -= targetPressure.enemy * pw * 0.5;
+
+        // Focus fire: reward threatening an enemy already threatened by another friendly.
+        // Encourages ganging up on high-armor targets no single unit can kill.
+        if (move.actionType === 'MOVE' && !preSimTargetUnit && targetHexObj) {
+            for (const n of GAME.getNeighbors(targetHexObj, state)) {
+                const enemy = GAME.getUnitOnHex(n.id, state);
+                if (!enemy || enemy.playerId === state.currentPlayerIndex) continue;
+                const threateners = friendlyThreatMap[enemy.id];
+                if (threateners && [...threateners].some(id => id !== unit.id)) {
+                    analysis.score += (w.focusFireBonus || 120) + enemy.value * 10;
+                    break;
+                }
+            }
+
+            // Self-blocking: don't park directly in front of a stronger ally that is
+            // heading the same way — the weak unit plugs the corridor the strong one needs.
+            const nearestFromDest = findNearestEnemyUnit(GAME, state, state.currentPlayerIndex, targetHexObj);
+            if (nearestFromDest && nearestFromDest.unit) {
+                const enemyHexId = aiGetUnitHexId(nearestFromDest.unit, state);
+                const enemyHex = GAME.getHex(enemyHexId, state);
+                for (const n of GAME.getNeighbors(targetHexObj, state)) {
+                    const ally = GAME.getUnitOnHex(n.id, state);
+                    if (!ally || ally.playerId !== state.currentPlayerIndex || ally.id === unit.id) continue;
+                    if (ally.value <= unit.value) continue;
+                    const allyHex = GAME.getHex(n.id, state);
+                    if (!allyHex || !enemyHex) continue;
+                    const allyDist = GAME.axialDistance(allyHex.q, allyHex.r, enemyHex.q, enemyHex.r);
+                    const myDist = GAME.axialDistance(targetHexObj.q, targetHexObj.r, enemyHex.q, enemyHex.r);
+                    if (myDist < allyDist) {
+                        analysis.score += (w.selfBlockPenalty ?? -80);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     // Team Position Score calculation
@@ -1256,7 +1350,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     if (canBeKilledImmediate) {
         analysis.isSafe = false;
         // Strong deterrent — enemy can kill us this round
-        analysis.score -= 300;
+        analysis.score += (w.immediateDeathPenalty ?? -300);
     } else if (canBeKilledNextTurn) {
         analysis.isSafe = false;
         // Mild deterrent — enemy already moved, threat resets next round
@@ -1313,16 +1407,17 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
     // --- ROLE-SPECIFIC HEURISTICS ---
     // Archer (Dice 2) Kiting logic
     if (unit.value === 2) {
+        const rw = w.roleWeights || {};
         const myHex = GAME.getHex(aiUnitNext.hexId, nextState);
         const nearest = findNearestEnemyUnit(GAME, nextState, state.currentPlayerIndex, myHex);
 
         if (nearest.distance === 2) {
-            analysis.score += 200; // Optimal kiting range
+            analysis.score += (rw.kitingOptimal ?? 200); // Optimal kiting range
             // Extra bonus: destination sets up a ranged shot next turn
             const rangedTargets = GAME.calcValidRangedTargets(aiUnitNext.hexId, nextState);
-            if (rangedTargets.length > 0) analysis.score += 300;
+            if (rangedTargets.length > 0) analysis.score += (rw.kitingSetup ?? 300);
         } else if (nearest.distance === 1) {
-            analysis.score -= 500; // Too close!
+            analysis.score += (rw.kitingAdjacentPenalty ?? -500); // Too close!
         }
     }
 
@@ -1334,7 +1429,7 @@ function heuristicMove(GAME, state, move, unit, opponentIndices, opponentBases, 
             const neighborUnit = GAME.getUnitOnHex(n.id, nextState);
             if (neighborUnit && neighborUnit.playerId === state.currentPlayerIndex && neighborUnit.id !== unit.id) {
                 if (neighborUnit.value <= 3) { // Protecting "squishy" units (Archer, Knight, Infantry)
-                    analysis.score += 150;
+                    analysis.score += ((w.roleWeights || {}).bodyguard ?? 150);
                 }
             }
         });

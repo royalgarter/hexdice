@@ -57,9 +57,9 @@ Adds 7 harder types requiring deliberate risk/mastery. Boss and late-game levels
 
 ---
 
-## AI Improvements — Priority Order
+## AI Improvements — Priority Order ✓ COMPLETE (steps 1–6 shipped, verified in code review 2026-07-09)
 
-### Step 1 — Fix random spell gate [ai-heuristic.js] ← START HERE
+### Step 1 — Fix random spell gate [ai-heuristic.js]
 Remove `random() < ratio` in `executePriority('spell')`.
 Always cast if `viableSpells[0].score > 0`. Keep sacrifice special-case unchanged.
 Risk: none.
@@ -92,3 +92,39 @@ Risk: low — additive.
 ### Step 6 — Hussar flanking bonus [ai-heuristic.js]
 When Hussar MOVE lands adjacent to enemy value >= 3 that it can kill next turn (attack >= defenderArmor), add +200.
 Risk: low — additive.
+
+---
+
+## AI Heuristic — Review Round 2 (2026-07-09)
+
+From full review of `js/ai/ai.js`, `js/ai/ai-heuristic.js`, `js/ai/heuristic-profiles.js`.
+
+### Bugs
+
+- [x] **B1: Late phase unreachable** — `calculatePhaseWeights` (ai-heuristic.js:104): `deployedUnits < total*0.4` checked before `< total*0.2`, so `late` branch never fires; endgame `captureBonus*5` push dead. Reorder conditions.
+- [x] **B2: `mutateProfile` destroys float weights** — heuristic-profiles.js:318: `Math.round()` collapses `teamPositionWeight`/`pressureWeight` (0–1 floats) and spell multipliers to 0/1. Skip rounding for float-scale keys.
+- [x] **B3: `generateRandomProfile` missing keys** — no `spells` object → `w.spells[...]` throws at ai-heuristic.js:761; `mergeOver6Penalty` range can go positive. Add defaults, clamp penalty negative.
+- [x] **B4: `eval` as variable name** — `minimaxSearch` (ai-heuristic.js:987/:999). Breaks under strict mode. Rename `evalScore`.
+
+### Enhancements
+
+- [x] **E1: Focus-fire / kill-zone score** (backlog item 2) — build friendly threat map (mirror `predictEnemyThreats`); bonus in `heuristicMove` when destination threatens an enemy already threatened by another friendly. New profile weight `focusFireBonus`.
+- [x] **E2: Bad-trade demotion in kill bucket** — kill priority fires regardless of trade value; demote kill moves where `canBeKilled && unit.value > targetValue`.
+- [x] **E3: Extract `_executeMove` helper** — `activationCount++` + `applyMove` duplicated ×5 in `executePriority`.
+- [x] **E4: Split pressure map into friendly/enemy channels** — net value makes contested hex look empty. Positioning wants high-friendly AND low-enemy; dodge wants low-enemy only.
+- [x] **E5: Profile-tunable role/kiting numbers** — hardcoded role bonuses (±20/15/30/200), kiting (±200/500), -300 death deterrent. Move to `w.roleWeights` with defaults.
+- [x] **E6: Minimax without structuredClone** — reuse `_saveHeuristicSnapshot` machinery inside `minimaxSearch` for speed.
+- [x] **E7: Self-blocking penalty** (backlog item 5) — penalise moves that block path of higher-value unit behind.
+- [x] **E8: Unify `filterByPriority` / `executePriority` position scoring** — Autochess `evaluateBestMoveForUnit` position bucket never gets advance/capture enrichment.
+
+### Backlog file status (`backlogs/ai-heuristic.md`)
+
+Items 1 (role-based), 3 (phase weights), 4 (pressure map), 6 (lookahead) already implemented. Items 2 → E1, 5 → E7 remain.
+
+### Verification
+
+```
+deno run --allow-all js/tournament.ts -g=5 --profiles=baseline,berserker,turtle,assassin,tactician -q
+```
+
+Target: no profile above ~70% win rate (see ai.js header).
