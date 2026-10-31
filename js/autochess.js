@@ -611,6 +611,7 @@ const Autochess = {
 			playerAIData[idx] = {
 				pressureMap: calculatePressureMap(GAME, target, idx),
 				predictedThreats: predictEnemyThreats(GAME, target, idx),
+				friendlyThreatMap: buildFriendlyThreatMap(GAME, target, idx),
 			};
 		});
 

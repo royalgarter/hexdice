@@ -35,11 +35,13 @@ function _saveHeuristicSnapshot(state) {
 				actionsTakenThisTurn: u.actionsTakenThisTurn,
 				lastActionWasGuard: u.lastActionWasGuard,
 				lastHexId: u.lastHexId, prevHexId: u.prevHexId, stepsMoved: u.stepsMoved,
+				currentHP: u.currentHP,
 			});
 		});
 	});
 	const hexes = state.hexes.map(h => ({ ref: h, unit: h.unit, unitId: h.unitId }));
-	return { units, hexes, phase: state.phase };
+	const players = state.players.map(p => ({ ref: p, diceLength: p.dice.length, isEliminated: p.isEliminated }));
+	return { units, hexes, players, phase: state.phase, currentPlayerIndex: state.currentPlayerIndex };
 }
 
 function _restoreHeuristicSnapshot(state, snap) {
@@ -58,12 +60,19 @@ function _restoreHeuristicSnapshot(state, snap) {
 		us.ref.lastHexId = us.lastHexId;
 		us.ref.prevHexId = us.prevHexId;
 		us.ref.stepsMoved = us.stepsMoved;
+		us.ref.currentHP = us.currentHP;
+	}
+	// MERGE pushes a new die onto p.dice — truncate so length and generated ids stay stable across branches
+	for (const ps of snap.players) {
+		ps.ref.dice.length = ps.diceLength;
+		ps.ref.isEliminated = ps.isEliminated;
 	}
 	for (const hs of snap.hexes) {
 		hs.ref.unit = hs.unit;
 		hs.ref.unitId = hs.unitId;
 	}
 	state.phase = snap.phase;
+	state.currentPlayerIndex = snap.currentPlayerIndex;
 }
 
 /**
@@ -322,13 +331,15 @@ function performAIByHeuristic(GAME, profileName = 'baseline', verbose = true) {
             const rootPlayerIndex = state.currentPlayerIndex;
             for (const candidate of candidates) {
                 const snap = _saveHeuristicSnapshot(state);
-                const nextState = applyMove(GAME, candidate.move, state, { noClone: true });
-                if (nextState) {
-                    const lookAheadScore = minimaxSearch(GAME, nextState, profile.minimaxDepth - 1, -Infinity, Infinity, false, rootPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
-                    candidate.score += (lookAheadScore * 0.1); // Blend minimax insight into heuristic score
+                try {
+                    const nextState = applyMove(GAME, candidate.move, state, { noClone: true });
+                    if (nextState) {
+                        const lookAheadScore = minimaxSearch(GAME, nextState, profile.minimaxDepth - 1, -Infinity, Infinity, false, rootPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                        candidate.score += (lookAheadScore * 0.1); // Blend minimax insight into heuristic score
+                    }
+                } finally {
+                    _restoreHeuristicSnapshot(state, snap);
                 }
-                _restoreHeuristicSnapshot(state, snap);
-                state.currentPlayerIndex = rootPlayerIndex;
             }
         }
     }
@@ -416,6 +427,7 @@ function evaluateBestMoveForUnit(GAME, state, unit, profileName = 'baseline', ca
                     m.positionScore = scorePositionMove(GAME, state, m, profile, opponentBases);
                 });
                 priorityMoves.sort((a, b) => b.positionScore - a.positionScore);
+                if (priorityMoves[0].positionScore < -10000) continue;
                 return priorityMoves[0].move;
             }
             // Sort priority moves by score
@@ -934,7 +946,7 @@ function generateStateKey(state) {
         key += `|${player.id}:`;
         player.dice.forEach(d => {
             if (d.isDeployed && !d.isDeath) {
-                key += `${d.hexId},${d.value},${d.currentArmor},${d.hasMovedOrAttackedThisTurn ? 1 : 0};`;
+                key += `${d.hexId},${d.value},${d.currentArmor},${d.currentHP ?? ''},${d.hasMovedOrAttackedThisTurn ? 1 : 0};`;
             }
         });
     }
@@ -1028,15 +1040,16 @@ function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIn
         let maxEval = -Infinity;
         for (const move of movesToSearch) {
             const snap = _saveHeuristicSnapshot(state);
-            const prevPlayerIndex = state.currentPlayerIndex;
-            const nextState = applyMove(GAME, move, state, { noClone: true });
-            if (nextState) {
-                const evalScore = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, false, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
-                maxEval = Math.max(maxEval, evalScore);
-                alpha = Math.max(alpha, evalScore);
+            try {
+                const nextState = applyMove(GAME, move, state, { noClone: true });
+                if (nextState) {
+                    const evalScore = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, false, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                    maxEval = Math.max(maxEval, evalScore);
+                    alpha = Math.max(alpha, evalScore);
+                }
+            } finally {
+                _restoreHeuristicSnapshot(state, snap);
             }
-            _restoreHeuristicSnapshot(state, snap);
-            state.currentPlayerIndex = prevPlayerIndex;
             if (beta <= alpha) break;
         }
         transpositionTable.set(stateKey, { score: maxEval, depth });
@@ -1045,15 +1058,16 @@ function minimaxSearch(GAME, state, depth, alpha, beta, isMaximizing, myPlayerIn
         let minEval = Infinity;
         for (const move of movesToSearch) {
             const snap = _saveHeuristicSnapshot(state);
-            const prevPlayerIndex = state.currentPlayerIndex;
-            const nextState = applyMove(GAME, move, state, { noClone: true });
-            if (nextState) {
-                const evalScore = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, true, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
-                minEval = Math.min(minEval, evalScore);
-                beta = Math.min(beta, evalScore);
+            try {
+                const nextState = applyMove(GAME, move, state, { noClone: true });
+                if (nextState) {
+                    const evalScore = minimaxSearch(GAME, nextState, depth - 1, alpha, beta, true, myPlayerIndex, profile, opponentIndices, opponentBases, shouldExcludeBases, transpositionTable);
+                    minEval = Math.min(minEval, evalScore);
+                    beta = Math.min(beta, evalScore);
+                }
+            } finally {
+                _restoreHeuristicSnapshot(state, snap);
             }
-            _restoreHeuristicSnapshot(state, snap);
-            state.currentPlayerIndex = prevPlayerIndex;
             if (beta <= alpha) break;
         }
         transpositionTable.set(stateKey, { score: minEval, depth });
