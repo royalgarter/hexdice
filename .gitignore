@@ -149,3 +149,7 @@ dist
 /output.wav
 /.antigravitycli
 /hexdice.zip
+/.agents/skills
+/.claude/skills
+/.commandcode/skills
+/skills-lock.json
