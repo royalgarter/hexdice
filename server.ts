@@ -38,7 +38,7 @@ mqttClient.on("message", (topic, message) => {
 	try {
 		const roomId = topic.split("/")[2];
 		const payload = JSON.parse(message.toString());
-		core.handleRoomAction(roomId, payload).catch((e: unknown) => console.error("Room action failed:", e));
+		core.handleRoomMessage(roomId, payload).catch((e: unknown) => console.error("Room action failed:", e));
 	} catch (e) {
 		console.error("MQTT message handling failed:", e);
 	}

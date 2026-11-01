@@ -19,6 +19,10 @@ function fakeDb() {
 				store[name][doc._key] = structuredClone(doc);
 				return doc;
 			},
+			async remove(key: string) {
+				if (!store[name][key]) throw Object.assign(new Error("document not found"), { code: 404 });
+				delete store[name][key];
+			},
 			async update(key: string, patch: any) {
 				if (!store[name][key]) throw Object.assign(new Error("document not found"), { code: 404 });
 				Object.assign(store[name][key], structuredClone(patch));
@@ -252,4 +256,78 @@ Deno.test({ name: "room: /api/rooms/state is gone and cannot corrupt restore", .
 	const core2 = createRoomCore({ db, mqttClient: { publish() {} }, loadEngine, mqttUrl: "ws://x" });
 	assert(await core2.getOrInitEngine(id));
 	void core;
+} });
+
+const hmacHex = async (secret: string, msg: string) => {
+	const enc = new TextEncoder();
+	const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+	return [...new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(msg)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+const sign = async (secret: string, type: string, data: any, sender: string, seq = 1, ts = Date.now()) =>
+	({ type, data, sender, seq, ts, sig: await hmacHex(secret, JSON.stringify([type, data ?? null, sender, seq, ts])) });
+
+async function signedRoom() {
+	const ctx = setup();
+	const created = await ctx.post("/api/rooms/create", { userId: HOST.id, name: HOST.name });
+	const joined = await ctx.post("/api/rooms/join", { roomId: created.json._key, userId: GUEST.id, name: GUEST.name });
+	return { ...ctx, id: created.json._key as string, hostSecret: created.json.secret as string, guestSecret: joined.json.secret as string };
+}
+
+Deno.test({ name: "api: secrets are only returned to their owner", ...opts, async fn() {
+	const { post, id, hostSecret, guestSecret } = await signedRoom();
+	assert(hostSecret && guestSecret && hostSecret !== guestSecret);
+	const again = await post("/api/rooms/join", { roomId: id, userId: HOST.id, name: HOST.name });
+	assertEquals(again.json.secret, hostSecret);
+	assert(again.json.players.every((p: any) => !("secret" in p)));
+} });
+
+Deno.test({ name: "mqtt: signed host START_GAME accepted", ...opts, async fn() {
+	const { core, id, hostSecret } = await signedRoom();
+	await core.handleRoomMessage(id, await sign(hostSecret, "START_GAME", { seed: 5 }, HOST.id));
+	assert(core.roomEngines[id]._initialized);
+} });
+
+Deno.test({ name: "mqtt: unsigned, forged, stale and replayed messages rejected", ...opts, async fn() {
+	const { core, id, hostSecret, guestSecret } = await signedRoom();
+	const start = { seed: 5 };
+	await core.handleRoomMessage(id, { type: "START_GAME", sender: HOST.id, data: start });
+	assertEquals(core.roomEngines[id], undefined);
+	await core.handleRoomMessage(id, await sign(guestSecret, "START_GAME", start, HOST.id));
+	assertEquals(core.roomEngines[id], undefined);
+	await core.handleRoomMessage(id, await sign(hostSecret, "START_GAME", start, HOST.id, 1, Date.now() - 3600_000));
+	assertEquals(core.roomEngines[id], undefined);
+	const tampered = await sign(hostSecret, "START_GAME", start, HOST.id);
+	await core.handleRoomMessage(id, { ...tampered, data: { seed: 6 } });
+	assertEquals(core.roomEngines[id], undefined);
+	const good = await sign(hostSecret, "AUTOCHESS_READY", {}, HOST.id);
+	await core.handleRoomMessage(id, good);
+	const before = core.roomEngines[id].Autochess.state.ready?.[HOST.id];
+	await core.handleRoomMessage(id, good);
+	assertEquals(core.roomEngines[id].Autochess.state.ready?.[HOST.id], before);
+} });
+
+Deno.test({ name: "api: leave removes player from waiting room and recolours", ...opts, async fn() {
+	const { post, id, db } = await signedRoom();
+	await post("/api/rooms/join", { roomId: id, userId: "third", name: "Third" });
+	const res = await post("/api/rooms/leave", { userId: GUEST.id, roomId: id });
+	assertEquals(res.json, { success: true, left: true, closed: false });
+	assertEquals(db.store.rooms[id].players.map((p: any) => [p.id, p.color]), [[HOST.id, "Blue"], ["third", "Red"]]);
+} });
+
+Deno.test({ name: "api: creator leaving passes host to next player; last leaver closes room", ...opts, async fn() {
+	const { post, id, db } = await signedRoom();
+	await post("/api/rooms/leave", { userId: HOST.id, roomId: id });
+	assertEquals(db.store.rooms[id].creator, GUEST.id);
+	const last = await post("/api/rooms/leave", { userId: GUEST.id, roomId: id });
+	assertEquals(last.json.closed, true);
+	assertEquals(db.store.rooms[id], undefined);
+} });
+
+Deno.test({ name: "api: leave keeps seat in started game; needs auth", ...opts, async fn() {
+	const { post, id, db } = await signedRoom();
+	assertEquals((await post("/api/rooms/leave", { roomId: id }, "")).status, 401);
+	db.store.rooms[id].status = "PLAYING";
+	const res = await post("/api/rooms/leave", { userId: GUEST.id, roomId: id });
+	assertEquals(res.json.left, false);
+	assertEquals(db.store.rooms[id].players.length, 2);
 } });

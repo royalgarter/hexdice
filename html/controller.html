@@ -156,11 +156,11 @@
 					</div>
 				</div>
 				
-				<div class="text-gray-500 mt-1 border-t pt-1 flex justify-between items-center" x-show="online.opponent">
-					<div>Opponent: <span class="font-bold" x-text="online.opponent?.name"></span></div>
+				<div class="text-gray-500 mt-1 border-t pt-1 flex justify-between items-center" x-show="online.opponents.length">
+					<div>Opponent<span x-show="online.opponents.length > 1">s</span>: <span class="font-bold" x-text="online.opponents.map(p => p.name).join(', ')"></span></div>
 					<button class="text-red-500 hover:underline cursor-pointer" @click="leaveRoom()">[Leave]</button>
 				</div>
-				<button class="hover:underline cursor-pointer" x-show="!online.opponent" @click="leaveRoom()">[Cancel]</button>
+				<button class="hover:underline cursor-pointer" x-show="!online.opponents.length" @click="leaveRoom()">[Cancel]</button>
 			</div>
 
 		</div>

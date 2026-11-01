@@ -84,6 +84,16 @@ try {
 	await third.waitForTimeout(1500);
 	check((await online(third)).status === 'OFFLINE', 'unknown room id leaves user offline');
 
+	// Host sees the guest, then guest leaves the lobby -> seat freed server-side
+	const rosterOf = (p) => p.evaluate(async (id) => {
+		const game = window.Alpine.$data(document.querySelector('[x-data]'));
+		const r = await fetch('/api/rooms/join', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${game.auth.token}` }, body: JSON.stringify({ roomId: id, name: game.auth.user.name }) });
+		return (await r.json()).players?.map(x => x.name);
+	}, hostState.roomId);
+	await guest.getByRole('button', { name: '[Leave]' }).click();
+	await guest.waitForLoadState('load');
+	check((await rosterOf(host)).join() === HOST, 'leaving frees the seat');
+
 	check(errors.length === 0, `no page errors ${errors.join(' | ')}`);
 } finally {
 	await browser.close();

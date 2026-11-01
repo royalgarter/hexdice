@@ -28,6 +28,8 @@ function alpineHexDiceTacticGame() { return {
 		status: 'OFFLINE', // OFFLINE, LOBBY, PLAYING
 		creator: null,
 		opponent: null,
+		opponents: [],
+		secret: null,
 		mqttClient: null,
 		playerIndex: null, // 0 for host, 1 for guest
 		nextSentSeq: 1,
@@ -845,7 +847,9 @@ function alpineHexDiceTacticGame() { return {
 	},
 
 	/* --- ONLINE METHODS --- */
-	leaveRoom() {
+	async leaveRoom() {
+		const roomId = this.online.roomId;
+		if (roomId) await this._leaveRoomRequest(roomId);
 		if (this.online.mqttClient) {
 			this.online.mqttClient.end();
 		}
@@ -853,10 +857,43 @@ function alpineHexDiceTacticGame() { return {
 		this.online.status = 'OFFLINE';
 		this.online.mqttClient = null;
 		this.online.opponent = null;
+		this.online.opponents = [];
+		this.online.secret = null;
 		this.online.playerIndex = null;
 		this.updateURLParams();
 		this.addLog("Left online room.");
 		location.reload();
+	},
+
+	async _leaveRoomRequest(roomId) {
+		try {
+			await fetch('/api/rooms/leave', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.auth.token}` },
+				body: JSON.stringify({ roomId }),
+				keepalive: true
+			});
+		} catch (e) {
+			console.error("Leave request failed:", e);
+		}
+	},
+
+	async _hmacHex(secret, message) {
+		const enc = new TextEncoder();
+		const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+		const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+		return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+	},
+
+	_applyRoom(room) {
+		const me = this.auth.user._key;
+		this.online.roomId = room._key;
+		this.online.creator = room.creator;
+		this.online.secret = room.secret;
+		this.online.playerIndex = room.players.findIndex(p => p.id === me);
+		this.online.opponents = room.players.filter(p => p.id !== me);
+		this.online.opponent = this.online.opponents[0] || null;
+		this.players = room.players.map(p => ({ ...p, dice: [] }));
 	},
 
 	updateURLParams() {
@@ -885,12 +922,9 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog("Create failed: " + (room.error || res.status));
 				return;
 			}
-			this.online.roomId = room._key;
+			this._applyRoom(room);
 			this.online.isHost = true;
-			this.online.creator = room.creator;
 			this.online.status = 'LOBBY';
-			this.online.playerIndex = 0;
-			this.players = room.players.map(p => ({ ...p, dice: [] }));
 			this.updateURLParams();
 			this.addLog(`Room created: ${room._key}. Waiting for opponent...`);
 			this.connectMQTT();
@@ -918,16 +952,12 @@ function alpineHexDiceTacticGame() { return {
 				this.addLog("Join failed: " + room.error);
 				return;
 			}
-			this.online.roomId = room._key;
+			this._applyRoom(room);
 			this.online.isHost = room.creator === this.auth.user._key;
-			this.online.creator = room.creator;
 			this.online.status = room.status === 'WAITING' ? 'LOBBY' : 'PLAYING';
-			this.online.playerIndex = room.players.findIndex(p => p.id === this.auth.user._key);
-			this.online.opponent = room.players.find(p => p.id !== this.auth.user._key);
-			this.players = room.players.map(p => ({ ...p, dice: [] }));
 			
 			this.updateURLParams();
-			this.addLog(`Joined room: ${room._key}. Opponent: ${this.online.opponent?.name || 'Waiting...'}`);
+			this.addLog(`Joined room: ${room._key}. Opponents: ${this.online.opponents.map(p => p.name).join(', ') || 'Waiting...'}`);
 			
 			this.connectMQTT();
 
@@ -1065,6 +1095,8 @@ function alpineHexDiceTacticGame() { return {
 
 		if (state.players) {
 			this.playerCount = state.players.length;
+			this.online.opponents = state.players.filter(sp => sp.id !== this.auth.user._key);
+			this.online.opponent = this.online.opponents[0] || null;
 			const updatedPlayers = [];
 			
 			state.players.forEach(sp => {
@@ -1139,10 +1171,11 @@ function alpineHexDiceTacticGame() { return {
 
 	handleStatusMessage(payload) {
 		if (payload.userId === this.auth.user._key) return;
+		const who = this.online.opponents.find(p => p.id === payload.userId)?.name || '';
 		if (payload.status === 'OFFLINE') {
-			this.addLog(`⚠️ Opponent ${this.online.opponent?.name || ''} disconnected.`);
+			this.addLog(`⚠️ Opponent ${who} disconnected.`);
 		} else if (payload.status === 'ONLINE' && this.online.status === 'PLAYING') {
-			this.addLog(`Opponent ${this.online.opponent?.name || ''} is back.`);
+			this.addLog(`Opponent ${who} is back.`);
 		}
 	},
 
@@ -1165,16 +1198,15 @@ function alpineHexDiceTacticGame() { return {
 		return (hash >>> 0).toString(16);
 	},
 
-	publishAction(type, data) {
+	async publishAction(type, data) {
 		if (!this.online.mqttClient) return;
 		const topic = `hexdice/rooms/${this.online.roomId}`;
-		const payload = { 
-			type, 
-			data, 
-			sender: this.auth.user._key,
-			seq: this.online.nextSentSeq++,
-			checksum: this.getStateChecksum() // This now captures the state at publication time
-		};
+		const sender = this.auth.user._key;
+		const seq = this.online.nextSentSeq++;
+		const ts = Date.now();
+		const checksum = this.getStateChecksum(); // captures the state at publication time
+		const sig = await this._hmacHex(this.online.secret, JSON.stringify([type, data ?? null, sender, seq, ts]));
+		const payload = { type, data, sender, seq, ts, sig, checksum };
 		this.online.mqttClient.publish(topic, JSON.stringify(payload), { qos: 1 });
 	},
 

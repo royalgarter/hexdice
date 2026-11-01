@@ -1,3 +1,5 @@
+import { encodeHex } from "https://deno.land/std/encoding/hex.ts";
+
 export interface RoomCoreDeps {
 	db: any;
 	mqttClient: { publish: (topic: string, payload: string, opts?: any) => any };
@@ -458,6 +460,64 @@ function withRoomLock<T>(roomId: string, fn: () => Promise<T>): Promise<T> {
 	return run;
 }
 
+function newSecret() {
+	return encodeHex(crypto.getRandomValues(new Uint8Array(24)));
+}
+
+const publicRoom = (room: any) => ({
+	_key: room._key,
+	creator: room.creator,
+	players: room.players.map(({ secret: _s, ...p }: any) => p),
+	status: room.status
+});
+
+const PLAYER_COLORS = ['Blue', 'Red', 'Green', 'Purple', 'Black', 'Yellow'];
+const SIGNATURE_MAX_AGE_MS = 5 * 60 * 1000;
+const secretCache: Record<string, Record<string, string>> = {};
+const seenSignatures: Record<string, Set<string>> = {};
+
+async function hmacHex(secret: string, message: string) {
+	const enc = new TextEncoder();
+	const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+	return encodeHex(await crypto.subtle.sign("HMAC", key, enc.encode(message)));
+}
+
+async function getPlayerSecret(roomId: string, userId: string) {
+	const cached = secretCache[roomId]?.[userId];
+	if (cached) return cached;
+	try {
+		const room: any = await db.collection("rooms").document(roomId);
+		secretCache[roomId] = Object.fromEntries(room.players.map((p: any) => [p.id, p.secret]));
+		return secretCache[roomId][userId] ?? null;
+	} catch (_e) {
+		return null;
+	}
+}
+
+// Authenticate an MQTT action: sender must prove knowledge of the secret issued at join time
+async function verifyRoomMessage(roomId: string, payload: any) {
+	if (!payload || typeof payload.sender !== 'string' || typeof payload.sig !== 'string') return false;
+	const ts = Number(payload.ts);
+	if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > SIGNATURE_MAX_AGE_MS) return false;
+	const secret = await getPlayerSecret(roomId, payload.sender);
+	if (!secret) return false;
+	const expected = await hmacHex(secret, JSON.stringify([payload.type, payload.data ?? null, payload.sender, payload.seq ?? null, ts]));
+	if (expected !== payload.sig) return false;
+	const seen = (seenSignatures[roomId] ??= new Set());
+	if (seen.has(expected)) return false;
+	seen.add(expected);
+	if (seen.size > 5000) seen.delete(seen.values().next().value as string);
+	return true;
+}
+
+async function handleRoomMessage(roomId: string, payload: any) {
+	if (!await verifyRoomMessage(roomId, payload)) {
+		console.warn(`[Room ${roomId}] Rejected unsigned/forged message`);
+		return;
+	}
+	await handleRoomAction(roomId, payload);
+}
+
 function newRoomId() {
 	const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 	const bytes = crypto.getRandomValues(new Uint8Array(6));
@@ -571,14 +631,14 @@ async function handleApi(req: Request): Promise<Response | null> {
 				const room = {
 					_key: newRoomId(),
 					creator: userId,
-					players: [{ id: userId, name, color: 'Blue' }],
+					players: [{ id: userId, name, color: 'Blue', secret: newSecret() }],
 					status: 'WAITING',
 					createdAt: now,
 					updatedAt: now
 				};
 				try {
 					await db.collection("rooms").save(room);
-					return json(room);
+					return json({ ...publicRoom(room), secret: room.players[0].secret });
 				} catch (e: any) {
 					if (e?.code !== 409) throw e;
 				}
@@ -616,13 +676,50 @@ async function handleApi(req: Request): Promise<Response | null> {
 					if (room.players.length >= 6) {
 						return json({ error: "Room is full" }, 400);
 					}
-					const PLAYER_COLORS = ['Blue', 'Red', 'Green', 'Purple', 'Black', 'Yellow'];
-					room.players.push({ id: userId, name, color: PLAYER_COLORS[room.players.length] });
+					room.players.push({ id: userId, name, color: PLAYER_COLORS[room.players.length], secret: newSecret() });
 					room.updatedAt = new Date().toISOString();
 					await roomsColl.update(roomId, { players: room.players, updatedAt: room.updatedAt });
+					delete secretCache[roomId];
 				}
 
-				return json({ _key: room._key, creator: room.creator, players: room.players, status: room.status });
+				const me = room.players.find((p: any) => p.id === userId);
+				return json({ ...publicRoom(room), secret: me.secret });
+			});
+		} catch (e: any) {
+			return json({ error: e.message }, e instanceof SyntaxError ? 400 : 500);
+		}
+	}
+
+	if (pathname === "/api/rooms/leave" && req.method === "POST") {
+		try {
+			const userId = await authUser(req);
+			if (!userId) return json({ error: "Unauthorized" }, 401);
+			const { roomId } = await req.json();
+			if (typeof roomId !== 'string' || !roomId) return json({ error: "Invalid input" }, 400);
+			return await withRoomLock(roomId, async () => {
+				const roomsColl = db.collection("rooms");
+				let room: any;
+				try {
+					room = await roomsColl.document(roomId);
+				} catch (e: any) {
+					return json({ error: "Room not found" }, e?.code === 404 || e?.errorNum === 1202 ? 404 : 500);
+				}
+				// Started games keep the seat so the player can rejoin
+				if (room.status !== 'WAITING' || !room.players.some((p: any) => p.id === userId)) {
+					return json({ success: true, left: false });
+				}
+				const players = room.players
+					.filter((p: any) => p.id !== userId)
+					.map((p: any, idx: number) => ({ ...p, color: PLAYER_COLORS[idx] }));
+				delete roomEngines[roomId];
+				delete secretCache[roomId];
+				delete seenSignatures[roomId];
+				if (players.length === 0) {
+					await roomsColl.remove(roomId);
+					return json({ success: true, left: true, closed: true });
+				}
+				await roomsColl.update(roomId, { players, creator: players[0].id, updatedAt: new Date().toISOString() });
+				return json({ success: true, left: true, closed: false });
 			});
 		} catch (e: any) {
 			return json({ error: e.message }, e instanceof SyntaxError ? 400 : 500);
@@ -637,5 +734,5 @@ async function handleApi(req: Request): Promise<Response | null> {
 	return null;
 }
 
-return { roomEngines, getOrInitEngine, handleRoomAction, broadcastState, saveRoomState, handleApi };
+return { roomEngines, getOrInitEngine, handleRoomAction, handleRoomMessage, broadcastState, saveRoomState, handleApi };
 }
