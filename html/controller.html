@@ -338,7 +338,7 @@
 
 		<p class="text-sm" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">
 			<span x-show="players.every(p => p.isAI)" class="text-yellow-700">Romance Mode - </span>
-			Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + currentPlayer.name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
+			Current: P<span x-text="(currentPlayerIndex + 1) + (players[currentPlayerIndex]?.name ? '-' + players[currentPlayerIndex].name : '') + (players[currentPlayerIndex]?.isAI ? (' [AI] ' + players[currentPlayerIndex]?.profileName + ' ') :'')"></span> (<span x-text="players[currentPlayerIndex]?.color"></span>)
 			<span x-show="players[currentPlayerIndex]?.empire" x-text="' - ' + EMPIRES[players[currentPlayerIndex]?.empire]?.alias"></span>
 		</p>
 		<p class="text-xs italic" x-show="players[currentPlayerIndex]?.empire" :class="PLAYER_CONFIG[currentPlayerIndex]?.logColor">

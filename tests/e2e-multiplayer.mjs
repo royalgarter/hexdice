@@ -41,7 +41,7 @@ const check = (cond, msg) => {
 	if (!cond) failed++;
 };
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 try {
 	const hostCtx = await browser.newContext();
 	const guestCtx = await browser.newContext();
