@@ -29,6 +29,9 @@ const mqttClient = mqtt.connect(MQTT, {
 const MQTT_PULSE_MS = Number(Deno.env.get("MQTT_PULSE_MS")) || 90;
 
 
+mqttClient.on("error", (e: unknown) => console.error("MQTT error:", e));
+mqttClient.on("offline", () => console.warn("MQTT offline"));
+
 mqttClient.on("connect", () => {
 	console.log("Connected to MQTT broker via esm.sh (v4)", MQTT);
 	mqttClient.subscribe("hexdice/rooms/+");

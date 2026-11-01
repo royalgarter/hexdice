@@ -309,6 +309,8 @@ function alpineHexDiceTacticGame() { return {
 		const seed = Math.floor(Math.random() * 1e9);
 		setSeed(seed);
 		this.publishAction('START_GAME', { seed, hostName: this.auth.user.name });
+		// Own MQTT messages are ignored in handleMQTTMessage, so the host must flip its own status here
+		this.online.status = 'PLAYING';
 	},
 	prepareAutochessCombat() { this.Autochess.prepareCombat(this); },
 	runAutochessSimulation() { this.Autochess.runSimulation(this); },

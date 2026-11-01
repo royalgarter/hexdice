@@ -63,9 +63,8 @@ async function initEngine(roomId: string) {
 	game._engine = engine;
 	game._isOnline = true;
 
-	// Generate hex grid and base locations so deployment works, but defer army generation until seed arrives
+	// Generate hex grid now; base locations need game.players, so they are set once players are mapped below
 	game.generateHexGrid(game.getRadius());
-	game.determineBaseLocations(game.getRadius());
 
 	if (room.gameState) {
 		console.log(`[Room ${roomId}] Restoring game state (Round ${room.gameState.autochess.round})`);
@@ -105,6 +104,8 @@ async function initEngine(roomId: string) {
 			wins: 0
 		}));
 	}
+
+	game.determineBaseLocations(game.getRadius());
 
 	roomEngines[roomId] = game;
 	return game;
@@ -201,7 +202,7 @@ async function handleRoomAction(roomId: string, payload: any) {
 		}
 	} else if (type === 'AUTOCHESS_NEXT_ROUND') {
 		// Simple validation: any player can advance if in RECAP
-		if (game.Autochess.state.phase === 'RECAP') {
+		if (game.Autochess.state.phase === 'RECAP' && game.Autochess.state.round <= game.Autochess.state.maxRound) {
 			game.Autochess.nextRound(game);
 		}
 		updated = true;
@@ -414,12 +415,26 @@ function startCombatStreaming(roomId: string, game: any) {
 		}
 	};
 
+	// Auto-advance to next round after 5 seconds in RECAP,
+	// so game doesn't hang if no player clicks "Next Round"
+	const scheduleAutoAdvance = () => {
+		if (game.Autochess.state.phase !== 'RECAP') return;
+		setTimeout(() => {
+			if (game.Autochess.state.phase !== 'RECAP' || game.Autochess.state.round > game.Autochess.state.maxRound) return;
+			game.Autochess.nextRound(game);
+			broadcastState(roomId, game, true);
+			saveRoomState(roomId, game);
+			console.log(`[Room ${roomId}] Auto-advanced to round ${game.Autochess.state.round}`);
+		}, 5000);
+	};
+
 	// Hook resolveTimeout (catches time-out path)
 	game.Autochess.resolveTimeout = (g: any) => {
 		originalResolveTimeout.call(game.Autochess, g);
 		clearInterval(monitorInterval);
 		cleanup();
 		broadcastState(roomId, g, true);
+		scheduleAutoAdvance();
 	};
 
 	// Monitor for combat end from winner-determination path (phase set in runSimulation
@@ -430,17 +445,7 @@ function startCombatStreaming(roomId: string, game: any) {
 			cleanup();
 			broadcastState(roomId, game, true);
 
-			// Auto-advance to next round after 5 seconds in RECAP,
-			// so game doesn't hang if no player clicks "Next Round"
-			if (game.Autochess.state.phase === 'RECAP') {
-				setTimeout(() => {
-					if (game.Autochess.state.phase === 'RECAP') {
-						game.Autochess.nextRound(game);
-						broadcastState(roomId, game, true);
-						console.log(`[Room ${roomId}] Auto-advanced to round ${game.Autochess.state.round}`);
-					}
-				}, 5000);
-			}
+			scheduleAutoAdvance();
 		}
 	}, 50);
 }

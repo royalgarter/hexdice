@@ -229,13 +229,26 @@ Deno.test({ name: "room: place on hex 0 moves unit instead of duplicating", ...o
 	await core.handleRoomAction(id, { type: "START_GAME", sender: HOST.id, data: { seed: 11 } });
 	const g = core.roomEngines[id];
 	const valid: number[] = g.calcValidDeploymentHexes(0);
-	if (!valid.includes(0)) return; // hex 0 not in P0 zone for this layout
 	const unit = g.players[0].dice[0];
+	const old = g.getHex(unit.hexId);
+	old.unit = null; old.unitId = null;
 	g.getHex(0).unit = unit; g.getHex(0).unitId = unit.id; unit.hexId = 0;
 	const to = valid.find((h) => h !== 0 && !g.getHex(h).unit)!;
+	assert(to !== undefined);
 	await core.handleRoomAction(id, { type: "AUTOCHESS_PLACE", sender: HOST.id, data: { unitId: unit.id, toHexId: to, fromHexId: 0 } });
 	assertEquals(g.getHex(0).unit, null);
 	assertEquals(g.getHex(to).unit?.id, unit.id);
+} });
+
+Deno.test({ name: "room: START_GAME assigns bases and deploys every army", ...opts, async fn() {
+	const { core, id } = await startedRoom();
+	await core.handleRoomAction(id, { type: "START_GAME", sender: HOST.id, data: { seed: 21 } });
+	const g = core.roomEngines[id];
+	assert(g.players.every((p: any) => p.baseHexId != null), "every player has a base hex");
+	assertEquals(g.players[0].baseHexId === g.players[1].baseHexId, false);
+	for (const p of g.players) {
+		assertEquals(p.dice.filter((d: any) => d.isDeployed && d.hexId != null).length, Math.min(6, p.dice.length));
+	}
 } });
 
 Deno.test({ name: "room: restart restores state from db", ...opts, async fn() {
@@ -330,4 +343,16 @@ Deno.test({ name: "api: leave keeps seat in started game; needs auth", ...opts, 
 	const res = await post("/api/rooms/leave", { userId: GUEST.id, roomId: id });
 	assertEquals(res.json.left, false);
 	assertEquals(db.store.rooms[id].players.length, 2);
+} });
+
+Deno.test({ name: "room: NEXT_ROUND does not advance past the final round", ...opts, async fn() {
+	const { core, id } = await startedRoom();
+	await core.handleRoomAction(id, { type: "START_GAME", sender: HOST.id, data: { seed: 2 } });
+	const st = core.roomEngines[id].Autochess.state;
+	st.round = st.maxRound;
+	st.phase = "RECAP";
+	await core.handleRoomAction(id, { type: "AUTOCHESS_NEXT_ROUND", sender: HOST.id, data: {} });
+	assertEquals(st.round, st.maxRound + 1);
+	await core.handleRoomAction(id, { type: "AUTOCHESS_NEXT_ROUND", sender: GUEST.id, data: {} });
+	assertEquals(st.round, st.maxRound + 1);
 } });
