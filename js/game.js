@@ -31,7 +31,7 @@ function alpineHexDiceTacticGame() { return {
 		mqttClient: null,
 		playerIndex: null, // 0 for host, 1 for guest
 		nextSentSeq: 1,
-		lastRecvSeq: 0,
+		lastRecvSeq: {},
 		turnTimer: 60,
 		timerInterval: null,
 		_stateApplyPending: false,
@@ -753,7 +753,7 @@ function alpineHexDiceTacticGame() { return {
 					email: `${debugUser}@localhost`,
 					picture: `https://ui-avatars.com/api/?name=${debugUser}`
 				};
-				this.auth.token = debugToken || debugUser || 'debug-token';
+				this.auth.token = debugToken || `debug:${debugUser}`;
 				this.addLog(`Debug mode: Logged in as ${debugUser}`);
 			} else {
 				// Check if already logged in (local storage)
@@ -877,10 +877,14 @@ function alpineHexDiceTacticGame() { return {
 		try {
 			const res = await fetch('/api/rooms/create', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ userId: this.auth.user._key, name: this.auth.user.name })
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.auth.token}` },
+				body: JSON.stringify({ name: this.auth.user.name })
 			});
 			const room = await res.json();
+			if (!res.ok || room.error) {
+				this.addLog("Create failed: " + (room.error || res.status));
+				return;
+			}
 			this.online.roomId = room._key;
 			this.online.isHost = true;
 			this.online.creator = room.creator;
@@ -906,8 +910,8 @@ function alpineHexDiceTacticGame() { return {
 		try {
 			const res = await fetch('/api/rooms/join', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ roomId: id.toUpperCase(), userId: this.auth.user._key, name: this.auth.user.name })
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.auth.token}` },
+				body: JSON.stringify({ roomId: id.toUpperCase(), name: this.auth.user.name })
 			});
 			const room = await res.json();
 			if (room.error) {
@@ -947,6 +951,7 @@ function alpineHexDiceTacticGame() { return {
 			}
 		};
 
+		if (this.online.mqttClient) this.online.mqttClient.end(true);
 		this.online.mqttClient = mqtt.connect(this.online.broker, options);
 
 		this.online.mqttClient.on('connect', () => {
@@ -964,7 +969,7 @@ function alpineHexDiceTacticGame() { return {
 			
 			this.addLog("Connected to MQTT.");
 
-			if (!this.online.isHost) {
+			if (!this.online.isHost || this.online.status === 'PLAYING') {
 				this.publishAction('GUEST_JOINED', { name: this.auth.user.name });
 			}
 		});
@@ -1178,11 +1183,11 @@ function alpineHexDiceTacticGame() { return {
 
 		// Sequence check
 		if (payload.seq) {
-			if (payload.seq <= this.online.lastRecvSeq) {
+			if (payload.seq <= (this.online.lastRecvSeq[payload.sender] || 0)) {
 				console.log("Ignoring out-of-order or duplicate message:", payload.seq);
 				return;
 			}
-			this.online.lastRecvSeq = payload.seq;
+			this.online.lastRecvSeq[payload.sender] = payload.seq;
 		}
 
 		const { type, data, checksum, sender } = payload;
@@ -5162,7 +5167,9 @@ function alpineHexDiceTacticGame() { return {
 			this.pushStateToServer();
 		}
 	},
+	// DEPRECATED: server persists room state itself; /api/rooms/state now returns 410
 	async pushStateToServer() {
+		return;
 		if (this.online.status !== 'PLAYING' || !this.online.roomId) return;
 		
 		try {

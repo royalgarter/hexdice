@@ -23,6 +23,7 @@ export async function loadEngine(playerCount: number = 2, version: number = 2): 
 	const documentStub = {
 		getElementById: () => null,
 		querySelector: () => ({ content: 'headless' }),
+		querySelectorAll: () => [],
 	};
 
 	const gameCode = await Deno.readTextFile("./js/game.js");

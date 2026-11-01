@@ -22,7 +22,9 @@
     "blog": "node scripts/sync-blog.js",
     "test:browser": "node tests/browser-smoke.mjs",
     "test:browser:v2": "node tests/browser-smoke.mjs \"?players=2&version=2\"",
-    "test:browser:epic": "node tests/browser-smoke.mjs \"?players=2&preset=E_21\""
+    "test:browser:epic": "node tests/browser-smoke.mjs \"?players=2&preset=E_21\"",
+    "test:server": "deno test --allow-read --allow-env --no-check tests/room-core.test.ts",
+    "test:e2e:multiplayer": "node tests/e2e-multiplayer.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1"
