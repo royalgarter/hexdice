@@ -25,7 +25,8 @@
     "test:browser:epic": "node tests/browser-smoke.mjs \"?players=2&preset=E_21\"",
     "test:server": "deno test --allow-read --allow-env --no-check tests/room-core.test.ts",
     "test:e2e:multiplayer": "node tests/e2e-multiplayer.mjs",
-    "test:e2e:game": "node tests/e2e-multiplayer-game.mjs"
+    "test:e2e:game": "node tests/e2e-multiplayer-game.mjs",
+    "test:browser:recap": "node tests/browser-recap.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1"
