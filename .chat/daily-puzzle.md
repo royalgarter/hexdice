@@ -30,7 +30,15 @@ Accounts, leaderboards on server, ranked play. v1 is fully client-side + static 
 - E2E 2026-11-02: browser (`tests/browser-hdfen.mjs`) loads HDFEN into the live Alpine game, DOM renders, unit selectable. Headless (`tests/e2e-puzzle-p1.ts`) on 9 real AI-game positions: all round-trips identical, solver leaves state untouched, found a real unique win-in-1 at turn 84. Cost: n=2 ~0.2s, n=3 ~4s on crowded openings (83k-90k nodes), <0.3s late game; n=3 on some openings exceeds 150k nodes -> `maxNodes` budget added, generator must skip aborted positions.
 - Exit: solver solves hand-made mate-in-1 and mate-in-2 fixtures; round-trip test passes. Tests in `tests/puzzle-solver.test.ts`.
 
-### P2 — Generator
+### P2 — Generator (in progress; log 2026-11-02)
+Findings that changed the plan:
+- Mid-game AI positions almost never contain a forced win in <=3, so sampling is **endgame-only**: last N positions of finished games, winner to move. Yield is ~1 puzzle per 10 positions, ~3/min per core, limited by AI game play, not the solver.
+- Solver pruning (leaf cut + last-ply "can this end the game" filter + stop at 2nd winner) cut nodes ~44x; `tests/e2e-puzzle-p1.ts` asserts pruned == exhaustive on real positions (and `turnModelViolations == 0`).
+- Decoy count gates only N=1; for N>=2 it is a difficulty input (quiet endgames have few attacking moves).
+- Generator emits `attacker` (either seat). P4 must either let the human take that seat or normalise by rotating 180 degrees (q,r -> -q,-r, swap ids) and re-solving.
+- "Unique first move" holds within `generateAllPossibleMoves` (AI-pruned: GUARD anti-spam, SWAP-back skip, MERGE off, no SACRIFICE). P4's UI must offer the same move set or treat extra moves as wrong-by-definition; defence table only covers the solver set.
+- Positions with radius not in {5,6,8} are unsupported by the client grid class; generator inherits radius from normal games so this holds.
+
 - [ ] `js/puzzle-gen.ts`: sample mid/late-game positions from AI-vs-AI sims (reuse `simulate.ts`), keep those where solver finds forced win in <=N and **exactly one** winning first move (the aha).
 - [ ] Use `solvePuzzle(..., maxNodes)`; skip `aborted` results. Prefer late-game positions (cheap, and the only ones with wins so far).
 - [ ] Reject trivial: win available by plain capture of adjacent base at N>1, or any "obvious" kill-chain (score by number of losing-looking decoys: candidate first moves that a depth-1 heuristic prefers but lose).

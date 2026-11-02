@@ -32,7 +32,7 @@ let failures = 0;
 const check = (ok: boolean, msg: string) => { if (!ok) { failures++; console.error(`FAIL: ${msg}`); } };
 
 const rows: string[] = [];
-let positions = 0, solved = 0;
+let positions = 0, solved = 0, prunedNodes = 0, fullNodes = 0;
 
 for (let gi = 0; gi < args.games; gi++) {
 	const seed = args.seed + gi;
@@ -58,9 +58,19 @@ for (let gi = 0; gi < args.games; gi++) {
 
 		for (let n = 1; n <= args["max-n"]; n++) {
 			const t0 = performance.now();
-			const res = solvePuzzle(engine, g, n, args.budget);
+			const res = solvePuzzle(engine, g, n, { maxNodes: args.budget });
 			const ms = Math.round(performance.now() - t0);
 			check(g.generateHDFEN() === fen, `solver mutated game (seed ${seed}, n=${n})`);
+			if (!res.aborted && n <= 2) {
+				// Pruning must not change the answer: compare with the exhaustive search
+				const ref = solvePuzzle(engine, g, n, { maxNodes: args.budget * 4, prune: false });
+				if (!ref.aborted) {
+					const key = (r: typeof res) => r.winningFirstMoves.map(m => `${m.actionType}:${m.unitHexId}:${m.targetHexId}`).sort().join("|");
+					check(key(ref) === key(res), `PRUNING CHANGED RESULT (seed ${seed}, n=${n}): pruned=[${key(res)}] exhaustive=[${key(ref)}]`);
+					prunedNodes += res.nodes; fullNodes += ref.nodes;
+				}
+			}
+			check(res.turnModelViolations === 0, `turn model violated ${res.turnModelViolations}x (seed ${seed}, n=${n})`);
 			if (res.win) solved++;
 			const row = `seed=${seed} turn~${fen.split(' ')[3]} n=${n} ${res.aborted ? `ABORTED(>${args.budget} nodes)` : `win=${res.win} firstMoves=${res.winningFirstMoves.length}`} nodes=${res.nodes} ${ms}ms`;
 			rows.push(row);
@@ -70,5 +80,5 @@ for (let gi = 0; gi < args.games; gi++) {
 	}
 }
 
-console.log(`\npositions=${positions} winsFound=${solved} failures=${failures}`);
+console.log(`\npositions=${positions} winsFound=${solved} failures=${failures} nodes pruned/full=${prunedNodes}/${fullNodes}`);
 Deno.exit(failures ? 1 : 0);
