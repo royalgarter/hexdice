@@ -1,0 +1,22 @@
+{
+	"id": "11qonds",
+	"hdfen": "14/15mgd0/11/11mgd0/2/06mgd0/15mgd0/2/11mgd0/17/15mgd0/8/03mgd0/3/01Mgd0/4/05mgd0/21 1 PT 63 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 26,
+		"toHex": 28,
+		"unit": "D1"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		4,
+		5
+	],
+	"seed": 300171,
+	"generator": "puzzle-gen v1"
+}

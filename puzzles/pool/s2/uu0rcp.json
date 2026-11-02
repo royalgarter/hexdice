@@ -1,0 +1,22 @@
+{
+	"id": "uu0rcp",
+	"hdfen": "26/01Mgd0/1/05mgd0/06mgd0/1/15mgd0/9/15mgd0/9/11mgd0/15mgd0/3/11mgd0/11/06mgd0/22 1 PT 77 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 56,
+		"toHex": 58,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		4,
+		5
+	],
+	"seed": 200223,
+	"generator": "puzzle-gen v1"
+}

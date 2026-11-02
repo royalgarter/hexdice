@@ -1,0 +1,22 @@
+{
+	"id": "zmxxtf",
+	"hdfen": "30/14mgd0/1/12mgd0/4/16mgd0/7/02Mgd0/5/12mgd0/4/02mgd0/12/02mgd0/21 1 PT 67 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 37,
+		"toHex": 38,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		4
+	],
+	"seed": 100401,
+	"generator": "puzzle-gen v1"
+}

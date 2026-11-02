@@ -1,0 +1,22 @@
+{
+	"id": "1lyy3ob",
+	"hdfen": "21/15mgd0/7/04mgd0/12mgd0/05mgd0/8/15mgd0/3/14mgd0/3/06mgd0/1/03mgd0/12Mgd0/7/06mgd0/04mgd0/12mgd0/29 0 PT 44 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 31,
+		"toHex": 41,
+		"unit": "D5"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		6,
+		6
+	],
+	"seed": 100340,
+	"generator": "puzzle-gen v1"
+}

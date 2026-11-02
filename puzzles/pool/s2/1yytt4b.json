@@ -1,0 +1,22 @@
+{
+	"id": "1yytt4b",
+	"hdfen": "27/05mgd0/2/11mgd0/2/12mgd0/2/02Mgd0/3/13mgd0/4/14mgd0/45 1 PT 67 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 45,
+		"toHex": 47,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		4
+	],
+	"seed": 200077,
+	"generator": "puzzle-gen v1"
+}

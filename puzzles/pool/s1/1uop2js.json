@@ -1,0 +1,22 @@
+{
+	"id": "1uop2js",
+	"hdfen": "11/15mgd0/12/15mgd0/2/12mgd0/12mgd0/9/14mgd0/6/02Mgd0/1/05mgd0/8/06mgd0/2/05mgd0/5/05mgd0/25 1 PT 271 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 38,
+		"toHex": 49,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		5,
+		5
+	],
+	"seed": 100229,
+	"generator": "puzzle-gen v1"
+}

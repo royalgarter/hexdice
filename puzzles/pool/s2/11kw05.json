@@ -1,0 +1,22 @@
+{
+	"id": "11kw05",
+	"hdfen": "24/12Mgd0/8/15mgd0/2/05mgd0/2/04mgd0/3/12mgd0/11mgd0/14/02mgd0/04mgd0/06mgd0/3/13mgd0/3/06mgd0/21 0 PT 92 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 61,
+		"toHex": 51,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		6,
+		5
+	],
+	"seed": 200044,
+	"generator": "puzzle-gen v1"
+}

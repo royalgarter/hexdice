@@ -1,0 +1,22 @@
+{
+	"id": "sok10",
+	"hdfen": "21/02mgd0/16/02mgd0/04mgd0/3/12mgd0/16mgd0/16mgd0/11Mgd0/3/04mgd0/5/11mgd0/2/05mgd0/31 0 PT 86 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 21,
+		"toHex": 30,
+		"unit": "D2"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		5,
+		5
+	],
+	"seed": 100496,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "qtlh4l",
+	"hdfen": "24/13mgd0/4/05mgd0/3/15mgd0/5/06mgd0/4/15mgd0/11mgd0/11mgd0/13/02mgd0/8/02mgd0/2/02Mgd0/18 1 PT 69 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 24,
+		"toHex": 36,
+		"unit": "D3"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		5,
+		5
+	],
+	"seed": 100418,
+	"generator": "puzzle-gen v1"
+}

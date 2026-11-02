@@ -1,0 +1,22 @@
+{
+	"id": "ys52mr",
+	"hdfen": "27/12mgd0/16mgd0/12/15mgd0/2/02Mgd0/05mgd0/05mgd0/5/11mgd0/11/02mgd0/8/06mgd0/17 1 PT 171 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 28,
+		"toHex": 38,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 1,
+	"units": [
+		5,
+		4
+	],
+	"seed": 200458,
+	"generator": "puzzle-gen v1"
+}

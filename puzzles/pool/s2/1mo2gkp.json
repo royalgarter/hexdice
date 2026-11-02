@@ -1,0 +1,22 @@
+{
+	"id": "1mo2gkp",
+	"hdfen": "22/12mgd0/01mgd0/5/02mgd0/15mgd0/8/01mgd0/16mgd0/16mgd0/12/11Mgd0/5/05mgd0/30 0 PT 84 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 23,
+		"toHex": 31,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 1,
+	"units": [
+		4,
+		5
+	],
+	"seed": 200049,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "4rvt7j",
+	"hdfen": "26/06mgd0/2/05mgd0/9/06mgd0/5/16mgd0/05Mgd0/11mgd0/4/15mgd0/12mgd0/15/06mgd0/21 1 PT 85 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 47,
+		"toHex": 49,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		5,
+		4
+	],
+	"seed": 100039,
+	"generator": "puzzle-gen v1"
+}

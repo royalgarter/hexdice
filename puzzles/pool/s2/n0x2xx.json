@@ -1,0 +1,22 @@
+{
+	"id": "n0x2xx",
+	"hdfen": "21/16mgd0/8/16mgd0/6/02mgd0/2/15mgd0/7/04Mgd0/12/12mgd0/6/15mgd0/22 1 PT 65 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 68,
+		"toHex": 59,
+		"unit": "D5"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		2,
+		5
+	],
+	"seed": 200120,
+	"generator": "puzzle-gen v1"
+}

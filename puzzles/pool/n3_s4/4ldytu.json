@@ -1,0 +1,22 @@
+{
+	"id": "4ldytu",
+	"hdfen": "35/02mgd0/8/05mgd0/4/02mgd0/4/16mgd0/5/01mgd0/2/15Mgd0/16mgd0/4/05mgd0/21 0 PT 102 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 44,
+		"toHex": 43,
+		"unit": "D5"
+	},
+	"difficulty": 2,
+	"decoys": 1,
+	"units": [
+		5,
+		3
+	],
+	"seed": 400545,
+	"generator": "puzzle-gen v1"
+}

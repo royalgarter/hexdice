@@ -1,0 +1,22 @@
+{
+	"id": "7buggc",
+	"hdfen": "37/02Mgd0/1/06mgd0/15mgd0/4/11mgd0/4/06mgd0/40 1 PT 55 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 45,
+		"toHex": 47,
+		"unit": "D1"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		3,
+		2
+	],
+	"seed": 300210,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "15a1rtv",
+	"hdfen": "31/15mgd0/7/02mgd0/7/11Mgd0/1/05mgd0/03mgd0/16mgd0/04mgd0/7/01mgd0/15mgd0/29 0 PT 56 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 52,
+		"toHex": 41,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		5,
+		4
+	],
+	"seed": 200402,
+	"generator": "puzzle-gen v1"
+}

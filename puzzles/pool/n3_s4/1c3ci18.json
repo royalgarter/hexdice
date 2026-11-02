@@ -1,0 +1,22 @@
+{
+	"id": "1c3ci18",
+	"hdfen": "12/15mgd0/17/16mgd0/12mgd0/8/12mgd0/3/11mgd0/1/05mgd0/10/05Mgd0/3/16mgd0/29 1 PT 81 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 44,
+		"toHex": 35,
+		"unit": "D1"
+	},
+	"difficulty": 2,
+	"decoys": 1,
+	"units": [
+		2,
+		6
+	],
+	"seed": 400499,
+	"generator": "puzzle-gen v1"
+}

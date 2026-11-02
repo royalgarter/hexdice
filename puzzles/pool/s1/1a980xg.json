@@ -1,0 +1,22 @@
+{
+	"id": "1a980xg",
+	"hdfen": "21/11mgd0/01mgd0/4/12Mgd0/2/16mgd0/9/11mgd0/3/01mgd0/1/05mgd0/2/05mgd0/1/11mgd0/3/04mgd0/6/12mgd0/28 0 PT 58 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 22,
+		"toHex": 41,
+		"unit": "D1"
+	},
+	"difficulty": 2,
+	"decoys": 2,
+	"units": [
+		5,
+		6
+	],
+	"seed": 100058,
+	"generator": "puzzle-gen v1"
+}

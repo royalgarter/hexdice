@@ -1,0 +1,22 @@
+{
+	"id": "100ym3p",
+	"hdfen": "21/06mgd0/13/14mgd0/11Mgd0/2/02mgd0/10/05mgd0/12/14mgd0/1/12mgd0/3/06mgd0/3/12mgd0/15mgd0/16 0 PT 84 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 21,
+		"toHex": 30,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		4,
+		6
+	],
+	"seed": 200457,
+	"generator": "puzzle-gen v1"
+}

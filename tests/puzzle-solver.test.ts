@@ -83,3 +83,20 @@ Deno.test("solver leaves game state untouched", async () => {
 	const { game, fenBefore } = await solveFrom(engine, [[0, 1, start.q, start.r], [1, 1, park.q, park.r]], 2);
 	assertEquals(game.generateHDFEN(), fenBefore);
 });
+
+// Regression: the transposition key once omitted lastActionWasGuard/lastHexId, so results depended on search order
+// (forward found {43}, reverse found {21,31,43}). Truth, from the table-less search, is {43, 21}.
+Deno.test("transposition table does not change results or depend on move order", async () => {
+	const engine = await loadGameEngine(2, 1);
+	const fen = "23/01mgd0/8/16mgd0/10/14mgd0/4/04mgd0/6/15mgd0/3/02mgd0/05mgd0/4/11mgd0/12Mgd0/1/05mgd0/01mgd0/21 0 PT 78 ___ R5 91.";
+	const key = (r: any) => r.winningFirstMoves.map((m: any) => `${m.unitHexId}>${m.targetHexId}`).sort().join(",");
+	const runs = [];
+	for (const opts of [{ table: false }, {}, { reverseOrder: true }]) {
+		const g = await blankGame(engine);
+		await g.loadHDFEN(fen);
+		runs.push(solvePuzzle(engine, g, 3, opts));
+	}
+	assertEquals(key(runs[0]), "23>21,23>43");
+	assertEquals(key(runs[1]), key(runs[0]));
+	assertEquals(key(runs[2]), key(runs[0]));
+});

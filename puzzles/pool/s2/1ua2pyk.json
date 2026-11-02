@@ -1,0 +1,22 @@
+{
+	"id": "1ua2pyk",
+	"hdfen": "9/16mgd0/14Mgd0/5/14mgd0/8/15mgd0/11/02mgd0/17/01mgd0/1/06mgd0/05mgd0/6/01mgd0/25 0 PT 146 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 55,
+		"toHex": 53,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		5,
+		4
+	],
+	"seed": 200276,
+	"generator": "puzzle-gen v1"
+}

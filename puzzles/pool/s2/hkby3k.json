@@ -1,0 +1,22 @@
+{
+	"id": "hkby3k",
+	"hdfen": "23/13mgd0/8/15mgd0/7/15mgd0/6/12mgd0/3/16mgd0/15mgd0/20/02Mgd0/6/05mgd0/10 1 PT 75 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 47,
+		"toHex": 48,
+		"unit": "D2"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		6
+	],
+	"seed": 200416,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "1rtufny",
+	"hdfen": "11/14mgd0/7/16mgd0/26/02mgd0/6/15mgd0/3/05Mgd0/15/12mgd0/17 1 PT 187 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "SPELLCAST_SWAP",
+		"fromHex": 19,
+		"toHex": 11,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		4
+	],
+	"seed": 200429,
+	"generator": "puzzle-gen v1"
+}

@@ -35,10 +35,12 @@ export interface SolveOptions {
 	stopAfter?: number;
 	/** false disables the leaf/last-ply pruning; used by tests to prove pruning does not change results */
 	prune?: boolean;
+	/** false disables the transposition table (slow; used to isolate table bugs) */
+	table?: boolean;
 }
 
 export function solvePuzzle(engine: any, game: any, n: number, opts: SolveOptions = {}): SolveResult {
-	const { maxNodes = Infinity, reverseOrder = false, stopAfter = Infinity, prune = true } = opts;
+	const { maxNodes = Infinity, reverseOrder = false, stopAfter = Infinity, prune = true, table: useTable = true } = opts;
 	const attacker = game.currentPlayerIndex;
 	const table = new Map<string, boolean>();
 	let nodes = 0;
@@ -52,7 +54,8 @@ export function solvePuzzle(engine: any, game: any, n: number, opts: SolveOption
 	const stateKey = (movesLeft: number): string => {
 		const units: string[] = [];
 		game.players.forEach((p: any) => p.dice.forEach((d: any) => {
-			if (!d.isDeath) units.push(`${d.id}:${d.hexId}:${d.value}:${d.isGuarding}:${d.skirmishBuff}`);
+			// every field generateAllPossibleMoves/applyMove reads: omitting one makes the table order-dependent
+			if (!d.isDeath) units.push(`${d.id}:${d.hexId}:${d.value}:${d.isGuarding}:${d.skirmishBuff}:${d.lastActionWasGuard ? 1 : 0}:${d.lastHexId ?? ''}:${d.hasMovedOrAttackedThisTurn ? 1 : 0}`);
 		}));
 		return `${game.currentPlayerIndex}|${movesLeft}|${units.join(',')}`;
 	};
@@ -99,13 +102,13 @@ export function solvePuzzle(engine: any, game: any, n: number, opts: SolveOption
 		// Attacker has no moves left and the game is not over; a V1 defender move cannot end it in the attacker's favour.
 		if (prune && movesLeft === 0) return false;
 		const key = stateKey(movesLeft);
-		const cached = table.get(key);
+		const cached = useTable ? table.get(key) : undefined;
 		if (cached !== undefined) return cached;
 
 		const replies = legalMoves();
 		if (!replies.some(m => m.actionType === 'END_TURN')) replies.push(DEFENDER_PASS);
 		const result = replies.every(reply => tryMove(reply, () => attackerWinsWithin(movesLeft)));
-		table.set(key, result);
+		if (useTable) table.set(key, result);
 		return result;
 	};
 

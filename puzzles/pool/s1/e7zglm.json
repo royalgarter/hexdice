@@ -1,0 +1,22 @@
+{
+	"id": "e7zglm",
+	"hdfen": "21/12mgd0/2/02mgd0/05Mgd0/7/02mgd0/12/02mgd0/4/12mgd0/3/15mgd0/11mgd0/17/12mgd0/16 1 PT 119 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 56,
+		"toHex": 47,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 1,
+	"units": [
+		4,
+		5
+	],
+	"seed": 100068,
+	"generator": "puzzle-gen v1"
+}

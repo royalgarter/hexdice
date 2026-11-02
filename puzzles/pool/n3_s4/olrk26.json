@@ -1,0 +1,22 @@
+{
+	"id": "olrk26",
+	"hdfen": "33/05Mgd0/5/02mgd0/16mgd0/6/15mgd0/2/06mgd0/1/12mgd0/8/11mgd0/29 1 PT 61 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 47,
+		"toHex": 48,
+		"unit": "D5"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		3,
+		4
+	],
+	"seed": 400574,
+	"generator": "puzzle-gen v1"
+}

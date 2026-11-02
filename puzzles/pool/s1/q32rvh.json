@@ -1,0 +1,22 @@
+{
+	"id": "q32rvh",
+	"hdfen": "29/04mgd0/04mgd0/7/05mgd0/02mgd0/15mgd0/10/11mgd0/11mgd0/7/02mgd0/14mgd0/13mgd0/5/14Mgd0/06mgd0/21 0 PT 44 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 30,
+		"toHex": 41,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		6,
+		6
+	],
+	"seed": 100091,
+	"generator": "puzzle-gen v1"
+}

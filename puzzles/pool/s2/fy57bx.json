@@ -1,0 +1,22 @@
+{
+	"id": "fy57bx",
+	"hdfen": "17/06mgd0/9/06mgd0/06Mgd0/7/05mgd0/7/11mgd0/3/14mgd0/9/02mgd0/6/11mgd0/2/05mgd0/22 1 PT 101 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 48,
+		"toHex": 49,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		6,
+		3
+	],
+	"seed": 200447,
+	"generator": "puzzle-gen v1"
+}

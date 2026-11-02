@@ -1,0 +1,22 @@
+{
+	"id": "goigm5",
+	"hdfen": "21/12mgd0/1/16mgd0/3/02Mgd0/2/16mgd0/2/16mgd0/2/04mgd0/8/11mgd0/16/16mgd0/28 1 PT 91 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 45,
+		"toHex": 36,
+		"unit": "D1"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		2,
+		6
+	],
+	"seed": 200502,
+	"generator": "puzzle-gen v1"
+}

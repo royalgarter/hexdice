@@ -1,0 +1,22 @@
+{
+	"id": "1dkywht",
+	"hdfen": "16/15Mgd0/6/14mgd0/11mgd0/4/01mgd0/1/14mgd0/6/02mgd0/04mgd0/1/14mgd0/12/02mgd0/6/01mgd0/29 0 PT 268 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 61,
+		"toHex": 41,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		5,
+		5
+	],
+	"seed": 100179,
+	"generator": "puzzle-gen v1"
+}

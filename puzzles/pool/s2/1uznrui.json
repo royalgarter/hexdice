@@ -1,0 +1,22 @@
+{
+	"id": "1uznrui",
+	"hdfen": "23/16mgd0/12mgd0/3/15mgd0/3/16mgd0/15mgd0/8/15mgd0/4/05mgd0/9/05mgd0/5/01Mgd0/04mgd0/8/03mgd0/17 1 PT 113 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 28,
+		"toHex": 38,
+		"unit": "D5"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		5,
+		6
+	],
+	"seed": 200143,
+	"generator": "puzzle-gen v1"
+}

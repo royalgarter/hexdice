@@ -1,0 +1,22 @@
+{
+	"id": "ga7455",
+	"hdfen": "14/02mgd0/9/05mgd0/17/15mgd0/2/11mgd0/6/15mgd0/13mgd0/16/05mgd0/05mgd0/06Mgd0/6/05mgd0/11 1 PT 207 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 45,
+		"toHex": 47,
+		"unit": "D1"
+	},
+	"difficulty": 2,
+	"decoys": 2,
+	"units": [
+		6,
+		4
+	],
+	"seed": 100121,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "imy3co",
+	"hdfen": "21/12mgd0/18/16mgd0/3/05Mgd0/4/02mgd0/1/12mgd0/1/14mgd0/5/11mgd0/31 1 PT 69 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 59,
+		"toHex": 49,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		5
+	],
+	"seed": 100083,
+	"generator": "puzzle-gen v1"
+}

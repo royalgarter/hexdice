@@ -1,0 +1,22 @@
+{
+	"id": "dsmuud",
+	"hdfen": "28/03mgd0/02Mgd0/4/12mgd0/9/12mgd0/14mgd0/10/14mgd0/8/12mgd0/25 1 PT 103 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 45,
+		"toHex": 47,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		5
+	],
+	"seed": 200229,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "p9hicf",
+	"hdfen": "21/16mgd0/8/15mgd0/1/01mgd0/6/02mgd0/12mgd0/9/05mgd0/15mgd0/7/14Mgd0/06mgd0/1/12mgd0/6/05mgd0/21 0 PT 44 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 32,
+		"toHex": 41,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 4,
+	"units": [
+		5,
+		6
+	],
+	"seed": 100283,
+	"generator": "puzzle-gen v1"
+}

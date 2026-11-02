@@ -1,0 +1,22 @@
+{
+	"id": "169c5po",
+	"hdfen": "19/05mgd0/5/12mgd0/2/02mgd0/5/16mgd0/12mgd0/2/05mgd0/6/11Mgd0/15mgd0/2/06mgd0/7/12mgd0/2/06mgd0/1/06mgd0/28 0 PT 120 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 62,
+		"toHex": 52,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		6,
+		6
+	],
+	"seed": 200005,
+	"generator": "puzzle-gen v1"
+}

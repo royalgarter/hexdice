@@ -1,0 +1,22 @@
+{
+	"id": "real6y",
+	"hdfen": "21/16mgd0/8/14mgd0/15mgd0/8/14mgd0/5/05mgd0/9/02Mgd0/4/14mgd0/15/16mgd0/13 1 PT 73 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 77,
+		"toHex": 69,
+		"unit": "D6"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		2,
+		6
+	],
+	"seed": 400021,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "f7ko7g",
+	"hdfen": "20/15Mgd0/02mgd0/05mgd0/6/12mgd0/21/16mgd0/12mgd0/6/02mgd0/06mgd0/16mgd0/15/05mgd0/13 0 PT 184 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 22,
+		"toHex": 31,
+		"unit": "D5"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		5,
+		5
+	],
+	"seed": 400036,
+	"generator": "puzzle-gen v1"
+}

@@ -1,0 +1,22 @@
+{
+	"id": "1qohapm",
+	"hdfen": "16/14mgd0/6/15mgd0/14mgd0/11/06mgd0/5/15mgd0/4/06Mgd0/17/02mgd0/25 1 PT 95 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 16,
+		"toHex": 19,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		4
+	],
+	"seed": 100203,
+	"generator": "puzzle-gen v1"
+}

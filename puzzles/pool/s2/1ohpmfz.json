@@ -1,0 +1,22 @@
+{
+	"id": "1ohpmfz",
+	"hdfen": "28/13mgd0/14/11mgd0/9/02mgd0/7/06Mgd0/29 1 PT 261 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 43,
+		"toHex": 53,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		2
+	],
+	"seed": 200333,
+	"generator": "puzzle-gen v1"
+}

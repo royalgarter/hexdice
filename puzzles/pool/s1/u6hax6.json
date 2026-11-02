@@ -1,0 +1,22 @@
+{
+	"id": "u6hax6",
+	"hdfen": "16/14mgd0/6/15mgd0/04Mgd0/11/06mgd0/06mgd0/4/15mgd0/14mgd0/21/02mgd0/25 1 PT 93 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 16,
+		"toHex": 19,
+		"unit": "D4"
+	},
+	"difficulty": 3,
+	"decoys": 3,
+	"units": [
+		4,
+		4
+	],
+	"seed": 100203,
+	"generator": "puzzle-gen v1"
+}

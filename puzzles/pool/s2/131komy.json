@@ -1,0 +1,22 @@
+{
+	"id": "131komy",
+	"hdfen": "23/15mgd0/3/02mgd0/4/15Mgd0/29/05mgd0/05mgd0/27 0 PT 158 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 62,
+		"toHex": 52,
+		"unit": "D5"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		2
+	],
+	"seed": 200037,
+	"generator": "puzzle-gen v1"
+}

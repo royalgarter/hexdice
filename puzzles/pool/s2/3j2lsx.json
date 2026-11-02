@@ -1,0 +1,22 @@
+{
+	"id": "3j2lsx",
+	"hdfen": "30/14mgd0/15mgd0/8/15mgd0/4/01Mgd0/2/02mgd0/1/04mgd0/7/11mgd0/2/15mgd0/7/06mgd0/21 1 PT 45 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 58,
+		"toHex": 49,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 2,
+	"units": [
+		4,
+		5
+	],
+	"seed": 200127,
+	"generator": "puzzle-gen v1"
+}

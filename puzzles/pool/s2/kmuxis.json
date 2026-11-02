@@ -1,0 +1,22 @@
+{
+	"id": "kmuxis",
+	"hdfen": "14/02mgd0/7/06mgd0/22/15mgd0/10/15Mgd0/10/04mgd0/23 0 PT 198 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 22,
+		"toHex": 31,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		2
+	],
+	"seed": 200151,
+	"generator": "puzzle-gen v1"
+}

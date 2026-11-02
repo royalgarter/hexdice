@@ -1,0 +1,22 @@
+{
+	"id": "tg5afs",
+	"hdfen": "15/16mgd0/1/15mgd0/7/15mgd0/12mgd0/8/12Mgd0/8/15mgd0/2/05mgd0/01mgd0/9/02mgd0/3/02mgd0/7/05mgd0/20 0 PT 156 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 62,
+		"toHex": 52,
+		"unit": "D2"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		5,
+		6
+	],
+	"seed": 100318,
+	"generator": "puzzle-gen v1"
+}

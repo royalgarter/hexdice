@@ -1,0 +1,22 @@
+{
+	"id": "1emyxca",
+	"hdfen": "12/14mgd0/7/16mgd0/25/05Mgd0/02mgd0/5/15mgd0/19/12mgd0/17 1 PT 191 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 12,
+		"toHex": 19,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		2,
+		4
+	],
+	"seed": 200429,
+	"generator": "puzzle-gen v1"
+}

@@ -31,6 +31,9 @@ Accounts, leaderboards on server, ranked play. v1 is fully client-side + static 
 - Exit: solver solves hand-made mate-in-1 and mate-in-2 fixtures; round-trip test passes. Tests in `tests/puzzle-solver.test.ts`.
 
 ### P2 — Generator (in progress; log 2026-11-02)
+Solver bug found and fixed 2026-11-02: the transposition key omitted `lastActionWasGuard`, `lastHexId`, `hasMovedOrAttackedThisTurn`, so results depended on search order (forward {43}, reverse {21,31,43}, truth {43,21}). Key widened; regression test added; `js/puzzle-verify.ts` re-solves a pool both ways. All 123 pool puzzles passed re-verification (0 rejected) with the fixed solver.
+Pool status: 123 puzzles (N1: 17, N2: 76, N3: 30; difficulty 1: 85, 2: 33, 3: 5). Gap: difficulty 4-5 needs a recalibrated score or Guard/Oracle-based puzzles.
+
 Findings that changed the plan:
 - Mid-game AI positions almost never contain a forced win in <=3, so sampling is **endgame-only**: last N positions of finished games, winner to move. Yield is ~1 puzzle per 10 positions, ~3/min per core, limited by AI game play, not the solver.
 - Solver pruning (leaf cut + last-ply "can this end the game" filter + stop at 2nd winner) cut nodes ~44x; `tests/e2e-puzzle-p1.ts` asserts pruned == exhaustive on real positions (and `turnModelViolations == 0`).

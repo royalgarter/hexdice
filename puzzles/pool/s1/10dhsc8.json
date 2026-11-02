@@ -1,0 +1,22 @@
+{
+	"id": "10dhsc8",
+	"hdfen": "29/06mgd0/6/11mgd0/16Mgd0/22/02mgd0/1/02mgd0/6/02mgd0/21 0 PT 82 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 62,
+		"toHex": 52,
+		"unit": "D2"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		4,
+		2
+	],
+	"seed": 100104,
+	"generator": "puzzle-gen v1"
+}

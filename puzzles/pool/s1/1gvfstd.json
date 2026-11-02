@@ -1,0 +1,22 @@
+{
+	"id": "1gvfstd",
+	"hdfen": "10/12mgd0/11mgd0/33/02Mgd0/9/01mgd0/1/05mgd0/33 1 PT 125 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 11,
+		"toHex": 28,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		2
+	],
+	"seed": 100396,
+	"generator": "puzzle-gen v1"
+}

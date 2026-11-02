@@ -1,0 +1,22 @@
+{
+	"id": "i2v70j",
+	"hdfen": "22/06mgd0/02mgd0/21/15mgd0/9/15Mgd0/11/04mgd0/23 0 PT 196 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 22,
+		"toHex": 31,
+		"unit": "D6"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		2
+	],
+	"seed": 200151,
+	"generator": "puzzle-gen v1"
+}

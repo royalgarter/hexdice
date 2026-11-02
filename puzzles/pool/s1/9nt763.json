@@ -1,0 +1,22 @@
+{
+	"id": "9nt763",
+	"hdfen": "25/12mgd0/15mgd0/7/15mgd0/1/12mgd0/9/12Mgd0/15/02mgd0/8/05mgd0/9/02mgd0/9 0 PT 168 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 62,
+		"toHex": 52,
+		"unit": "D2"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		3,
+		5
+	],
+	"seed": 100432,
+	"generator": "puzzle-gen v1"
+}

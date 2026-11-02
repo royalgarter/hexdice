@@ -1,0 +1,22 @@
+{
+	"id": "8bt4n",
+	"hdfen": "29/06mgd0/1/04mgd0/6/02mgd0/04mgd0/6/11mgd0/6/16mgd0/1/11mgd0/3/14Mgd0/04mgd0/1/15mgd0/13mgd0/5/01mgd0/21 0 PT 58 ___ R5 91.",
+	"n": 1,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 31,
+		"toHex": 41,
+		"unit": "D4"
+	},
+	"difficulty": 1,
+	"decoys": 5,
+	"units": [
+		6,
+		6
+	],
+	"seed": 200343,
+	"generator": "puzzle-gen v1"
+}

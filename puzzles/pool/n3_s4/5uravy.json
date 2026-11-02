@@ -1,0 +1,22 @@
+{
+	"id": "5uravy",
+	"hdfen": "36/12mgd0/4/12mgd0/4/05Mgd0/5/15mgd0/3/05mgd0/5/15mgd0/28 1 PT 97 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 36,
+		"toHex": 37,
+		"unit": "D2"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		2,
+		4
+	],
+	"seed": 400421,
+	"generator": "puzzle-gen v1"
+}

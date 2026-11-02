@@ -1,0 +1,22 @@
+{
+	"id": "i5u13b",
+	"hdfen": "29/01mgd0/9/05mgd0/14mgd0/14mgd0/5/16Mgd0/06mgd0/1/03mgd0/5/14mgd0/7/03mgd0/4/05mgd0/21 0 PT 54 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 64,
+		"toHex": 33,
+		"unit": "D3"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		6,
+		4
+	],
+	"seed": 300428,
+	"generator": "puzzle-gen v1"
+}

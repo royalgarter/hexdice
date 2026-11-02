@@ -70,6 +70,14 @@ for (let gi = 0; gi < args.games; gi++) {
 					prunedNodes += res.nodes; fullNodes += ref.nodes;
 				}
 			}
+			if (!res.aborted && n <= 2) {
+				// Table + search order must not change the answer
+				const k = (r: typeof res) => r.winningFirstMoves.map(m => `${m.unitHexId}>${m.targetHexId}`).sort().join("|");
+				const noTable = solvePuzzle(engine, g, n, { maxNodes: args.budget * 4, table: false });
+				const rev = solvePuzzle(engine, g, n, { maxNodes: args.budget * 4, reverseOrder: true });
+				if (!noTable.aborted) check(k(noTable) === k(res), `TABLE CHANGED RESULT (seed ${seed}, n=${n})`);
+				if (!rev.aborted) check(k(rev) === k(res), `ORDER CHANGED RESULT (seed ${seed}, n=${n})`);
+			}
 			check(res.turnModelViolations === 0, `turn model violated ${res.turnModelViolations}x (seed ${seed}, n=${n})`);
 			if (res.win) solved++;
 			const row = `seed=${seed} turn~${fen.split(' ')[3]} n=${n} ${res.aborted ? `ABORTED(>${args.budget} nodes)` : `win=${res.win} firstMoves=${res.winningFirstMoves.length}`} nodes=${res.nodes} ${ms}ms`;

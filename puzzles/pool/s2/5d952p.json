@@ -1,0 +1,22 @@
+{
+	"id": "5d952p",
+	"hdfen": "39/04mgd0/16Mgd0/12mgd2/01mgd0/7/05mgd0/9/02mgd0/6/15mgd0/23 0 PT 82 ___ R5 91.",
+	"n": 2,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 42,
+		"toHex": 41,
+		"unit": "D1"
+	},
+	"difficulty": 1,
+	"decoys": 0,
+	"units": [
+		4,
+		3
+	],
+	"seed": 200288,
+	"generator": "puzzle-gen v1"
+}

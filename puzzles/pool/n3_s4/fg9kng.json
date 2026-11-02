@@ -1,0 +1,22 @@
+{
+	"id": "fg9kng",
+	"hdfen": "8/15mgd0/4/15mgd0/11/05mgd0/13/06mgd0/2/14mgd0/2/11mgd0/4/06mgd0/5/11Mgd0/3/06mgd0/1/05mgd0/28 0 PT 184 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 0,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 62,
+		"toHex": 52,
+		"unit": "D5"
+	},
+	"difficulty": 2,
+	"decoys": 0,
+	"units": [
+		5,
+		5
+	],
+	"seed": 400127,
+	"generator": "puzzle-gen v1"
+}

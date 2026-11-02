@@ -1,0 +1,22 @@
+{
+	"id": "qrs5vk",
+	"hdfen": "26/14mgd0/8/02mgd0/1/06mgd0/5/12mgd0/2/05mgd0/6/14mgd0/14mgd0/2/02mgd0/8/01Mgd0/24 1 PT 199 ___ R5 91.",
+	"n": 3,
+	"rules": "V1",
+	"attacker": 1,
+	"uniqueFirstMove": true,
+	"firstMove": {
+		"actionType": "MOVE",
+		"fromHex": 26,
+		"toHex": 28,
+		"unit": "D4"
+	},
+	"difficulty": 3,
+	"decoys": 2,
+	"units": [
+		5,
+		4
+	],
+	"seed": 300473,
+	"generator": "puzzle-gen v1"
+}
