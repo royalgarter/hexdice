@@ -49,6 +49,8 @@ Findings that changed the plan:
 - [ ] CLI: `deno run --allow-all js/puzzle-gen.ts --count=400 --out=puzzles/pool`. Seeded for reproducibility.
 - Exit: 100+ puzzles with spread of difficulty; manual review of 20.
 
+- [ ] TODO (later): recalibrate difficulty score. Pool has no difficulty 4-5 (85/33/5 at 1/2/3). Ideas: count plausible wrong first moves (not just attacks), reward Guard/Oracle-spell solutions, weight branching factor and unit count.
+
 ### P3 — Daily scheduler + content QA
 - [ ] `scripts/schedule-puzzles.js`: assign pool entries to dates, difficulty ramp Mon(1) -> Sun(5), no repeats in 365 days.
 - [ ] Human QA pass: title, flavour line, flag broken ones.
