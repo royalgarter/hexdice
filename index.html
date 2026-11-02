@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Hex Dice</title>
+	<title>Hex Dice – Free Tactical Hexagon Dice Board Game Online</title>
 
 	<meta charset="UTF-8">
 	<!-- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> -->
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="color-scheme" content="light">
-	<meta name="description" content="Hex Dice">
-	<meta name="keywords" content="boardgame,hexagon,dice">
+	<meta name="description" content="Hex Dice is a free tactical hexagon board game where every die is a soldier. Roll an army of six unit types, fight on a hex map, and play solo vs AI, online, or in a campaign.">
+	<meta name="keywords" content="hex dice,tactical board game,hexagon board game,dice strategy game,dice army game,free online board game,turn-based tactics,print and play">
+	<meta name="author" content="Tung Pham Thanh">
+	<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
 	<meta name="theme-color" content="#c3a471">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -17,20 +19,81 @@
 	<link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
 
 	<!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
-	<meta property="og:image" content="/assets/infographics/hexdice_recap.png">
-	<meta property="og:image:width" content="1200">
-	<meta property="og:image:height" content="630">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="Hex Dice">
+	<meta property="og:locale" content="en_US">
+	<meta property="og:url" content="https://hexdice.newsrss.org/">
+	<meta property="og:title" content="Hex Dice – Tactical Hexagon Dice Board Game">
+	<meta property="og:description" content="Dice are the game: each die is a soldier. Roll your army, outmaneuver opponents on a hex map, and capture their base. Free to play online or print and play.">
+	<meta property="og:image" content="https://hexdice.newsrss.org/assets/infographics/hexdice_recap.png">
+	<meta property="og:image:type" content="image/png">
+	<meta property="og:image:width" content="1376">
+	<meta property="og:image:height" content="768">
+	<meta property="og:image:alt" content="Hex Dice infographic: dice armies, unit types and terrain on a hexagonal board">
 
 	<!-- Twitter Card (X/Twitter) -->
-	<meta name="twitter:card" content="Hex Dice is a tactical board game where players command armies of dice, using their face values to determine their unit type, abilities, and movement. Played on a hexagonal map, players maneuver their forces, engage in deterministic combat, and aim to defeat all opponents or capture their base.">
-	<meta name="twitter:image" content="/assets/infographics/hexdice_recap.png">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="Hex Dice – Tactical Hexagon Dice Board Game">
+	<meta name="twitter:description" content="Dice are the game: each die is a soldier. Roll your army, outmaneuver opponents on a hex map, and capture their base.">
+	<meta name="twitter:image" content="https://hexdice.newsrss.org/assets/infographics/hexdice_recap.png">
+	<meta name="twitter:image:alt" content="Hex Dice infographic: dice armies, unit types and terrain on a hexagonal board">
+
+	<link rel="canonical" href="https://hexdice.newsrss.org/">
+	<link rel="alternate" type="text/markdown" href="/rules/RULES.md" title="Hex Dice rules (Markdown)">
+	<link rel="sitemap" type="application/xml" href="/sitemap.xml">
+
+	<script type="application/ld+json">
+	{
+		"@context": "https://schema.org",
+		"@graph": [
+			{
+				"@type": "WebSite",
+				"@id": "https://hexdice.newsrss.org/#website",
+				"url": "https://hexdice.newsrss.org/",
+				"name": "Hex Dice",
+				"inLanguage": "en"
+			},
+			{
+				"@type": ["VideoGame", "Game"],
+				"@id": "https://hexdice.newsrss.org/#game",
+				"name": "Hex Dice",
+				"url": "https://hexdice.newsrss.org/",
+				"description": "Tactical hexagon board game where players command armies of dice, using their face values to determine unit type, abilities and movement.",
+				"image": "https://hexdice.newsrss.org/assets/infographics/hexdice_recap.png",
+				"genre": ["Strategy", "Tactical", "Board game"],
+				"gamePlatform": "Web browser",
+				"applicationCategory": "Game",
+				"operatingSystem": "Any",
+				"numberOfPlayers": {"@type": "QuantitativeValue", "minValue": 2, "maxValue": 6},
+				"playMode": ["SinglePlayer", "MultiPlayer"],
+				"author": {"@type": "Person", "name": "Tung Pham Thanh", "url": "https://github.com/royalgarter"},
+				"isAccessibleForFree": true,
+				"offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+				"citation": "https://hexdice.newsrss.org/rules"
+			},
+			{
+				"@type": "FAQPage",
+				"mainEntity": [
+					{"@type": "Question", "name": "What is Hex Dice?", "acceptedAnswer": {"@type": "Answer", "text": "Hex Dice is a free tactical board game on a hexagonal map. Each player commands an army of dice, and the face value of each die (1-6) sets its unit type, abilities and movement. You win by defeating all opponents or capturing their base."}},
+					{"@type": "Question", "name": "What unit types are in Hex Dice?", "acceptedAnswer": {"@type": "Answer", "text": "Six: 1 Fencer (balanced all-rounder), 2 Archer (ranged), 3 Hussar (fast L-shape striker), 4 Knight (six-diagonal maneuver), 5 Tanker (heavy armor) and 6 Oracle (spellcaster with Shield, Swap and Skirmish)."}},
+					{"@type": "Question", "name": "How do you win Hex Dice?", "acceptedAnswer": {"@type": "Answer", "text": "Defeat every opposing die or capture the enemy base. Combat is either deterministic (Decisive Dice, version 1) or probabilistic (Destiny Dice, version 2)."}},
+					{"@type": "Question", "name": "How many players can play Hex Dice?", "acceptedAnswer": {"@type": "Answer", "text": "Two to six players, against AI opponents or other people online. A solo campaign mode with a story, upgrades and bosses is also available."}},
+					{"@type": "Question", "name": "Is Hex Dice free, and can I play it offline?", "acceptedAnswer": {"@type": "Answer", "text": "It is free to play in the browser. The rules and a printable transparent board are available, so you can play with physical dice too."}},
+					{"@type": "Question", "name": "Where are the full rules?", "acceptedAnswer": {"@type": "Answer", "text": "The complete rulebook with unit stats, combat and terrain is at https://hexdice.newsrss.org/rules"}}
+				]
+			}
+		]
+	}
+	</script>
+
+	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
+	<link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+	<link rel="manifest" href="/assets/manifest.json">
 
 	<meta id="hexdice_version" name="hexdice_version" content="___VERSION___">
 	<meta id="hexdice_mqtt" name="hexdice_mqtt" content="___MQTT___">
 
-	<link rel="canonical" :href="host">
-	<link rel="shortcut icon" href="/assets/images/favicon.ico" type="image/x-icon">
-	<link rel="manifest" href="/assets/manifest.json">
 	<link rel="stylesheet" type="text/css" href="/assets/litewind.css" />
 	<link rel="stylesheet" type="text/css" href="/assets/style.css?v=___VERSION___" />
 

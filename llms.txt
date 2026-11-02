@@ -1,0 +1,9 @@
+# Hex Dice
+
+> Free tactical hexagon board game where each die is a soldier. Face value (1-6) sets unit type: Fencer, Archer, Hussar, Knight, Tanker, Oracle. 2-6 players, vs AI or online, plus a story campaign.
+
+- [Play](https://hexdice.newsrss.org/): browser game
+- [Rules](https://hexdice.newsrss.org/rules): units, combat, terrain, setup, win conditions
+- [Rules (Markdown)](https://hexdice.newsrss.org/rules/RULES.md): authoritative rulebook
+- [Printable board](https://hexdice.newsrss.org/assets/board.png): transparent board for physical play
+- [Source](https://github.com/royalgarter/hexdice)
