@@ -19,10 +19,13 @@ Replace hand-tuned heuristic profiles with profiles found by self-play evolution
 ## Phases
 
 ### P1 — Harness (shares the headless sim work with Daily Puzzle P1)
-- [ ] Make `mutateProfile` / `generateRandomProfile` take an `rng` param (default `Math.random`). Keep old signature working.
-- [ ] `js/evolve.ts`: load engine like `simulate.ts`, evaluate a profile list vs gauntlet in parallel (worker pool; see `tournament` parallel scripts).
-- [ ] Profile (de)serialisation to JSON, validation (clamp ranges: `mergeOver6Penalty` negative, `riskTolerance` 0-1).
-- [ ] Throughput benchmark: games/sec. Decide population and games-per-eval from it.
+- [x] Make `mutateProfile` / `generateRandomProfile` take an `rng` param (default `Math.random`). Keep old signature working.
+- [x] `js/evolve.ts`: load engine like `simulate.ts`, evaluate a profile list vs gauntlet in parallel (worker pool; see `tournament` parallel scripts).
+- [x] Profile (de)serialisation to JSON, validation (clamp ranges: `mergeOver6Penalty` negative, `riskTolerance` 0-1).
+- [x] Throughput benchmark: games/sec. Decide population and games-per-eval from it.
+- Notes: seeded `makeRng`; `completeProfile` materialises hidden role weights; `clampProfile`; `crossoverProfiles`. Bench: 2.3 games/s on 2 workers, ~47 plies/game; a 100-game profile score is ~45s, a gen of 8 is ~4-5 min. Run 2 gens x 8 pop x 10 games: gen0 best 75.0% / mean 59.9%, gen1 best 73.5% / mean 67.7% (small samples; gauntlet includes baseline, so these are not yet evidence of improvement - P2 adds held-out seeds/opponents).
+- Fixed on the way: `performMove` dereferenced the attacker before its null check (crashed ~1 in 400 games with mutated minimax profiles).
+- TODO: root-cause why minimax produces a move for a unit `getUnitOnHex` sees as dead (cloned-state aliasing); currently a logged no-op.
 - Exit: `deno run --allow-all js/evolve.ts --gens=2 --pop=8 --games=10` runs and logs.
 
 ### P2 — Evolution run + selection

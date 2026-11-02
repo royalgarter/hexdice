@@ -301,25 +301,93 @@ function getProfileNames() {
 }
 
 /**
- * Create a mutated copy of a profile
- * @param {string} baseProfileName - Name of the base profile to mutate
- * @param {number} mutationRate - 0-1, how much to mutate weights (0.2 = ±20%)
+ * Seeded RNG (mulberry32) for reproducible evolution runs. Returns a () => [0,1) function.
  */
-function mutateProfile(baseProfileName, mutationRate = 0.2) {
-    const base = getProfile(baseProfileName);
-    const mutated = JSON.parse(JSON.stringify(base)); // Deep clone
+function makeRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Weights the AI reads with a `?? default`. Profiles that omit them can't be mutated, so evolution materialises them.
+const ROLE_WEIGHT_DEFAULTS = {
+    flankerEdge: 20, flankerKillSetup: 200, frontlineCenter: 15,
+    supportAdjacency: 30, supportFarPenalty: 40, supportInRange: 60,
+    kitingOptimal: 200, kitingSetup: 300, kitingAdjacentPenalty: -500, bodyguard: 150,
+};
+const TOP_LEVEL_WEIGHT_DEFAULTS = { selfBlockPenalty: -80, immediateDeathPenalty: -300, focusFireBonus: 120 };
+const NESTED_WEIGHT_KEYS = ['terrainWeights', 'spells', 'roleWeights'];
+const FLOAT_RANGES = { teamPositionWeight: [0, 2], pressureWeight: [0, 2] };
+const PRIORITY_SET = ['capture', 'kill', 'attack', 'spell', 'dodge', 'position'];
+
+/**
+ * Deep copy with every AI-read weight present, so all of them can evolve.
+ */
+function completeProfile(profile) {
+    const full = JSON.parse(JSON.stringify(profile));
+    full.weights = full.weights || {};
+    for (const k in TOP_LEVEL_WEIGHT_DEFAULTS) {
+        if (full.weights[k] === undefined) full.weights[k] = TOP_LEVEL_WEIGHT_DEFAULTS[k];
+    }
+    full.weights.roleWeights = Object.assign({}, ROLE_WEIGHT_DEFAULTS, full.weights.roleWeights || {});
+    return full;
+}
+
+function _clampWeight(key, v, group) {
+    if (!Number.isFinite(v)) return 0;
+    if (group === 'spells') return Math.max(0, Math.min(4, v));
+    if (FLOAT_RANGES[key]) return Math.max(FLOAT_RANGES[key][0], Math.min(FLOAT_RANGES[key][1], v));
+    // supportFarPenalty is a positive magnitude that the AI subtracts; every other *Penalty is stored negative
+    if (key === 'supportFarPenalty') return Math.max(0, v);
+    if (/Penalty$/.test(key)) return Math.min(0, v);
+    return Math.max(0, v);
+}
+
+/**
+ * Force a (possibly mutated/crossed) profile back into legal ranges. Mutates and returns it.
+ */
+function clampProfile(profile) {
+    const w = profile.weights;
+    for (const key in w) {
+        if (NESTED_WEIGHT_KEYS.includes(key)) {
+            for (const sub in w[key]) w[key][sub] = _clampWeight(sub, w[key][sub], key);
+            continue;
+        }
+        w[key] = _clampWeight(key, w[key], null);
+    }
+    profile.riskTolerance = Math.max(0, Math.min(1, profile.riskTolerance));
+    // priorityOrder must stay a permutation of the profile's own priorities (no duplicates, nothing invented)
+    const seen = new Set();
+    profile.priorityOrder = profile.priorityOrder.filter(p => PRIORITY_SET.includes(p) && !seen.has(p) && seen.add(p));
+    return profile;
+}
+
+/**
+ * Create a mutated copy of a profile
+ * @param {string|object} base - Profile name or profile object
+ * @param {number} mutationRate - 0-1, how much to mutate weights (0.2 = ±20%)
+ * @param {function} rng - () => [0,1); defaults to Math.random. Pass makeRng(seed) for reproducible runs.
+ */
+function mutateProfile(base, mutationRate = 0.2, rng = Math.random) {
+    const baseProfile = typeof base === 'string' ? getProfile(base) : base;
+    const mutated = completeProfile(baseProfile);
     
-    mutated.name = `${base.name} (Mutated)`;
+    mutated.name = `${baseProfile.name} (Mutated)`;
     
     // Mutate weights. Small float-scale weights (multipliers < 10) must not be rounded to ints.
+    // Zero-valued weights get an absolute nudge, otherwise they could never evolve.
     const mutateValue = (original) => {
-        const variance = original * mutationRate;
-        const randomOffset = (Math.random() * 2 - 1) * variance;
-        const result = original + randomOffset;
-        return Math.abs(original) < 10 ? Math.round(result * 100) / 100 : Math.round(result);
+        const scale = original === 0 ? (mutationRate * 50) : Math.abs(original) * mutationRate;
+        const result = original + (rng() * 2 - 1) * scale;
+        return Math.abs(original) < 10 && original !== 0 ? Math.round(result * 100) / 100 : Math.round(result);
     };
     for (const key in mutated.weights) {
-        if (key === 'terrainWeights' || key === 'spells' || key === 'roleWeights') {
+        if (NESTED_WEIGHT_KEYS.includes(key)) {
             for (const subKey in mutated.weights[key]) {
                 mutated.weights[key][subKey] = mutateValue(mutated.weights[key][subKey]);
             }
@@ -328,67 +396,89 @@ function mutateProfile(baseProfileName, mutationRate = 0.2) {
         mutated.weights[key] = mutateValue(mutated.weights[key]);
     }
     
-    // Mutate risk tolerance (clamp to 0-1)
-    mutated.riskTolerance = Math.max(0, Math.min(1, 
-        mutated.riskTolerance + (Math.random() * 0.2 - 0.1)
-    ));
+    mutated.riskTolerance = mutated.riskTolerance + (rng() * 0.2 - 0.1);
     
     // Possibly shuffle priority order (10% chance)
-    if (Math.random() < 0.1) {
-        // Swap two random priorities
-        const i = Math.floor(Math.random() * mutated.priorityOrder.length);
-        const j = Math.floor(Math.random() * mutated.priorityOrder.length);
+    if (rng() < 0.1) {
+        const i = Math.floor(rng() * mutated.priorityOrder.length);
+        const j = Math.floor(rng() * mutated.priorityOrder.length);
         [mutated.priorityOrder[i], mutated.priorityOrder[j]] = 
         [mutated.priorityOrder[j], mutated.priorityOrder[i]];
     }
     
-    return mutated;
+    return clampProfile(mutated);
+}
+
+/**
+ * Uniform crossover: each weight (including nested ones) comes from parent A or B.
+ */
+function crossoverProfiles(a, b, rng = Math.random) {
+    const pa = completeProfile(typeof a === 'string' ? getProfile(a) : a);
+    const pb = completeProfile(typeof b === 'string' ? getProfile(b) : b);
+    const child = completeProfile(pa);
+    child.name = `${pa.name} x ${pb.name}`;
+    const pick = (x, y) => (rng() < 0.5 ? x : y);
+    for (const key in child.weights) {
+        if (NESTED_WEIGHT_KEYS.includes(key)) {
+            for (const sub in child.weights[key]) {
+                child.weights[key][sub] = pick(pa.weights[key][sub], pb.weights[key]?.[sub] ?? pa.weights[key][sub]);
+            }
+            continue;
+        }
+        child.weights[key] = pick(pa.weights[key], pb.weights[key] ?? pa.weights[key]);
+    }
+    child.riskTolerance = pick(pa.riskTolerance, pb.riskTolerance);
+    child.priorityOrder = pick(pa, pb).priorityOrder.slice();
+    for (const trait of ['targetSelection', 'positioningStyle', 'unitSelection']) child[trait] = pick(pa[trait], pb[trait]);
+    return clampProfile(child);
 }
 
 /**
  * Generate a completely random profile
  */
-function generateRandomProfile() {
+function generateRandomProfile(rng = Math.random) {
     const priorities = ['capture', 'kill', 'attack', 'dodge', 'position'];
-    const shuffled = priorities.sort(() => Math.random() - 0.5);
+    const shuffled = priorities.map(p => [rng(), p]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+    const int = (range, min) => Math.floor(rng() * range) + min;
+    const choice = (arr) => arr[Math.floor(rng() * arr.length)];
     
-    return {
+    return clampProfile(completeProfile({
         name: "Random",
         description: "Randomly generated heuristic profile",
         priorityOrder: shuffled,
         weights: {
-            captureBonus: Math.floor(Math.random() * 5000) + 5000,
-            killBonus: Math.floor(Math.random() * 1500) + 500,
-            attackBonus: Math.floor(Math.random() * 400) + 50,
-            safeBonus: Math.floor(Math.random() * 1500) + 200,
-            threatPenalty: Math.floor(Math.random() * -400) - 100,
-            protectedRangeBonus: Math.floor(Math.random() * 250) + 25,
-            friendlySixBonus: Math.floor(Math.random() * 250) + 50,
-            advanceBonus: Math.floor(Math.random() * 90) + 10,
-            guardPenalty: Math.floor(Math.random() * -900) - 100,
-            mergeOver6Penalty: Math.floor(Math.random() * -500) - 20,
+            captureBonus: int(5000, 5000),
+            killBonus: int(1500, 500),
+            attackBonus: int(400, 50),
+            safeBonus: int(1500, 200),
+            threatPenalty: -int(400, 100),
+            protectedRangeBonus: int(250, 25),
+            friendlySixBonus: int(250, 50),
+            advanceBonus: int(90, 10),
+            guardPenalty: -int(900, 100),
+            mergeOver6Penalty: -int(500, 20),
             backAndForthPenalty: -300,
             teamPositionWeight: 0.1,
             pressureWeight: 0.2,
-            focusFireBonus: Math.floor(Math.random() * 200) + 50,
+            focusFireBonus: int(200, 50),
             spells: {
-                SPELLCAST_SHIELD: Math.random() * 2 + 0.3,
-                SPELLCAST_SWAP: Math.random() * 2 + 0.3,
-                SPELLCAST_SKIRMISH: Math.random() * 2 + 0.3
+                SPELLCAST_SHIELD: rng() * 2 + 0.3,
+                SPELLCAST_SWAP: rng() * 2 + 0.3,
+                SPELLCAST_SKIRMISH: rng() * 2 + 0.3
             },
             terrainWeights: {
-                defenseBonusWeight: Math.floor(Math.random() * 200) + 50,
-                archerTowerBonus: Math.floor(Math.random() * 300) + 50,
-                archerMountainBonus: Math.floor(Math.random() * 400) + 50,
-                mountainMovePenalty: Math.floor(Math.random() * -200) - 50,
-                losBlockBonus: Math.floor(Math.random() * 300) + 50
+                defenseBonusWeight: int(200, 50),
+                archerTowerBonus: int(300, 50),
+                archerMountainBonus: int(400, 50),
+                mountainMovePenalty: -int(200, 50),
+                losBlockBonus: int(300, 50)
             }
         },
-        riskTolerance: Math.random(),
-        targetSelection: ['highestValue', 'lowArmor', 'threatRemoval'][Math.floor(Math.random() * 3)],
-        positioningStyle: ['balanced', 'rush', 'turtle', 'flank', 'cluster'][Math.floor(Math.random() * 5)],
-        unitSelection: ['leastMoved', 'highestValue', 'lowestValue', 'mostThreatened'][Math.floor(Math.random() * 4)]
-    };
+        riskTolerance: rng(),
+        targetSelection: choice(['highestValue', 'lowArmor', 'threatRemoval']),
+        positioningStyle: choice(['balanced', 'rush', 'turtle', 'flank', 'cluster']),
+        unitSelection: choice(['leastMoved', 'highestValue', 'lowestValue', 'mostThreatened'])
+    }));
 }
 
 // Export for use in other modules
@@ -398,6 +488,10 @@ if (typeof module !== 'undefined' && module.exports) {
         getProfile, 
         getProfileNames,
         mutateProfile,
-        generateRandomProfile
+        generateRandomProfile,
+        crossoverProfiles,
+        completeProfile,
+        clampProfile,
+        makeRng
     };
 }

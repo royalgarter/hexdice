@@ -3016,13 +3016,13 @@ function alpineHexDiceTacticGame() { return {
 		const defenderUnit = this.getUnitOnHex(targetHexId, state);
 		const attackerHex = this.getHex(unitHexId, state);
 		const defenderHex = this.getHex(targetHexId, state);
-		const unitValue = attackerUnit.value;
 
 		if (!attackerUnit || !attackerHex || !defenderHex) {
 			this.addLog("Move failed: Invalid unit or hex.", state);
 			this.deselectUnit(state); // Deselect if something is wrong
 			return;
 		}
+		const unitValue = attackerUnit.value;
 
 		// this.addLog(`P${attackerUnit.playerId + 1} attempts to move Dice ${attackerUnit.value} from (${attackerHex.q},${attackerHex.r}) to (${defenderHex.q},${defenderHex.r}).`, state);
 		attackerUnit.isGuarding = Math.max(attackerUnit.isGuarding - 1, 0);

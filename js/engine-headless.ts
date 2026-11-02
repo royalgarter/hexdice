@@ -42,8 +42,12 @@ export function stubBrowserAPIs(playerCount: number = 2, version: number = 1, au
 	};
 
 	if (typeof (globalThis as any).window === 'undefined') {
-		(globalThis as any).window = globalThis;
+		// Workers expose a read-only `location`, so `window` must be a separate object there.
+		const inWorker = typeof (globalThis as any).WorkerGlobalScope !== 'undefined';
+		(globalThis as any).window = inWorker ? {} : globalThis;
 	}
+	// constants.js reads this bare after assigning it on window; a worker's separate window object would not expose it as a global
+	(globalThis as any).hexdice_version = 'headless';
 	(globalThis as any).window.location = locationStub;
 	(globalThis as any).window.history = { replaceState: () => null, pushState: () => null };
 	(globalThis as any).alert = () => null;
@@ -110,6 +114,7 @@ export async function loadGameEngine(playerCount: number = 2, version: number = 
             random: typeof random === 'function' ? () => random() : () => Math.random(),
             AUTOCHESS_CONFIG: typeof AUTOCHESS_CONFIG !== 'undefined' ? AUTOCHESS_CONFIG : null,
             heuristicProfiles: typeof heuristicProfiles !== 'undefined' ? heuristicProfiles : {},
+            profileTools: typeof makeRng !== 'undefined' ? { makeRng, mutateProfile, crossoverProfiles, generateRandomProfile, completeProfile, clampProfile, getProfile } : null,
             performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
             generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,
             applyMove: typeof applyMove !== 'undefined' ? applyMove : null,
