@@ -2052,6 +2052,28 @@ function alpineHexDiceTacticGame() { return {
 			? `${HEXDICE_CDN}/sprites/sets/default/${value}.png`
 			: `${HEXDICE_CDN}/sprites/multi_players/d${value}_${spriteColor}.gif`;
 	},
+	_makeDie(playerId, index, value, initialArmor) {
+		const die = {
+			id: `${playerId}_${index}`, // Unique ID for the die unit
+			originalIndex: index, // to link back to player.dice array
+			playerId: playerId,
+			value: value,
+			...UNIT_STATS[value], // Spread initial stats
+			currentArmor: initialArmor,
+			armorReduction: 0,
+			isDeployed: false,
+			isHit: false,
+			hexId: null,
+			hasMovedOrAttackedThisTurn: false,
+			isGuarding: 0,
+			skirmishBuff: 0,
+			isDeath: false,
+			actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
+		};
+		die.effectiveArmor = die.currentArmor;
+		die.spriteUrl = this.getUnitSpriteUrl(die);
+		return die;
+	},
 	rollInitialDice(playerId) {
 		if (this.players[playerId].initialRollDone) return;
 		const player = this.players[playerId];
@@ -2073,25 +2095,7 @@ function alpineHexDiceTacticGame() { return {
 				initialArmor += 1;
 			}
 
-			const die = {
-				id: `${playerId}_${i}`, // Unique ID for the die unit
-				originalIndex: i, // to link back to player.dice array
-				playerId: playerId,
-				value: roll,
-				...baseStats, // Spread initial stats
-				currentArmor: initialArmor,
-				armorReduction: 0,
-				isDeployed: false,
-				isHit: false,
-				hexId: null,
-				hasMovedOrAttackedThisTurn: false,
-				isGuarding: 0,
-				skirmishBuff: 0,
-				isDeath: false,
-				actionsTakenThisTurn: 0, // For merged unit to act if target hasn't
-			};
-			die.effectiveArmor = die.currentArmor;
-			die.spriteUrl = this.getUnitSpriteUrl(die);
+			const die = this._makeDie(playerId, i, roll, initialArmor);
 			player.dice.push(die);
 		}
 		player.initialRollDone = true;
@@ -5587,7 +5591,64 @@ function alpineHexDiceTacticGame() { return {
 		const mergeModeFlag = options.includes('m') ? 'm' : '_';
 		const otherFlags = `${noRerollFlag}${annihilationModeFlag}${mergeModeFlag}`;
 
-		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags}`;
+		// v2 tail: radius + run-length terrain so a position is fully reconstructable (see loadHDFEN)
+		const radius = Math.max(...this.hexes.map(h => h.q));
+		const terrain = this.hexes.map(h => HDFEN_TERRAIN_CODES[h.terrainType] || '.');
+		let terrainRle = '';
+		for (let i = 0; i < terrain.length;) {
+			let j = i;
+			while (j < terrain.length && terrain[j] === terrain[i]) j++;
+			terrainRle += `${j - i}${terrain[i]}`;
+			i = j;
+		}
+
+		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags} R${radius} ${terrainRle}`;
+	},
+	// Inverse of generateHDFEN. Rebuilds a live board. Units are placed deployed; HP/armor perks are not encoded (V1 puzzles only).
+	async loadHDFEN(fen) {
+		const [placement, active, phaseCode, turn, flags, radiusTok, terrainTok] = fen.trim().split(/\s+/);
+		if (!radiusTok || !terrainTok) throw new Error('HDFEN has no radius/terrain tail (pre-v2 string)');
+
+		const radius = parseInt(radiusTok.slice(1));
+		const unitTokens = placement.split('/').filter(t => t.length === 6);
+		this.playerCount = Math.max(2, ...unitTokens.map(t => parseInt(t[0]) + 1));
+		this.options = (flags[1] === 'a' ? 'a' : '') + (flags[2] === 'm' ? 'm' : '');
+
+		await this.resetGame({ isCampaign: false });
+		this.rules.noReroll = flags[0] === 'r';
+		this.generateHexGrid(radius);
+
+		const terrainByCode = Object.fromEntries(Object.entries(HDFEN_TERRAIN_CODES).map(([type, code]) => [code, type]));
+		let hexIdx = 0;
+		for (const [, count, code] of terrainTok.matchAll(/(\d+)(.)/g)) {
+			for (let n = 0; n < +count; n++) this.setTerrainType(this.hexes[hexIdx++], terrainByCode[code] || 'PLAIN');
+		}
+		this.determineBaseLocations(radius);
+
+		this.players.forEach(p => { p.dice = []; p.initialRollDone = true; p.isEliminated = false; p.isAI = false; });
+		hexIdx = 0;
+		for (const tok of placement.split('/')) {
+			if (tok.length !== 6) {
+				hexIdx += parseInt(tok);
+				continue;
+			}
+			const hex = this.hexes[hexIdx++];
+			const playerId = parseInt(tok[0]);
+			const player = this.players[playerId];
+			const value = parseInt(tok[1]);
+			const die = this._makeDie(playerId, player.dice.length, value, UNIT_STATS[value].armor);
+			die.isDeployed = true;
+			die.hasMovedOrAttackedThisTurn = tok[2] === 'M';
+			die.isGuarding = tok[3] === 'G' ? 1 : 0;
+			die.skirmishBuff = parseInt(tok[5]) || 0;
+			player.dice.push(die);
+			this.move(die, null, hex);
+		}
+		this.players.forEach(p => p.dice.forEach(d => this.calcDefenderEffectiveArmor(d.hexId)));
+
+		this.phase = { SR: 'SETUP_ROLL', SRR: 'SETUP_REROLL', SD: 'SETUP_DEPLOY', GO: 'GAME_OVER' }[phaseCode] || 'PLAYER_TURN';
+		this.currentPlayerIndex = parseInt(active);
+		this.turnCount = parseInt(turn);
 	},
 	rollDice(max=6, delay=0) {
 		const roll = this._rollDice(max, delay);

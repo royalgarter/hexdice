@@ -80,6 +80,9 @@ const TERRAIN_CONFIG = {
 	'MOUNTAIN': { color: 'Mountain', bg: 'bg-hexmountain', logColor: 'text-gray-700' },
 };
 
+// Single-char terrain codes used by HDFEN (generateHDFEN / loadHDFEN)
+const HDFEN_TERRAIN_CODES = { PLAIN: '.', FOREST: 'F', LAKE: 'L', TOWER: 'T', MOUNTAIN: 'M' };
+
 const EMPIRES = {
 	'Aztec': 	{ unit: 1, flag: '🇲🇽', alias: 'Persian 🇮🇷', name: `Taka Warrior [D1-${UNIT_STATS[1].name}]`, buff: '+1 Armor' },
 	'Briton': 	{ unit: 2, flag: '🇬🇧', alias: 'Celtic 🇬🇧', name: `Longbow Ranger [D2-${UNIT_STATS[2].name}]`, buff: '+1 Range' },
