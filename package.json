@@ -28,6 +28,9 @@
     "test:e2e:game": "node tests/e2e-multiplayer-game.mjs",
     "test:browser:recap": "node tests/browser-recap.mjs",
     "test:browser:hdfen": "node tests/browser-hdfen.mjs",
+    "test:browser:puzzle": "node tests/browser-puzzle.mjs",
+    "puzzle:replay": "deno run --allow-all js/puzzle-replay.ts",
+    "puzzle:schedule": "node scripts/schedule-puzzles.js",
     "test:puzzle": "deno test --allow-all tests/hdfen.test.ts tests/puzzle-solver.test.ts",
     "test:e2e:puzzle": "deno run --allow-all tests/e2e-puzzle-p1.ts"
   },

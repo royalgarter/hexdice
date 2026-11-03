@@ -51,18 +51,28 @@ Findings that changed the plan:
 
 - [ ] TODO (later): recalibrate difficulty score. Pool has no difficulty 4-5 (85/33/5 at 1/2/3). Ideas: count plausible wrong first moves (not just attacks), reward Guard/Oracle-spell solutions, weight branching factor and unit count.
 
+### Plan changes decided 2026-11-03 (before P3/P4)
+- **Live defender, no stored `defence` table.** Client defender = `performAIByHeuristic(game, 'baseline')` (what `performAITurn` calls with no profile). The solver's proof covers its own move set only, so P3 adds a replay gate (`js/puzzle-replay.ts`): solver-chosen winning line vs the live AI over several seeds; failing puzzles are dropped from the schedule. Result: 121/123 survive; also asserts no gameOver/_endTurn leak while the AI thinks.
+- **Human takes the attacker's seat** (no 180 degree rotation). `loadHDFEN` already sets the active player.
+- **"Show solution" reveals the first move only** (JSON has no full line).
+- **One `puzzles/schedule.json`** (`start` + `entries[]` of `<dir>/<id>`) instead of 365 dated files; entries are frozen, re-running only appends. Days keyed by UTC date. Pool (121) < 365 days, so puzzles repeat (least-recently-used within a weekday band). Pool has difficulty 1-3 only, so the Mon->Sun ramp is by rank bands over (difficulty, n), not literal 1-5.
+- Navigation: toolbar button to `/?puzzle=daily`; `?puzzle=<id>` also accepted (tests).
+
 ### P3 — Daily scheduler + content QA
-- [ ] `scripts/schedule-puzzles.js`: assign pool entries to dates, difficulty ramp Mon(1) -> Sun(5), no repeats in 365 days.
+- [x] `scripts/schedule-puzzles.js`: assign pool entries to dates, rank-band ramp Mon -> Sun, LRU within band (repeats unavoidable at 121 puzzles). Output `puzzles/schedule.json`.
+- [x] `js/puzzle-replay.ts` gate -> `puzzles/replay-report.json`; scheduler skips failures.
 - [ ] Human QA pass: title, flavour line, flag broken ones.
 - [ ] Output `puzzles/YYYY-MM-DD.json` + `puzzles/index.json`. Add to service-worker cache list.
 
-### P4 — Client UI
+### P4 — Client UI (DONE 2026-11-03, see notes under the checklist)
 - [ ] URL: `?puzzle=daily` and `?puzzle=YYYY-MM-DD`. New phase `PUZZLE` in `game.js` state (alongside `SETUP_*`), gated by `isPuzzle` like `isCampaign`.
 - [ ] `html/puzzle.html` partial via `loadComponent` in `index.html`: header (N moves left, attempt count), Hint (reveals piece), Reset, Show solution (marks run as failed).
 - [ ] Engine hook: after each player move, opponent reply from solver's best-defence table (precomputed in JSON `defence`), not live AI, so behaviour is deterministic.
 - [ ] Win/fail detection; wrong first move -> "that loses" feedback after the line plays out.
 - [ ] Simulation guard rules apply; audio/UI side effects only when `!state`.
 - Exit: playable end-to-end in Chromium (extend `tests/browser-smoke.mjs`).
+- Done 2026-11-03: `game.js` (`isPuzzle`, `puzzle`, `loadPuzzle`, `startPuzzle`, `puzzleReset/Hint/ShowSolution`, hooks in `_endTurn` after the `isState` return and in `gameOver`), `html/puzzle.html` HUD, toolbar button (puzzle emoji) -> `/?puzzle=daily`, `?puzzle=<dir/id|id>`. Generic Game Over box hidden in puzzle mode. `tests/browser-puzzle.mjs` (npm `test:browser:puzzle`): N=1 solved from seat 0 and seat 1, hint, reset, fail on ending the turn, show solution, reset inside the AI's 500 ms delay, daily loads, no page errors. Needs the dev server (local run needs a dummy `ARANGODB_URI`).
+- Known gaps: the UI may still offer moves outside the solver set (SACRIFICE etc.); not-yet-wired offline cache (P5); no unit-type tutorial text; Hint/Show solution cover the first move only.
 
 ### P5 — Share + retention
 - [ ] Result string: `HexDice 2026-11-03 ⭐ 2/3 🟥🟩` (attempts, hint use). Copy-to-clipboard + Web Share API.

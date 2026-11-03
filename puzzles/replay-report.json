@@ -1,0 +1,500 @@
+{
+	"s2/100ym3p.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/10dhsc8.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/10gsv0d.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/11kw05.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/11qonds.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/131komy.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/13r8jwp.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/15a1rtv.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/169c5po.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/16xx9lu.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/17awwoe.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/17mf41g.json": {
+		"ok": false,
+		"reasons": [
+			"seed 7000: no forced win with 1 turn(s) left (defender left the solver's tree)",
+			"seed 7001: no forced win with 1 turn(s) left (defender left the solver's tree)"
+		]
+	},
+	"n3_s3/18272l8.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/18ja600.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/18q3h3r.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/19el6ee.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/19zgxe0.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1a980xg.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1b2ucbe.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1ba7ap5.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1byw4f9.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1c18rb6.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/1c3ci18.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1cmll05.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1dcaqcc.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1dkywht.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1eb08f.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1emyxca.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/1g3oqri.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1gvfstd.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1hrdmv5.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1jdlbqs.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1jrbmja.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1kifir2.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1kscnq9.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1ksqxnj.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1lyy3ob.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1mo2gkp.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1ohpmfz.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1pwp77d.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1qgebif.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1qohapm.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1rtufny.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1rwgdvs.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1sjvp1n.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1u73q5v.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1ua2pyk.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1uop2js.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1uznrui.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1v21mpz.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1w8u0d4.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/1wv01gm.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/1xe3h8z.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1xexmz6.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1yy9tdh.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/1yytt4b.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/3j2lsx.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/3yv52g.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/43a8kl.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/4ldytu.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/4rvt7j.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/5blscq.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/5d952p.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/5uravy.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/5yc3ss.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/6mdu65.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/6uslbz.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/6yv00e.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/7buggc.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/8bt4n.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/8xqs2b.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/92s9xw.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/9nt763.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/a0yl4v.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/bp4duo.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/bswyhq.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/doi9qk.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/dsmuud.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/e7zglm.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/e91ya5.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/f3rb8p.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/f7ko7g.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/femxa4.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/fg9kng.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/fy57bx.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/ga7455.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/gl6dxb.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/goigm5.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/guvur5.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/hkby3k.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/i2v70j.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/i5u13b.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/imy3co.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/jg4u9h.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/kmuxis.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/l2x4yu.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/mfbhhn.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/n0x2xx.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/nhzeut.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/oaq8iq.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/olrk26.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/ot0sqv.json": {
+		"ok": false,
+		"reasons": [
+			"seed 7000: no forced win with 1 turn(s) left (defender left the solver's tree)",
+			"seed 7001: no forced win with 1 turn(s) left (defender left the solver's tree)"
+		]
+	},
+	"n3_s3/p7atvd.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/p9hicf.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/q32rvh.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/qhhglf.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s3/qrs5vk.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/qtlh4l.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/real6y.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/s2eylu.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/s8jebj.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/sok10.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/tg5afs.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/tn2335.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/tsn8qs.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/tsz1pn.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/u6hax6.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/uu0rcp.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"n3_s4/x3lufl.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/ys52mr.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s2/yzzr8r.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/z2m1rm.json": {
+		"ok": true,
+		"reasons": []
+	},
+	"s1/zmxxtf.json": {
+		"ok": true,
+		"reasons": []
+	}
+}

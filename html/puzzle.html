@@ -1,0 +1,20 @@
+<div id="puzzle-hud" x-show="isPuzzle && puzzle" x-cloak style="display: none;" class="bg-wood mb-1 p-2 border text-center w-full max-w-xl">
+	<div class="font-bold" x-text="puzzle?.label"></div>
+	<div class="text-sm">
+		Win in <b x-text="puzzle?.data.n"></b>
+		<span x-show="puzzle?.status === 'playing'">
+			· your turn <b x-text="Math.min((puzzle?.turnsUsed ?? 0) + 1, puzzle?.data.n ?? 1)"></b>/<span x-text="puzzle?.data.n"></span>
+		</span>
+		· attempt <span x-text="puzzle?.attempts"></span>
+	</div>
+
+	<div x-show="puzzle?.status === 'solved'" class="text-xl font-bold text-green-700 mt-1">✅ Solved<span x-show="puzzle?.hintUsed"> (with hint)</span></div>
+	<div x-show="puzzle?.status === 'failed'" class="text-xl font-bold text-red-700 mt-1">❌ Not this time</div>
+	<div class="text-xs mt-1" x-show="puzzle?.note" x-text="puzzle?.note"></div>
+
+	<div class="mt-2 flex justify-center gap-2 text-sm">
+		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'playing'" @click="puzzleHint()">Hint</button>
+		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'playing'" @click="puzzleShowSolution()">Show solution</button>
+		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="puzzleReset()">Reset</button>
+	</div>
+</div>

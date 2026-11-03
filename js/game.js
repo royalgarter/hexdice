@@ -85,6 +85,8 @@ function alpineHexDiceTacticGame() { return {
 	rollingDice: false,
 	campaignData: null,
 	isCampaign: false,
+	isPuzzle: false,
+	puzzle: null, // { data, label, humanSeat, status: 'playing'|'solved'|'failed', turnsUsed, attempts, hintUsed, note }
 	nextCampaignMap: null,
 	deploymentLimit: 666,
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
@@ -1411,6 +1413,9 @@ function alpineHexDiceTacticGame() { return {
 		if (this.Autochess.state.enabled) {
 			this.initAutochess();
 		}
+
+		const puzzleParam = new URLSearchParams(location.search).get('puzzle');
+		if (puzzleParam) await this.loadPuzzle(puzzleParam);
 
 		setTimeout(() => window?.AudioManager?.playMusic(this.isCampaign ? 'campaign' : 'opening', {volume: 1, mapName: this.campaignData?.rmi || ''}), 3e3);
 	},
@@ -5284,6 +5289,8 @@ function alpineHexDiceTacticGame() { return {
 		this.checkWinConditions(state);
 		if (isState) return;
 
+		if (this.isPuzzle && this._puzzleTurnEnded()) return;
+
 		if (this.online.status === 'PLAYING') {
 			this.startOnlineTimer();
 		}
@@ -5450,6 +5457,10 @@ function alpineHexDiceTacticGame() { return {
 		window?.AudioManager?.playSfx('victory');
 
 		this.addLog(`Game Over: ${this.winnerMessage}`);
+
+		if (this.isPuzzle && this.puzzle?.status === 'playing') {
+			this.puzzle.status = winnerPlayerIndex === this.puzzle.humanSeat ? 'solved' : 'failed';
+		}
 	},
 
 	/* --- UTILITIES --- */
@@ -5603,6 +5614,71 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags} R${radius} ${terrainRle}`;
+	},
+	// 'daily' picks today's (UTC) entry from puzzles/schedule.json; 'dir/id' or a bare id from the schedule is also accepted.
+	async loadPuzzle(param) {
+		const v = document.querySelector('#hexdice_version')?.content;
+		try {
+			const schedule = await (await fetch(`/puzzles/schedule.json?v=${v}`)).json();
+			const count = schedule.entries.length;
+			let entry = param;
+			let label = `Puzzle ${param}`;
+			if (param === 'daily') {
+				const today = new Date().toISOString().slice(0, 10);
+				const day = Math.floor(Date.parse(today + 'T00:00:00Z') / 864e5) - Math.floor(Date.parse(schedule.start + 'T00:00:00Z') / 864e5);
+				entry = schedule.entries[((day % count) + count) % count];
+				label = `Daily Puzzle ${today}`;
+			} else if (!param.includes('/')) {
+				entry = schedule.entries.find(e => e.endsWith('/' + param)) || param;
+			}
+			const data = await (await fetch(`/puzzles/pool/${entry}.json?v=${v}`)).json();
+			await this.startPuzzle(data, label);
+		} catch (e) {
+			console.error('Failed to load puzzle', e);
+			this.addLog(`Error loading puzzle: ${e.message}`);
+		}
+	},
+	// The human takes the attacker's seat; the other seat is the baseline heuristic AI (what the solver's proof was replayed against).
+	async startPuzzle(data, label, attempts = 1) {
+		await this.loadHDFEN(data.hdfen);
+		this.players.forEach((p, i) => {
+			p.isAI = i !== data.attacker;
+			if (p.isAI) p.profileName = 'baseline';
+		});
+		setSeed(parseInt(data.id, 36) % 1e9 || 1);
+		this.isPuzzle = true;
+		this.showLog = false;
+		this.puzzle = { data, label, humanSeat: data.attacker, status: 'playing', turnsUsed: 0, attempts, hintUsed: false, note: '' };
+	},
+	puzzleReset() {
+		return this.startPuzzle(this.puzzle.data, this.puzzle.label, this.puzzle.attempts + 1);
+	},
+	_puzzleKeyUnit() {
+		const m = this.puzzle.data.firstMove;
+		const unit = this.getUnitOnHex(m.fromHex);
+		return { m, unit, name: unit ? UNIT_STATS[unit.value].name : 'unit' };
+	},
+	puzzleHint() {
+		if (this.puzzle.status !== 'playing') return;
+		const { m, name } = this._puzzleKeyUnit();
+		this.puzzle.hintUsed = true;
+		this.puzzle.note = `Hint: the key piece is your ${name}.`;
+		this.selectUnit(m.fromHex);
+	},
+	puzzleShowSolution() {
+		if (this.puzzle.status !== 'playing') return;
+		const { m, name } = this._puzzleKeyUnit();
+		this.puzzle.status = 'failed';
+		this.puzzle.note = `Solution: ${m.actionType} your ${name} from hex ${m.fromHex} to hex ${m.toHex}.`;
+		this.selectUnit(m.fromHex);
+	},
+	_puzzleTurnEnded() {
+		const p = this.puzzle;
+		if (p.status !== 'playing' || this.phase !== 'PLAYER_TURN' || this.currentPlayerIndex === p.humanSeat) return false;
+		if (++p.turnsUsed < p.data.n) return false;
+		p.status = 'failed';
+		this.gameOver(this.currentPlayerIndex, 'You ran out of turns.');
+		return true;
 	},
 	// Inverse of generateHDFEN. Rebuilds a live board. Units are placed deployed; HP/armor perks are not encoded (V1 puzzles only).
 	async loadHDFEN(fen) {
