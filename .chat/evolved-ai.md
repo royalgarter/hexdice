@@ -34,6 +34,9 @@ Replace hand-tuned heuristic profiles with profiles found by self-play evolution
 - [ ] Noise handling: re-evaluate top-k with more games before promotion (win rate CI).
 - [ ] Runs: 6-player-free first (2 players, R=5, V1). Then V2 and campaign V3 variants as separate runs (different genome pools).
 - Exit: archive of >=6 distinct champions each beating hand-tuned baseline >55% and none >70% vs the gauntlet.
+- Done 2026-11-02 (code in `js/evolve.ts`, tests `tests/evolve.test.ts`). Archive axes: kills per own action x game length (guard rate was ~0.01 for every profile, useless). Bin edges = terciles of gen 0, frozen. Top-3 per gen re-scored on a 2x sample before archive/HoF. Validation: held-out seeds + held-out opponents (`ranger`).
+- Run `--gens=6 --pop=10 --games=6 --topk=3 --vgames=8` (~45 min): 8/9 cells filled, 6/8 champions pass (drop <=10pts, >55% vs baseline, <=70% vs gauntlet). Exit criterion met.
+- Caveat: 5 of 6 passers are gen 0 mutants of hand profiles; archive gained nothing in gens 3-5 and the best train rate fell as HoF opponents joined. So the loop mostly diversifies, little proof of real improvement. Held-out opponent set is one profile only. Next: more profiles to hold out, larger rate/step, longer run, and compare against a gen-0-only random-mutant control.
 
 ### P3 — Integration
 - [ ] Export champions into `js/ai/evolved-profiles.js` (generated file, header notes run id + date). Register in `heuristicProfiles`; load order after `heuristic-profiles.js` in `index.html`.
