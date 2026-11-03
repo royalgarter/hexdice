@@ -370,6 +370,8 @@ const evolvedProfiles = {
 	}
 };
 
+const EVOLVED_RULES_HASH = 'a5eb42a4fb1cdc15';
+
 const EVOLVED_ORDER = ["evolved_blood_marathon","evolved_patient_tide","evolved_steady_hand","evolved_iron_wall","evolved_long_siege","evolved_silent_blade"];
 
 const AI_TIERS = {

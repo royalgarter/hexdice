@@ -35,7 +35,10 @@
     "puzzle:schedule": "node scripts/schedule-puzzles.js",
     "puzzle:tutorial": "node scripts/build-tutorial.js",
     "test:puzzle": "deno test --allow-all tests/hdfen.test.ts tests/puzzle-solver.test.ts",
-    "test:e2e:puzzle": "deno run --allow-all tests/e2e-puzzle-p1.ts"
+    "test:e2e:puzzle": "deno run --allow-all tests/e2e-puzzle-p1.ts",
+    "ai:nightly": "scripts/nightly-evolve.sh",
+    "ai:rules-regression": "deno run --allow-all js/rules-regression.ts",
+    "ai:balance": "deno run --allow-all js/balance-feed.ts"
   },
   "devDependencies": {
     "playwright": "^1.61.1"

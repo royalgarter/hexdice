@@ -50,10 +50,13 @@ Replace hand-tuned heuristic profiles with profiles found by self-play evolution
 - Not done: easy tier (needs move-noise in the AI), human-readable replay review of champions, difficulty playtest of bosses. Hard champions are minimax depth 3 profiles, so expect slower AI turns in the browser.
 - Tests: `tests/evolved-profiles.test.ts`, `tests/browser-evolved.mjs`.
 
-### P4 — Continuous improvement
+### P4 — Continuous improvement (DONE 2026-11-03)
 - [ ] `scripts/nightly-evolve.sh` seeded from last archive; PR/commit artefact only if gauntlet score improves.
 - [ ] Rules-change regression: when `RULES.md`/`constants.js` change, re-run gauntlet and flag stale champions.
 - [ ] Feed A4 balance observatory (win rates by unit/terrain) from the same logs.
+- P4 notes: `evolve.ts --from=<runDir>` seeds gen 0 from a prior archive and reuses its `edges.json` (cells stay comparable). `scripts/nightly-evolve.sh` = evolve from newest run -> `balance-feed.ts` -> `scripts/nightly-compare.js` (exit 0 IMPROVED when more champions pass, or same count and mean held-out rate up >2 pts, vs the run named in the `evolved-profiles.js` header; exit 3 SAME) -> `export-champions.js`; `COMMIT=1` commits only `evolved-profiles.js`, never pushes, never touches `evolution/`. Export now stamps `EVOLVED_RULES_HASH` (sha256 of `RULES.md` + `constants.js`); `js/rules-regression.ts` re-scores champions on the held-out block when the hash differs (exit 1 if any fall to <=55% vs baseline or >70%). `js/balance-feed.ts`: mirror matches of one profile, seat win rate + win rate of the seat holding more of each unit (60 games: Oracle 35%, Fencer 63%, noisy). MatchResult gained `comp`.
+- Gotchas: inline `playMatch` patches `console`/`Math.random`, so games must not overlap (rules-regression serialises; evolve uses the worker pool). Tiny smoke night (2 gens x pop 4) produced 0 passers -> SAME, shipped champions untouched.
+- Not done: terrain win rates in the observatory, a scheduler (cron/CI) entry, kills-by-unit stats, a real 45-min nightly run.
 
 ### P5 — Stretch
 - [ ] Ghost opponents: fit a profile to human HDPGN logs by minimising move-prediction loss (supervised, not self-play).

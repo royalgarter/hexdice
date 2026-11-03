@@ -27,6 +27,8 @@ export interface MatchResult {
 	ms: number;
 	/** per-seat counters for behaviour descriptors; counts only, no game logic involved */
 	stats: [SeatStats, SeatStats];
+	/** per-seat count of starting units by die value (index 0 = value 1); feeds the balance observatory */
+	comp: [number[], number[]];
 }
 
 export interface SeatStats {
@@ -76,6 +78,7 @@ export async function playMatch(task: MatchTask): Promise<MatchResult> {
 		game.players.forEach((p: any) => (p.isAI = true));
 		game.performAITurn = () => {}; // _endTurn would schedule it via setTimeout; we drive turns ourselves
 
+		const comp = game.players.map((p: any) => [1, 2, 3, 4, 5, 6].map((v) => p.dice.filter((d: any) => d.value === v).length)) as [number[], number[]];
 		let plies = 0;
 		const stats: [SeatStats, SeatStats] = [{ moves: 0, kills: 0, guardActs: 0 }, { moves: 0, kills: 0, guardActs: 0 }];
 		const alive = (pi: number) => game.players[pi].dice.filter((d: any) => !d.isDeath).length;
@@ -93,7 +96,7 @@ export async function playMatch(task: MatchTask): Promise<MatchResult> {
 		}
 		const over = game.phase === "GAME_OVER";
 		const winnerSeat = over && game.winnerPlayerId >= 0 ? game.winnerPlayerId : -1;
-		return { winnerSeat, plies, ms: performance.now() - t0, stats };
+		return { winnerSeat, plies, ms: performance.now() - t0, stats, comp };
 	} finally {
 		Math.random = realRandom;
 		console.log = log;
@@ -299,7 +302,7 @@ export function archiveInsert(archive: Map<string, Elite>, e: Elite, edges: Edge
 if (import.meta.main && !isWorker) {
 	const parsed = parse(Deno.args, {
 		boolean: ["bench", "help"],
-		string: ["out", "gauntlet"],
+		string: ["out", "gauntlet", "from"],
 		default: {
 			games: 10, gens: 2, pop: 8, workers: 2, seed: 1, rate: 0.2, out: "evolution", gauntlet: GAUNTLET.join(","),
 			bins: 3, topk: 3, hof: 4, vgames: 10, maxdrop: 0.1,
@@ -344,9 +347,19 @@ if (import.meta.main && !isWorker) {
 	const archive = new Map<string, Elite>();
 	let edges: Edges | null = null;
 
+	// --from=<runDir>: continue from a previous archive (same cell edges, so cells stay comparable across nights)
+	let seedProfiles: any[] = [];
+	if (parsed.from) {
+		const prev = JSON.parse(await Deno.readTextFile(`${parsed.from}/archive.json`));
+		seedProfiles = Object.values(prev).map((e: any) => e.profile);
+		edges = JSON.parse(await Deno.readTextFile(`${parsed.from}/edges.json`));
+		await Deno.writeTextFile(`${dir}/edges.json`, JSON.stringify(edges));
+		console.log(`seeded from ${parsed.from}: ${seedProfiles.length} archive profiles`);
+	}
+
 	let population: { name: string; profile: any; score?: Score }[] = [];
 	for (let i = 0; i < args.pop; i++) {
-		const profile = i === 0 ? tools.completeProfile(eng.heuristicProfiles.baseline) : tools.mutateProfile(pick(GAUNTLET), args.rate, rng);
+		const profile = i < seedProfiles.length ? seedProfiles[i] : i === 0 ? tools.completeProfile(eng.heuristicProfiles.baseline) : tools.mutateProfile(pick(GAUNTLET), args.rate, rng);
 		population.push({ name: `g0-${i}`, profile });
 	}
 
