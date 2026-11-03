@@ -1,0 +1,59 @@
+{
+	"version": 1,
+	"lessons": [
+		{
+			"entry": "s1/4rvt7j",
+			"title": "Fencer: the all-rounder",
+			"text": "You win by moving a unit onto the enemy base or by removing every enemy unit. The Fencer walks up to 2 steps in any direction and hits for 2. One move wins here: find it.",
+			"n": 1
+		},
+		{
+			"entry": "s1/1kifir2",
+			"title": "Hussar: the fast striker",
+			"text": "The Hussar jumps in an L-shape and covers up to 3 hexes, but has no armor. Speed is its weapon: look for the base it can reach in one jump.",
+			"n": 1
+		},
+		{
+			"entry": "s1/1sjvp1n",
+			"title": "Knight: the diagonal rider",
+			"text": "The Knight moves along six diagonal lines, up to 3 hexes. Check which of its lines ends on the enemy base.",
+			"n": 1
+		},
+		{
+			"entry": "s1/1lyy3ob",
+			"title": "Tanker: the wall",
+			"text": "The Tanker has armor 4 but moves only 1 hex and attacks for 1. The base is one step away: the hard part is knowing which unit is the one that gets there.",
+			"n": 1
+		},
+		{
+			"entry": "s2/s8jebj",
+			"title": "Archer: two turns",
+			"text": "The Archer shoots 2 hexes away but moves only 1. Now you have 2 turns: the first move sets up the second, and the enemy answers in between.",
+			"n": 2
+		},
+		{
+			"entry": "s2/i2v70j",
+			"title": "Oracle: a support piece",
+			"text": "The Oracle has no attack and no armor, so it never wins a fight, but it still occupies space and can go where it is safe. Plan both turns.",
+			"n": 2
+		},
+		{
+			"entry": "s2/1rtufny",
+			"title": "Oracle: Swap",
+			"text": "The Oracle can swap places with a friendly unit within range 2 (not while an enemy is adjacent to it). Swapping teleports a strong piece forward.",
+			"n": 2
+		},
+		{
+			"entry": "s2/1emyxca",
+			"title": "Think two moves ahead",
+			"text": "Not every first move that looks good works: the enemy replies in between. Only one first move forces the win.",
+			"n": 2
+		},
+		{
+			"entry": "n3_s3/7buggc",
+			"title": "Three turns",
+			"text": "The enemy has three chances to answer. Count the turns it needs to stop you, then find the line that is faster.",
+			"n": 3
+		}
+	]
+}

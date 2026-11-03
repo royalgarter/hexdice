@@ -1,5 +1,11 @@
 <div id="puzzle-hud" x-show="isPuzzle && puzzle" x-cloak style="display: none;" class="bg-wood mb-1 p-2 border text-center w-full max-w-xl">
 	<div class="font-bold" x-text="puzzle?.label"></div>
+	<template x-if="puzzle?.lesson">
+		<div class="my-1">
+			<div class="font-bold" x-text="puzzle.lesson.title"></div>
+			<div class="text-xs leading-snug" x-text="puzzle.lesson.text"></div>
+		</div>
+	</template>
 	<div class="text-sm">
 		Win in <b x-text="puzzle?.data.n"></b>
 		<span x-show="puzzle?.status === 'playing'">
@@ -17,6 +23,8 @@
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'playing'" @click="puzzleHint()">Hint</button>
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'playing'" @click="puzzleShowSolution()">Show solution</button>
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'solved' && puzzle?.day" @click="puzzleShare()">Share</button>
+		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'solved' && puzzle?.lesson && puzzle.lesson.index + 1 < puzzle.lesson.total" @click="puzzleNextLesson()">Next lesson ▶</button>
+		<a class="border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'solved' && puzzle?.lesson && puzzle.lesson.index + 1 >= puzzle.lesson.total" href="/?puzzle=daily">Daily puzzle ▶</a>
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="puzzleReset()">Reset</button>
 	</div>
 </div>

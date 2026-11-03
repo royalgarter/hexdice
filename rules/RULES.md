@@ -483,4 +483,4 @@ Each hex on the map has a terrain type that affects movement and combat. By defa
 
 ## **11\. Daily Puzzle**
 
-Every UTC day there is one shared puzzle: a mid-battle position (Decisive Dice, V1 rules) where you must win within N of your own turns, whatever the opponent answers. Play it at [/?puzzle=daily](/?puzzle=daily). A Hint names the key piece, Show solution reveals the first move and counts as a miss, and your result can be shared as a row of 🟩/🟥 attempts.
+Every UTC day there is one shared puzzle: a mid-battle position (Decisive Dice, V1 rules) where you must win within N of your own turns, whatever the opponent answers. Play it at [/?puzzle=daily](/?puzzle=daily). A Hint names the key piece, Show solution reveals the first move and counts as a miss, and your result can be shared as a row of 🟩/🟥 attempts. New to the units? [/?puzzle=learn](/?puzzle=learn) is a nine-lesson track, one idea per puzzle.

@@ -83,8 +83,10 @@ Findings that changed the plan:
 - P5 notes: `localStorage.hexdice_puzzle_state = { days: { 'YYYY-MM-DD': { n, solved, attempts, hintUsed, results } } }`, daily only, first solve is never overwritten; streak = consecutive solved UTC days ending today (or yesterday). Share text: `HexDice Daily <date> · win in N` + one row of hit/miss squares (+ bulb if hint) + link; `navigator.share` else clipboard else shows the text in the HUD. Offline: the service worker is network-first and caches every same-origin GET, so the client prefetches tomorrow's puzzle when the daily loads (no SW change). Entries: `[Daily Puzzle]` link in setup, toolbar button, `sitemap.xml`, `llms.txt`, RULES.md section 11.
 - Not done: streak/history screen, share image, timezone choice (UTC only).
 
-### P6 — Tutorial track (stretch)
+### P6 — Tutorial track (DONE 2026-11-03)
 - [ ] Curated ordered puzzles (one per unit type, terrain, Guard, Spell) at `?puzzle=learn`.
+- Done: `scripts/build-tutorial.js` -> `puzzles/tutorial.json`, nine lessons (Fencer, Hussar, Knight, Tanker at N=1; Archer, Oracle, Oracle Swap, plan-ahead at N=2; one N=3), each the smallest verified board using that unit/action. Client: `?puzzle=learn` resumes at the first unsolved lesson, `&lesson=N` jumps, progress in `localStorage.hexdice_tutorial`, "Next lesson" button, `[Learn]` link in setup, RULES.md mention. Browser test covers open, solve, next, resume, direct jump.
+- Gaps: no Guard or terrain lesson (the pool has no puzzle whose unique first move is a Guard, or lands on non-plain terrain); all N=1 lessons are base captures, none is an attack. Fixing needs a generator pass targeting those (new TODO).
 
 ## Risks
 - Solver blow-up on 6-player or big boards: restrict to 2 players, radius 5, <=8 units each in v1.

@@ -109,6 +109,28 @@ try {
 		await page.close();
 	}
 
+	{
+		const page = await open('puzzle=learn');
+		await page.evaluate(() => localStorage.removeItem('hexdice_tutorial'));
+		await page.reload({ waitUntil: 'networkidle' });
+		await page.waitForFunction(() => window.Alpine.$data(document.querySelector('[x-data]')).puzzle, null, { timeout: 15000 });
+		const first = await game(page, `return { label: g.puzzle.label, title: g.puzzle.lesson.title, entry: g.puzzle.lesson.entry, fm: g.puzzle.data.firstMove }`);
+		check(first.label === 'Lesson 1/9' && first.title.startsWith('Fencer'), `learn opens lesson 1 (${first.title})`);
+		await playFirstMove(page, first.fm);
+		await page.waitForTimeout(500);
+		check((await status(page)).s === 'solved', 'lesson 1 solves');
+		check(await page.getByText('Next lesson').isVisible(), 'Next lesson button appears');
+		await game(page, `await g.puzzleNextLesson()`);
+		check((await game(page, `return g.puzzle.lesson.index`)) === 1, 'Next lesson loads lesson 2');
+		await page.reload({ waitUntil: 'networkidle' });
+		await page.waitForFunction(() => window.Alpine.$data(document.querySelector('[x-data]')).puzzle, null, { timeout: 15000 });
+		check((await game(page, `return g.puzzle.lesson.index`)) === 1, 'reopening resumes at the first unsolved lesson');
+		await page.close();
+		const direct = await open('puzzle=learn&lesson=9');
+		check((await game(direct, `return g.puzzle.lesson.index`)) === 8, '?lesson=9 jumps straight to the last lesson');
+		await direct.close();
+	}
+
 	check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {
 	await browser.close();

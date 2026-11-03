@@ -88,7 +88,7 @@ function alpineHexDiceTacticGame() { return {
 	aiChoice: new URLSearchParams(location.search).get('ai') || '',
 	isPuzzle: false,
 	puzzleStreak: 0,
-	puzzle: null, // { data, label, day (UTC date for daily, else null), humanSeat, status: 'playing'|'solved'|'failed', turnsUsed, attempts, results[], hintUsed, note }
+	puzzle: null, // { data, label, day (UTC date for daily, else null), lesson ({ index, total, entry, title, text } for the tutorial track, else null), humanSeat, status: 'playing'|'solved'|'failed', turnsUsed, attempts, results[], hintUsed, note }
 	nextCampaignMap: null,
 	deploymentLimit: 666,
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
@@ -5634,6 +5634,7 @@ function alpineHexDiceTacticGame() { return {
 	async loadPuzzle(param) {
 		const v = document.querySelector('#hexdice_version')?.content;
 		try {
+			if (param === 'learn') return await this.loadLesson(parseInt(new URLSearchParams(location.search).get('lesson')) - 1);
 			const schedule = await (await fetch(`/puzzles/schedule.json?v=${v}`)).json();
 			const count = schedule.entries.length;
 			let entry = param;
@@ -5657,8 +5658,31 @@ function alpineHexDiceTacticGame() { return {
 			this.addLog(`Error loading puzzle: ${e.message}`);
 		}
 	},
+	// Tutorial track: puzzles/tutorial.json lessons in order; with no index, resume at the first lesson not yet solved.
+	async loadLesson(index) {
+		const v = document.querySelector('#hexdice_version')?.content;
+		const { lessons } = await (await fetch(`/puzzles/tutorial.json?v=${v}`)).json();
+		const done = this._lessonsDone();
+		if (!(index >= 0 && index < lessons.length)) {
+			index = lessons.findIndex(l => !done.includes(l.entry));
+			if (index < 0) index = 0;
+		}
+		const l = lessons[index];
+		const data = await (await fetch(`/puzzles/pool/${l.entry}.json?v=${v}`)).json();
+		await this.startPuzzle(data, `Lesson ${index + 1}/${lessons.length}`, { lesson: { index, total: lessons.length, entry: l.entry, title: l.title, text: l.text } });
+	},
+	_lessonsDone() {
+		try {
+			return JSON.parse(localStorage.getItem('hexdice_tutorial'))?.done || [];
+		} catch (e) {
+			return [];
+		}
+	},
+	puzzleNextLesson() {
+		return this.loadLesson(this.puzzle.lesson.index + 1);
+	},
 	// The human takes the attacker's seat; the other seat is the baseline heuristic AI (what the solver's proof was replayed against).
-	async startPuzzle(data, label, { day = null, attempts = 1, results = [] } = {}) {
+	async startPuzzle(data, label, { day = null, lesson = null, attempts = 1, results = [] } = {}) {
 		await this.loadHDFEN(data.hdfen);
 		this.players.forEach((p, i) => {
 			p.isAI = i !== data.attacker;
@@ -5670,7 +5694,7 @@ function alpineHexDiceTacticGame() { return {
 		setSeed(parseInt(data.id, 36) % 1e9 || 1);
 		this.isPuzzle = true;
 		this.showLog = false;
-		this.puzzle = { data, label, day, humanSeat: data.attacker, status: 'playing', turnsUsed: 0, attempts, results, hintUsed: false, note: '' };
+		this.puzzle = { data, label, day, lesson, humanSeat: data.attacker, status: 'playing', turnsUsed: 0, attempts, results, hintUsed: false, note: '' };
 		this.puzzleStreak = this._puzzleStreak();
 	},
 	puzzleReset() {
@@ -5678,7 +5702,7 @@ function alpineHexDiceTacticGame() { return {
 		// Abandoning a running attempt counts as a miss; solved/failed attempts were already recorded.
 		if (p.status === 'playing') this._puzzleRecord(false);
 		const results = p.results;
-		return this.startPuzzle(p.data, p.label, { day: p.day, attempts: p.attempts + 1, results });
+		return this.startPuzzle(p.data, p.label, { day: p.day, lesson: p.lesson, attempts: p.attempts + 1, results });
 	},
 	_puzzleLoad() {
 		try {
@@ -5690,6 +5714,12 @@ function alpineHexDiceTacticGame() { return {
 	// Only the first outcome of a daily counts toward streak/share; later replays never overwrite it.
 	_puzzleRecord(solved) {
 		const p = this.puzzle;
+		if (p.lesson && solved) {
+			try {
+				const done = this._lessonsDone();
+				if (!done.includes(p.lesson.entry)) localStorage.setItem('hexdice_tutorial', JSON.stringify({ done: [...done, p.lesson.entry] }));
+			} catch (e) {}
+		}
 		if (!p.day) return;
 		p.results = [...p.results, solved ? 'hit' : 'miss'];
 		try {
