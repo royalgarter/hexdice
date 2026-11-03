@@ -90,6 +90,25 @@ try {
 		await page.close();
 	}
 
+	{
+		const { p } = pick(1, 0);
+		const page = await open('puzzle=daily');
+		await page.evaluate(() => localStorage.removeItem('hexdice_puzzle_state'));
+		const day = new Date().toISOString().slice(0, 10);
+		await game(page, `await g.startPuzzle(arg.p, 'Daily Puzzle ' + arg.day, { day: arg.day })`, { p, day });
+		await game(page, `g.puzzleReset()`); // abandoned attempt -> miss
+		await playFirstMove(page, p.firstMove);
+		await page.waitForTimeout(500);
+		const out = await game(page, `return { s: g.puzzle.status, streak: g.puzzleStreak, text: g.puzzleShareText(), rec: JSON.parse(localStorage.getItem('hexdice_puzzle_state')).days[arg.day] }`, { day });
+		check(out.s === 'solved' && out.streak === 1, `daily solve records streak 1 (status ${out.s}, streak ${out.streak})`);
+		check(out.text.includes('🟥🟩') && out.text.includes(`HexDice Daily ${day}`), 'share text shows miss then hit');
+		check(out.rec?.solved === true && out.rec.attempts === 2, 'stored record: solved on attempt 2');
+		await game(page, `g.puzzleReset(); await g.puzzleShowSolution()`); // replay after solve must not overwrite the first result
+		const again = await game(page, `return JSON.parse(localStorage.getItem('hexdice_puzzle_state')).days[arg.day].solved`, { day });
+		check(again === true, 'later replay never overwrites a solved day');
+		await page.close();
+	}
+
 	check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {
 	await browser.close();

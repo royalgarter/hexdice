@@ -86,7 +86,8 @@ function alpineHexDiceTacticGame() { return {
 	campaignData: null,
 	isCampaign: false,
 	isPuzzle: false,
-	puzzle: null, // { data, label, humanSeat, status: 'playing'|'solved'|'failed', turnsUsed, attempts, hintUsed, note }
+	puzzleStreak: 0,
+	puzzle: null, // { data, label, day (UTC date for daily, else null), humanSeat, status: 'playing'|'solved'|'failed', turnsUsed, attempts, results[], hintUsed, note }
 	nextCampaignMap: null,
 	deploymentLimit: 666,
 	actionMode: null, // 'MOVE', 'RANGED_ATTACK', 'SPECIAL_ATTACK', 'MERGE_SELECT_TARGET', 'SPELLCAST'
@@ -5459,7 +5460,9 @@ function alpineHexDiceTacticGame() { return {
 		this.addLog(`Game Over: ${this.winnerMessage}`);
 
 		if (this.isPuzzle && this.puzzle?.status === 'playing') {
-			this.puzzle.status = winnerPlayerIndex === this.puzzle.humanSeat ? 'solved' : 'failed';
+			const solved = winnerPlayerIndex === this.puzzle.humanSeat;
+			this.puzzle.status = solved ? 'solved' : 'failed';
+			this._puzzleRecord(solved);
 		}
 	},
 
@@ -5623,23 +5626,27 @@ function alpineHexDiceTacticGame() { return {
 			const count = schedule.entries.length;
 			let entry = param;
 			let label = `Puzzle ${param}`;
+			let day = null;
 			if (param === 'daily') {
-				const today = new Date().toISOString().slice(0, 10);
-				const day = Math.floor(Date.parse(today + 'T00:00:00Z') / 864e5) - Math.floor(Date.parse(schedule.start + 'T00:00:00Z') / 864e5);
-				entry = schedule.entries[((day % count) + count) % count];
+				const today = day = new Date().toISOString().slice(0, 10);
+				const dayIdx = Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(schedule.start + 'T00:00:00Z')) / 864e5);
+				const at = i => schedule.entries[((i % count) + count) % count];
+				entry = at(dayIdx);
 				label = `Daily Puzzle ${today}`;
+				// Network-first service worker caches responses it sees; fetching tomorrow's now makes it playable offline.
+				fetch(`/puzzles/pool/${at(dayIdx + 1)}.json?v=${v}`).catch(() => {});
 			} else if (!param.includes('/')) {
 				entry = schedule.entries.find(e => e.endsWith('/' + param)) || param;
 			}
 			const data = await (await fetch(`/puzzles/pool/${entry}.json?v=${v}`)).json();
-			await this.startPuzzle(data, label);
+			await this.startPuzzle(data, label, { day });
 		} catch (e) {
 			console.error('Failed to load puzzle', e);
 			this.addLog(`Error loading puzzle: ${e.message}`);
 		}
 	},
 	// The human takes the attacker's seat; the other seat is the baseline heuristic AI (what the solver's proof was replayed against).
-	async startPuzzle(data, label, attempts = 1) {
+	async startPuzzle(data, label, { day = null, attempts = 1, results = [] } = {}) {
 		await this.loadHDFEN(data.hdfen);
 		this.players.forEach((p, i) => {
 			p.isAI = i !== data.attacker;
@@ -5648,10 +5655,66 @@ function alpineHexDiceTacticGame() { return {
 		setSeed(parseInt(data.id, 36) % 1e9 || 1);
 		this.isPuzzle = true;
 		this.showLog = false;
-		this.puzzle = { data, label, humanSeat: data.attacker, status: 'playing', turnsUsed: 0, attempts, hintUsed: false, note: '' };
+		this.puzzle = { data, label, day, humanSeat: data.attacker, status: 'playing', turnsUsed: 0, attempts, results, hintUsed: false, note: '' };
+		this.puzzleStreak = this._puzzleStreak();
 	},
 	puzzleReset() {
-		return this.startPuzzle(this.puzzle.data, this.puzzle.label, this.puzzle.attempts + 1);
+		const p = this.puzzle;
+		// Abandoning a running attempt counts as a miss; solved/failed attempts were already recorded.
+		if (p.status === 'playing') this._puzzleRecord(false);
+		const results = p.results;
+		return this.startPuzzle(p.data, p.label, { day: p.day, attempts: p.attempts + 1, results });
+	},
+	_puzzleLoad() {
+		try {
+			return JSON.parse(localStorage.getItem('hexdice_puzzle_state')) || { days: {} };
+		} catch (e) {
+			return { days: {} };
+		}
+	},
+	// Only the first outcome of a daily counts toward streak/share; later replays never overwrite it.
+	_puzzleRecord(solved) {
+		const p = this.puzzle;
+		if (!p.day) return;
+		p.results = [...p.results, solved ? 'hit' : 'miss'];
+		try {
+			const state = this._puzzleLoad();
+			const prev = state.days[p.day];
+			if (!prev?.solved) {
+				state.days[p.day] = { n: p.data.n, solved, attempts: p.attempts, hintUsed: p.hintUsed, results: p.results };
+				localStorage.setItem('hexdice_puzzle_state', JSON.stringify(state));
+			}
+		} catch (e) {}
+		this.puzzleStreak = this._puzzleStreak();
+	},
+	_puzzleStreak() {
+		const days = this._puzzleLoad().days;
+		const dayMs = 864e5;
+		const iso = t => new Date(t).toISOString().slice(0, 10);
+		let t = Date.parse(iso(Date.now()) + 'T00:00:00Z');
+		if (!days[iso(t)]?.solved) t -= dayMs; // today still open does not break yesterday's streak
+		let streak = 0;
+		while (days[iso(t)]?.solved) {
+			streak++;
+			t -= dayMs;
+		}
+		return streak;
+	},
+	puzzleShareText() {
+		const p = this.puzzle;
+		const row = p.results.map(r => r === 'hit' ? '🟩' : '🟥').join('') + (p.hintUsed ? ' 💡' : '');
+		const url = location.origin + '/?puzzle=daily';
+		return `HexDice Daily ${p.day} · win in ${p.data.n}\n${row}\n${url}`;
+	},
+	async puzzleShare() {
+		const text = this.puzzleShareText();
+		try {
+			if (navigator.share) await navigator.share({ text });
+			else await navigator.clipboard.writeText(text);
+			this.puzzle.note = navigator.share ? 'Shared.' : 'Result copied to clipboard.';
+		} catch (e) {
+			this.puzzle.note = text;
+		}
 	},
 	_puzzleKeyUnit() {
 		const m = this.puzzle.data.firstMove;
@@ -5669,6 +5732,7 @@ function alpineHexDiceTacticGame() { return {
 		if (this.puzzle.status !== 'playing') return;
 		const { m, name } = this._puzzleKeyUnit();
 		this.puzzle.status = 'failed';
+		this._puzzleRecord(false);
 		this.puzzle.note = `Solution: ${m.actionType} your ${name} from hex ${m.fromHex} to hex ${m.toHex}.`;
 		this.selectUnit(m.fromHex);
 	},
@@ -5676,7 +5740,6 @@ function alpineHexDiceTacticGame() { return {
 		const p = this.puzzle;
 		if (p.status !== 'playing' || this.phase !== 'PLAYER_TURN' || this.currentPlayerIndex === p.humanSeat) return false;
 		if (++p.turnsUsed < p.data.n) return false;
-		p.status = 'failed';
 		this.gameOver(this.currentPlayerIndex, 'You ran out of turns.');
 		return true;
 	},

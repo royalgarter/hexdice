@@ -6,6 +6,7 @@
 			· your turn <b x-text="Math.min((puzzle?.turnsUsed ?? 0) + 1, puzzle?.data.n ?? 1)"></b>/<span x-text="puzzle?.data.n"></span>
 		</span>
 		· attempt <span x-text="puzzle?.attempts"></span>
+		<span x-show="puzzle?.day && puzzleStreak > 0">· 🔥 <span x-text="puzzleStreak"></span>-day streak</span>
 	</div>
 
 	<div x-show="puzzle?.status === 'solved'" class="text-xl font-bold text-green-700 mt-1">✅ Solved<span x-show="puzzle?.hintUsed"> (with hint)</span></div>
@@ -15,6 +16,7 @@
 	<div class="mt-2 flex justify-center gap-2 text-sm">
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'playing'" @click="puzzleHint()">Hint</button>
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'playing'" @click="puzzleShowSolution()">Show solution</button>
+		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" x-show="puzzle?.status === 'solved' && puzzle?.day" @click="puzzleShare()">Share</button>
 		<button class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="puzzleReset()">Reset</button>
 	</div>
 </div>

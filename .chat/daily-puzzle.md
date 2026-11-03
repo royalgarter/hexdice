@@ -74,11 +74,14 @@ Findings that changed the plan:
 - Done 2026-11-03: `game.js` (`isPuzzle`, `puzzle`, `loadPuzzle`, `startPuzzle`, `puzzleReset/Hint/ShowSolution`, hooks in `_endTurn` after the `isState` return and in `gameOver`), `html/puzzle.html` HUD, toolbar button (puzzle emoji) -> `/?puzzle=daily`, `?puzzle=<dir/id|id>`. Generic Game Over box hidden in puzzle mode. `tests/browser-puzzle.mjs` (npm `test:browser:puzzle`): N=1 solved from seat 0 and seat 1, hint, reset, fail on ending the turn, show solution, reset inside the AI's 500 ms delay, daily loads, no page errors. Needs the dev server (local run needs a dummy `ARANGODB_URI`).
 - Known gaps: the UI may still offer moves outside the solver set (SACRIFICE etc.); not-yet-wired offline cache (P5); no unit-type tutorial text; Hint/Show solution cover the first move only.
 
-### P5 — Share + retention
+### P5 — Share + retention (DONE 2026-11-03 except Web Share on desktop untested; see notes)
 - [ ] Result string: `HexDice 2026-11-03 ⭐ 2/3 🟥🟩` (attempts, hint use). Copy-to-clipboard + Web Share API.
 - [ ] localStorage `hexdice_puzzle_state`: streak, history, today's status. try/catch (private mode).
 - [ ] Rules page / home page entry; update `sitemap.xml`, `llms.txt`.
 - [ ] Offline: today's puzzle precached by service worker.
+
+- P5 notes: `localStorage.hexdice_puzzle_state = { days: { 'YYYY-MM-DD': { n, solved, attempts, hintUsed, results } } }`, daily only, first solve is never overwritten; streak = consecutive solved UTC days ending today (or yesterday). Share text: `HexDice Daily <date> · win in N` + one row of hit/miss squares (+ bulb if hint) + link; `navigator.share` else clipboard else shows the text in the HUD. Offline: the service worker is network-first and caches every same-origin GET, so the client prefetches tomorrow's puzzle when the daily loads (no SW change). Entries: `[Daily Puzzle]` link in setup, toolbar button, `sitemap.xml`, `llms.txt`, RULES.md section 11.
+- Not done: streak/history screen, share image, timezone choice (UTC only).
 
 ### P6 — Tutorial track (stretch)
 - [ ] Curated ordered puzzles (one per unit type, terrain, Guard, Spell) at `?puzzle=learn`.
