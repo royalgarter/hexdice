@@ -85,6 +85,7 @@ function alpineHexDiceTacticGame() { return {
 	rollingDice: false,
 	campaignData: null,
 	isCampaign: false,
+	aiChoice: new URLSearchParams(location.search).get('ai') || '',
 	isPuzzle: false,
 	puzzleStreak: 0,
 	puzzle: null, // { data, label, day (UTC date for daily, else null), humanSeat, status: 'playing'|'solved'|'failed', turnsUsed, attempts, results[], hintUsed, note }
@@ -1494,7 +1495,8 @@ function alpineHexDiceTacticGame() { return {
 				selectedSpriteMix: null,
 				selectedSpriteSet: selectedSkin,
 				isAI: isAI,
-				profileName: Object.keys(heuristicProfiles).random()
+				profileName: this.pickAIProfile(campaignData),
+				profileExplicit: !!(campaignData?.story?.boss?.aiProfile || this.aiChoice)
 			});
 		}
 
@@ -1565,7 +1567,17 @@ function alpineHexDiceTacticGame() { return {
 
 	setPlayerAI(player, flag=true) {
 		player.isAI = flag;
-		player.profileName = player.profileName || Object.keys(heuristicProfiles).random();
+		player.profileName = this.aiChoice ? this.pickAIProfile() : (player.profileName || Object.keys(heuristicProfiles).random());
+		player.profileExplicit = !!this.aiChoice;
+	},
+	// Precedence: campaign boss data > setup/URL choice (a name or a tier) > random hand-tuned profile (the old behaviour).
+	pickAIProfile(campaignData) {
+		const choice = campaignData?.story?.boss?.aiProfile || this.aiChoice;
+		const tier = typeof AI_TIERS !== 'undefined' && AI_TIERS[choice];
+		if (tier?.length) return tier.random();
+		if (choice && typeof evolvedProfiles !== 'undefined' && evolvedProfiles[choice]) return choice;
+		if (choice && heuristicProfiles[choice]) return choice;
+		return Object.keys(heuristicProfiles).random();
 	},
 
 	initPlayerSkins(playerId) {
@@ -5650,7 +5662,10 @@ function alpineHexDiceTacticGame() { return {
 		await this.loadHDFEN(data.hdfen);
 		this.players.forEach((p, i) => {
 			p.isAI = i !== data.attacker;
-			if (p.isAI) p.profileName = 'baseline';
+			if (p.isAI) {
+				p.profileName = 'baseline';
+				p.profileExplicit = false;
+			}
 		});
 		setSeed(parseInt(data.id, 36) % 1e9 || 1);
 		this.isPuzzle = true;

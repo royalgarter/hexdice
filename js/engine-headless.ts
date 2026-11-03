@@ -89,6 +89,7 @@ export async function loadGameEngine(playerCount: number = 2, version: number = 
     const aiCoreCode = await Deno.readTextFile("./js/ai/ai.js");
     const aiHeuristicCode = await Deno.readTextFile("./js/ai/ai-heuristic.js");
     const aiHeuristicProfiles = await Deno.readTextFile("./js/ai/heuristic-profiles.js");
+    const evolvedProfilesCode = await Deno.readTextFile("./js/ai/evolved-profiles.js");
     const campaignManagerCode = await Deno.readTextFile("./js/campaign/campaign-manager.js");
 
     // Combine all code (game.js has its own seeded random + setSeed)
@@ -99,6 +100,7 @@ export async function loadGameEngine(playerCount: number = 2, version: number = 
         ${gameCode}
         ${campaignManagerCode}
         ${aiHeuristicProfiles}
+        ${evolvedProfilesCode}
         ${aiCoreCode}
         ${aiHeuristicCode}
 
@@ -114,6 +116,8 @@ export async function loadGameEngine(playerCount: number = 2, version: number = 
             random: typeof random === 'function' ? () => random() : () => Math.random(),
             AUTOCHESS_CONFIG: typeof AUTOCHESS_CONFIG !== 'undefined' ? AUTOCHESS_CONFIG : null,
             heuristicProfiles: typeof heuristicProfiles !== 'undefined' ? heuristicProfiles : {},
+            evolvedProfiles: typeof evolvedProfiles !== 'undefined' ? evolvedProfiles : {},
+            aiTiers: typeof AI_TIERS !== 'undefined' ? AI_TIERS : {},
             profileTools: typeof makeRng !== 'undefined' ? { makeRng, mutateProfile, crossoverProfiles, generateRandomProfile, completeProfile, clampProfile, getProfile } : null,
             performAIByHeuristic: typeof performAIByHeuristic !== 'undefined' ? performAIByHeuristic : null,
             generateAllPossibleMoves: typeof generateAllPossibleMoves !== 'undefined' ? generateAllPossibleMoves : null,

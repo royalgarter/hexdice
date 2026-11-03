@@ -29,6 +29,8 @@
     "test:browser:recap": "node tests/browser-recap.mjs",
     "test:browser:hdfen": "node tests/browser-hdfen.mjs",
     "test:browser:puzzle": "node tests/browser-puzzle.mjs",
+    "test:browser:evolved": "node tests/browser-evolved.mjs",
+    "ai:export-champions": "node scripts/export-champions.js",
     "puzzle:replay": "deno run --allow-all js/puzzle-replay.ts",
     "puzzle:schedule": "node scripts/schedule-puzzles.js",
     "test:puzzle": "deno test --allow-all tests/hdfen.test.ts tests/puzzle-solver.test.ts",

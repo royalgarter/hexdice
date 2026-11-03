@@ -73,8 +73,11 @@
  *   ranger     — kiting, wins ~45%
  */
 
+// TODO: players get a random profileName at reset, but live games have always played 'baseline' because the default
+// argument of performAIByHeuristic wins. Only an explicit choice (boss data, ?ai=, setup picker) is honoured so far.
 function performAIByWeight(GAME) {
-	return performAIByHeuristic(GAME);
+	const player = GAME.players[GAME.currentPlayerIndex];
+	return performAIByHeuristic(GAME, player?.profileExplicit ? player.profileName : undefined);
 }
 
 const performAI = performAIByWeight;

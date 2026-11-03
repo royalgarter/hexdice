@@ -38,12 +38,17 @@ Replace hand-tuned heuristic profiles with profiles found by self-play evolution
 - Run `--gens=6 --pop=10 --games=6 --topk=3 --vgames=8` (~45 min): 8/9 cells filled, 6/8 champions pass (drop <=10pts, >55% vs baseline, <=70% vs gauntlet). Exit criterion met.
 - Caveat: 5 of 6 passers are gen 0 mutants of hand profiles; archive gained nothing in gens 3-5 and the best train rate fell as HoF opponents joined. So the loop mostly diversifies, little proof of real improvement. Held-out opponent set is one profile only. Next: more profiles to hold out, larger rate/step, longer run, and compare against a gen-0-only random-mutant control.
 
-### P3 — Integration
+### P3 — Integration (DONE 2026-11-03; see notes under the list)
 - [ ] Export champions into `js/ai/evolved-profiles.js` (generated file, header notes run id + date). Register in `heuristicProfiles`; load order after `heuristic-profiles.js` in `index.html`.
 - [ ] Human-readable names + 1-line style blurb from descriptors ("Iron Wall: guards 3x average, wins by attrition").
 - [ ] Difficulty tiers: easy/normal/hard mapped to champion strength; easy = hand-profile + random move noise.
 - [ ] Campaign bosses: map each boss in `ro_quest_db.json` to a champion (data only; `StoryEngine` stays thin). Keep fallback to old profile if missing.
 - Exit: boss levels use evolved profiles; smoke test plays a level to completion.
+
+- P3 notes: `scripts/export-champions.js <run>` writes generated `js/ai/evolved-profiles.js` (`evolvedProfiles`, `EVOLVED_ORDER` weakest->strongest, `AI_TIERS` normal/hard). 6 champions from run 2026-11-02T10-44: Blood Marathon, Patient Tide, Steady Hand (normal); Iron Wall, Long Siege, Silent Blade (hard). Names come from the MAP-Elites cell; blurbs from measured descriptors. `getProfile()` falls back to `evolvedProfiles`, so random AI picks (hand-tuned only) are unchanged. Choice precedence in `pickAIProfile`: campaign boss `aiProfile` (data in `ro_quest_db.json`, 17 bosses ramped weakest->strongest) > `?ai=<name|normal|hard>` / setup picker > random hand profile. Non-boss campaign levels untouched.
+- Found on the way: live games never used the per-player random `profileName`; `performAIByHeuristic`'s default argument forced `baseline`. `performAIByWeight` now honours a profile only when `profileExplicit` (boss/`?ai=`/picker), so existing behaviour is preserved. TODO in `ai.js`: decide whether default games should really use random profiles.
+- Not done: easy tier (needs move-noise in the AI), human-readable replay review of champions, difficulty playtest of bosses. Hard champions are minimax depth 3 profiles, so expect slower AI turns in the browser.
+- Tests: `tests/evolved-profiles.test.ts`, `tests/browser-evolved.mjs`.
 
 ### P4 — Continuous improvement
 - [ ] `scripts/nightly-evolve.sh` seeded from last archive; PR/commit artefact only if gauntlet score improves.

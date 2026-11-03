@@ -1420,102 +1420,119 @@
 		"10": {
 			"name": "Golden Thief Bug",
 			"title": "The Gilded Horror",
+			"aiProfile": "evolved_blood_marathon",
 			"intro": "The Prontera culverts run deep beneath the city. Something has been feeding down there — growing larger, growing bolder. The Kafra guides stopped coming to this section three weeks ago.",
 			"outro": "The carapace shatters. Gold dust settles over the sewer water. Whatever it was hoarding down here, it will never collect again."
 		},
 		"20": {
 			"name": "Amon Ra",
 			"title": "The Awakened God",
+			"aiProfile": "evolved_blood_marathon",
 			"intro": "The deepest chamber of the Morroc pyramid radiates heat that has nothing to do with the desert above. The sarcophagus is open. The god within is not grateful for its freedom.",
 			"outro": "The god's form disperses like smoke. The pyramid goes dark. What was sleeping has been silenced — for now."
 		},
 		"30": {
 			"name": "Eddga",
 			"title": "Father of Flames",
+			"aiProfile": "evolved_blood_marathon",
 			"intro": "Payon's sacred tiger spirit has been twisted by the same corruption spreading through the forest. The Father of Flames burns — but not with the warmth the archers once knew.",
 			"outro": "The great tiger collapses. Its flames dim to embers. The forest sighs, as if releasing a breath held too long."
 		},
 		"40": {
 			"name": "Mistress",
 			"title": "Queen of Mjolnir",
+			"aiProfile": "evolved_patient_tide",
 			"intro": "Something rules these peaks — a queen whose children fill every crack and crevice of the mountain. Where the Mistress nests, nothing else survives. She has nested here for centuries.",
 			"outro": "The queen falls. Her swarm scatters without direction. The mountain is quieter than it has been in years."
 		},
 		"50": {
 			"name": "Moonlight Flower",
 			"title": "The Nightmare Blossom",
+			"aiProfile": "evolved_patient_tide",
 			"intro": "At the heart of Payon's deepest cave, a flower of impossible beauty blooms. Its pollen shows you your deepest fears — then makes them real.",
 			"outro": "The flower withers. Dawn breaks over Payon Forest for the first time in weeks."
 		},
 		"60": {
 			"name": "Pharaoh",
 			"title": "Undying King of the Sands",
+			"aiProfile": "evolved_patient_tide",
 			"intro": "Deep within Morroc's greatest tomb, the Pharaoh stirs. Millennia of death have not diminished his hunger for dominion.",
 			"outro": "The Pharaoh crumbles to dust. The desert winds carry his final sigh across the dunes."
 		},
 		"70": {
 			"name": "Drake",
 			"title": "The Cursed Captain",
+			"aiProfile": "evolved_steady_hand",
 			"intro": "The sunken vessels off the Brasilis coast have a guardian — not alive, not dead, but furious. Drake, the captain who refused to go down with his ship, has haunted these waters for three centuries.",
 			"outro": "The ghost captain dissipates over the waves. Whatever oath kept him bound here has finally been broken."
 		},
 		"80": {
 			"name": "Turtle General",
 			"title": "The Ancient Warlord",
+			"aiProfile": "evolved_steady_hand",
 			"intro": "On Turtle Island, they built an army. The Turtle General has held this post since before the Holy Lands were named. Age has not slowed it — only made it angrier.",
 			"outro": "The General's shell cracks. Ancient armor falls into the sea. A warlord that outlasted three civilizations finally rests."
 		},
 		"90": {
 			"name": "Fallen Bishop Hibram",
 			"title": "The Apostate",
+			"aiProfile": "evolved_steady_hand",
 			"intro": "The monastery bells rang for a bishop who never returned from the deep halls. He was found — or what was left of him — changed by something that speaks in corrupted prayer.",
 			"outro": "The bishop's robes burn away. The corruption that wore his faith crumbles. The monastery's deeper halls fall silent."
 		},
 		"100": {
 			"name": "Vesper",
 			"title": "The Iron Heretic",
+			"aiProfile": "evolved_iron_wall",
 			"intro": "In the ruins of Juperos, an ancient artificial intelligence still runs its original programming: eliminate all biological life. It has been waiting in the dark for someone to wake it. You have obliged.",
 			"outro": "Vesper's processes terminate. The lights in Juperos Core flicker out one by one. Technology from another age goes dark."
 		},
 		"110": {
 			"name": "RSX-0806",
 			"title": "Einbroch's War Machine",
+			"aiProfile": "evolved_iron_wall",
 			"intro": "The military prototype never left the mine — because it was never meant to. RSX-0806 was designed to destroy everything around it. The mining shaft is its testing ground. You are its test subjects.",
 			"outro": "The war machine's power core fails. The mine shakes with its final explosion. Einbroch's dirtiest secret is buried."
 		},
 		"120": {
 			"name": "Gloom Under Night",
 			"title": "The Eternal Dark",
+			"aiProfile": "evolved_iron_wall",
 			"intro": "Rachel Sanctuary, lowest level. The prayers stop here. The light stops here. Gloom Under Night has seeped into the deepest vault of the holy city's most sacred site — and it is consuming everything.",
 			"outro": "The darkness recedes. Cold, thin light filters back into the sanctuary's lowest hall. Whatever the Gloom was feeding on — it will feed no more."
 		},
 		"130": {
 			"name": "Ifrit",
 			"title": "Lord of the Inferno",
+			"aiProfile": "evolved_long_siege",
 			"intro": "Thor's Volcano does not merely burn — it howls. The fire spirit bound within its core has been restless for centuries. Today, something has set it free. Ifrit burns with a hatred older than humanity.",
 			"outro": "Ifrit's flames gutter and die. Thor's Volcano goes quiet for the first time in living memory."
 		},
 		"140": {
 			"name": "Hardrock Mammoth",
 			"title": "The Ancient Colossus",
+			"aiProfile": "evolved_long_siege",
 			"intro": "Something impossible moves in the Manuk wastes — a creature from before recorded history, preserved by the same ancient magic that kept the ruins intact. The earth shakes. Trees break. The Colossus does not care that you exist.",
 			"outro": "The mammoth collapses. The ground stops shaking. A creature that survived ice ages and entire civilizations falls to six strangers with dice for soldiers."
 		},
 		"150": {
 			"name": "Valkyrie Randgris",
 			"title": "Fallen Seraph",
+			"aiProfile": "evolved_long_siege",
 			"intro": "The Temple of Odin's greatest guardian has been corrupted. Randgris, once the protector of the worthy, now judges all — and finds all wanting.",
 			"outro": "Randgris's wings shatter. The temple's light flickers back to life."
 		},
 		"155": {
 			"name": "Beelzebub",
 			"title": "Lord of Flies, Architect of Corruption",
+			"aiProfile": "evolved_silent_blade",
 			"intro": "At the lowest level of the Biolabs, something ancient was not discovered — it was invited. Beelzebub did not create the Genesis Project. But it funded it. It guided it. The corruption that spread across the world had a patron, and you have found its throne.",
 			"outro": "Beelzebub's form dissolves into a swarm that extinguishes itself. The source of the corruption's intelligence goes dark. But Genesis still waits."
 		},
 		"161": {
 			"name": "Genesis",
 			"title": "The First and the Last",
+			"aiProfile": "evolved_silent_blade",
 			"intro": "At the heart of the Biolabs, the Genesis Project awaits. It is not a monster — it is the template from which all monsters were made. The origin of the corruption. The end of your journey.",
 			"outro": "Genesis falls. The Biolabs fall silent. The corruption's source is severed — but the scars remain."
 		}

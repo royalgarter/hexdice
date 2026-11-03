@@ -290,7 +290,8 @@ const heuristicProfiles = {
  * Get a profile by name
  */
 function getProfile(name) {
-    return heuristicProfiles[name] || heuristicProfiles.baseline;
+    const evolved = typeof evolvedProfiles !== 'undefined' ? evolvedProfiles : null;
+    return heuristicProfiles[name] || evolved?.[name] || heuristicProfiles.baseline;
 }
 
 /**
