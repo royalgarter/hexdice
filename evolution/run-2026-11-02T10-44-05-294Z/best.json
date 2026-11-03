@@ -1,0 +1,60 @@
+{
+	"name": "Assassin (Mutated)",
+	"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+	"priorityOrder": [
+		"kill",
+		"capture",
+		"attack",
+		"spell",
+		"dodge",
+		"position"
+	],
+	"minimax": true,
+	"minimaxDepth": 3,
+	"weights": {
+		"captureBonus": 6409,
+		"killBonus": 5055,
+		"attackBonus": 954,
+		"safeBonus": 712,
+		"threatPenalty": -381,
+		"protectedRangeBonus": 78,
+		"friendlySixBonus": 109,
+		"advanceBonus": 388,
+		"guardPenalty": -321,
+		"mergeOver6Penalty": -458,
+		"backAndForthPenalty": -603,
+		"teamPositionWeight": 0.26,
+		"pressureWeight": 0.67,
+		"focusFireBonus": 180,
+		"terrainWeights": {
+			"defenseBonusWeight": 86,
+			"archerTowerBonus": 149,
+			"archerMountainBonus": 165,
+			"mountainMovePenalty": -52,
+			"losBlockBonus": 332
+		},
+		"spells": {
+			"SPELLCAST_SHIELD": 0.46,
+			"SPELLCAST_SWAP": 1.05,
+			"SPELLCAST_SKIRMISH": 2.04
+		},
+		"selfBlockPenalty": -82,
+		"immediateDeathPenalty": -289,
+		"roleWeights": {
+			"flankerEdge": 22,
+			"flankerKillSetup": 184,
+			"frontlineCenter": 13,
+			"supportAdjacency": 32,
+			"supportFarPenalty": 41,
+			"supportInRange": 66,
+			"kitingOptimal": 175,
+			"kitingSetup": 327,
+			"kitingAdjacentPenalty": -509,
+			"bodyguard": 166
+		}
+	},
+	"riskTolerance": 0.8989068002905697,
+	"targetSelection": "lowArmor",
+	"positioningStyle": "flank",
+	"unitSelection": "highestValue"
+}

@@ -1,0 +1,106 @@
+[
+	{
+		"cell": "1:0",
+		"name": "g0-2",
+		"train": 0.7666666666666667,
+		"heldSeeds": 0.725,
+		"heldOpps": 0.9375,
+		"vsBaseline": 0.75,
+		"desc": {
+			"aggression": 0.19066560011519734,
+			"length": 29.866666666666667
+		},
+		"ok": false
+	},
+	{
+		"cell": "2:0",
+		"name": "g0-1",
+		"train": 0.7444444444444445,
+		"heldSeeds": 0.7875,
+		"heldOpps": 0.9375,
+		"vsBaseline": 0.75,
+		"desc": {
+			"aggression": 0.20590600993675795,
+			"length": 27.211111111111112
+		},
+		"ok": false
+	},
+	{
+		"cell": "0:1",
+		"name": "g0-8",
+		"train": 0.6666666666666666,
+		"heldSeeds": 0.6,
+		"heldOpps": 0.8125,
+		"vsBaseline": 0.5625,
+		"desc": {
+			"aggression": 0.09867172675521822,
+			"length": 34.96666666666667
+		},
+		"ok": true
+	},
+	{
+		"cell": "0:2",
+		"name": "g0-4",
+		"train": 0.6166666666666667,
+		"heldSeeds": 0.525,
+		"heldOpps": 0.8125,
+		"vsBaseline": 0.5625,
+		"desc": {
+			"aggression": 0.09623430962343096,
+			"length": 39.71666666666667
+		},
+		"ok": true
+	},
+	{
+		"cell": "1:1",
+		"name": "g0-3",
+		"train": 0.6,
+		"heldSeeds": 0.5625,
+		"heldOpps": 0.8125,
+		"vsBaseline": 0.5625,
+		"desc": {
+			"aggression": 0.1010194624652456,
+			"length": 35.86666666666667
+		},
+		"ok": true
+	},
+	{
+		"cell": "2:2",
+		"name": "g0-5",
+		"train": 0.5166666666666667,
+		"heldSeeds": 0.5125,
+		"heldOpps": 0.6875,
+		"vsBaseline": 0.5625,
+		"desc": {
+			"aggression": 0.2544861337683524,
+			"length": 40.85
+		},
+		"ok": true
+	},
+	{
+		"cell": "0:0",
+		"name": "g2-9",
+		"train": 0.6626984126984127,
+		"heldSeeds": 0.7,
+		"heldOpps": 0.9375,
+		"vsBaseline": 0.8125,
+		"desc": {
+			"aggression": 0.08330674112485043,
+			"length": 34.861111111111114
+		},
+		"ok": true
+	},
+	{
+		"cell": "1:2",
+		"name": "g2-7",
+		"train": 0.5952380952380952,
+		"heldSeeds": 0.6375,
+		"heldOpps": 0.875,
+		"vsBaseline": 0.6875,
+		"desc": {
+			"aggression": 0.16829971181556197,
+			"length": 41.214285714285715
+		},
+		"ok": true
+	}
+]

@@ -1,0 +1,832 @@
+[
+	{
+		"name": "g2-5",
+		"score": {
+			"rate": 0.6875,
+			"games": 288,
+			"wins": 198,
+			"draws": 0,
+			"avgPlies": 20.256944444444443,
+			"perOpponent": {
+				"baseline": 0.8055555555555556,
+				"berserker": 0.75,
+				"turtle": 1,
+				"assassin": 0.5555555555555556,
+				"tactician": 0.7222222222222222,
+				"hof-g0-2": 0.6111111111111112,
+				"hof-g1-8": 0.5277777777777778
+			},
+			"desc": {
+				"aggression": 0.2034803661444967,
+				"length": 20.256944444444443
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Assassin (Mutated) (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 6683,
+				"killBonus": 6277,
+				"attackBonus": 746,
+				"safeBonus": 493,
+				"threatPenalty": -298,
+				"protectedRangeBonus": 99,
+				"friendlySixBonus": 78,
+				"advanceBonus": 434,
+				"guardPenalty": -406,
+				"mergeOver6Penalty": -548,
+				"backAndForthPenalty": -657,
+				"teamPositionWeight": 0.37,
+				"pressureWeight": 0.59,
+				"focusFireBonus": 199,
+				"terrainWeights": {
+					"defenseBonusWeight": 98,
+					"archerTowerBonus": 184,
+					"archerMountainBonus": 199,
+					"mountainMovePenalty": -51,
+					"losBlockBonus": 423
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.52,
+					"SPELLCAST_SWAP": 1.47,
+					"SPELLCAST_SKIRMISH": 3.47
+				},
+				"selfBlockPenalty": -47,
+				"immediateDeathPenalty": -259,
+				"roleWeights": {
+					"flankerEdge": 20,
+					"flankerKillSetup": 138,
+					"frontlineCenter": 24,
+					"supportAdjacency": 26,
+					"supportFarPenalty": 38,
+					"supportInRange": 58,
+					"kitingOptimal": 224,
+					"kitingSetup": 407,
+					"kitingAdjacentPenalty": -511,
+					"bodyguard": 108
+				}
+			},
+			"riskTolerance": 0.9280627780593932,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	},
+	{
+		"name": "g1-8",
+		"score": {
+			"rate": 0.6145833333333334,
+			"games": 96,
+			"wins": 59,
+			"draws": 0,
+			"avgPlies": 20.84375,
+			"perOpponent": {
+				"baseline": 0.75,
+				"berserker": 0.75,
+				"turtle": 1,
+				"assassin": 0.5,
+				"tactician": 0.4166666666666667,
+				"hof-g0-2": 0.5,
+				"hof-g1-8": 0.5
+			},
+			"desc": {
+				"aggression": 0.21272365805168986,
+				"length": 20.84375
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Assassin (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 7411,
+				"killBonus": 5238,
+				"attackBonus": 766,
+				"safeBonus": 535,
+				"threatPenalty": -320,
+				"protectedRangeBonus": 90,
+				"friendlySixBonus": 85,
+				"advanceBonus": 402,
+				"guardPenalty": -505,
+				"mergeOver6Penalty": -594,
+				"backAndForthPenalty": -562,
+				"teamPositionWeight": 0.35,
+				"pressureWeight": 0.65,
+				"focusFireBonus": 201,
+				"terrainWeights": {
+					"defenseBonusWeight": 103,
+					"archerTowerBonus": 154,
+					"archerMountainBonus": 198,
+					"mountainMovePenalty": -49,
+					"losBlockBonus": 358
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.63,
+					"SPELLCAST_SWAP": 1.53,
+					"SPELLCAST_SKIRMISH": 3.1
+				},
+				"selfBlockPenalty": -58,
+				"immediateDeathPenalty": -223,
+				"roleWeights": {
+					"flankerEdge": 19,
+					"flankerKillSetup": 152,
+					"frontlineCenter": 20,
+					"supportAdjacency": 31,
+					"supportFarPenalty": 46,
+					"supportInRange": 56,
+					"kitingOptimal": 264,
+					"kitingSetup": 382,
+					"kitingAdjacentPenalty": -474,
+					"bodyguard": 133
+				}
+			},
+			"riskTolerance": 0.9583313953597099,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	},
+	{
+		"name": "g1-9",
+		"score": {
+			"rate": 0.6145833333333334,
+			"games": 96,
+			"wins": 59,
+			"draws": 0,
+			"avgPlies": 23.71875,
+			"perOpponent": {
+				"baseline": 0.6666666666666666,
+				"berserker": 0.9166666666666666,
+				"turtle": 1,
+				"assassin": 0.4166666666666667,
+				"tactician": 0.5833333333333334,
+				"hof-g0-2": 0.5,
+				"hof-g1-8": 0.4166666666666667
+			},
+			"desc": {
+				"aggression": 0.19318181818181818,
+				"length": 23.71875
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Tactician (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 7592,
+				"killBonus": 4794,
+				"attackBonus": 327,
+				"safeBonus": 671,
+				"threatPenalty": -475,
+				"protectedRangeBonus": 74,
+				"friendlySixBonus": 346,
+				"advanceBonus": 328,
+				"guardPenalty": -335,
+				"mergeOver6Penalty": -528,
+				"backAndForthPenalty": -745,
+				"teamPositionWeight": 0.89,
+				"pressureWeight": 0.75,
+				"focusFireBonus": 142,
+				"terrainWeights": {
+					"defenseBonusWeight": 207,
+					"archerTowerBonus": 241,
+					"archerMountainBonus": 156,
+					"mountainMovePenalty": -101,
+					"losBlockBonus": 390
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.88,
+					"SPELLCAST_SWAP": 1.86,
+					"SPELLCAST_SKIRMISH": 1.09
+				},
+				"selfBlockPenalty": -92,
+				"immediateDeathPenalty": -384,
+				"roleWeights": {
+					"flankerEdge": 24,
+					"flankerKillSetup": 242,
+					"frontlineCenter": 14,
+					"supportAdjacency": 28,
+					"supportFarPenalty": 44,
+					"supportInRange": 62,
+					"kitingOptimal": 207,
+					"kitingSetup": 361,
+					"kitingAdjacentPenalty": -562,
+					"bodyguard": 122
+				}
+			},
+			"riskTolerance": 0.8654186874628067,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	},
+	{
+		"name": "g3-5",
+		"score": {
+			"rate": 0.6076388888888888,
+			"games": 288,
+			"wins": 175,
+			"draws": 0,
+			"avgPlies": 25.395833333333332,
+			"perOpponent": {
+				"baseline": 0.7777777777777778,
+				"berserker": 0.7222222222222222,
+				"turtle": 0.9722222222222222,
+				"assassin": 0.4722222222222222,
+				"tactician": 0.6944444444444444,
+				"hof-g0-2": 0.4444444444444444,
+				"hof-g1-8": 0.3888888888888889
+			},
+			"desc": {
+				"aggression": 0.101003182661835,
+				"length": 25.395833333333332
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Tactician (Mutated) (Mutated) x Assassin (Mutated) x Tactician (Mutated) (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"capture",
+				"spell",
+				"position",
+				"kill",
+				"attack",
+				"dodge"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 12746,
+				"killBonus": 6019,
+				"attackBonus": 1242,
+				"safeBonus": 871,
+				"threatPenalty": -359,
+				"protectedRangeBonus": 333,
+				"friendlySixBonus": 86,
+				"advanceBonus": 468,
+				"guardPenalty": -273,
+				"mergeOver6Penalty": -514,
+				"backAndForthPenalty": -628,
+				"teamPositionWeight": 0.21,
+				"pressureWeight": 0.99,
+				"focusFireBonus": 117,
+				"terrainWeights": {
+					"defenseBonusWeight": 263,
+					"archerTowerBonus": 176,
+					"archerMountainBonus": 262,
+					"mountainMovePenalty": -41,
+					"losBlockBonus": 260
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.42,
+					"SPELLCAST_SWAP": 1.4,
+					"SPELLCAST_SKIRMISH": 0.97
+				},
+				"selfBlockPenalty": -79,
+				"immediateDeathPenalty": -254,
+				"roleWeights": {
+					"flankerEdge": 22,
+					"flankerKillSetup": 162,
+					"frontlineCenter": 16,
+					"supportAdjacency": 30,
+					"supportFarPenalty": 41,
+					"supportInRange": 52,
+					"kitingOptimal": 195,
+					"kitingSetup": 260,
+					"kitingAdjacentPenalty": -589,
+					"bodyguard": 172
+				}
+			},
+			"riskTolerance": 0.8014985056128353,
+			"targetSelection": "threatRemoval",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	},
+	{
+		"name": "g2-9",
+		"score": {
+			"rate": 0.5902777777777778,
+			"games": 288,
+			"wins": 170,
+			"draws": 0,
+			"avgPlies": 26.791666666666668,
+			"perOpponent": {
+				"baseline": 0.8055555555555556,
+				"berserker": 0.8055555555555556,
+				"turtle": 1,
+				"assassin": 0.3611111111111111,
+				"tactician": 0.6111111111111112,
+				"hof-g0-2": 0.4722222222222222,
+				"hof-g1-8": 0.3333333333333333
+			},
+			"desc": {
+				"aggression": 0.09684297881019194,
+				"length": 26.791666666666668
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Tactician (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"capture",
+				"spell",
+				"position",
+				"kill",
+				"attack",
+				"dodge"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 11311,
+				"killBonus": 5189,
+				"attackBonus": 1104,
+				"safeBonus": 782,
+				"threatPenalty": -416,
+				"protectedRangeBonus": 309,
+				"friendlySixBonus": 106,
+				"advanceBonus": 395,
+				"guardPenalty": -319,
+				"mergeOver6Penalty": -512,
+				"backAndForthPenalty": -602,
+				"teamPositionWeight": 0.26,
+				"pressureWeight": 0.91,
+				"focusFireBonus": 144,
+				"terrainWeights": {
+					"defenseBonusWeight": 243,
+					"archerTowerBonus": 159,
+					"archerMountainBonus": 233,
+					"mountainMovePenalty": -45,
+					"losBlockBonus": 269
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.46,
+					"SPELLCAST_SWAP": 1.23,
+					"SPELLCAST_SKIRMISH": 0.81
+				},
+				"selfBlockPenalty": -87,
+				"immediateDeathPenalty": -231,
+				"roleWeights": {
+					"flankerEdge": 25,
+					"flankerKillSetup": 200,
+					"frontlineCenter": 20,
+					"supportAdjacency": 25,
+					"supportFarPenalty": 44,
+					"supportInRange": 56,
+					"kitingOptimal": 220,
+					"kitingSetup": 282,
+					"kitingAdjacentPenalty": -517,
+					"bodyguard": 152
+				}
+			},
+			"riskTolerance": 0.8481854300945998,
+			"targetSelection": "threatRemoval",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	},
+	{
+		"name": "g1-6",
+		"score": {
+			"rate": 0.5833333333333334,
+			"games": 96,
+			"wins": 56,
+			"draws": 0,
+			"avgPlies": 29.3125,
+			"perOpponent": {
+				"baseline": 0.8333333333333334,
+				"berserker": 0.6666666666666666,
+				"turtle": 1,
+				"assassin": 0.3333333333333333,
+				"tactician": 0.6666666666666666,
+				"hof-g0-2": 0.3333333333333333,
+				"hof-g1-8": 0.4166666666666667
+			},
+			"desc": {
+				"aggression": 0.08717221828490432,
+				"length": 29.3125
+			}
+		},
+		"profile": {
+			"name": "Tactician (Mutated) x Tactician (Mutated) (Mutated)",
+			"description": "Strategic Thinker: Uses deep calculation (Minimax) to set traps and control the board.",
+			"priorityOrder": [
+				"capture",
+				"spell",
+				"position",
+				"kill",
+				"attack",
+				"dodge"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 9375,
+				"killBonus": 1703,
+				"attackBonus": 303,
+				"safeBonus": 637,
+				"threatPenalty": -347,
+				"protectedRangeBonus": 324,
+				"friendlySixBonus": 216,
+				"advanceBonus": 337,
+				"guardPenalty": -328,
+				"mergeOver6Penalty": -495,
+				"backAndForthPenalty": -509,
+				"teamPositionWeight": 0.88,
+				"pressureWeight": 0.84,
+				"focusFireBonus": 194,
+				"terrainWeights": {
+					"defenseBonusWeight": 255,
+					"archerTowerBonus": 192,
+					"archerMountainBonus": 262,
+					"mountainMovePenalty": -102,
+					"losBlockBonus": 222
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 1.21,
+					"SPELLCAST_SWAP": 1.74,
+					"SPELLCAST_SKIRMISH": 0.71
+				},
+				"selfBlockPenalty": -103,
+				"immediateDeathPenalty": -294,
+				"roleWeights": {
+					"flankerEdge": 19,
+					"flankerKillSetup": 226,
+					"frontlineCenter": 12,
+					"supportAdjacency": 21,
+					"supportFarPenalty": 42,
+					"supportInRange": 70,
+					"kitingOptimal": 266,
+					"kitingSetup": 347,
+					"kitingAdjacentPenalty": -542,
+					"bodyguard": 156
+				}
+			},
+			"riskTolerance": 0.49067037743516273,
+			"targetSelection": "threatRemoval",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	},
+	{
+		"name": "g3-7",
+		"score": {
+			"rate": 0.5729166666666666,
+			"games": 96,
+			"wins": 55,
+			"draws": 0,
+			"avgPlies": 32.34375,
+			"perOpponent": {
+				"baseline": 0.75,
+				"berserker": 0.6666666666666666,
+				"turtle": 0.8333333333333334,
+				"assassin": 0.4166666666666667,
+				"tactician": 0.5833333333333334,
+				"hof-g0-2": 0.5,
+				"hof-g1-8": 0.4166666666666667
+			},
+			"desc": {
+				"aggression": 0.06555269922879177,
+				"length": 32.34375
+			}
+		},
+		"profile": {
+			"name": "Tactician (Mutated) (Mutated)",
+			"description": "Strategic Thinker: Uses deep calculation (Minimax) to set traps and control the board.",
+			"priorityOrder": [
+				"capture",
+				"spell",
+				"position",
+				"kill",
+				"attack",
+				"dodge"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 11055,
+				"killBonus": 1725,
+				"attackBonus": 388,
+				"safeBonus": 738,
+				"threatPenalty": -413,
+				"protectedRangeBonus": 390,
+				"friendlySixBonus": 387,
+				"advanceBonus": 314,
+				"guardPenalty": -299,
+				"mergeOver6Penalty": -554,
+				"backAndForthPenalty": -607,
+				"teamPositionWeight": 0.76,
+				"pressureWeight": 0.8,
+				"focusFireBonus": 166,
+				"terrainWeights": {
+					"defenseBonusWeight": 241,
+					"archerTowerBonus": 213,
+					"archerMountainBonus": 446,
+					"mountainMovePenalty": -82,
+					"losBlockBonus": 245
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.97,
+					"SPELLCAST_SWAP": 2.23,
+					"SPELLCAST_SKIRMISH": 0.93
+				},
+				"selfBlockPenalty": -94,
+				"immediateDeathPenalty": -330,
+				"roleWeights": {
+					"flankerEdge": 15,
+					"flankerKillSetup": 213,
+					"frontlineCenter": 20,
+					"supportAdjacency": 26,
+					"supportFarPenalty": 31,
+					"supportInRange": 45,
+					"kitingOptimal": 139,
+					"kitingSetup": 368,
+					"kitingAdjacentPenalty": -461,
+					"bodyguard": 132
+				}
+			},
+			"riskTolerance": 0.2632351777516305,
+			"targetSelection": "threatRemoval",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	},
+	{
+		"name": "g3-6",
+		"score": {
+			"rate": 0.5625,
+			"games": 96,
+			"wins": 54,
+			"draws": 0,
+			"avgPlies": 25.479166666666668,
+			"perOpponent": {
+				"baseline": 0.8333333333333334,
+				"berserker": 0.8333333333333334,
+				"turtle": 1,
+				"assassin": 0.3333333333333333,
+				"tactician": 0.4166666666666667,
+				"hof-g0-2": 0.4166666666666667,
+				"hof-g1-8": 0.3333333333333333
+			},
+			"desc": {
+				"aggression": 0.17128874388254486,
+				"length": 25.479166666666668
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 7631,
+				"killBonus": 4012,
+				"attackBonus": 783,
+				"safeBonus": 556,
+				"threatPenalty": -332,
+				"protectedRangeBonus": 76,
+				"friendlySixBonus": 108,
+				"advanceBonus": 293,
+				"guardPenalty": -368,
+				"mergeOver6Penalty": -538,
+				"backAndForthPenalty": -669,
+				"teamPositionWeight": 0.4,
+				"pressureWeight": 0.64,
+				"focusFireBonus": 262,
+				"terrainWeights": {
+					"defenseBonusWeight": 115,
+					"archerTowerBonus": 163,
+					"archerMountainBonus": 211,
+					"mountainMovePenalty": -44,
+					"losBlockBonus": 371
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.68,
+					"SPELLCAST_SWAP": 1.51,
+					"SPELLCAST_SKIRMISH": 2.63
+				},
+				"selfBlockPenalty": -79,
+				"immediateDeathPenalty": -284,
+				"roleWeights": {
+					"flankerEdge": 20,
+					"flankerKillSetup": 184,
+					"frontlineCenter": 18,
+					"supportAdjacency": 30,
+					"supportFarPenalty": 48,
+					"supportInRange": 59,
+					"kitingOptimal": 228,
+					"kitingSetup": 359,
+					"kitingAdjacentPenalty": -594,
+					"bodyguard": 171
+				}
+			},
+			"riskTolerance": 0.8712218258995563,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	},
+	{
+		"name": "g3-9",
+		"score": {
+			"rate": 0.5625,
+			"games": 96,
+			"wins": 54,
+			"draws": 0,
+			"avgPlies": 33.552083333333336,
+			"perOpponent": {
+				"baseline": 0.5,
+				"berserker": 0.6666666666666666,
+				"turtle": 0.9166666666666666,
+				"assassin": 0.4166666666666667,
+				"tactician": 0.5833333333333334,
+				"hof-g0-2": 0.5833333333333334,
+				"hof-g1-8": 0.4166666666666667
+			},
+			"desc": {
+				"aggression": 0.06071871127633209,
+				"length": 33.552083333333336
+			}
+		},
+		"profile": {
+			"name": "Tactician (Mutated) (Mutated)",
+			"description": "Strategic Thinker: Uses deep calculation (Minimax) to set traps and control the board.",
+			"priorityOrder": [
+				"capture",
+				"spell",
+				"position",
+				"kill",
+				"attack",
+				"dodge"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 10385,
+				"killBonus": 1571,
+				"attackBonus": 281,
+				"safeBonus": 793,
+				"threatPenalty": -388,
+				"protectedRangeBonus": 508,
+				"friendlySixBonus": 325,
+				"advanceBonus": 326,
+				"guardPenalty": -292,
+				"mergeOver6Penalty": -468,
+				"backAndForthPenalty": -577,
+				"teamPositionWeight": 0.8,
+				"pressureWeight": 0.77,
+				"focusFireBonus": 132,
+				"terrainWeights": {
+					"defenseBonusWeight": 198,
+					"archerTowerBonus": 207,
+					"archerMountainBonus": 356,
+					"mountainMovePenalty": -73,
+					"losBlockBonus": 258
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 1.03,
+					"SPELLCAST_SWAP": 2.23,
+					"SPELLCAST_SKIRMISH": 0.76
+				},
+				"selfBlockPenalty": -90,
+				"immediateDeathPenalty": -275,
+				"roleWeights": {
+					"flankerEdge": 17,
+					"flankerKillSetup": 255,
+					"frontlineCenter": 17,
+					"supportAdjacency": 28,
+					"supportFarPenalty": 37,
+					"supportInRange": 53,
+					"kitingOptimal": 165,
+					"kitingSetup": 288,
+					"kitingAdjacentPenalty": -609,
+					"bodyguard": 155
+				}
+			},
+			"riskTolerance": 0.3778733599931002,
+			"targetSelection": "threatRemoval",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	},
+	{
+		"name": "g3-8",
+		"score": {
+			"rate": 0.40625,
+			"games": 96,
+			"wins": 39,
+			"draws": 0,
+			"avgPlies": 32.604166666666664,
+			"perOpponent": {
+				"baseline": 0.4166666666666667,
+				"berserker": 0.5833333333333334,
+				"turtle": 0.75,
+				"assassin": 0.25,
+				"tactician": 0.4166666666666667,
+				"hof-g0-2": 0.3333333333333333,
+				"hof-g1-8": 0.25
+			},
+			"desc": {
+				"aggression": 0.060858424087123636,
+				"length": 32.604166666666664
+			}
+		},
+		"profile": {
+			"name": "Tactician (Mutated) x Tactician (Mutated) (Mutated)",
+			"description": "Strategic Thinker: Uses deep calculation (Minimax) to set traps and control the board.",
+			"priorityOrder": [
+				"spell",
+				"capture",
+				"position",
+				"kill",
+				"attack",
+				"dodge"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 8511,
+				"killBonus": 1629,
+				"attackBonus": 335,
+				"safeBonus": 583,
+				"threatPenalty": -423,
+				"protectedRangeBonus": 457,
+				"friendlySixBonus": 397,
+				"advanceBonus": 309,
+				"guardPenalty": -306,
+				"mergeOver6Penalty": -493,
+				"backAndForthPenalty": -498,
+				"teamPositionWeight": 0.68,
+				"pressureWeight": 1.07,
+				"focusFireBonus": 176,
+				"terrainWeights": {
+					"defenseBonusWeight": 225,
+					"archerTowerBonus": 243,
+					"archerMountainBonus": 293,
+					"mountainMovePenalty": -100,
+					"losBlockBonus": 269
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.75,
+					"SPELLCAST_SWAP": 2.35,
+					"SPELLCAST_SKIRMISH": 0.81
+				},
+				"selfBlockPenalty": -112,
+				"immediateDeathPenalty": -384,
+				"roleWeights": {
+					"flankerEdge": 15,
+					"flankerKillSetup": 225,
+					"frontlineCenter": 15,
+					"supportAdjacency": 27,
+					"supportFarPenalty": 46,
+					"supportInRange": 49,
+					"kitingOptimal": 157,
+					"kitingSetup": 296,
+					"kitingAdjacentPenalty": -599,
+					"bodyguard": 130
+				}
+			},
+			"riskTolerance": 0.5524495140183717,
+			"targetSelection": "threatRemoval",
+			"positioningStyle": "balanced",
+			"unitSelection": "leastMoved"
+		}
+	}
+]

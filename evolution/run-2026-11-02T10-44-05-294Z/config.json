@@ -1,0 +1,25 @@
+{
+	"_": [],
+	"gens": 6,
+	"pop": 10,
+	"games": 6,
+	"topk": 3,
+	"vgames": 8,
+	"out": "evolution",
+	"workers": 2,
+	"seed": 1,
+	"rate": 0.2,
+	"gauntlet": [
+		"baseline",
+		"berserker",
+		"turtle",
+		"assassin",
+		"tactician"
+	],
+	"bins": 3,
+	"hof": 4,
+	"maxdrop": 0.1,
+	"bench": false,
+	"help": false,
+	"maxPlies": 300
+}
