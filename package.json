@@ -38,7 +38,8 @@
     "test:e2e:puzzle": "deno run --allow-all tests/e2e-puzzle-p1.ts",
     "ai:nightly": "scripts/nightly-evolve.sh",
     "ai:rules-regression": "deno run --allow-all js/rules-regression.ts",
-    "ai:balance": "deno run --allow-all js/balance-feed.ts"
+    "ai:balance": "deno run --allow-all js/balance-feed.ts",
+    "test:browser:a11y": "node tests/browser-a11y.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1"

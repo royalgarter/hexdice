@@ -61,6 +61,7 @@ function alpineHexDiceTacticGame() { return {
 	selectedDieToDeploy: null, // index in player's dice array
 	hovering: {},
 	unitstat: null, // Pinned hex id for the unit info panel (set on click).
+	kbHexId: null, // Hex id holding the roving tabindex for keyboard play.
 	hoverUnitHexId: null, // Hex id under hover-with-delay; preview source when no pin.
 	hoverUnitHexIdImmediate: null, // Hex id set immediately on mouseenter for instant highlight.
 	_unitPanelHoverTimer: null,
@@ -1853,6 +1854,36 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		return cls;
+	},
+	hexLabel(hex) {
+		const terrain = TERRAIN_CONFIG[hex.terrainType]?.color || 'Plain';
+		const unit = hex.unit;
+		const state = [unit?.isGuarding ? 'guarding' : '', this.selectedUnitHexId === hex.id ? 'selected' : '', this.validMovesSet?.has(hex.id) ? 'can move here' : '', this.validTargetsSet?.has(hex.id) ? 'can attack' : ''].filter(Boolean).join(', ');
+		const what = unit ? `: player ${unit.playerId + 1} ${UNIT_STATS[unit.value]?.name || 'Unit'}, attack ${unit.attack}, armor ${unit.effectiveArmor}` : '';
+		return `Hex ${hex.q}, ${hex.r}, ${terrain}${what}${state ? ', ' + state : ''}`;
+	},
+	hexTabIndex(hex) {
+		const home = this.getHex(this.kbHexId) || this.getHex(this.selectedUnitHexId) || this.getHexByQR(0, 0);
+		return home?.id === hex.id ? 0 : -1;
+	},
+	// Flat-top board: Up/Down are the 12h/6h neighbours; Right/Left take 4h/10h, with Shift 2h/8h.
+	hexKeydown(ev, hex) {
+		if (ev.key === 'Enter' || ev.key === ' ') {
+			ev.preventDefault();
+			this.handleHexClick(hex.id);
+			return;
+		}
+		const dirs = {
+			ArrowUp: [0, -1], ArrowDown: [0, 1],
+			ArrowRight: ev.shiftKey ? [1, -1] : [1, 0], ArrowLeft: ev.shiftKey ? [-1, 1] : [-1, 0],
+		};
+		const d = dirs[ev.key];
+		if (!d) return;
+		ev.preventDefault();
+		const next = this.getHexByQR(hex.q + d[0], hex.r + d[1]);
+		if (!next) return;
+		this.kbHexId = next.id;
+		this.$nextTick(() => document.querySelector(`.hex-${next.id}`)?.focus());
 	},
 	hexStyle(hex) {
 		let style = [];

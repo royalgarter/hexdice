@@ -15,9 +15,9 @@
 								<div class="w-3 h-3 rounded-full border-2 flex-shrink-0"
 									 :class="CampaignManager.state.currentLevel > arc.levels[1] ? 'bg-yellow-600 border-yellow-600' : CampaignManager.state.currentLevel >= arc.levels[0] ? 'bg-white border-white' : 'border-white/40'"></div>
 								<div class="font-bold text-sm" x-text="arc.name"></div>
-								<div class="text-[10px] opacity-50 ml-auto" x-text="'Lv ' + arc.levels[0] + '–' + arc.levels[1]"></div>
+								<div class="text-xs opacity-50 ml-auto" x-text="'Lv ' + arc.levels[0] + '–' + arc.levels[1]"></div>
 							</div>
-							<div class="ml-5 text-[10px] opacity-50 italic mb-2 leading-relaxed" x-text="arc.summary"></div>
+							<div class="ml-5 text-xs opacity-50 italic mb-2 leading-relaxed" x-text="arc.summary"></div>
 
 							<!-- Regions in this arc -->
 							<div class="ml-5 space-y-1">
@@ -26,10 +26,10 @@
 										<div class="w-1.5 h-1.5 rounded-full flex-shrink-0"
 											 :class="CampaignManager.state.currentLevel > region.levelRange[1] ? 'bg-yellow-600' : CampaignManager.state.currentLevel >= region.levelRange[0] ? 'bg-white' : 'bg-white/20'"></div>
 										<span x-text="region.name" :class="CampaignManager.state.currentLevel >= region.levelRange[0] ? '' : 'opacity-40'"></span>
-										<span class="opacity-30 text-[9px]" x-text="'Lv ' + region.levelRange[0] + (region.levelRange[1] !== region.levelRange[0] ? '–' + region.levelRange[1] : '')"></span>
+										<span class="opacity-30 text-xs" x-text="'Lv ' + region.levelRange[0] + (region.levelRange[1] !== region.levelRange[0] ? '–' + region.levelRange[1] : '')"></span>
 										<!-- Boss indicator -->
 										<template x-for="bossLevel in Object.keys(StoryEngine.db.bosses).map(Number).filter(n => n >= region.levelRange[0] && n <= region.levelRange[1])" :key="bossLevel">
-											<span class="text-[9px] font-bold ml-auto"
+											<span class="text-xs font-bold ml-auto"
 												  :class="CampaignManager.state.storyState?.bossesDefeated?.includes(bossLevel) ? 'text-yellow-600' : CampaignManager.state.currentLevel >= bossLevel ? 'text-red-400 animate-pulse' : 'text-red-900'"
 												  x-text="'⚔ ' + StoryEngine.db.bosses[bossLevel]?.name"></span>
 										</template>
@@ -47,7 +47,7 @@
 			</template>
 
 			<!-- Stats footer -->
-			<div class="mt-6 pt-4 border-t text-[10px] opacity-40 flex gap-4 justify-center">
+			<div class="mt-6 pt-4 border-t text-xs opacity-40 flex gap-4 justify-center">
 				<span>Level: <span x-text="CampaignManager.state.currentLevel"></span>/<span x-text="StoryEngine.db ? Object.keys(StoryEngine.db.levels).length : 58"></span></span>
 				<span>Quests: <span x-text="Object.keys(CampaignManager.state.storyState?.completedQuests || {}).length"></span></span>
 				<span>Bosses: <span x-text="CampaignManager.state.storyState?.bossesDefeated?.length || 0"></span>/<span x-text="StoryEngine.db ? Object.keys(StoryEngine.db.bosses).length : 12"></span></span>

@@ -168,7 +168,7 @@
 	background-position: center;
 }
 .text-xxs {
-	font-size: 0.6rem;
+	font-size: 0.75rem;   /* was 0.6rem (9.6px): in-hex attack/armor decide moves, so they get a readable floor */
 }
 
 /* Dice Animation Styles */
@@ -333,3 +333,53 @@ body {
 		max-height: 40vh;
 	}
 }
+/* Keyboard focus: hexes are clip-path'd, so an outline would be cut off; thicken and brighten the hex border instead. */
+.hexagon:focus { outline: none; }
+.hexagon:focus-visible { --border-width: 14%; }
+.hexagon:focus-visible::before { background-color: #fff8e0; }
+button:focus-visible, a:focus-visible, select:focus-visible, [role="button"]:focus-visible:not(.hexagon) {
+	outline: 3px solid #1d3557;
+	outline-offset: 2px;
+	box-shadow: 0 0 0 5px #fff8e0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.unit-info-panel-hint { animation: none; }
+	.cube { transition: none; }
+}
+
+/* Status and stat colours, tuned for the wood (#c3a471) and parchment surfaces; the stock Tailwind 700s measured 2.1-2.7:1 there. */
+:root {
+	--status-ok: #0f4d26;      /* 4.2:1 on wood, 7.1:1 on parchment */
+	--status-bad: #8a1414;     /* 4.1:1 on wood, 6.8:1 on parchment */
+	--stat-attack: #8a1414;
+	--stat-armor: #1f2937;
+	--halo: rgba(255, 248, 224, 0.95);
+}
+.status-ok { color: var(--status-ok); }
+.status-bad { color: var(--status-bad); }
+
+/* In-hex stats sit on sprites and terrain of any lightness: a parchment outline keeps them legible without a glow. */
+[data-game-attack], [data-game-armor] {
+	font-weight: 700;
+	paint-order: stroke fill;
+	-webkit-text-stroke: 2.5px var(--halo);
+}
+[data-game-attack] { color: var(--stat-attack); }
+[data-game-armor] { color: var(--stat-armor); }
+
+/* Toolbar toggles: "off" reads from shape (strike-through, flat) as well as tone, and keeps 4.3:1 on wood. */
+button[aria-pressed][aria-label^="Toggle"] { color: #1f2937; }
+button[aria-pressed="false"][aria-label^="Toggle"] {
+	color: #5b3a14;
+	text-decoration: line-through;
+	text-decoration-thickness: 2px;
+	box-shadow: inset 0 2px 4px rgba(43, 29, 14, 0.35);
+}
+
+/* Numbers that change in place (stats, turn counter, streak) keep a fixed width so they do not jitter. */
+[data-game-attack], [data-game-armor], #puzzle-hud b, #puzzle-hud span {
+	font-variant-numeric: tabular-nums;
+}
+#puzzle-hud .puzzle-lesson { text-wrap: pretty; line-height: 1.4; }
+#puzzle-hud .puzzle-lesson-title, #puzzle-hud .puzzle-label { text-wrap: balance; }

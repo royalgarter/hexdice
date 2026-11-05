@@ -23,8 +23,8 @@
 		<div class="mb-3 p-2 border bg-black/10 text-center">
 			<div class="text-xs uppercase tracking-wide opacity-60">Current Arc</div>
 			<div class="font-bold text-sm" x-text="StoryEngine.getArcName(CampaignManager.state.currentLevel) || 'Journey of the Six'"></div>
-			<div class="text-[10px] opacity-50 mt-0.5 italic" x-text="StoryEngine.getArcSummary(CampaignManager.state.currentLevel)?.summary || ''"></div>
-			<div class="mt-1 flex items-center justify-center gap-2 text-[10px]">
+			<div class="text-xs opacity-50 mt-0.5 italic" x-text="StoryEngine.getArcSummary(CampaignManager.state.currentLevel)?.summary || ''"></div>
+			<div class="mt-1 flex items-center justify-center gap-2 text-xs">
 				<span class="opacity-60">Level <span x-text="CampaignManager.state.currentLevel"></span></span>
 				<template x-if="StoryEngine.getArcForLevel(CampaignManager.state.currentLevel)">
 					<span class="opacity-40">|</span>
@@ -37,7 +37,7 @@
 					</span>
 				</template>
 			</div>
-			<div class="text-[10px] mt-1 opacity-40">
+			<div class="text-xs mt-1 opacity-40">
 				<template x-if="CampaignManager.state.storyState">
 					<span>Quests: <span x-text="Object.keys(CampaignManager.state.storyState.completedQuests || {}).length"></span> completed</span>
 				</template>

@@ -1,35 +1,34 @@
 <!-- Top Left -->
 <div class="absolute top-0 left-1 text-base font-mono font-bold flex flex-col items-start gap-1" style="display: none;" x-show="audioManager">
-	<a href="#" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl"
-		@click="audioManager.noSFX = !audioManager.noSFX"
-		:class="audioManager.noSFX ? 'text-gray-300' : 'text-gray-800'">♪</a>
+	<button type="button" aria-label="Toggle sound effects" title="Toggle sound effects" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0"
+		@click="audioManager.noSFX = !audioManager.noSFX" :aria-pressed="!audioManager.noSFX">♪</button>
 
-	<a href="#" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl text-xs"
-		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.(isCampaign ? 'campaign' : 'battle')"
-		:class="audioManager.musicEl ? 'text-gray-300' : 'text-gray-800'">𝄞</a>
+	<button type="button" aria-label="Toggle music" title="Toggle music" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0 text-xs"
+		@click="audioManager.musicEl ? audioManager?.stopMusic?.() : audioManager?.playMusic?.(isCampaign ? 'campaign' : 'battle')" :aria-pressed="!!audioManager.musicEl">𝄞</button>
 
 </div>
 
 <!-- Bottom Right -->
 <div class="absolute bottom-0 right-1 text-base font-mono font-bold flex flex-col items-end gap-1">
-	<a href="#" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl"
-		@click="showUnitInfo = !showUnitInfo"
-		:class="showUnitInfo ? 'text-gray-300' : 'text-gray-800'"
-		x-show="unitstat || hoverUnitHexId" style="display: none;">?</a>
+	<button type="button" aria-label="Toggle unit info" title="Toggle unit info" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0"
+		@click="showUnitInfo = !showUnitInfo" :aria-pressed="showUnitInfo"
+		x-show="unitstat || hoverUnitHexId" style="display: none;">?</button>
 
-	<a href="#" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl"
-		@click="showLog = !showLog"
-		x-show="messageLog?.length" style="display: none;">🪵</a>
+	<button type="button" aria-label="Toggle message log" title="Toggle message log" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0"
+		@click="showLog = !showLog" :aria-pressed="showLog"
+		x-show="messageLog?.length" style="display: none;">🪵</button>
 
-	<a href="#" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl"
-		@click="showMinimap = !showMinimap"
-		x-show="isCampaign" style="display: none;">🖼️</a>
+	<button type="button" aria-label="Toggle minimap" title="Toggle minimap" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0"
+		@click="showMinimap = !showMinimap" :aria-pressed="showMinimap"
+		x-show="isCampaign" style="display: none;">🖼️</button>
 </div>
 
 <!-- Bottom Left -->
 <div class="absolute bottom-0 left-1 text-base font-mono flex gap-1">
-	<a href="#" title="Home" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl" @click="openURL('/')">🏰</a>
-	<a href="/blog.html" title="Blog" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl" target="_blank" >📣</a>
-	<a href="/rules.html" title="Rules" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl" target="_blank" >📐</a>
-	<a href="/?puzzle=daily" title="Daily Puzzle" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl">🧩</a>
+	<button type="button" title="Home" aria-label="Home" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0" @click="openURL('/')">🏰</button>
+	<a aria-label="Blog" href="/blog.html" title="Blog" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl" target="_blank" >📣</a>
+	<a aria-label="Rules" href="/rules.html" title="Rules" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl" target="_blank" >📐</a>
+	<a aria-label="Daily Puzzle" href="/?puzzle=daily" title="Daily Puzzle" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl">🧩</a>
 </div>
+
+<div class="sr-only" role="log" aria-live="polite" x-text="messageLog[0]?.message || ''"></div>
