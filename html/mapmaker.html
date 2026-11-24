@@ -14,7 +14,7 @@
 					@click="mapMaker.brush = type" x-text="TERRAIN_CONFIG[type].color"></button>
 			</template>
 			<label class="ml-auto">Radius
-				<select class="border bg-transparent cursor-pointer" :value="mapMaker.radius" @change="mmReset(parseInt($event.target.value))">
+				<select class="border bg-transparent cursor-pointer px-2 py-1" :value="mapMaker.radius" @change="mmReset(parseInt($event.target.value))">
 					<template x-for="r in Array.from({length: MAP_RADIUS_MAX - MAP_RADIUS_MIN + 1}, (_, n) => n + MAP_RADIUS_MIN)" :key="r">
 						<option :value="r" :selected="r === mapMaker.radius" x-text="r"></option>
 					</template>
@@ -45,10 +45,10 @@
 		<div class="mt-2 flex flex-wrap gap-1">
 			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmPlay()">▶ Play vs AI</button>
 			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmShare()">🔗 Share link</button>
-			<input type="text" class="border bg-transparent px-1 flex-grow" style="min-width: 8rem;" placeholder="Map name" maxlength="40" aria-label="Map name" x-model="mapMaker.name">
+			<input type="text" class="border bg-transparent px-2 py-1 flex-grow" style="min-width: 8rem;" placeholder="Map name" maxlength="40" aria-label="Map name" x-model="mapMaker.name">
 			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmSave()">💾 Save</button>
 		</div>
-		<input type="text" readonly class="border bg-transparent px-1 w-full mt-1 text-xs" aria-label="Share link" x-show="mapMaker.shareUrl" style="display: none;"
+		<input type="text" readonly class="border bg-transparent px-2 py-1 w-full mt-1 text-xs" aria-label="Share link" x-show="mapMaker.shareUrl" style="display: none;"
 			:value="mapMaker.shareUrl" @focus="$event.target.select()">
 		<p class="mt-1 text-xs" role="status" x-text="mapMaker.notice"></p>
 
