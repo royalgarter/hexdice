@@ -166,7 +166,12 @@
 			margin: 1rem 0;
 			color: #666;
 		}
-		
+
+		#markdown-viewer blockquote#live-combat-example {
+			color: #2b1d0e;
+			border-left-color: #2b1d0e;
+		}
+
 		#markdown-viewer a {
 			color: #0366d6;
 			text-decoration: none;
@@ -285,7 +290,8 @@
 				} catch (ex) {console.error('Caught:', ex)}
 
 				markdownViewer.innerHTML = htmlContent;
-				
+				await renderLiveRules(markdownViewer);
+
 				// Intercept internal markdown links
 				markdownViewer.querySelectorAll('a').forEach(link => {
 					const href = link.getAttribute('href');
@@ -314,6 +320,57 @@
 			}
 		}
 		
+		// Reads UNIT_STATS from constants.js as text: that file needs the game page (meta tag, service worker), so it cannot be loaded here.
+		async function loadUnitStats() {
+			const src = await (await fetch('/js/constants.js')).text();
+			const literal = src.match(/const UNIT_STATS = (\{[\s\S]*?\n\});/)?.[1];
+			if (!literal) throw new Error('UNIT_STATS not found');
+			return new Function(`return ${literal}`)();
+		}
+
+		function findTable(root, firstHeaders) {
+			return [...root.querySelectorAll('table')].find(t => {
+				const heads = [...t.querySelectorAll('thead th')].map(th => th.textContent.trim());
+				return firstHeaders.every((h, i) => heads[i] === h);
+			});
+		}
+
+		async function renderLiveRules(root) {
+			let stats;
+			try {
+				stats = await loadUnitStats();
+			} catch (ex) {
+				console.warn('Live unit stats unavailable, showing the written table:', ex);
+				return;
+			}
+			const glyph = { X: 'ж' };
+			const table = findTable(root, ['Dice', 'Unit']);
+			table?.querySelectorAll('tbody tr').forEach(row => {
+				const cells = row.querySelectorAll('td');
+				const unit = stats[Number(cells[0]?.textContent.trim())];
+				if (!unit) return;
+				const values = [unit.armor, unit.attack, unit.range, unit.distance];
+				values.forEach((v, i) => { cells[2 + i].textContent = v; });
+				const code = document.createElement('code');
+				code.textContent = glyph[unit.movement] || unit.movement;
+				cells[6].replaceChildren(code);
+			});
+
+			const combatHeading = [...root.querySelectorAll('h2')].find(h => /Combat/.test(h.textContent));
+			if (!combatHeading) return;
+			const attacker = stats[3];
+			const defender = stats[1];
+			const forest = 1;
+			const guard = 1;
+			const armor = defender.armor + forest;
+			const note = document.createElement('blockquote');
+			note.id = 'live-combat-example';
+			note.innerHTML = `<strong>Worked example (V1, live numbers):</strong> a ${attacker.name} (Attack ${attacker.attack}) attacks a ${defender.name} (Armor ${defender.armor}) standing in a FOREST (+${forest}).
+				Effective Armor = ${defender.armor} + ${forest} = ${armor}. ${attacker.attack} &ge; ${armor}: ${attacker.attack >= armor ? 'the attack wins' : 'the attack fails'}.
+				If the ${defender.name} first Guards (+${guard}), Effective Armor = ${armor + guard} and a guarding unit is only beaten by a strictly higher Attack: ${attacker.attack} &gt; ${armor + guard} is ${attacker.attack > armor + guard ? 'true, the attack wins' : 'false, the attack fails'}.`;
+			combatHeading.after(note);
+		}
+
 		function DEFAULT_RULE() {
 			return 'rules/RULES.md';
 		}
