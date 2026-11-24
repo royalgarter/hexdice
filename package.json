@@ -39,7 +39,14 @@
     "ai:nightly": "scripts/nightly-evolve.sh",
     "ai:rules-regression": "deno run --allow-all js/rules-regression.ts",
     "ai:balance": "deno run --allow-all js/balance-feed.ts",
-    "test:browser:a11y": "node tests/browser-a11y.mjs"
+    "test:browser:a11y": "node tests/browser-a11y.mjs",
+    "test:browser:keys": "node tests/browser-keys.mjs",
+    "test:browser:undo": "node tests/browser-undo.mjs",
+    "test:browser:mapmaker": "node tests/browser-mapmaker.mjs",
+    "test:browser:ladder": "node tests/browser-ladder.mjs",
+    "test:rating": "deno test --allow-read --allow-env --no-check tests/rating.test.ts",
+    "test:map":"deno test --allow-read --no-check tests/map-codec.test.ts",
+    "test:rules":"deno test --allow-read --no-check tests/rules-docs.test.ts"
   },
   "devDependencies": {
     "playwright": "^1.61.1"

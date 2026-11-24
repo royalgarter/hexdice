@@ -109,6 +109,7 @@
 			<div class="gap-4">
 				<button class="cursor-pointer hover:bg-black hover:text-white" :class="empiresModeEnabled ? 'bg-black text-white' : ''" @click="toggleEmpiresMode()">[👑 Empires]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" :class="terrainEnabled ? 'bg-black text-white' : ''" @click="setupTerrain(true)">[🏞️ Terrain]</button>
+				<button class="cursor-pointer hover:bg-black hover:text-white" @click="openMapMaker()" x-show="!isCampaign">[🗺️ Map Maker]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="openURL(null, {campaign: 'true', map: CampaignManager.getCurrentMapName()})" x-show="!isCampaign">[📜 Campaign Mode]</button>
 				<button class="cursor-pointer hover:bg-black hover:text-white" @click="openURL(null, {autochess: 'true', players: playerCount})">[💥 Autochess Mode]</button>
 				<!-- <button class="cursor-pointer hover:bg-black hover:text-white" @click="startRomanceMode()">[RotDK]</button> -->
@@ -278,13 +279,13 @@
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MOVE')"
 				@click="initiateAction('MOVE')"
 			>[MOVE]</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+			<button aria-keyshortcuts="R" class="cursor-pointer p-1 hover:bg-black hover:text-white"
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'REROLL')"
 				@click="performAction('REROLL', selectedUnitHexId)"
 			>
 				<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/reroll.png'" alt="[REROLL]" title="REROLL" width="24" height="24">
 			</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+			<button aria-keyshortcuts="G" class="cursor-pointer p-1 hover:bg-black hover:text-white"
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'GUARD')"
 				@click="performAction('GUARD', selectedUnitHexId)"
 			>
@@ -303,43 +304,47 @@
 			</button>
 
 			<div x-show="canPerformAction(selectedUnitHexId, 'SPECIAL_ATTACK')" class="inline-block space-x-1">
-				<button class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">
+				<button aria-keyshortcuts="1" class="cursor-pointer p-1" @click="selectOracleSpell('SHIELD')">
 					<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/shield.png'" alt="[SHIELD]" title="SHIELD" width="24" height="24">
 				</button>
-				<button class="cursor-pointer p-1" @click="selectOracleSpell('SWAP')">
+				<button aria-keyshortcuts="2" class="cursor-pointer p-1" @click="selectOracleSpell('SWAP')">
 					<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/swap.png'" alt="[SWAP]" title="SWAP" width="24" height="24">
 				</button>
-				<button class="cursor-pointer p-1" @click="selectOracleSpell('SKIRMISH')">
+				<button aria-keyshortcuts="3" class="cursor-pointer p-1" @click="selectOracleSpell('SKIRMISH')">
 					<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/skirmish.png'" alt="[SKIRMISH]" title="SKIRMISH" width="24" height="24">
 				</button>
 			</div>
 
 
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+			<button aria-keyshortcuts="M" class="cursor-pointer p-1 hover:bg-black hover:text-white"
 				x-show="options.includes('m') && (selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'MERGE')"
 				@click="initiateAction('MERGE')"
 			>
 				<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/merge.png'" alt="[MERGE]" title="MERGE" width="24" height="24">
 			</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white font-bold bg-red-100"
+			<button aria-keyshortcuts="T" class="cursor-pointer p-1 hover:bg-black hover:text-white font-bold bg-red-100"
 				x-show="(selectedUnitHexId !== null) && canPerformAction(selectedUnitHexId, 'SPELLCAST_SACRIFICE')"
 				@click="initiateAction('SPELLCAST_SACRIFICE')"
 			>
 				<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/transmute.png'" alt="[TRANSMUTE]" title="TRANSMUTE" width="24" height="24">
 			</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+			<button aria-keyshortcuts="Escape" class="cursor-pointer p-1 hover:bg-black hover:text-white"
 				x-show="actionMode !== null"
 				@click="cancelAction()"
 			>
 				<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/cancel.png'" alt="[CANCEL]" title="CANCEL" width="24" height="24">
 			</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+			<button aria-keyshortcuts="F" class="cursor-pointer p-1 hover:bg-black hover:text-white"
 				@click="startTacticalCommand()"
 				x-show="gameplayVersion == 2 && turnPhase == 'FATE_CALL'"
 			>
 				<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/fate.png'" alt="[END FATE]" title="END FATE" width="24" height="24">
 			</button>
-			<button class="cursor-pointer p-1 hover:bg-black hover:text-white"
+			<button aria-keyshortcuts="U" class="cursor-pointer p-1 hover:bg-black hover:text-white"
+				x-show="canUndo" style="display: none;" title="UNDO last turn" aria-label="Undo last turn"
+				@click="undoTurn()"
+			>↩ UNDO</button>
+			<button aria-keyshortcuts="E" class="cursor-pointer p-1 hover:bg-black hover:text-white"
 				@click="endTurn()"
 			>
 				<img class="inline h-6 w-6" :src="HEXDICE_CDN + '/sprites/icons/escape.png'" alt="[END TURN]" title="END TURN" width="24" height="24">

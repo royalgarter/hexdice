@@ -12,6 +12,49 @@ let random = () => {
 };
 // const random = () => {return Math.random();const a = new Uint32Array(1);crypto.getRandomValues(a);return a[0] / 4294967296/*2^32*/;}
 
+const MAP_RADIUS_MIN = 3;
+const MAP_RADIUS_MAX = 8;
+const MAP_CODE_MAX_LENGTH = 600;
+const mapHexCount = (radius) => 3 * radius * (radius + 1) + 1;
+
+// Run-length terrain codec shared by HDFEN (puzzles) and shared custom maps. Hex order is generateHexGrid order.
+function terrainToRle(types) {
+	const codes = types.map(t => HDFEN_TERRAIN_CODES[t] || '.');
+	let rle = '';
+	for (let i = 0; i < codes.length;) {
+		let j = i;
+		while (j < codes.length && codes[j] === codes[i]) j++;
+		rle += `${j - i}${codes[i]}`;
+		i = j;
+	}
+	return rle;
+}
+
+function rleToTerrain(rle) {
+	const typeByCode = Object.fromEntries(Object.entries(HDFEN_TERRAIN_CODES).map(([type, code]) => [code, type]));
+	const types = [];
+	for (const [, count, code] of rle.matchAll(/(\d+)(.)/g)) {
+		for (let n = 0; n < +count; n++) types.push(typeByCode[code] || 'PLAIN');
+	}
+	return types;
+}
+
+function encodeMap(radius, types) {
+	return `R${radius}:${terrainToRle(types)}`;
+}
+
+// Throws Error with a player-readable message; the code comes from a URL or a saved list, so it is untrusted.
+function decodeMap(code) {
+	if (typeof code !== 'string' || code.length > MAP_CODE_MAX_LENGTH) throw new Error('Map code is too long.');
+	const m = code.trim().match(/^R(\d{1,2}):((?:\d{1,3}[.FLTM])+)$/);
+	if (!m) throw new Error('Map code is not valid.');
+	const radius = parseInt(m[1]);
+	if (radius < MAP_RADIUS_MIN || radius > MAP_RADIUS_MAX) throw new Error(`Map radius must be ${MAP_RADIUS_MIN}-${MAP_RADIUS_MAX}.`);
+	const terrain = rleToTerrain(m[2]);
+	if (terrain.length !== mapHexCount(radius)) throw new Error('Map code does not match its radius.');
+	return { radius, terrain };
+}
+
 function alpineHexDiceTacticGame() { return {
 	/* --- VARIABLES --- */
 	Autochess: Autochess,
@@ -26,6 +69,8 @@ function alpineHexDiceTacticGame() { return {
 		roomId: null,
 		isHost: false,
 		status: 'OFFLINE', // OFFLINE, LOBBY, PLAYING
+		rated: false,
+		result: null, // { winnerId, rounds, rating } published by the server when the match ends
 		creator: null,
 		opponent: null,
 		opponents: [],
@@ -102,6 +147,13 @@ function alpineHexDiceTacticGame() { return {
 	},
 	showLog: true,
 	showMinimap: true,
+	showKeyHelp: false,
+	rankedRoom: false, // checkbox: the next room created is rated (Elo)
+	ladder: { open: false, players: [], me: null, loading: false, error: '' },
+	customMap: null, // { radius, terrain[] } from ?cm= or the map maker; applied by resetGame in non-campaign games.
+	mapMaker: { open: false, radius: 5, brush: 'FOREST', terrain: Array(91).fill('PLAIN'), name: '', saved: [], notice: '', painting: false, shareUrl: '' },
+	_undoCur: null,
+	_undoPrev: null,
 	get autochessPlayerIndex() {
 		if (this.online?.status === 'PLAYING') return this.online.playerIndex;
 		return 0;
@@ -897,6 +949,8 @@ function alpineHexDiceTacticGame() { return {
 		this.online.roomId = room._key;
 		this.online.creator = room.creator;
 		this.online.secret = room.secret;
+		this.online.rated = !!room.rated;
+		this.online.result = null;
 		this.online.playerIndex = room.players.findIndex(p => p.id === me);
 		this.online.opponents = room.players.filter(p => p.id !== me);
 		this.online.opponent = this.online.opponents[0] || null;
@@ -913,6 +967,32 @@ function alpineHexDiceTacticGame() { return {
 		window.history.replaceState({}, '', url);
 	},
 
+	// Cosmetic only: ratings are applied and stored by the server, this just reports them.
+	handleMatchResult(result) {
+		this.online.result = result;
+		const me = this.auth.user?._key;
+		const outcome = result.winnerId === null ? 'The match is a draw.' : (result.winnerId === me ? 'You won the match!' : 'You lost the match.');
+		const delta = result.rating?.deltas?.[me];
+		this.addLog(`🏁 ${outcome}${result.rating?.rated ? ` Rating ${delta >= 0 ? '+' : ''}${delta}.` : ''}`);
+		if (this.ladder.open) this.openLadder();
+	},
+	async openLadder() {
+		this.ladder.open = true;
+		this.ladder.loading = true;
+		this.ladder.error = '';
+		try {
+			const board = await (await fetch('/api/leaderboard?limit=25')).json();
+			this.ladder.players = board.players || [];
+			if (this.auth.token) {
+				const me = await fetch('/api/me/rating', { headers: { 'Authorization': `Bearer ${this.auth.token}` } });
+				this.ladder.me = me.ok ? await me.json() : null;
+			}
+		} catch (e) {
+			this.ladder.error = 'Could not load the ladder.';
+		}
+		this.ladder.loading = false;
+	},
+
 	async createRoom() {
 		if (!this.auth.user) {
 			this.addLog("Please login first.");
@@ -922,7 +1002,7 @@ function alpineHexDiceTacticGame() { return {
 			const res = await fetch('/api/rooms/create', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.auth.token}` },
-				body: JSON.stringify({ name: this.auth.user.name })
+				body: JSON.stringify({ name: this.auth.user.name, rated: this.rankedRoom })
 			});
 			const room = await res.json();
 			if (!res.ok || room.error) {
@@ -999,6 +1079,7 @@ function alpineHexDiceTacticGame() { return {
 			this.online.mqttClient.subscribe(topic, { qos: 1 });
 			this.online.mqttClient.subscribe(stateTopic, { qos: 1 });
 			this.online.mqttClient.subscribe(logTopic, { qos: 1 });
+			this.online.mqttClient.subscribe(`hexdice/rooms/${this.online.roomId}/result`, { qos: 1 });
 			this.online.mqttClient.subscribe(statusTopic, { qos: 1 });
 			
 			// Mark as online
@@ -1030,6 +1111,8 @@ function alpineHexDiceTacticGame() { return {
 					}
 				} else if (topic.endsWith('/logs')) {
 					this.addLog(payload.message);
+				} else if (topic.endsWith('/result')) {
+					this.handleMatchResult(payload);
 				} else {
 					this.handleMQTTMessage(payload);
 				}
@@ -1399,7 +1482,19 @@ function alpineHexDiceTacticGame() { return {
 
 		// Re-generate with the authoritative radius in case campaign data
 		// specified one, or playerCount changed (5 vs 6 hexes for ≤3 players).
-		const radius = campaignData?.radius || this.getRadius();
+		// resetGame clears the log, so the outcome is logged after it.
+		let sharedMapNotice = '';
+		const sharedMap = new URLSearchParams(location.search).get('cm');
+		if (sharedMap) {
+			try {
+				this.customMap = decodeMap(sharedMap);
+				sharedMapNotice = 'Loaded shared map.';
+			} catch (e) {
+				sharedMapNotice = `Shared map ignored: ${e.message}`;
+			}
+		}
+
+		const radius = campaignData?.radius || this.customMap?.radius || this.getRadius();
 		this.generateHexGrid(radius);
 
 		// Init game renderer for direct DOM updates
@@ -1412,6 +1507,8 @@ function alpineHexDiceTacticGame() { return {
 			isCampaign: !!campaignData || (new URLSearchParams(location.search).get('campaign') == 'true'),
 			campaignData: campaignData
 		});
+
+		if (sharedMapNotice) this.addLog(sharedMapNotice);
 
 		if (this.Autochess.state.enabled) {
 			this.initAutochess();
@@ -1512,13 +1609,15 @@ function alpineHexDiceTacticGame() { return {
 			}
 		}
 
-		const radius = campaignData?.radius || this.getRadius();
+		const customMap = this.isCampaign ? null : (opts?.customMap ?? this.customMap);
+		const radius = campaignData?.radius || customMap?.radius || this.getRadius();
 		this.generateHexGrid(radius);
 		this.hexes.forEach(h => {
 			h.unitId = null;
 			h.unit = null;
 			this.setTerrainType(h, 'PLAIN');
 		});
+		customMap?.terrain.forEach((type, i) => this.setTerrainType(this.hexes[i], type));
 
 		if (this.isCampaign && campaignData?.rmi) {
 			await this.setupTerrain();
@@ -1534,6 +1633,8 @@ function alpineHexDiceTacticGame() { return {
 		}
 
 		this.determineBaseLocations(radius);
+		// A shared map is untrusted: a lake under a base would strand its owner.
+		if (customMap) this.players.forEach(p => this.setTerrainType(this.getHex(p.baseHexId), 'PLAIN'));
 		this.phase = (this.isCampaign && !!campaignData) ? 'SETUP_DEPLOY' : 'SETUP_ROLL';
 		if (this.phase === 'SETUP_DEPLOY') {
 			this.refreshValidDeploymentHexes();
@@ -1884,6 +1985,52 @@ function alpineHexDiceTacticGame() { return {
 		if (!next) return;
 		this.kbHexId = next.id;
 		this.$nextTick(() => document.querySelector(`.hex-${next.id}`)?.focus());
+	},
+	handleGlobalKey(ev) {
+		if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;
+		const t = ev.target;
+		if (t?.closest?.('input, textarea, select, [contenteditable]')) return;
+		const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+		if (key === '?') {
+			this.showKeyHelp = !this.showKeyHelp;
+			return;
+		}
+		if (key === 'Escape' && this.showKeyHelp) {
+			this.showKeyHelp = false;
+			return;
+		}
+		if (this.mapMaker.open || this.ladder.open) {
+			if (key === 'Escape') this.mapMaker.open = this.ladder.open = false;
+			return;
+		}
+		if (this.showStoryIntro || this.showStoryOutro || this.showWorldMap || this.Autochess?.state?.enabled) return;
+		if (this.phase !== 'PLAYER_TURN' || this.players[this.currentPlayerIndex]?.isAI) return;
+		if (this.online.status === 'PLAYING' && this.currentPlayerIndex !== this.online.playerIndex) return;
+		const sel = this.selectedUnitHexId;
+		const can = (action) => sel !== null && this.canPerformAction(sel, action);
+		if (key === 'Escape') {
+			if (sel !== null) this.deselectUnit();
+			else if (this.actionMode !== null) this.cancelAction();
+			else return;
+			ev.preventDefault();
+			return;
+		}
+		if (this.isPuzzle) return;
+		const spells = { 1: 'SHIELD', 2: 'SWAP', 3: 'SKIRMISH' };
+		const handlers = {
+			g: () => can('GUARD') && this.performAction('GUARD', sel),
+			r: () => can('REROLL') && this.performAction('REROLL', sel),
+			a: () => can('RANGED_ATTACK') && this.initiateAction('RANGED_ATTACK'),
+			m: () => can('MERGE') && this.initiateAction('MERGE'),
+			t: () => can('SPELLCAST_SACRIFICE') && this.initiateAction('SPELLCAST_SACRIFICE'),
+			f: () => this.gameplayVersion === 2 && this.turnPhase === 'FATE_CALL' && this.startTacticalCommand(),
+			e: () => this.endTurn(),
+			u: () => this.undoTurn(),
+		};
+		const run = handlers[key] || (spells[key] && (() => can('SPECIAL_ATTACK') && this.selectOracleSpell(spells[key])));
+		if (!run) return;
+		ev.preventDefault();
+		run();
 	},
 	hexStyle(hex) {
 		let style = [];
@@ -2321,6 +2468,9 @@ function alpineHexDiceTacticGame() { return {
 		this.trailSpell = {};
 
 		this.resetTurnActionsForPlayer(this.currentPlayerIndex);
+		this._undoCur = null;
+		this._undoPrev = null;
+		if (!this.players[this.currentPlayerIndex].isAI) this._captureUndo();
 		this.addLog("---");
 		this.addLog("P1 turn.");
 
@@ -5288,6 +5438,178 @@ function alpineHexDiceTacticGame() { return {
 			console.error("Failed to push state to server:", e);
 		}
 	},
+	/* --- MAP MAKER --- */
+	MAP_SAVE_LIMIT: 20,
+	get mmCells() {
+		const R = this.mapMaker.radius;
+		const cells = [];
+		for (let q = -R; q <= R; q++) {
+			for (let r = -R; r <= R; r++) {
+				if (-q - r < -R || -q - r > R) continue;
+				cells.push({ i: cells.length, q, r, x: 30 * q, y: 34.64 * (r + q / 2) });
+			}
+		}
+		return cells;
+	},
+	get mmBox() {
+		const R = this.mapMaker.radius;
+		return { w: 60 * R + 40, h: 2 * 34.64 * R + 36, ox: 30 * R, oy: 34.64 * R };
+	},
+	get mmCode() {
+		return encodeMap(this.mapMaker.radius, this.mapMaker.terrain);
+	},
+	mmType(cell) {
+		return this.mapMaker.terrain[cell.i] || 'PLAIN';
+	},
+	mmBasePlayer(cell) {
+		const axes = PLAYER_PRIMARY_AXIS[this.playerCount] || [];
+		const offset = -(this.mapMaker.radius - 1);
+		return axes.findIndex(a => a.q * offset === cell.q && a.r * offset === cell.r);
+	},
+	mmReset(radius) {
+		this.mapMaker.radius = Math.min(MAP_RADIUS_MAX, Math.max(MAP_RADIUS_MIN, radius));
+		this.mapMaker.terrain = Array(mapHexCount(this.mapMaker.radius)).fill('PLAIN');
+		this.mapMaker.shareUrl = '';
+	},
+	openMapMaker() {
+		if (this.customMap) {
+			this.mapMaker.radius = this.customMap.radius;
+			this.mapMaker.terrain = [...this.customMap.terrain];
+		}
+		this.mapMaker.notice = '';
+		this.mapMaker.open = true;
+		this.mmFetchSaved();
+	},
+	mmPaint(cell) {
+		if (this.mmBasePlayer(cell) >= 0) return;
+		this.mapMaker.terrain[cell.i] = this.mapMaker.brush;
+		this.mapMaker.shareUrl = '';
+	},
+	mmShare() {
+		const url = new URL(location.pathname, location.origin);
+		url.searchParams.set('players', this.playerCount);
+		url.searchParams.set('cm', this.mmCode);
+		this.mapMaker.shareUrl = url.toString();
+		navigator.clipboard?.writeText(this.mapMaker.shareUrl).then(
+			() => { this.mapMaker.notice = 'Link copied.'; },
+			() => { this.mapMaker.notice = 'Copy the link below.'; },
+		);
+	},
+	async mmPlay() {
+		this.customMap = { radius: this.mapMaker.radius, terrain: [...this.mapMaker.terrain] };
+		this.mapMaker.open = false;
+		await this.resetGame({ isCampaign: false });
+		this.setPlayerAI(this.players[1]);
+		this.players.forEach((p, i) => i > 0 && this.rollInitialDice(i));
+	},
+	_mmAuthHeaders() {
+		return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.auth.token}` };
+	},
+	async mmFetchSaved() {
+		if (!this.auth.token) return;
+		try {
+			const data = await (await fetch('/api/user/data?key=maps', { headers: this._mmAuthHeaders() })).json();
+			this.mapMaker.saved = Array.isArray(data.value) ? data.value : [];
+		} catch (e) {
+			this.mapMaker.notice = 'Could not load saved maps.';
+		}
+	},
+	async _mmPushSaved(list) {
+		const res = await fetch('/api/user/data', { method: 'POST', headers: this._mmAuthHeaders(), body: JSON.stringify({ key: 'maps', value: list }) });
+		if (!res.ok) throw new Error(`save failed (${res.status})`);
+		this.mapMaker.saved = list;
+	},
+	async mmSave() {
+		if (!this.auth.token) {
+			this.mapMaker.notice = 'Log in to save maps. Sharing a link needs no login.';
+			return;
+		}
+		const name = this.mapMaker.name.trim().slice(0, 40) || `Map ${this.mapMaker.saved.length + 1}`;
+		const others = this.mapMaker.saved.filter(m => m.name !== name);
+		if (others.length >= this.MAP_SAVE_LIMIT) {
+			this.mapMaker.notice = `Limit of ${this.MAP_SAVE_LIMIT} saved maps reached. Delete one first.`;
+			return;
+		}
+		try {
+			await this._mmPushSaved([...others, { name, code: this.mmCode, updatedAt: new Date().toISOString() }]);
+			this.mapMaker.name = name;
+			this.mapMaker.notice = `Saved "${name}".`;
+		} catch (e) {
+			this.mapMaker.notice = `Could not save: ${e.message}`;
+		}
+	},
+	mmLoadSaved(saved) {
+		try {
+			const map = decodeMap(saved.code);
+			this.mapMaker.radius = map.radius;
+			this.mapMaker.terrain = map.terrain;
+			this.mapMaker.name = saved.name;
+			this.mapMaker.shareUrl = '';
+			this.mapMaker.notice = `Loaded "${saved.name}".`;
+		} catch (e) {
+			this.mapMaker.notice = `Saved map is invalid: ${e.message}`;
+		}
+	},
+	async mmDelete(saved) {
+		try {
+			await this._mmPushSaved(this.mapMaker.saved.filter(m => m.name !== saved.name));
+			this.mapMaker.notice = `Deleted "${saved.name}".`;
+		} catch (e) {
+			this.mapMaker.notice = `Could not delete: ${e.message}`;
+		}
+	},
+
+	// Undo takes back the human's last turn plus the AI reply: V1 resolves one action per turn, so
+	// restoring the snapshot taken at the start of the previous human turn is exactly that.
+	get canUndo() {
+		return this.gameplayVersion === 1
+			&& this.phase === 'PLAYER_TURN'
+			&& this._undoEligible()
+			&& !this.players[this.currentPlayerIndex]?.isAI
+			&& !!this._undoPrev;
+	},
+	_undoEligible() {
+		const humans = this.players.filter(p => !p.isAI).length;
+		return humans === 1 && !this.isCampaign && !this.isPuzzle && !this.Autochess?.state?.enabled && this.online.status !== 'PLAYING';
+	},
+	_captureUndo() {
+		if (!this._undoEligible()) return;
+		this._undoPrev = this._undoCur;
+		this._undoCur = {
+			players: JSON.stringify(this.players),
+			currentPlayerIndex: this.currentPlayerIndex,
+			turnCount: this.turnCount,
+			turnPhase: this.turnPhase,
+			messageLog: JSON.stringify(this.messageLog),
+			logCounter: this.logCounter,
+			moves: this.currentReplay.games[0]?.moves.length ?? 0,
+			seed: _seed,
+			checksum: this.getStateChecksum(),
+		};
+	},
+	undoTurn() {
+		if (!this.canUndo) return;
+		const snap = this._undoPrev;
+		this.deselectUnit();
+		this.players = JSON.parse(snap.players);
+		this.hexes.forEach(hex => {
+			const unit = this.players.flatMap(p => p.dice).find(d => d.isDeployed && !d.isDeath && d.hexId === hex.id) || null;
+			hex.unit = unit;
+			hex.unitId = unit ? unit.id : null;
+		});
+		this.currentPlayerIndex = snap.currentPlayerIndex;
+		this.turnCount = snap.turnCount;
+		this.turnPhase = snap.turnPhase;
+		this.messageLog = JSON.parse(snap.messageLog);
+		this.logCounter = snap.logCounter;
+		_seed = snap.seed;
+		if (this.currentReplay.games[0]) this.currentReplay.games[0].moves.length = snap.moves;
+		this.trail = {fromHex: null, toHex: null, unit: null, path: []};
+		this.trailSpell = {};
+		this._undoCur = snap;
+		this._undoPrev = null;
+		this.addLog('↩ Last turn undone.');
+	},
 	_endTurn(state) {
 		let isState = !!state;
 		state = state || this;
@@ -5338,6 +5660,8 @@ function alpineHexDiceTacticGame() { return {
 		if (this.online.status === 'PLAYING') {
 			this.startOnlineTimer();
 		}
+
+		if (state.phase === 'PLAYER_TURN' && !state.players[state.currentPlayerIndex].isAI) this._captureUndo();
 
 		if (this.gameplayVersion === 2) {
 			this.startFatesCall();
@@ -5650,14 +5974,7 @@ function alpineHexDiceTacticGame() { return {
 
 		// v2 tail: radius + run-length terrain so a position is fully reconstructable (see loadHDFEN)
 		const radius = Math.max(...this.hexes.map(h => h.q));
-		const terrain = this.hexes.map(h => HDFEN_TERRAIN_CODES[h.terrainType] || '.');
-		let terrainRle = '';
-		for (let i = 0; i < terrain.length;) {
-			let j = i;
-			while (j < terrain.length && terrain[j] === terrain[i]) j++;
-			terrainRle += `${j - i}${terrain[i]}`;
-			i = j;
-		}
+		const terrainRle = terrainToRle(this.hexes.map(h => h.terrainType));
 
 		return `${piecePlacement} ${activePlayer} ${gamePhase} ${turnNumber} ${otherFlags} R${radius} ${terrainRle}`;
 	},
@@ -5833,15 +6150,11 @@ function alpineHexDiceTacticGame() { return {
 		this.rules.noReroll = flags[0] === 'r';
 		this.generateHexGrid(radius);
 
-		const terrainByCode = Object.fromEntries(Object.entries(HDFEN_TERRAIN_CODES).map(([type, code]) => [code, type]));
-		let hexIdx = 0;
-		for (const [, count, code] of terrainTok.matchAll(/(\d+)(.)/g)) {
-			for (let n = 0; n < +count; n++) this.setTerrainType(this.hexes[hexIdx++], terrainByCode[code] || 'PLAIN');
-		}
+		rleToTerrain(terrainTok).forEach((type, i) => this.setTerrainType(this.hexes[i], type));
 		this.determineBaseLocations(radius);
 
 		this.players.forEach(p => { p.dice = []; p.initialRollDone = true; p.isEliminated = false; p.isAI = false; });
-		hexIdx = 0;
+		let hexIdx = 0;
 		for (const tok of placement.split('/')) {
 			if (tok.length !== 6) {
 				hexIdx += parseInt(tok);

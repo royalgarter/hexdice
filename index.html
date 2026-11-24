@@ -132,7 +132,8 @@
 
 <body class="text-black min-h-screen flex flex-col items-center font-mono"
 	x-data="alpineHexDiceTacticGame()"
-	@mousemove.window="cursorX = $event.clientX; cursorY = $event.clientY">
+	@mousemove.window="cursorX = $event.clientX; cursorY = $event.clientY"
+	@keydown.window="handleGlobalKey($event)">
 
 	<!-- Dice Container -->
 	<div x-init="loadComponent($el, 'dice')"></div>
@@ -152,6 +153,10 @@
 	<div x-init="loadComponent($el, 'autochess')" style="max-height: min-content;"></div>
 
 	<!-- Puzzle HUD -->
+	<div x-init="loadComponent($el, 'mapmaker')"></div>
+
+	<div x-init="loadComponent($el, 'ladder')"></div>
+
 	<div x-init="loadComponent($el, 'puzzle')" class="w-full flex justify-center"></div>
 
 	<!-- Game Controller -->
