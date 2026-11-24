@@ -1,0 +1,42 @@
+{
+	"exported": "a5eb42a4fb1cdc15",
+	"now": "a5eb42a4fb1cdc15",
+	"champions": [
+		{
+			"key": "evolved_blood_marathon",
+			"rate": 0.45,
+			"vsBaseline": 0.5,
+			"stale": true
+		},
+		{
+			"key": "evolved_patient_tide",
+			"rate": 0.4,
+			"vsBaseline": 0.5,
+			"stale": true
+		},
+		{
+			"key": "evolved_steady_hand",
+			"rate": 0.65,
+			"vsBaseline": 0.75,
+			"stale": false
+		},
+		{
+			"key": "evolved_iron_wall",
+			"rate": 0.5,
+			"vsBaseline": 0.5,
+			"stale": true
+		},
+		{
+			"key": "evolved_long_siege",
+			"rate": 0.7,
+			"vsBaseline": 0.75,
+			"stale": false
+		},
+		{
+			"key": "evolved_silent_blade",
+			"rate": 0.65,
+			"vsBaseline": 0.75,
+			"stale": false
+		}
+	]
+}

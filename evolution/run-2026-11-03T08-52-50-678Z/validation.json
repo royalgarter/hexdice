@@ -1,0 +1,67 @@
+[
+	{
+		"cell": "1:2",
+		"name": "g0-1",
+		"train": 0.75,
+		"heldSeeds": 0.8,
+		"heldOpps": 1,
+		"vsBaseline": 0.75,
+		"desc": {
+			"aggression": 0.16450648697058715,
+			"length": 43.25
+		},
+		"ok": false
+	},
+	{
+		"cell": "1:1",
+		"name": "g0-0",
+		"train": 0.7333333333333333,
+		"heldSeeds": 0.75,
+		"heldOpps": 1,
+		"vsBaseline": 0.75,
+		"desc": {
+			"aggression": 0.17379406307977738,
+			"length": 38.5
+		},
+		"ok": false
+	},
+	{
+		"cell": "0:2",
+		"name": "g0-3",
+		"train": 0.65,
+		"heldSeeds": 0.4,
+		"heldOpps": 1,
+		"vsBaseline": 0.5,
+		"desc": {
+			"aggression": 0.06881236528586275,
+			"length": 51.35
+		},
+		"ok": false
+	},
+	{
+		"cell": "1:0",
+		"name": "g1-2",
+		"train": 0.7222222222222222,
+		"heldSeeds": 0.75,
+		"heldOpps": 0.75,
+		"vsBaseline": 0.75,
+		"desc": {
+			"aggression": 0.16796217553439086,
+			"length": 33.27777777777778
+		},
+		"ok": false
+	},
+	{
+		"cell": "2:0",
+		"name": "g1-3",
+		"train": 0.625,
+		"heldSeeds": 0.7,
+		"heldOpps": 1,
+		"vsBaseline": 0.5,
+		"desc": {
+			"aggression": 0.23391812865497075,
+			"length": 28.375
+		},
+		"ok": false
+	}
+]

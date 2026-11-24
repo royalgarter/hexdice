@@ -1,0 +1,45 @@
+{
+	"profile": "baseline",
+	"games": 60,
+	"draws": 0,
+	"avgPlies": 48.13333333333333,
+	"seat0WinRate": 0.5,
+	"units": [
+		{
+			"unit": "Fencer",
+			"value": 1,
+			"unevenGames": 46,
+			"winRateWhenMore": 0.6304347826086957
+		},
+		{
+			"unit": "Archer",
+			"value": 2,
+			"unevenGames": 45,
+			"winRateWhenMore": 0.5111111111111111
+		},
+		{
+			"unit": "Hussar",
+			"value": 3,
+			"unevenGames": 47,
+			"winRateWhenMore": 0.44680851063829785
+		},
+		{
+			"unit": "Knight",
+			"value": 4,
+			"unevenGames": 38,
+			"winRateWhenMore": 0.5789473684210527
+		},
+		{
+			"unit": "Tanker",
+			"value": 5,
+			"unevenGames": 48,
+			"winRateWhenMore": 0.5416666666666666
+		},
+		{
+			"unit": "Oracle",
+			"value": 6,
+			"unevenGames": 48,
+			"winRateWhenMore": 0.3541666666666667
+		}
+	]
+}

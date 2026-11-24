@@ -1,0 +1,330 @@
+[
+	{
+		"name": "g1-2",
+		"score": {
+			"rate": 0.7222222222222222,
+			"games": 72,
+			"wins": 52,
+			"draws": 0,
+			"avgPlies": 33.27777777777778,
+			"perOpponent": {
+				"baseline": 0.8333333333333334,
+				"berserker": 0.5833333333333334,
+				"turtle": 1,
+				"assassin": 0.5833333333333334,
+				"tactician": 0.75,
+				"hof-g0-1": 0.5833333333333334
+			},
+			"desc": {
+				"aggression": 0.16796217553439086,
+				"length": 33.27777777777778
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Assassin (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 5271,
+				"killBonus": 5490,
+				"attackBonus": 899,
+				"safeBonus": 735,
+				"threatPenalty": -435,
+				"protectedRangeBonus": 64,
+				"friendlySixBonus": 131,
+				"advanceBonus": 308,
+				"guardPenalty": -289,
+				"mergeOver6Penalty": -412,
+				"backAndForthPenalty": -501,
+				"teamPositionWeight": 0.27,
+				"pressureWeight": 0.55,
+				"focusFireBonus": 189,
+				"terrainWeights": {
+					"defenseBonusWeight": 107,
+					"archerTowerBonus": 140,
+					"archerMountainBonus": 208,
+					"mountainMovePenalty": -52,
+					"losBlockBonus": 301
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.68,
+					"SPELLCAST_SWAP": 0.92,
+					"SPELLCAST_SKIRMISH": 1.71
+				},
+				"selfBlockPenalty": -81,
+				"immediateDeathPenalty": -278,
+				"roleWeights": {
+					"flankerEdge": 21,
+					"flankerKillSetup": 137,
+					"frontlineCenter": 15,
+					"supportAdjacency": 33,
+					"supportFarPenalty": 48,
+					"supportInRange": 63,
+					"kitingOptimal": 186,
+					"kitingSetup": 291,
+					"kitingAdjacentPenalty": -668,
+					"bodyguard": 195
+				}
+			},
+			"riskTolerance": 0.936202590400353,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	},
+	{
+		"name": "g0-0",
+		"score": {
+			"rate": 0.6666666666666666,
+			"games": 72,
+			"wins": 48,
+			"draws": 0,
+			"avgPlies": 32.583333333333336,
+			"perOpponent": {
+				"baseline": 0.75,
+				"berserker": 0.5833333333333334,
+				"turtle": 1,
+				"assassin": 0.5,
+				"tactician": 0.6666666666666666,
+				"hof-g0-1": 0.5
+			},
+			"desc": {
+				"aggression": 0.17517329910141205,
+				"length": 32.583333333333336
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 6890,
+				"killBonus": 4647,
+				"attackBonus": 772,
+				"safeBonus": 540,
+				"threatPenalty": -399,
+				"protectedRangeBonus": 82,
+				"friendlySixBonus": 103,
+				"advanceBonus": 340,
+				"guardPenalty": -438,
+				"mergeOver6Penalty": -531,
+				"backAndForthPenalty": -571,
+				"teamPositionWeight": 0.34,
+				"pressureWeight": 0.63,
+				"focusFireBonus": 239,
+				"terrainWeights": {
+					"defenseBonusWeight": 109,
+					"archerTowerBonus": 144,
+					"archerMountainBonus": 184,
+					"mountainMovePenalty": -46,
+					"losBlockBonus": 354
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.58,
+					"SPELLCAST_SWAP": 1.29,
+					"SPELLCAST_SKIRMISH": 2.92
+				},
+				"selfBlockPenalty": -69,
+				"immediateDeathPenalty": -248,
+				"roleWeights": {
+					"flankerEdge": 17,
+					"flankerKillSetup": 163,
+					"frontlineCenter": 17,
+					"supportAdjacency": 28,
+					"supportFarPenalty": 46,
+					"supportInRange": 60,
+					"kitingOptimal": 235,
+					"kitingSetup": 325,
+					"kitingAdjacentPenalty": -567,
+					"bodyguard": 161
+				}
+			},
+			"riskTolerance": 0.889776243036613,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	},
+	{
+		"name": "g1-3",
+		"score": {
+			"rate": 0.625,
+			"games": 24,
+			"wins": 15,
+			"draws": 0,
+			"avgPlies": 28.375,
+			"perOpponent": {
+				"baseline": 1,
+				"berserker": 0.75,
+				"turtle": 1,
+				"assassin": 0.5,
+				"tactician": 0.25,
+				"hof-g0-1": 0.25
+			},
+			"desc": {
+				"aggression": 0.23391812865497075,
+				"length": 28.375
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated) x Assassin (Mutated) (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 6466,
+				"killBonus": 4286,
+				"attackBonus": 626,
+				"safeBonus": 637,
+				"threatPenalty": -338,
+				"protectedRangeBonus": 84,
+				"friendlySixBonus": 85,
+				"advanceBonus": 346,
+				"guardPenalty": -429,
+				"mergeOver6Penalty": -545,
+				"backAndForthPenalty": -632,
+				"teamPositionWeight": 0.34,
+				"pressureWeight": 0.54,
+				"focusFireBonus": 228,
+				"terrainWeights": {
+					"defenseBonusWeight": 98,
+					"archerTowerBonus": 145,
+					"archerMountainBonus": 181,
+					"mountainMovePenalty": -55,
+					"losBlockBonus": 397
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.5,
+					"SPELLCAST_SWAP": 1.22,
+					"SPELLCAST_SKIRMISH": 3.44
+				},
+				"selfBlockPenalty": -80,
+				"immediateDeathPenalty": -204,
+				"roleWeights": {
+					"flankerEdge": 19,
+					"flankerKillSetup": 132,
+					"frontlineCenter": 19,
+					"supportAdjacency": 24,
+					"supportFarPenalty": 38,
+					"supportInRange": 67,
+					"kitingOptimal": 221,
+					"kitingSetup": 338,
+					"kitingAdjacentPenalty": -512,
+					"bodyguard": 142
+				}
+			},
+			"riskTolerance": 0.8218750852160157,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	},
+	{
+		"name": "g0-1",
+		"score": {
+			"rate": 0.5972222222222222,
+			"games": 72,
+			"wins": 43,
+			"draws": 0,
+			"avgPlies": 37.763888888888886,
+			"perOpponent": {
+				"baseline": 0.5833333333333334,
+				"berserker": 0.5,
+				"turtle": 1,
+				"assassin": 0.6666666666666666,
+				"tactician": 0.3333333333333333,
+				"hof-g0-1": 0.5
+			},
+			"desc": {
+				"aggression": 0.16173566236048767,
+				"length": 37.763888888888886
+			}
+		},
+		"profile": {
+			"name": "Assassin (Mutated)",
+			"description": "Calculated Killer: Uses deep calculation (Minimax) to find guaranteed weak-point executions.",
+			"priorityOrder": [
+				"kill",
+				"capture",
+				"attack",
+				"spell",
+				"dodge",
+				"position"
+			],
+			"minimax": true,
+			"minimaxDepth": 3,
+			"weights": {
+				"captureBonus": 6409,
+				"killBonus": 5055,
+				"attackBonus": 954,
+				"safeBonus": 712,
+				"threatPenalty": -381,
+				"protectedRangeBonus": 78,
+				"friendlySixBonus": 109,
+				"advanceBonus": 388,
+				"guardPenalty": -321,
+				"mergeOver6Penalty": -458,
+				"backAndForthPenalty": -603,
+				"teamPositionWeight": 0.26,
+				"pressureWeight": 0.67,
+				"focusFireBonus": 180,
+				"terrainWeights": {
+					"defenseBonusWeight": 86,
+					"archerTowerBonus": 149,
+					"archerMountainBonus": 165,
+					"mountainMovePenalty": -52,
+					"losBlockBonus": 332
+				},
+				"spells": {
+					"SPELLCAST_SHIELD": 0.46,
+					"SPELLCAST_SWAP": 1.05,
+					"SPELLCAST_SKIRMISH": 2.04
+				},
+				"selfBlockPenalty": -82,
+				"immediateDeathPenalty": -289,
+				"roleWeights": {
+					"flankerEdge": 22,
+					"flankerKillSetup": 184,
+					"frontlineCenter": 13,
+					"supportAdjacency": 32,
+					"supportFarPenalty": 41,
+					"supportInRange": 66,
+					"kitingOptimal": 175,
+					"kitingSetup": 327,
+					"kitingAdjacentPenalty": -509,
+					"bodyguard": 166
+				}
+			},
+			"riskTolerance": 0.8989068002905697,
+			"targetSelection": "lowArmor",
+			"positioningStyle": "flank",
+			"unitSelection": "highestValue"
+		}
+	}
+]

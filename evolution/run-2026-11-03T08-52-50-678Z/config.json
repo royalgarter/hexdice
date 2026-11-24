@@ -1,0 +1,26 @@
+{
+	"_": [],
+	"gens": 2,
+	"pop": 4,
+	"games": 2,
+	"vgames": 2,
+	"seed": 20261103,
+	"from": "evolution/run-2026-11-02T10-44-05-294Z",
+	"workers": 2,
+	"rate": 0.2,
+	"out": "evolution",
+	"gauntlet": [
+		"baseline",
+		"berserker",
+		"turtle",
+		"assassin",
+		"tactician"
+	],
+	"bins": 3,
+	"topk": 3,
+	"hof": 4,
+	"maxdrop": 0.1,
+	"bench": false,
+	"help": false,
+	"maxPlies": 300
+}
