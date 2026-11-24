@@ -31,4 +31,30 @@
 	<a aria-label="Daily Puzzle" href="/?puzzle=daily" title="Daily Puzzle" class="cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl">🧩</a>
 </div>
 
+<button type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" class="absolute top-0 right-1 cursor-pointer rounded-full w-9 h-9 text-center content-center bg-hardwood hover:opacity-90 shadow hover:shadow-xl p-0 font-mono font-bold"
+	@click="showKeyHelp = !showKeyHelp" :aria-pressed="showKeyHelp" aria-keyshortcuts="?">⌨</button>
+
+<div x-show="showKeyHelp" role="dialog" aria-label="Keyboard shortcuts"
+	class="fixed z-50 flex items-center justify-center" style="display: none; inset: 0; background: rgba(0,0,0,.5);" @click.self="showKeyHelp = false">
+	<div class="bg-wood border p-4 text-sm font-mono max-w-xs shadow-xl">
+		<p class="font-bold mb-2">Keyboard shortcuts</p>
+		<dl class="grid grid-cols-2 gap-x-3 gap-y-1">
+			<dt>Arrows</dt><dd>Move hex focus</dd>
+			<dt>Enter / Space</dt><dd>Select / act on hex</dd>
+			<dt>G</dt><dd>Guard</dd>
+			<dt>R</dt><dd>Reroll</dd>
+			<dt>A</dt><dd>Ranged attack</dd>
+			<dt>1 / 2 / 3</dt><dd>Shield / Swap / Skirmish</dd>
+			<dt>M</dt><dd>Merge</dd>
+			<dt>T</dt><dd>Transmute</dd>
+			<dt>F</dt><dd>End Fate (V2)</dd>
+			<dt>E</dt><dd>End turn</dd>
+			<dt>U</dt><dd>Undo last turn (vs AI)</dd>
+			<dt>Esc</dt><dd>Cancel / deselect</dd>
+			<dt>?</dt><dd>This help</dd>
+		</dl>
+		<button type="button" class="cursor-pointer mt-3 border px-2 py-1 hover:bg-black hover:text-white" @click="showKeyHelp = false">Close</button>
+	</div>
+</div>
+
 <div class="sr-only" role="log" aria-live="polite" x-text="messageLog[0]?.message || ''"></div>

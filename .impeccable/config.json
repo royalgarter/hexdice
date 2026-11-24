@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "html/toolbars.html"
+        ],
+        "createdAt": "2026-11-24T13:44:05.446Z",
+        "reason": "user confirmed: ignore; fixed-size icon buttons, same pattern as existing toolbar buttons"
+      }
+    ]
+  }
+}
