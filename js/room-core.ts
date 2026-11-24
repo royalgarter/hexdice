@@ -1,4 +1,5 @@
 import { encodeHex } from "https://deno.land/std/encoding/hex.ts";
+import { getRating, rateMatch, ELO_START } from "./rating.ts";
 
 export interface RoomCoreDeps {
 	db: any;
@@ -69,6 +70,7 @@ async function initEngine(roomId: string) {
 	if (room.gameState) {
 		console.log(`[Room ${roomId}] Restoring game state (Round ${room.gameState.autochess.round})`);
 		game._initialized = room.gameState._initialized;
+		game._roundResults = room.gameState.roundResults ?? [];
 		Object.assign(game.Autochess.state, room.gameState.autochess);
 		
 		game.players = room.gameState.players.map((p: any) => ({
@@ -131,7 +133,8 @@ async function saveRoomState(roomId: string, game: any) {
 			...game.Autochess.state,
 			ready: {} // Don't persist ready state
 		},
-		_initialized: game._initialized
+		_initialized: game._initialized,
+		roundResults: game._roundResults ?? []
 	};
 	try {
 		const roomsColl = db.collection("rooms");
@@ -375,6 +378,48 @@ function broadcastState(roomId: string, game: any, full = false) {
 	mqttClient.publish(topic, JSON.stringify(state), { qos });
 }
 
+// One entry per finished combat round; written by both end-of-round paths (winner found / time up).
+function recordRoundResult(game: any) {
+	const state = game.Autochess.state;
+	game._roundResults ??= [];
+	if (game._roundResults.some((r: any) => r.round === state.round)) return;
+	game._roundResults.push({ round: state.round, winnerId: state.lastWinnerId ?? null });
+}
+
+// Most round wins takes the match; a tie is a draw. p.wins is not used: the time-up path does not increment it.
+function matchWinner(game: any): string | null {
+	const tally: Record<string, number> = {};
+	for (const r of game._roundResults ?? []) if (r.winnerId) tally[r.winnerId] = (tally[r.winnerId] ?? 0) + 1;
+	const ranked = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+	if (!ranked.length) return null;
+	return ranked.length > 1 && ranked[0][1] === ranked[1][1] ? null : ranked[0][0];
+}
+
+async function finalizeMatch(roomId: string, game: any) {
+	if (game._finalized) return;
+	game._finalized = true;
+	const roomsColl = db.collection("rooms");
+	const room: any = await roomsColl.document(roomId);
+	if (room.status === 'FINISHED') return;
+
+	const winnerId = matchWinner(game);
+	const rounds = (game._roundResults ?? []).length;
+	let rating: any = { rated: false, reason: 'unrated room' };
+	// Rated needs exactly two distinct accounts and every round played (a restart mid-match loses the history, which fails safe).
+	const ids = new Set(room.players.map((p: any) => p.id));
+	if (room.rated && room.players.length === 2 && ids.size === 2 && rounds >= game.Autochess.state.maxRound) {
+		rating = await rateMatch(db, {
+			roomId,
+			mode: 'autochess',
+			players: [{ id: room.players[0].id, name: room.players[0].name }, { id: room.players[1].id, name: room.players[1].name }],
+			winnerId,
+		});
+	}
+	await roomsColl.update(roomId, { status: 'FINISHED', result: { winnerId, rounds, rating } });
+	mqttClient.publish(`hexdice/rooms/${roomId}/result`, JSON.stringify({ winnerId, rounds, rating }), { qos: 1 });
+	console.log(`[Room ${roomId}] Match finished: winner ${winnerId ?? 'draw'}, rating`, rating);
+}
+
 function startCombatStreaming(roomId: string, game: any) {
 	// Hook into game.addLog to broadcast logs too
 	const originalAddLog = game.addLog.bind(game);
@@ -419,6 +464,10 @@ function startCombatStreaming(roomId: string, game: any) {
 	// so game doesn't hang if no player clicks "Next Round"
 	const scheduleAutoAdvance = () => {
 		if (game.Autochess.state.phase !== 'RECAP') return;
+		recordRoundResult(game);
+		if (game.Autochess.state.round >= game.Autochess.state.maxRound) {
+			finalizeMatch(roomId, game).catch(e => console.error(`[Room ${roomId}] finalizeMatch failed:`, e));
+		}
 		setTimeout(() => {
 			if (game.Autochess.state.phase !== 'RECAP' || game.Autochess.state.round > game.Autochess.state.maxRound) return;
 			game.Autochess.nextRound(game);
@@ -473,7 +522,8 @@ const publicRoom = (room: any) => ({
 	_key: room._key,
 	creator: room.creator,
 	players: room.players.map(({ secret: _s, ...p }: any) => p),
-	status: room.status
+	status: room.status,
+	rated: !!room.rated
 });
 
 const PLAYER_COLORS = ['Blue', 'Red', 'Green', 'Purple', 'Black', 'Yellow'];
@@ -624,12 +674,39 @@ async function handleApi(req: Request): Promise<Response | null> {
 		}
 	}
 
+	// Ladder: public leaderboard, private own rating
+	if (pathname === "/api/leaderboard" && req.method === "GET") {
+		try {
+			const limit = Math.min(100, Math.max(1, parseInt(new URL(req.url).searchParams.get("limit") ?? "") || 25));
+			const cursor = await db.query(
+				"FOR r IN ratings SORT r.elo DESC, r.games DESC LIMIT @limit RETURN { name: r.name, elo: r.elo, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws }",
+				{ limit },
+			);
+			return json({ players: await cursor.all() });
+		} catch (e: any) {
+			return json({ error: e.message }, 500);
+		}
+	}
+
+	if (pathname === "/api/me/rating" && req.method === "GET") {
+		try {
+			const userId = await authUser(req);
+			if (!userId) return json({ error: "Unauthorized" }, 401);
+			const doc = await getRating(db, userId);
+			return json(doc
+				? { elo: doc.elo, games: doc.games, wins: doc.wins, losses: doc.losses, draws: doc.draws }
+				: { elo: ELO_START, games: 0, wins: 0, losses: 0, draws: 0 });
+		} catch (e: any) {
+			return json({ error: e.message }, 500);
+		}
+	}
+
 	// Room Management
 	if (pathname === "/api/rooms/create" && req.method === "POST") {
 		try {
 			const userId = await authUser(req);
 			if (!userId) return json({ error: "Unauthorized" }, 401);
-			const { name } = await req.json();
+			const { name, rated } = await req.json();
 			if (typeof name !== 'string' || !name) return json({ error: "Invalid input" }, 400);
 			for (let attempt = 0; attempt < 5; attempt++) {
 				const now = new Date().toISOString();
@@ -638,6 +715,7 @@ async function handleApi(req: Request): Promise<Response | null> {
 					creator: userId,
 					players: [{ id: userId, name, color: 'Blue', secret: newSecret() }],
 					status: 'WAITING',
+					rated: rated === true,
 					createdAt: now,
 					updatedAt: now
 				};
@@ -739,5 +817,5 @@ async function handleApi(req: Request): Promise<Response | null> {
 	return null;
 }
 
-return { roomEngines, getOrInitEngine, handleRoomAction, handleRoomMessage, broadcastState, saveRoomState, handleApi };
+return { roomEngines, getOrInitEngine, handleRoomAction, handleRoomMessage, broadcastState, saveRoomState, handleApi, finalizeMatch, recordRoundResult };
 }

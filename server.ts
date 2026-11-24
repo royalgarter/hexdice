@@ -109,7 +109,7 @@ const db = new Database({
 // Initialize Database Collections and Indexes
 async function initDatabase() {
 	try {
-		const collections = ['users', 'rooms', 'user_data'];
+		const collections = ['users', 'rooms', 'user_data', 'ratings', 'matches'];
 		for (const name of collections) {
 			const coll = db.collection(name);
 			const exists = await coll.exists();
@@ -128,6 +128,8 @@ async function initDatabase() {
 				await coll.ensureIndex({ type: 'persistent', fields: ['createdAt'] });
 			} else if (name === 'user_data') {
 				await coll.ensureIndex({ type: 'persistent', fields: ['userId', 'key'] });
+			} else if (name === 'ratings') {
+				await coll.ensureIndex({ type: 'persistent', fields: ['elo'] });
 			}
 		}
 		console.log("ArangoDB initialization complete.");

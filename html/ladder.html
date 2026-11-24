@@ -1,0 +1,37 @@
+<div x-show="ladder.open" style="display: none; inset: 0; background: rgba(0,0,0,.55);" role="dialog" aria-modal="true" aria-label="Ladder"
+	class="fixed z-50 flex items-start justify-center overflow-auto p-2"
+	@click.self="ladder.open = false" @keydown.escape.window="ladder.open = false">
+	<div class="bg-wood border p-3 text-sm font-mono shadow-xl w-full" style="max-width: 480px;">
+		<div class="flex items-center justify-between mb-2">
+			<p class="font-bold text-base">🏆 Ladder</p>
+			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" aria-label="Close ladder" @click="ladder.open = false">✕</button>
+		</div>
+
+		<p x-show="ladder.me" style="display: none;" class="mb-2">
+			You: <span class="font-bold" x-text="ladder.me?.elo"></span> Elo,
+			<span x-text="ladder.me?.wins"></span>W <span x-text="ladder.me?.losses"></span>L <span x-text="ladder.me?.draws"></span>D
+			(<span x-text="ladder.me?.games"></span> rated)
+		</p>
+		<p x-show="!auth.token" style="display: none;" class="mb-2 text-xs">Log in to see your own rating. Only rated 2-player rooms count.</p>
+
+		<p x-show="ladder.loading" style="display: none;">Loading...</p>
+		<p x-show="ladder.error" style="display: none;" role="alert" x-text="ladder.error"></p>
+		<p x-show="!ladder.loading && !ladder.error && ladder.players.length === 0" style="display: none;">No rated matches yet. Create a room with "Rated" ticked and play two accounts head to head.</p>
+
+		<table class="w-full" x-show="ladder.players.length" style="display: none;">
+			<thead>
+				<tr class="text-left border-b"><th class="pr-2">#</th><th>Player</th><th class="text-right">Elo</th><th class="text-right">W/L/D</th></tr>
+			</thead>
+			<tbody>
+				<template x-for="(p, i) in ladder.players" :key="i">
+					<tr>
+						<td class="pr-2" x-text="i + 1"></td>
+						<td x-text="p.name"></td>
+						<td class="text-right font-bold" x-text="p.elo"></td>
+						<td class="text-right" x-text="p.wins + '/' + p.losses + '/' + p.draws"></td>
+					</tr>
+				</template>
+			</tbody>
+		</table>
+	</div>
+</div>

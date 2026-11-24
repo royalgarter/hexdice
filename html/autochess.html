@@ -13,11 +13,15 @@
 		<!-- ONLINE ROOM UI -->
 		<div x-show="auth.user && online.status === 'OFFLINE' && Autochess.state.phase === 'PREPARATION' && Autochess.state.round < 2" class="p-2 text-center pointer-events-auto">
 			<button @click="createRoom()" class="border border-dashed px-2 py-1 hover:bg-black hover:text-white">New Room</button>
+			<label class="text-sm cursor-pointer"><input type="checkbox" x-model="rankedRoom"> Rated (Elo, 2 players)</label>
 			<button @click="joinRoom()" class="border border-dashed px-2 py-1 hover:bg-black hover:text-white">Join</button>
+			<button @click="openLadder()" class="border border-dashed px-2 py-1 hover:bg-black hover:text-white">🏆 Ladder</button>
 		</div>
 		<div x-show="online.status !== 'OFFLINE'" class="p-2 border border-dashed text-sm pointer-events-auto">
 			<div class="flex justify-between items-center mb-2">
-				<span>Room: <span x-text="online.roomId" class="font-bold select-all"></span></span>
+				<span>Room: <span x-text="online.roomId" class="font-bold select-all"></span>
+					<span x-show="online.rated" style="display: none;" class="text-xs uppercase border px-1 border-gray-400" title="Elo rating applies when the match ends">Rated</span>
+				</span>
 				<button @click="leaveRoom()" class="text-red-500 hover:underline cursor-pointer">[Leave]</button>
 			</div>
 			
