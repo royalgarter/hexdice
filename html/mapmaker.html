@@ -1,0 +1,68 @@
+<div x-show="mapMaker.open" style="display: none; inset: 0; background: rgba(0,0,0,.55);" role="dialog" aria-modal="true" aria-label="Map maker"
+	class="fixed z-50 flex items-start justify-center overflow-auto p-2"
+	@click.self="mapMaker.open = false" @mouseup.window="mapMaker.painting = false">
+	<div class="bg-wood border p-3 text-sm font-mono shadow-xl w-full" style="max-width: 560px;">
+		<div class="flex items-center justify-between mb-2">
+			<p class="font-bold text-base">🗺️ Map maker</p>
+			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" aria-label="Close map maker" @click="mapMaker.open = false">✕</button>
+		</div>
+
+		<div class="flex flex-wrap items-center gap-1 mb-2" role="group" aria-label="Terrain brush">
+			<template x-for="type in Object.keys(TERRAIN_CONFIG)" :key="type">
+				<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white"
+					:class="mapMaker.brush === type ? 'bg-black text-white' : ''" :aria-pressed="mapMaker.brush === type"
+					@click="mapMaker.brush = type" x-text="TERRAIN_CONFIG[type].color"></button>
+			</template>
+			<label class="ml-auto">Radius
+				<select class="border bg-transparent cursor-pointer" :value="mapMaker.radius" @change="mmReset(parseInt($event.target.value))">
+					<template x-for="r in Array.from({length: MAP_RADIUS_MAX - MAP_RADIUS_MIN + 1}, (_, n) => n + MAP_RADIUS_MIN)" :key="r">
+						<option :value="r" :selected="r === mapMaker.radius" x-text="r"></option>
+					</template>
+				</select>
+			</label>
+			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmReset(mapMaker.radius)">Clear</button>
+		</div>
+
+		<div class="overflow-auto flex justify-center" style="max-height: 55vh;">
+			<div class="relative select-none" :style="`width: ${mmBox.w}px; height: ${mmBox.h}px;`" @mouseleave="mapMaker.painting = false">
+				<template x-for="cell in mmCells" :key="cell.i">
+					<button type="button" class="absolute p-0 border-0"
+						:style="`left: ${cell.x + mmBox.ox}px; top: ${cell.y + mmBox.oy}px; width: 40px; height: 34.64px; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: ${mmBasePlayer(cell) >= 0 ? '#1a1a1a' : '#e8d9b5'}; cursor: ${mmBasePlayer(cell) >= 0 ? 'not-allowed' : 'pointer'};`"
+						:aria-label="`Hex ${cell.q}, ${cell.r}, ${mmBasePlayer(cell) >= 0 ? 'base of player ' + (mmBasePlayer(cell) + 1) + ', stays plain' : TERRAIN_CONFIG[mmType(cell)].color}`"
+						@mousedown.prevent="mapMaker.painting = true; mmPaint(cell)"
+						@mouseenter="mapMaker.painting && mmPaint(cell)"
+						@keydown.enter.prevent="mmPaint(cell)" @keydown.space.prevent="mmPaint(cell)">
+						<span class="absolute" style="inset: 3px; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);"
+							:class="mmBasePlayer(cell) >= 0 ? PLAYER_CONFIG[mmBasePlayer(cell)].bg : TERRAIN_CONFIG[mmType(cell)].bg"></span>
+						<span class="absolute text-xxs font-bold text-black" style="inset: 0; display: flex; align-items: center; justify-content: center;"
+							x-text="mmBasePlayer(cell) >= 0 ? 'B' + (mmBasePlayer(cell) + 1) : (mmType(cell) === 'PLAIN' ? '' : HDFEN_TERRAIN_CODES[mmType(cell)])"></span>
+					</button>
+				</template>
+			</div>
+		</div>
+		<p class="text-xs mt-1">Bases (B1, B2) always stay plain terrain. Click or drag to paint.</p>
+
+		<div class="mt-2 flex flex-wrap gap-1">
+			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmPlay()">▶ Play vs AI</button>
+			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmShare()">🔗 Share link</button>
+			<input type="text" class="border bg-transparent px-1 flex-grow" style="min-width: 8rem;" placeholder="Map name" maxlength="40" aria-label="Map name" x-model="mapMaker.name">
+			<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" @click="mmSave()">💾 Save</button>
+		</div>
+		<input type="text" readonly class="border bg-transparent px-1 w-full mt-1 text-xs" aria-label="Share link" x-show="mapMaker.shareUrl" style="display: none;"
+			:value="mapMaker.shareUrl" @focus="$event.target.select()">
+		<p class="mt-1 text-xs" role="status" x-text="mapMaker.notice"></p>
+
+		<div class="mt-2" x-show="auth.token" style="display: none;">
+			<p class="font-bold">Saved maps (<span x-text="mapMaker.saved.length"></span>/<span x-text="MAP_SAVE_LIMIT"></span>)</p>
+			<ul>
+				<template x-for="saved in mapMaker.saved" :key="saved.name">
+					<li class="flex items-center gap-1">
+						<button type="button" class="cursor-pointer underline flex-grow text-left" @click="mmLoadSaved(saved)" x-text="saved.name"></button>
+						<button type="button" class="cursor-pointer border px-2 py-1 hover:bg-black hover:text-white" :aria-label="'Delete ' + saved.name" @click="mmDelete(saved)">✕</button>
+					</li>
+				</template>
+			</ul>
+		</div>
+		<p class="mt-2 text-xs" x-show="!auth.token" style="display: none;">Log in (Google) to save maps. Share links work without login.</p>
+	</div>
+</div>
